@@ -21,6 +21,9 @@
 /docs/*
 !/docs/releasing.md
 !/docs/file-navigation.md
+!/docs/player-controls.md
+!/docs/network-settings.md
+!/docs/apple-platform-plan.md
 !/releases/
 
 # Local build output, fixtures, environment, runtime notes and signing material.

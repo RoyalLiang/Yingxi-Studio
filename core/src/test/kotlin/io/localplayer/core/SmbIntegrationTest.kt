@@ -3,7 +3,15 @@ package io.localplayer.core
 import kotlin.test.*
 
 class SmbIntegrationTest {
-    @Test fun idlePlaybackConnectionCanSeekAgain(){
+    @Test fun authenticatedShareEnumeration(){
+  val port=System.getenv("PLAYER_SMB_FIXTURE_PORT")?.toInt()
+  org.junit.Assume.assumeTrue("Explicit loopback fixture required",port!=null)
+  val source=Source(label="Shares",protocol=Protocol.SMB,host="127.0.0.1",port=port!!,root="",username=System.getenv("PLAYER_TEST_USERNAME")?:"test-user")
+  Cancellation().use { cancellation ->
+   assertTrue(SmbShares.list(source,Credentials(requireNotNull(System.getenv("PLAYER_TEST_PASSWORD"))),cancellation).any { it.equals("media",true) })
+  }
+ }
+ @Test fun idlePlaybackConnectionCanSeekAgain(){
         val port=System.getenv("PLAYER_SMB_FIXTURE_PORT")?.toInt()
         org.junit.Assume.assumeTrue("Set PLAYER_SMB_FIXTURE_PORT for the loopback fixture",port!=null)
         val source=Source(label="SMB idle fixture",protocol=Protocol.SMB,host="127.0.0.1",port=port!!,root="media",username=System.getenv("PLAYER_TEST_USERNAME")?:"test-user")

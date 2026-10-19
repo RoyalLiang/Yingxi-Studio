@@ -39,8 +39,8 @@ class SmbConnector : Connector {
                 override fun list(path: String): List<Entry> {
                     cancellation.check()
                     return share.list(Paths.clean(path).replace('/', '\\')).filter { it.fileName != "." && it.fileName != ".." }.map {
-                        Entry(it.fileName, Paths.join(path, it.fileName), it.fileAttributes and 0x10L != 0L, it.endOfFile)
-                    }.sortedWith(compareByDescending<Entry> { it.directory }.thenBy { it.name.lowercase() })
+                        Entry(it.fileName, Paths.join(path, it.fileName), it.fileAttributes and 0x10L != 0L, it.endOfFile, it.creationTime.toEpochMillis().takeIf { time -> time > 0 })
+                    }.sortedWith(MediaOrdering.entries)
                 }
                 override fun open(path: String): RemoteFile {
                     cancellation.check()
@@ -106,7 +106,7 @@ class SftpConnector : Connector {
                     cancellation.check()
                     return sftp.ls(Paths.sftp(source.root, path)).filter { it.name != "." && it.name != ".." }.map {
                         Entry(it.name, Paths.join(path, it.name), it.isDirectory, it.attributes.size)
-                    }.sortedWith(compareByDescending<Entry> { it.directory }.thenBy { it.name.lowercase() })
+                    }.sortedWith(MediaOrdering.entries)
                 }
                 override fun open(path: String): RemoteFile {
                     cancellation.check()

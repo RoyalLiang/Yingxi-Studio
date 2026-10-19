@@ -5,6 +5,23 @@ import java.util.concurrent.*
 import java.io.InterruptedIOException
 
 class ReadAheadFileTest {
+    @kotlin.test.Test fun sequentialWindowGrowsWithoutOverreadingRandomSeek() {
+        val data=ByteArray(8*1024*1024){(it%251).toByte()}
+        var calls=0;val requests=mutableListOf<Int>()
+        val raw=object:RemoteFile{
+            override val size=data.size.toLong()
+            override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {calls++;requests+=length;val n=minOf(length,data.size-position.toInt());if(n<=0)return -1;data.copyInto(buffer,offset,position.toInt(),position.toInt()+n);return n}
+            override fun close(){}
+        }
+        ReadAheadFile(raw).use{file->
+            val out=ByteArray(8192);var pos=0L
+            while(pos<data.size){val n=file.readAt(pos,out,0,out.size);kotlin.test.assertTrue(n>0);kotlin.test.assertContentEquals(data.copyOfRange(pos.toInt(),pos.toInt()+n),out.copyOf(n));pos+=n}
+            kotlin.test.assertTrue(calls<=10,"Sequential read should coalesce <=10 network calls, got $calls")
+            file.readAt(12345,out,0,out.size)
+            kotlin.test.assertEquals(64*1024,requests.last(),"A discontinuous seek starts with a small window")
+        }
+    }
+
     @Test fun tinyReadsAndLargeSeeksPreserveBytesWithBoundedNetworkRequests(){
         var calls=0;var largest=0;var closes=0
         val remote=object:RemoteFile{

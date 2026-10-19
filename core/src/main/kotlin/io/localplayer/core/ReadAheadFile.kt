@@ -4,7 +4,7 @@ import java.io.InterruptedIOException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** A bounded window avoids a network round trip for every small extractor read. */
-class ReadAheadFile(private val delegate:RemoteFile,capacity:Int=256*1024):RemoteFile {
+class ReadAheadFile(private val delegate:RemoteFile,capacity:Int=1024*1024):RemoteFile {
     private val cache=ByteArray(capacity.also{require(it>0)})
     private var start=-1L
     private var count=0
@@ -17,8 +17,9 @@ class ReadAheadFile(private val delegate:RemoteFile,capacity:Int=256*1024):Remot
         if(length==0)return 0
         if(position>=size)return -1
         if(start<0||position<start||position-start>=count){
+            val sequential = count > 0 && position == start + count
             count=0;start=position
-            val request=minOf(cache.size.toLong(),size-position).toInt()
+            val request=minOf((if(sequential) cache.size else minOf(cache.size,64*1024)).toLong(),size-position).toInt()
             val n=delegate.readAt(position,cache,0,request)
             checkOpen()
             if(n<=0)return n
