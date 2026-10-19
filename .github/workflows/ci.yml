@@ -1,0 +1,78 @@
+name: Android CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      COPYFILE_DISABLE: '1'
+      PLAYER_SMB_FIXTURE_PORT: '1445'
+      PLAYER_TEST_USERNAME: test-user
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Source and version checks
+        run: |
+          python3 scripts/repository_guard.py --git
+          python3 scripts/versioning.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+      - name: Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+      - name: Synthetic loopback fixture
+        shell: bash
+        run: |
+          fixture_password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          echo "::add-mask::$fixture_password"
+          printf 'PLAYER_TEST_PASSWORD=%s\n' "$fixture_password" >> "$GITHUB_ENV"
+          python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/fixture-python" 'impacket==0.13.0' > "$RUNNER_TEMP/fixture-install.log"
+          python3 scripts/create_fixture_data.py --root "$RUNNER_TEMP/fixture-data"
+          PLAYER_TEST_PASSWORD="$fixture_password" PYTHONPATH="$RUNNER_TEMP/fixture-python" python3 scripts/smb_fixture.py --root "$RUNNER_TEMP/fixture-data" --port "$PLAYER_SMB_FIXTURE_PORT" > "$RUNNER_TEMP/fixture.log" 2>&1 &
+          printf '%s\n' "$!" > "$RUNNER_TEMP/fixture.pid"
+          python3 - <<'PY'
+          import socket,time
+          for attempt in range(50):
+              try:
+                  with socket.create_connection(('127.0.0.1',1445),timeout=.2):break
+              except OSError:time.sleep(.1)
+          else:raise SystemExit('Loopback SMB fixture failed to start')
+          PY
+      - name: JVM integration, Android compile and lint
+        env:
+          PLAYER_BUILD_DIR: ${{ runner.temp }}/yingxi-build
+        run: python3 scripts/build.py :core:test :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+      - name: Debug validation APK (not a Release)
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: yingxi-debug-${{ github.sha }}
+          path: |
+            dist/yingxi-*-debug.apk
+            dist/yingxi-*-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
+      - name: Stop only this job's fixture
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/fixture.pid"; then kill "$(cat "$RUNNER_TEMP/fixture.pid")" 2>/dev/null || true; fi

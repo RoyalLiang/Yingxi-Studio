@@ -1,0 +1,83 @@
+name: Signed release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag, matching version.json
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: yingxi-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+    permissions:
+      contents: read
+  release:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: release
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      COPYFILE_DISABLE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Version, source and existing tag
+        run: |
+          python3 scripts/repository_guard.py --git
+          python3 scripts/versioning.py --tag "$TAG"
+          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)"
+          git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          cache-disabled: true
+      - name: Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+      - name: Import signing material outside checkout
+        env:
+          STORE_BASE64: ${{ secrets.YINGXI_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.YINGXI_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.YINGXI_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.YINGXI_KEY_PASSWORD }}
+        run: |
+          test -n "$STORE_BASE64" && test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || { echo 'Configure the four release environment signing secrets first'; exit 1; }
+          umask 077
+          printf '%s' "$STORE_BASE64" | base64 --decode > "$RUNNER_TEMP/yingxi-release.keystore"
+      - name: Build signed APK
+        env:
+          PLAYER_BUILD_DIR: ${{ runner.temp }}/yingxi-release-build
+          YINGXI_KEYSTORE_PATH: ${{ runner.temp }}/yingxi-release.keystore
+          YINGXI_KEYSTORE_PASSWORD: ${{ secrets.YINGXI_KEYSTORE_PASSWORD }}
+          YINGXI_KEY_ALIAS: ${{ secrets.YINGXI_KEY_ALIAS }}
+          YINGXI_KEY_PASSWORD: ${{ secrets.YINGXI_KEY_PASSWORD }}
+        run: python3 scripts/build.py :app:verifyReleaseSigning :app:assembleRelease
+      - name: Verify APK, signer and release assets
+        env:
+          YINGXI_SIGNER_SHA256: ${{ vars.YINGXI_SIGNER_SHA256 }}
+        run: python3 scripts/release_tools.py prepare --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
+      - name: Publish all verified assets from a draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release_tools.py publish --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
+      - name: Remove signing file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/yingxi-release.keystore"

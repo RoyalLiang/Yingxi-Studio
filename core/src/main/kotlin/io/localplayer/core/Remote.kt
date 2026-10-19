@@ -1,0 +1,98 @@
+package io.localplayer.core
+
+import java.io.Closeable
+import java.io.InterruptedIOException
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
+
+enum class Protocol { SMB, SFTP }
+
+data class Source(
+    val id: String = UUID.randomUUID().toString(),
+    val label: String,
+    val protocol: Protocol,
+    val host: String,
+    val port: Int = if (protocol == Protocol.SMB) 445 else 22,
+    val root: String = if (protocol == Protocol.SMB) "" else "/",
+    val username: String = "",
+    val domain: String = "",
+    val trustedKey: String? = null,
+    val trustedAuthority: String? = null,
+) {
+    val authority: String get() = "${host.lowercase()}:$port"
+    fun validate() {
+        require(host.isNotBlank() && host.none { it.isWhitespace() || it == '/' || it == '\\' || it == '\u0000' }) { "请填写主机名或 IP，不要包含协议或路径" }
+        require(port in 1..65535) { "端口应为 1–65535" }
+        require(label.isNotBlank()) { "请填写来源名称" }
+        if (protocol == Protocol.SMB) require(root.isNotBlank() && root.none { it == '/' || it == '\\' }) { "SMB 请填写单个共享名" }
+        else require(root.startsWith('/')) { "SFTP 根目录必须以 / 开头" }
+        Paths.clean(if (protocol == Protocol.SFTP) root else "")
+    }
+}
+
+// Never serialized with Source; the Android host is responsible for encrypted storage.
+class Credentials(val password: String) {
+    override fun toString(): String = "Credentials([redacted])"
+}
+
+data class Entry(val name: String, val path: String, val directory: Boolean, val size: Long) {
+    val isVideo: Boolean get() = !directory && name.substringAfterLast('.', "").lowercase() in
+        setOf("mp4", "mkv", "m4v", "mov", "webm", "avi", "ts", "m2ts", "mpg", "mpeg", "wmv", "flv", "3gp")
+}
+
+object Paths {
+    fun clean(path: String): String {
+        require('\u0000' !in path) { "路径包含无效字符" }
+        val pieces = path.replace('\\', '/').split('/').filter { it.isNotEmpty() && it != "." }
+        require(pieces.none { it == ".." }) { "路径不能包含 .." }
+        return pieces.joinToString("/")
+    }
+    fun join(parent: String, name: String): String {
+        require(name.isNotEmpty() && name.none { it == '/' || it == '\\' } && name != "." && name != "..") { "无效文件名" }
+        return clean("$parent/$name")
+    }
+    fun sftp(root: String, relative: String): String = "/" + listOf(clean(root), clean(relative)).filter { it.isNotEmpty() }.joinToString("/")
+}
+
+class HostKeyRequired(val source: Source, val fingerprint: String, val previous: String?) :
+    java.io.IOException(if (previous == null) "首次连接：请核验服务器指纹" else "服务器身份发生变化，连接已阻止")
+
+/** Invoke cancel off the UI thread. Transport deadlines bound blocking library calls too. */
+class Cancellation : Closeable {
+    private val cancelled = AtomicBoolean(false)
+    private val resources = mutableListOf<Closeable>()
+    fun check() { if (cancelled.get() || Thread.currentThread().isInterrupted) throw InterruptedIOException("操作已取消") }
+    fun own(resource: Closeable) {
+        synchronized(resources) {
+            if (cancelled.get()) { runCatching { resource.close() }; throw InterruptedIOException("操作已取消") }
+            resources += resource
+        }
+    }
+    override fun close() {
+        if (!cancelled.compareAndSet(false, true)) return
+        val copy = synchronized(resources) { resources.toList().asReversed().also { resources.clear() } }
+        copy.forEach { runCatching { it.close() } }
+    }
+}
+
+interface RemoteFile : Closeable {
+    val size: Long
+    fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int
+}
+interface RemoteSession : Closeable {
+    fun list(path: String): List<Entry>
+    fun open(path: String): RemoteFile
+}
+interface Connector {
+    fun connect(source: Source, credentials: Credentials, cancellation: Cancellation = Cancellation()): RemoteSession
+}
+
+class Protocols : Connector {
+    override fun connect(source: Source, credentials: Credentials, cancellation: Cancellation): RemoteSession {
+        source.validate(); cancellation.check()
+        return when (source.protocol) {
+            Protocol.SMB -> SmbConnector().connect(source, credentials, cancellation)
+            Protocol.SFTP -> SftpConnector().connect(source, credentials, cancellation)
+        }
+    }
+}

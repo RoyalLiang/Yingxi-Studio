@@ -1,0 +1,37 @@
+[
+  {
+    "file": "apache-2.0.txt",
+    "source": "https://raw.githubusercontent.com/hierynomus/sshj/v0.40.0/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "file": "sshj-NOTICE.txt",
+    "source": "https://raw.githubusercontent.com/hierynomus/sshj/v0.40.0/NOTICE",
+    "sha256": "28eafe2771c7cce241f05f1a28dfe0fc71c45a107d420b1a80305b487fa2f405"
+  },
+  {
+    "file": "smbj-copyright.txt",
+    "source": "https://raw.githubusercontent.com/hierynomus/smbj/v0.13.0/LICENSE_HEADER",
+    "sha256": "179ea5ae4d9d23b56335341e5a5d6effcfdf0125e9f108a8a21b8cec4ade85fc"
+  },
+  {
+    "file": "asn-one-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/hierynomus/asn-one/v0.6.0/LICENSE",
+    "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
+  },
+  {
+    "file": "slf4j-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/qos-ch/slf4j/v_2.0.17/LICENSE.txt",
+    "sha256": "6fbe2eaf44b193b8a40eed9208f52848572224ad8d7672dd09418aa174847e73"
+  },
+  {
+    "file": "mbassador-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/bennidi/mbassador/master/LICENSE",
+    "sha256": "ab2654d8c44f6816b82afa9c45bd79a5b203b7b08634a67a95d02b26aa9a7fec"
+  },
+  {
+    "file": "bouncycastle-LICENSE.txt",
+    "source": "org.bouncycastle:bcprov-jdk18on:1.80.2 org.bouncycastle.LICENSE",
+    "sha256": "89e61e44dcdd5bf128446fcdb8b2adf41d597d5c5a3de25e91c0b682af710ed8"
+  }
+]
