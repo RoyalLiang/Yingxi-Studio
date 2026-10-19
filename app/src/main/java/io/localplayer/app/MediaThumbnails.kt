@@ -167,7 +167,12 @@ internal object MediaThumbnails {
 internal fun MediaThumbnail(media: MediaRef, modifier: Modifier = Modifier) {
     val context = LocalContext.current.applicationContext
     val revision by MediaThumbnails.changes.collectAsState()
-    val bitmap by produceState<Bitmap?>(null, media, revision) { value = null; value = MediaThumbnails.load(context, media) }
+    val bitmap by key(media.key,media.location,media.sizeBytes,media.localUri) {
+        produceState<Bitmap?>(null, revision) {
+            // Keep the displayed frame while other cache entries notify observers.
+            value = MediaThumbnails.load(context, media)
+        }
+    }
     Box(modifier.clip(RoundedCornerShape(13.dp)).background(Berry.copy(alpha = .08f)), contentAlignment = Alignment.Center) {
         Crossfade(targetState = bitmap, animationSpec = tween(180), label = "thumbnail fade") { frame ->
             if (frame != null) Image(frame.asImageBitmap(), null, Modifier.fillMaxSize().testTag("media-thumbnail:${media.key}"), contentScale = ContentScale.Crop)

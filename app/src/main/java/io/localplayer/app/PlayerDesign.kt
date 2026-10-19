@@ -17,7 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -79,33 +80,42 @@ fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = false, radius: I
         half4 main(float2 p) {
             float2 v = (p / resolution - 0.5) * 2.0;
             float edge = pow(clamp(max(abs(v.x), abs(v.y)), 0.0, 1.0), 6.0);
-            float2 refracted = clamp(p + v * edge * 3.0, float2(0.5), resolution - 0.5);
+            float2 refracted = clamp(p + v * edge * 4.0, float2(0.5), resolution - 0.5);
             return content.eval(refracted);
         }
     """.trimIndent()) }
+    val blurPx = with(LocalDensity.current) { 18.dp.toPx() }
+    val blurEffect = remember(blurPx) {
+        android.graphics.RenderEffect.createBlurEffect(blurPx, blurPx, android.graphics.Shader.TileMode.CLAMP)
+    }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val wash = remember(dark) { Brush.linearGradient(if(dark)listOf(Color.White.copy(alpha=.07f),Color.Transparent)else listOf(Color.White.copy(alpha=.46f),Color.White.copy(alpha=.04f))) }
+    val rim = remember(dark) { Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark).3f else .96f),Color.White.copy(alpha=if(dark).08f else .24f),Hairline)) }
     val shape = RoundedCornerShape(radius.dp)
     Box(modifier
         .onGloballyPositioned { offset = it.positionInRoot() }
         .clip(shape)
-        .drawWithContent {
+        .drawWithCache {
+            // RenderEffect snapshots uniforms: set the current size before creating it.
+            lens.setFloatUniform("resolution", size.width.coerceAtLeast(1f), size.height.coerceAtLeast(1f))
+            val effect = android.graphics.RenderEffect.createChainEffect(
+                android.graphics.RenderEffect.createRuntimeShaderEffect(lens, "content"), blurEffect
+            ).asComposeRenderEffect()
+            onDrawWithContent {
             if (scene != null) {
-                lens.setFloatUniform("resolution", size.width, size.height)
-                blurred.renderEffect = android.graphics.RenderEffect.createChainEffect(
-                    android.graphics.RenderEffect.createRuntimeShaderEffect(lens, "content"),
-                    android.graphics.RenderEffect.createBlurEffect(22.dp.toPx(), 22.dp.toPx(), android.graphics.Shader.TileMode.CLAMP)
-                ).asComposeRenderEffect()
+                blurred.renderEffect = effect
                 blurred.record {
                     translate(-offset.x, -offset.y) { drawLayer(scene) }
                 }
                 drawLayer(blurred)
             }
             // A legible material remains when blur is unavailable or the scene is uniform.
-            drawRect(if (dark) Color(0xFF202128).copy(alpha = .92f) else Color(0xFFFCFCFF).copy(alpha = .82f))
-            drawRect(Brush.linearGradient(if (dark) listOf(Color.White.copy(alpha = .07f), Color.Transparent) else listOf(Color.White.copy(alpha = .58f), Color.White.copy(alpha = .04f))))
+            drawRect(if (dark) Color(0xFF202128).copy(alpha = if(scene!=null).76f else .94f) else Color(0xFFFCFCFF).copy(alpha = if(scene!=null).66f else .94f))
+            drawRect(wash)
             drawContent()
+            }
         }
-        .border(.7.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = if (dark) .22f else .95f), Hairline)), shape),
+        .border(.7.dp, rim, shape),
         content = content)
 }
 

@@ -7,6 +7,8 @@ import android.media.AudioManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -52,6 +54,9 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -98,6 +103,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var hudRevision by remember { mutableIntStateOf(0) }
     var frame by remember { mutableStateOf<Bitmap?>(null) }
     var frameLoading by remember { mutableStateOf(false) }
+    var frameAt by remember { mutableLongStateOf(0) }
+    var videoWidth by remember { mutableIntStateOf(0) }
+    var videoHeight by remember { mutableIntStateOf(0) }
     var fill by rememberSaveable { mutableStateOf(false) }
     val previews = remember(controller) { PreviewFrames(context.applicationContext) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
@@ -116,6 +124,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             buffering = controller.playbackState == Player.STATE_BUFFERING
             seekable = controller.isCurrentMediaItemSeekable
             videoAvailable = controller.videoSize.width > 0
+            videoWidth = controller.videoSize.width; videoHeight = controller.videoSize.height
             duration = controller.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
             error = controller.playerError?.let { "播放失败（${it.errorCodeName}），请返回重试" }
         }
@@ -145,15 +154,20 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         if (visible && playing && !dragging && !locked && !settings && !queue && !speedOpen && !touchExploration) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
-    LaunchedEffect(dragging, target / 5000, currentUri, buffering) {
+    LaunchedEffect(currentUri) { frame = null; frameAt = 0 }
+    LaunchedEffect(dragging, currentUri, buffering) {
         if (!dragging || currentUri == null || buffering) { frameLoading = false; return@LaunchedEffect }
-        frameLoading = true
-        frame = null
-        delay(180)
-        try { frame = previews.get(currentUri!!, target) }
-        catch (e: CancellationException) { throw e }
-        catch (_: Exception) { frame = null }
-        finally { frameLoading = false }
+        val uri = currentUri!!
+        snapshotFlow { target.coerceAtLeast(0) / 5000 * 5000 }
+            .distinctUntilChanged().conflate().collect { requested ->
+                frameLoading = true
+                try {
+                    val next = withTimeoutOrNull(4000) { previews.get(uri, requested) }
+                    if (next != null) { frame = next; frameAt = requested }
+                } catch (e: CancellationException) { throw e }
+                catch (_: Exception) { /* Retain a valid frame and its original timestamp. */ }
+                finally { frameLoading = false }
+            }
     }
     BackHandler(enabled = queue || speedOpen || settings) { queue = false; speedOpen = false; settings = false }
     Box(Modifier.fillMaxSize().background(Color(0xFF101113)).pointerInput(Unit) {
@@ -212,6 +226,11 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PlayerIcon(Icons.AutoMirrored.Rounded.ArrowBack, "返回", back)
                     Text(currentTitle, Modifier.weight(1f).padding(start = 8.dp), color = PlayerInk, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            videoDefinition(videoWidth,videoHeight)?.let { definition ->
+                Text(definition,Modifier.padding(horizontal=8.dp).clip(RoundedCornerShape(8.dp))
+                    .background(Color.White.copy(alpha=.13f)).semantics { contentDescription="视频清晰度 $definition，${videoWidth}×${videoHeight}" }
+                    .padding(horizontal=9.dp,vertical=5.dp).testTag("video-definition"),color=PlayerInk,fontSize=11.sp)
+            }
                     PlayerIcon(Icons.Rounded.Headphones, "后台播放", background)
                     if (smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; lock(true) })
@@ -265,14 +284,18 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 }
             }
         }
-        if (!compact && dragging) Column(Modifier.align(Alignment.Center).width(200.dp).clip(RoundedCornerShape(12.dp)).background(PlayerPanel), horizontalAlignment = Alignment.CenterHorizontally) {
-            val bitmap = frame
-            if (bitmap != null) Image(bitmap.asImageBitmap(), "进度预览", Modifier.fillMaxWidth().height(106.dp))
-            else Box(Modifier.fillMaxWidth().height(90.dp), contentAlignment = Alignment.Center) {
-                if (frameLoading) CircularProgressIndicator(Modifier.size(22.dp), color = PlayerInk) else Text(if (buffering) "优先保障播放" else "预览暂不可用", color = Color(0xFFC8CDD1), fontSize = 12.sp)
+        if (!compact && dragging) Column(Modifier.align(Alignment.Center).width(208.dp).clip(RoundedCornerShape(16.dp)).background(PlayerPanel), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().height(117.dp).background(Color.Black),contentAlignment=Alignment.Center) {
+                Crossfade(frame,animationSpec=tween(100),label="seek-preview-frame") { bitmap ->
+                    if(bitmap!=null)Image(bitmap.asImageBitmap(),"进度预览",Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Fit)
+                }
+                if(frameLoading)CircularProgressIndicator(Modifier.align(Alignment.TopEnd).padding(10.dp).size(15.dp),color=PlayerInk,strokeWidth=1.5.dp)
+                if(frame==null&&!frameLoading)Text("暂无预览",color=Color(0xFFC8CDD1),fontSize=12.sp)
             }
-            Text(playbackTime(target), color = PlayerInk, fontSize = 17.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 6.dp))
-            Text((if (target >= position) "+" else "−") + playbackTime(abs(target - position)), color = PlayerAccent, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            Text(time(target), color = PlayerInk, fontSize = 18.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 8.dp))
+            Text((if (target >= position) "+" else "−") + time(abs(target - position)), color = PlayerAccent, fontSize = 12.sp)
+            Text(if(frame!=null)"预览约 ${time(frameAt)}${if(frameLoading)" · 更新中"else""}"else if(frameLoading)"正在生成预览…"else"拖动以调整进度",
+                color=Color(0xFFC8CDD1),fontSize=10.sp,modifier=Modifier.padding(top=4.dp,bottom=9.dp))
         }
         if (!compact && !dragging) hud?.let { (name, value) -> Surface(Modifier.align(Alignment.Center).width(180.dp), shape = RoundedCornerShape(16.dp), color = PlayerPanel) {
             Column(Modifier.padding(18.dp)) { Text("$name  $value%", color = PlayerInk, fontSize = 16.sp); Spacer(Modifier.height(12.dp)); LinearProgressIndicator(progress = { value / 100f }, color = PlayerInk, trackColor = Color(0x55FFFFFF), modifier = Modifier.fillMaxWidth()) }

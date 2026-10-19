@@ -104,7 +104,9 @@ class FullscreenExperienceTest {
             scenario.onActivity { assertEquals(Configuration.ORIENTATION_LANDSCAPE, it.resources.configuration.orientation) }
             main { c.pause() }
             println("UX_METRICS $protocol ${PlaybackMetrics.snapshot()}")
-            capture("${protocol.name.lowercase()}-controls")
+            ui.onNodeWithTag("video-definition").assertIsDisplayed()
+        ui.onNodeWithText(videoDefinition(main{c.videoSize.width},main{c.videoSize.height})!!).assertIsDisplayed()
+        capture("${protocol.name.lowercase()}-controls")
             // Paused controls remain visible, so this test also catches the old non-clickable label.
             ui.waitForIdle()
             for (rate in listOf(.75f, 1f, 1.25f, 1.5f, 2f, 4f)) {
@@ -130,6 +132,11 @@ class FullscreenExperienceTest {
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput { down(Offset(width * .3f, height * .34f)); moveTo(Offset(width * .35f, height * .34f),700) }
             ui.waitUntil(20000){ui.onAllNodesWithContentDescription("进度预览").fetchSemanticsNodes().isNotEmpty()}
             capture("${protocol.name.lowercase()}-seek")
+        // A second seek bucket must not blank the already decoded image.
+        ui.onNodeWithTag("playback-gesture-surface").performTouchInput { moveBy(Offset(width*.18f,0f),100) }
+        ui.mainClock.advanceTimeBy(32);ui.waitForIdle()
+        assertTrue("Retain the last real preview while the latest position loads",ui.onAllNodesWithContentDescription("进度预览").fetchSemanticsNodes().isNotEmpty())
+
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput { up() }
             await("Horizontal gesture did not seek") { main { c.currentPosition > 7000 } }
             audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,2,0)

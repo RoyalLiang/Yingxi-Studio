@@ -70,7 +70,7 @@ class MainActivity:ComponentActivity(){
             val nearby=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted ->model.refreshDiscoveryPermission();if(granted)model.discover()else model.error="未授予附近设备访问权限，本机文件仍可打开"}
         LaunchedEffect(model){model.plays.collect{target ->
             if(openingPlayer||!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))target.release()
-            else {openingPlayer=true;runCatching{startActivity(PlaybackActivity.intent(this@MainActivity,target))}.onFailure{PlaybackRequests.remove(target.playId);openingPlayer=false;model.error="无法打开播放器"}}
+            else {openingPlayer=true;runCatching{startActivity(PlaybackActivity.intent(this@MainActivity,target),android.app.ActivityOptions.makeCustomAnimation(this@MainActivity,R.anim.player_enter,R.anim.player_exit).toBundle())}.onFailure{PlaybackRequests.remove(target.playId);openingPlayer=false;model.error="无法打开播放器"}}
         }}
             AppShell(model,localFiles,{openFile.launch(arrayOf("video/*"))},{openFolder.launch(null)},{nearby.launch(Manifest.permission.NEARBY_WIFI_DEVICES)})
         }
