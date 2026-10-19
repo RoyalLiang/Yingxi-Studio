@@ -51,7 +51,10 @@ jobs:
         with:
           cache-disabled: true
       - name: Android SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+        run: |
+          sdk_manager="${ANDROID_HOME:?Runner Android SDK location is missing}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdk_manager"
+          "$sdk_manager" 'platforms;android-36' 'build-tools;36.0.0'
       - name: Import signing material outside checkout
         env:
           STORE_BASE64: ${{ secrets.YINGXI_KEYSTORE_BASE64 }}
