@@ -56,7 +56,19 @@ object PlaybackRegistry {
         return Uri.Builder().scheme("localplayer").authority(token).appendPath(name).build()
     }
     fun get(uri: Uri): PlaybackLease = leases[uri.authority] ?: throw IOException("播放上下文已过期，请从来源重新打开")
+    // Artwork uses its own transport and cancellation; it must never close the player's lease.
+    fun preview(uri:Uri):PlaybackLease { val active=get(uri); return PlaybackLease(active.source,active.credentials,active.path) }
     fun remove(uri: Uri?) { if(uri?.scheme=="localplayer") leases.remove(uri.authority)?.let { lease -> closer.execute { lease.close() } } }
+    // Preserve the opaque registration for previous/next, but close its old transport.
+    // Replacement is atomic: a rapid jump back gets a fresh lease, never one closing later.
+    fun releaseConnection(uri:Uri?){
+        if(uri?.scheme!="localplayer")return
+        var previous:PlaybackLease?=null
+        leases.computeIfPresent(uri.authority!!){_,lease->
+            previous=lease;PlaybackLease(lease.source,lease.credentials,lease.path)
+        }
+        previous?.let{lease->closer.execute{lease.close()}}
+    }
     fun clear() { leases.keys.toList().forEach { token -> leases.remove(token)?.let { closer.execute { it.close() } } } }
 }
 
@@ -94,7 +106,9 @@ class RemoteDataSource : BaseDataSource(true) {
         if(closed)throw InterruptedIOException("读取已取消")
         if(remaining==0L)return C.RESULT_END_OF_INPUT
         val readAt=android.os.SystemClock.elapsedRealtime()
+        val readNanos=System.nanoTime()
         val n=file?.readAt(position,buffer,offset,minOf(length.toLong(),remaining).toInt()) ?: throw IOException("文件未打开")
+        if(n>0)PlaybackMetrics.read(n,System.nanoTime()-readNanos)
         val elapsed=android.os.SystemClock.elapsedRealtime()-readAt
         if(transferred==0L||elapsed>100)trace("read offset=$position bytes=$n took=${elapsed}ms")
         if(closed)throw InterruptedIOException("读取已取消")

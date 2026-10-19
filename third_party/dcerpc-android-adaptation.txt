@@ -1,0 +1,16 @@
+dcerpc 0.12.0 Android adaptation
+
+Upstream: https://github.com/rapid7/smbj-rpc
+License: BSD 3-Clause; see dcerpc-LICENSE.txt.
+
+The Gradle artifact transform in gradle/android-rpc.gradle.kts retains all upstream
+class members, instructions and resources. It replaces only constant-pool type
+references java/rmi/MarshalException and java/rmi/UnmarshalException with the
+project IOException subclass io/localplayer/core/RpcProtocolException, because
+Android does not provide these Java RMI classes. The subclass retains both
+upstream constructor descriptors. Artifact contents remain deterministically
+ordered; ZIP timestamps are normalized. No RMI transport is implemented or used.
+
+Share enumeration uses the transport request directly and continues using the
+absolute opaque resume handle, avoiding the upstream ServerService cursor
+accumulation behavior. Pagination bounds and error handling are tested locally.

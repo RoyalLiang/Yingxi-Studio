@@ -18,14 +18,25 @@ import javax.crypto.spec.GCMParameterSpec
 class SourceStore(context: Context) {
     private val prefs = context.getSharedPreferences("sources-v1", Context.MODE_PRIVATE)
     private val secrets = context.getSharedPreferences("secrets-v1", Context.MODE_PRIVATE)
+    private val presentation = context.getSharedPreferences("source-presentation-v1", Context.MODE_PRIVATE)
+    private companion object { val orderLock=Any() }
+    fun pinnedIds(): Set<String> = presentation.getStringSet("pinned",emptySet())?.toSet() ?: emptySet()
     fun load(): List<Source> = runCatching {
         val a = JSONArray(prefs.getString("sources", "[]"))
         (0 until a.length()).map { i -> a.getJSONObject(i).let { o -> Source(
             id=o.getString("id"), label=o.getString("label"), protocol=Protocol.valueOf(o.getString("protocol")),
             host=o.getString("host"), port=o.getInt("port"), root=o.getString("root"), username=o.optString("username"),
             domain=o.optString("domain"), trustedKey=o.optString("trustedKey").takeIf(String::isNotBlank),
-            trustedAuthority=o.optString("trustedAuthority").takeIf(String::isNotBlank)) } }
-    }.getOrDefault(emptyList())
+            trustedAuthority=o.optString("trustedAuthority").takeIf(String::isNotBlank),initialPath=o.optString("initialPath"),secure=o.optBoolean("secure",true),userAgent=o.optString("userAgent"),referer=o.optString("referer")) } }
+    }.getOrDefault(emptyList()).sortedBy { if(it.id in pinnedIds())0 else 1 }
+    fun togglePinned(id:String):Boolean = synchronized(orderLock) {
+        val existing=load().map{it.id}.toSet()
+        if(id !in existing)return@synchronized false
+        val pins=pinnedIds().intersect(existing).toMutableSet()
+        if(id in pins)pins.remove(id) else { if(pins.size>=3)return@synchronized false;pins.add(id) }
+        presentation.edit().putStringSet("pinned",pins).apply()
+        true
+    }
     @Synchronized fun save(source: Source, password: String, remember: Boolean, stillCurrent: () -> Boolean = { true }) {
         // Encrypt before updating the profile. Never fall back to plaintext on Keystore failure.
         val ciphertext = if (remember) encrypt(password) else null
@@ -35,13 +46,14 @@ class SourceStore(context: Context) {
         val a=JSONArray()
         sources.forEach { s -> a.put(JSONObject().put("id",s.id).put("label",s.label).put("protocol",s.protocol.name)
             .put("host",s.host).put("port",s.port).put("root",s.root).put("username",s.username).put("domain",s.domain)
-            .put("trustedKey",s.trustedKey ?: "").put("trustedAuthority",s.trustedAuthority ?: "")) }
+            .put("trustedKey",s.trustedKey ?: "").put("trustedAuthority",s.trustedAuthority ?: "").put("initialPath",s.initialPath).put("secure",s.secure).put("userAgent",s.userAgent).put("referer",s.referer)) }
         prefs.edit().putString("sources",a.toString()).apply()
     }
     @Synchronized fun delete(id: String) {
         val a=JSONArray(prefs.getString("sources","[]"));val next=JSONArray()
         for(i in 0 until a.length()) if(a.getJSONObject(i).getString("id")!=id) next.put(a.getJSONObject(i))
         prefs.edit().putString("sources",next.toString()).apply();secrets.edit().remove(id).apply()
+        synchronized(orderLock){presentation.edit().putStringSet("pinned",pinnedIds()-id).apply()}
     }
     fun password(id: String): String? = secrets.getString(id,null)?.let {
         try { decrypt(it) } catch (_: Exception) { throw java.io.IOException("本机凭据无法解密，请重新输入密码") }

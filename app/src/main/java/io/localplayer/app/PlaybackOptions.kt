@@ -1,6 +1,14 @@
 package io.localplayer.app
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -8,7 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,6 +30,7 @@ import java.util.Locale
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit){
     val context=LocalContext.current
+    val speedColumns=if(LocalDensity.current.fontScale>1.3f)2 else 3
     val prefs=remember(context){PlaybackPreferences(context)}
     var tracks by remember(controller){mutableStateOf(controller.currentTracks)}
     var parameters by remember(controller){mutableStateOf(controller.trackSelectionParameters)}
@@ -33,13 +44,14 @@ import java.util.Locale
         controller.addListener(listener);onDispose{controller.removeListener(listener)}
     }
     MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFFFFA1BC),surface=Color(0xFF202126),onSurface=Paper,onPrimary=Color(0xFF53102A),secondaryContainer=Color(0xFF67273B),onSecondaryContainer=Paper)){
-        ModalBottomSheet(onDismissRequest=onDismiss,containerColor=MaterialTheme.colorScheme.surface){
-            LazyColumn(contentPadding=PaddingValues(start=24.dp,end=24.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        ModalBottomSheet(onDismissRequest=onDismiss,containerColor=MaterialTheme.colorScheme.surface.copy(alpha=.97f),contentColor=Paper,scrimColor=Color(0x990D0D13),shape=RoundedCornerShape(topStart=32.dp,topEnd=32.dp)){
+            SheetGlassEffect()
+            LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(start=24.dp,end=24.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
                 item{Text("播放设置",fontSize=25.sp,fontWeight=FontWeight.SemiBold)}
                 item{Text("播放速度",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 item{Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
-                    listOf(.5f,.75f,1f,1.25f,1.5f,2f).chunked(3).forEach{row->Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        row.forEach{value->FilterChip(modifier=Modifier.weight(1f),selected=speed==value,onClick={controller.setPlaybackSpeed(value);prefs.speed=value},label={Text(speedLabel(value),Modifier.fillMaxWidth(),textAlign=androidx.compose.ui.text.style.TextAlign.Center)})}
+                    listOf(.75f,1f,1.25f,1.5f,2f,4f).chunked(speedColumns).forEach{row->Row(Modifier.fillMaxWidth().background(Color(0xFF303138),RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        row.forEach{value->ChoicePill(speedLabel(value),speed==value,Modifier.weight(1f),dark=true){controller.setPlaybackSpeed(value);prefs.speed=value}}
                     }}
                 }}
                 item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
@@ -76,10 +88,12 @@ import java.util.Locale
     }
 }
 
-@Composable private fun TrackChoice(label:String,selected:Boolean,enabled:Boolean=true,choose:()->Unit){
-    Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clickable(enabled=enabled,onClick=choose),verticalAlignment=Alignment.CenterVertically){
-        RadioButton(selected=selected,onClick=null,enabled=enabled);Text(label,Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp,color=if(enabled)Paper else Color(0xFF85858A))
-        if(!enabled)Text("不支持",fontSize=12.sp,color=Color(0xFF85858A))
+@Composable fun TrackChoice(label:String,selected:Boolean,enabled:Boolean=true,choose:()->Unit){
+    Row(Modifier.fillMaxWidth().background(if(selected)Color(0xFF422C37)else Color(0xFF292A31),RoundedCornerShape(14.dp))
+        .selectable(selected=selected,enabled=enabled,role=Role.RadioButton,onClick=choose).heightIn(min=52.dp).padding(horizontal=16.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(enabled)Paper else Color(0xFF9C9CA5))
+        if(selected)Icon(Icons.Rounded.Check,null,tint=Color(0xFFFFB4C8),modifier=Modifier.size(20.dp))
+        if(!enabled)Text("不支持",fontSize=12.sp,color=Color(0xFF9C9CA5))
     }
 }
 fun speedLabel(value:Float)=if(value==value.toInt().toFloat())"${value.toInt()}×"else"${value}×"

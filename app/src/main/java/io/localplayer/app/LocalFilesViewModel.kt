@@ -107,7 +107,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                             rows+=LocalEntry(DocumentsContract.buildDocumentUriUsingTree(folder.tree,cursor.getString(0)),name,directory,video,if(cursor.isNull(3))0L else cursor.getLong(3))
                         }
                     }?:throw java.io.IOException("文件夹无法读取")
-                    rows.sortedWith(compareByDescending<LocalEntry>{it.directory}.thenBy{it.name.lowercase(Locale.ROOT)})
+                    rows.sortedWith(Comparator { a,b -> b.directory.compareTo(a.directory).takeIf { it != 0 } ?: io.localplayer.core.MediaOrdering.compare(a.name,null,a.uri.toString(),b.name,null,b.uri.toString()) })
                 }
                 if(id==generation&&folder in folders){active=folder;trail=target;entries=result}
             }catch(e:CancellationException){throw e}

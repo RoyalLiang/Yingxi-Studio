@@ -11,14 +11,31 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
-data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""),val port:String=source.port.toString(),val password:String="",val remember:Boolean=true)
-data class PlayTarget(val uri:Uri,val title:String,val resume:Long,val media:MediaRef,val historyToken:HistoryToken?=null,val playId:String=java.util.UUID.randomUUID().toString())
+data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""),val port:String=source.port.toString(),val password:String="",val remember:Boolean=true,
+    val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV)source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
+data class SourceAccess(val source:Source,val password:String="",val remember:Boolean=false,val path:String="")
 private data class ReplayRequest(val entry:HistoryEntry,val fromStart:Boolean,val token:HistoryToken)
 
 class LibraryViewModel(app:Application):AndroidViewModel(app) {
     private val store=SourceStore(app)
+    val organization=SourceOrganization(app)
+    var organizationRevision by mutableIntStateOf(0);private set
+    var shareChoices by mutableStateOf<List<String>?>(null);private set
+    var selectedGroup by mutableStateOf("all")
+    var autoDiscoveryEnabled by mutableStateOf(app.getSharedPreferences("discovery",0).getBoolean("auto",true));private set
+    var nearbyPermissionGranted by mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(app,android.Manifest.permission.NEARBY_WIFI_DEVICES)==android.content.pm.PackageManager.PERMISSION_GRANTED);private set
+    private var discoveryEligible=false
+    private var autoActive=false
+    private var networkCallback:android.net.ConnectivityManager.NetworkCallback?=null
+    private var lastNetwork:String?=null
     private val historyStore=HistoryStore(app)
     var sources by mutableStateOf(store.load());private set
+    var pinnedIds by mutableStateOf(store.pinnedIds());private set
+    var access by mutableStateOf<SourceAccess?>(null);private set
+    var openingSource by mutableStateOf<Source?>(null);private set
+    var privateRequest by mutableStateOf<PrivateSourceRequest?>(null);private set
+    private var discoveryAllowed=false
+    private var discoveryEpoch=0L
     var history by mutableStateOf(emptyList<HistoryEntry>());private set
     var candidates by mutableStateOf(emptyList<Candidate>());private set
     var discoveryMessage by mutableStateOf("发现当前局域网中的 SMB / SFTP 服务");private set
@@ -38,51 +55,121 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
     private var job:Job?=null
     private var cancellation:Cancellation?=null
     @Volatile private var generation=0L
-    private val playChannel=Channel<PlayTarget>(Channel.BUFFERED)
+    private val playChannel=Channel<PlayTarget>(Channel.BUFFERED,onUndeliveredElement={it.release()})
     val plays=playChannel.receiveAsFlow()
     init { refreshHistory() }
 
     fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{history=it}.onFailure{error=it.message}}
-    fun removeHistory(entry:HistoryEntry){if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
-    fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();store.clearPositions();refreshHistory()}
-    fun discover(){
-        stopDiscovery();candidates=emptyList();scanning=true;discoveryMessage="正在发现附近服务…"
-        discovery=Discovery(getApplication(),::onCandidate,{discoveryMessage=it}).also{it.start()}
-        discoveryJob=viewModelScope.launch{delay(10_000);stopDiscovery();discoveryMessage="发现结束；未广播的服务器可手动添加"}
+    fun removeHistory(entry:HistoryEntry){if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);MediaThumbnails.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
+    fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();MediaThumbnails.clear(getApplication());store.clearPositions();refreshHistory()}
+    fun setDiscoveryEnabled(enabled:Boolean){discoveryEligible=enabled;refreshDiscoveryPermission()}
+    fun refreshDiscoveryPermission(){
+        nearbyPermissionGranted=androidx.core.content.ContextCompat.checkSelfPermission(getApplication(),android.Manifest.permission.NEARBY_WIFI_DEVICES)==android.content.pm.PackageManager.PERMISSION_GRANTED
+        if(discoveryEligible&&nearbyPermissionGranted)beginAutoDiscovery()else endAutoDiscovery()
+    }
+    private fun discoveryReady():Boolean {
+        nearbyPermissionGranted=androidx.core.content.ContextCompat.checkSelfPermission(getApplication(),android.Manifest.permission.NEARBY_WIFI_DEVICES)==android.content.pm.PackageManager.PERMISSION_GRANTED
+        if(!nearbyPermissionGranted){discoveryAllowed=false;discoveryMessage="请先允许附近设备访问";return false}
+        val cm=getApplication<Application>().getSystemService(android.net.ConnectivityManager::class.java)
+        val caps=cm.activeNetwork?.let{cm.getNetworkCapabilities(it)}
+        val local=caps!=null&&!caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)&&(caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)||caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET))
+        if(!local){discoveryAllowed=false;discoveryMessage="请连接 Wi-Fi 或以太网后发现";return false}
+        discoveryAllowed=true;return true
+    }
+    fun discover(supplement:Boolean=false){
+        stopDiscovery();if(!discoveryReady())return;val epoch=discoveryEpoch
+        candidates=emptyList();scanning=true;discoveryMessage="正在发现附近服务…"
+        discovery=Discovery(getApplication(),{if(discoveryAllowed&&epoch==discoveryEpoch)onCandidate(it)},{if(discoveryAllowed&&epoch==discoveryEpoch)discoveryMessage=it}).also{it.start()}
+        discoveryJob=viewModelScope.launch{delay(10_000);stopDiscovery();discoveryMessage="发现结束；未广播的服务器可手动添加";if(supplement&&autoActive&&autoDiscoveryEnabled)probe()}
     }
     private fun onCandidate(c:Candidate){candidates=(candidates.filterNot{it.id==c.id}+c).sortedBy{it.name.lowercase()}}
-    fun stopDiscovery(){discoveryJob?.cancel();discoveryJob=null;discovery?.close();discovery=null;probe?.close();probe=null;scanning=false}
-    fun probe(){stopDiscovery();scanning=true;discoveryMessage="补充发现中 · 仅当前局域网 22/445 端口"
-        probe=LocalProbe(getApplication(),::onCandidate,{discoveryMessage=it;scanning=false}).also{it.start()}}
+    fun stopDiscovery(){discoveryEpoch++;discoveryJob?.cancel();discoveryJob=null;discovery?.close();discovery=null;probe?.close();probe=null;scanning=false}
+    fun probe(){
+        stopDiscovery();if(!discoveryReady())return;val epoch=discoveryEpoch;scanning=true;discoveryMessage="补充发现中 · 仅当前局域网 22/445 端口"
+        probe=LocalProbe(getApplication(),{if(discoveryAllowed&&epoch==discoveryEpoch)onCandidate(it)},
+            {if(discoveryAllowed&&epoch==discoveryEpoch){discoveryMessage=it;scanning=false}}).also{it.start()}
+    }
+    fun togglePin(saved:Source){
+        if(!store.togglePinned(saved.id)){error="最多置顶 3 个来源，请先取消一个置顶";return}
+        pinnedIds=store.pinnedIds();sources=store.load()
+    }
+    fun removeSource(saved:Source){
+        if(source?.id==saved.id||openingSource?.id==saved.id)closeSource()
+        if(draft?.source?.id==saved.id)dismissDraft()
+        if(access?.source?.id==saved.id)dismissAccess()
+        if(privateRequest?.source?.id==saved.id)privateRequest=null
+        organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load()
+    }
+    fun privateAccess(saved:Source){
+        stopDiscovery();cancelOperation();draft=null;access=null;openingSource=null;privateRequest=PrivateSourceRequest(saved)
+    }
+    fun completePrivateAccess(id:String){val request=privateRequest?.takeIf{it.id==id} ?: return;privateRequest=null;open(request.source)}
+    fun cancelPrivateAccess(id:String,message:String?=null){if(privateRequest?.id!=id)return;privateRequest=null;if(message!=null)error=message}
+    fun open(saved:Source,location:String=saved.initialPath){
+        stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;draft=null;access=null;openingSource=saved
+        val request=generation
+        val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
+        source=null;credentials=null;path="";entries=emptyList()
+        viewModelScope.launch{try{
+            val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
+            if(request!=generation)return@launch
+            if(pass!=null||saved.username.isBlank())load(saved,Credentials(pass ?: ""),location,false,false)
+            else{openingSource=null;access=SourceAccess(saved,path=location)}
+        }catch(e:Exception){if(request==generation){openingSource=null;access=SourceAccess(saved,path=location);error="无法读取保存的密码，请重新认证"}}}
+    }
+    fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
+    fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
+    fun dismissAccess(){cancelOperation();pendingReplay=null;trust=null;access=null;openingSource=null;error=null}
     fun edit(saved:Source){
-        cancelOperation();pendingReplay=null;draft=Draft(saved)
+        stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null;draft=Draft(saved)
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){store.password(saved.id)}
             if(draft?.source?.id==saved.id&&draft?.password.isNullOrEmpty())draft=draft?.copy(password=pass ?: "")
         }catch(e:Exception){error=e.message}}
     }
     fun add(candidate:Candidate?=null){
-        cancelOperation();pendingReplay=null
+        stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null
         val protocol=candidate?.protocol ?: Protocol.SMB
         draft=Draft(Source(label=candidate?.name ?: "",protocol=protocol,host=candidate?.host ?: "",port=candidate?.port ?: if(protocol==Protocol.SMB)445 else 22,root=if(protocol==Protocol.SFTP)"/"else""))
     }
     fun connectDraft(){
-        val d=draft ?: return
-        try{
-            val s=d.source.copy(host=d.source.host.trim().removeSurrounding("[","]"),label=d.source.label.trim().ifEmpty{d.source.host.trim()},port=d.port.toIntOrNull() ?: throw IllegalArgumentException("端口应为数字"),root=d.source.root.trim())
+        val d=draft?:return
+        try {
+            var s=if(d.source.protocol==Protocol.WEBDAV){
+                val parsed=d.source.withWebDavAddress(d.webDavUrl);require(parsed.secure||d.allowHttp){"HTTP 不加密，请先确认允许明文连接"};parsed.copy(label=parsed.label.trim().ifEmpty{parsed.host})
+            }else d.source.copy(host=d.source.host.trim().removeSurrounding("[","]"),label=d.source.label.trim().ifEmpty{d.source.host.trim()},port=d.port.toIntOrNull()?:throw IllegalArgumentException("端口应为数字"),root=d.source.root.trim())
+            if(s.protocol==Protocol.SMB && (s.host.contains("://")||s.host.startsWith("\\")||s.host.startsWith("//")||s.host.contains('/'))){
+                val address=SmbAddress.parse(s.host)
+                s=s.copy(host=address.host,port=if(address.port!=445||d.port=="445")address.port else s.port,root=address.share.ifEmpty{s.root},initialPath=address.path,label=d.source.label.trim().ifEmpty{address.host})
+                draft=d.copy(source=s,port=s.port.toString())
+            }
+            if(s.protocol==Protocol.SMB && s.root.isBlank()) { enumerateShares(s,Credentials(d.password));return }
             s.validate();if(s.protocol==Protocol.SFTP)require(s.username.isNotBlank()){"请填写 SFTP 用户名"}
-            val parent=pendingReplay?.takeIf{it.entry.media.sourceId==s.id}?.entry?.media?.path?.substringBeforeLast('/',"") ?: ""
+            val parent=pendingReplay?.takeIf{it.entry.media.sourceId==s.id}?.entry?.media?.path?.substringBeforeLast('/',"") ?: d.browsePath ?: s.initialPath
             load(s,Credentials(d.password),parent,d.remember,true)
-        }catch(e:IllegalArgumentException){error=e.message}
+        } catch(e:IllegalArgumentException){error=e.message}
     }
+    private fun enumerateShares(s:Source,c:Credentials){
+        cancelOperation();val id=generation;val token=Cancellation();cancellation=token;busy=true;error=null
+        job=viewModelScope.launch { try {
+            val names=withContext(Dispatchers.IO){SmbShares.list(s,c,token)}
+            if(id==generation){shareChoices=names;if(names.isEmpty())error="服务器未返回共享，请手动填写共享名"}
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(id==generation)error="无法列出共享，请核对账户或在高级选项填写共享名（${e.javaClass.simpleName}）"}
+        finally{withContext(NonCancellable+Dispatchers.IO){token.close()};if(id==generation){busy=false;cancellation=null}} }
+    }
+    fun chooseShare(name:String){draft=draft?.let{it.copy(source=it.source.copy(root=name))};shareChoices=null;connectDraft()}
+    fun closeShares(){shareChoices=null}
     fun trustKey(){val t=trust ?: return
         draft=draft?.let{it.copy(source=it.source.copy(trustedKey=t.fingerprint,trustedAuthority=t.source.authority))}
-        trust=null;connectDraft()
+        if(draft!=null){trust=null;connectDraft()}else{
+            access=access?.let{it.copy(source=it.source.copy(trustedKey=t.fingerprint,trustedAuthority=t.source.authority))}
+            trust=null;connectAccess()
+        }
     }
     fun rejectKey(){trust=null;error="已拒绝该服务器，未发送密码认证"}
     fun browse(newPath:String){val s=source ?: return;val c=credentials ?: return;load(s,c,newPath,false,false)}
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
-        cancelOperation();val id=++generation;val token=Cancellation();cancellation=token;busy=true;error=null
+        stopDiscovery();cancelOperation();val id=++generation;val token=Cancellation();cancellation=token;busy=true;error=null
         job=viewModelScope.launch{
             try{
                 val result=withContext(Dispatchers.IO){Protocols().connect(s,c,token).use{session ->
@@ -91,7 +178,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                     list
                 }}
                 if(id==generation){
-                    source=s;credentials=c;path=newPath;entries=result;draft=null;sources=store.load()
+                    source=s;openingSource=null;credentials=c;path=newPath;entries=result;draft=null;access=null;sources=store.load()
                     val replay=pendingReplay?.takeIf{it.entry.media.sourceId==s.id};pendingReplay=null
                     if(replay!=null){
                         val entry=result.firstOrNull{!it.directory&&it.path==replay.entry.media.path}
@@ -100,14 +187,14 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                     }
                 }
             }catch(e:CancellationException){throw e}
-            catch(e:HostKeyRequired){if(id==generation)trust=e}
+            catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=if(e is IllegalArgumentException)e.message else "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"}
-            finally{if(id==generation){busy=false;cancellation=null}}
+            finally{if(id==generation){busy=false;cancellation=null;openingSource=null}}
         }
     }
     fun cancelOperation(){generation++;job?.cancel();job=null;val old=cancellation;cancellation=null;busy=false
         if(old!=null)CoroutineScope(Dispatchers.IO).launch{old.close()}}
-    fun closeSource(){cancelOperation();source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;error=null}
+    fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;error=null}
     fun up(){if(path.isEmpty())closeSource()else browse(path.substringBeforeLast('/',""))}
     fun play(entry:Entry,fromStart:Boolean=false,requestedToken:HistoryToken?=null){
         val s=source ?: return;val c=credentials ?: return
@@ -116,8 +203,15 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
             val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
             val token=requestedToken ?: historyStore.token(ref.key)
             if(token!=historyStore.token(ref.key))return
-            val uri=PlaybackRegistry.add(s,c,entry.path,entry.name)
-            viewModelScope.launch{playChannel.send(PlayTarget(uri,entry.name,resume,ref,token))}
+            val videos=entries.filter{!it.directory&&it.isVideo}
+            val siblings=PlaybackRequests.window(videos,entry)
+            val queue=siblings.map{e->
+                val item=MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s))
+                QueuedMedia(PlaybackRegistry.add(s,c,e.path,e.name),item,if(e.path==entry.path)token else historyStore.token(item.key))
+            }
+            val selected=queue.first{it.media.path==entry.path}
+            val target=PlayTarget(selected.uri,entry.name,resume,ref,token,queue=queue,truncated=videos.size>siblings.size)
+            viewModelScope.launch{try{playChannel.send(target)}catch(e:CancellationException){target.release();throw e}}
         }.onFailure{error=it.message}
     }
     fun resume(entry:HistoryEntry,fromStart:Boolean=false){
@@ -127,16 +221,17 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         val saved=sources.firstOrNull{it.id==ref.sourceId}
         if(saved==null){error="这个来源已移除，请重新添加后选择影片";return}
         if(ref.location!=null&&ref.location!=mediaLocation(saved)){error="来源身份已变更，请从来源重新选择影片";return}
-        cancelOperation();pendingReplay=ReplayRequest(entry,fromStart,historyStore.token(ref.key))
+        stopDiscovery();cancelOperation();draft=null;access=null;pendingReplay=ReplayRequest(entry,fromStart,historyStore.token(ref.key))
         val request=generation;val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
             if(request!=generation)return@launch
-            draft=Draft(saved,password=pass ?: "",remember=store.hasPassword(saved.id))
-            if(pass!=null||saved.username.isBlank())connectDraft()
-        }catch(e:Exception){if(request==generation){error="无法读取保存的凭据，请重新输入";draft=Draft(saved,remember=false)}}}
+            val parent=ref.path?.substringBeforeLast('/',"") ?: ""
+            if(pass!=null||saved.username.isBlank()){openingSource=saved;load(saved,Credentials(pass ?: ""),parent,false,false)}
+            else access=SourceAccess(saved,path=parent)
+        }catch(e:Exception){if(request==generation){error="无法读取保存的凭据，请重新输入";access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
     }
-    fun playLocal(uri:Uri,fromStart:Boolean=false){
+    fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList()){
         cancelOperation();pendingReplay=null;val request=generation
         val requestedToken=historyStore.token(uri.toString())
         viewModelScope.launch{try{
@@ -154,10 +249,43 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                 MediaRef(uri.toString(),title,"本机文件",localUri=uri.toString(),sizeBytes=size)
             }
             val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
-            if(request==generation&&requestedToken==historyStore.token(ref.key))playChannel.send(PlayTarget(uri,ref.title,resume,ref,requestedToken))
+            if(request==generation&&requestedToken==historyStore.token(ref.key)){
+                val videos=siblings.filter{!it.directory&&it.video}
+                val selected=videos.firstOrNull{it.uri==uri}
+                val window=if(selected!=null)PlaybackRequests.window(videos,selected)else emptyList()
+                val queue=window.map{e->
+                    val item=if(e.uri==uri)ref else MediaRef(e.uri.toString(),e.name,"本机文件",localUri=e.uri.toString(),sizeBytes=e.size)
+                    QueuedMedia(e.uri,item,if(e.uri==uri)requestedToken else historyStore.token(item.key))
+                }
+                playChannel.send(PlayTarget(uri,ref.title,resume,ref,requestedToken,queue=queue,truncated=videos.size>window.size&&window.isNotEmpty()))
+            }
         }catch(e:Exception){if(request==generation)error="本机文件无法读取，请通过“打开本机视频”重新选择"}}
     }
-    fun dismissDraft(){cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
-    fun deleteDraft(){cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load()}
-    override fun onCleared(){stopDiscovery();cancelOperation();super.onCleared()}
+    fun dismissDraft(){shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
+    fun deleteDraft(){draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds()}
+    fun putBookmark(item:SourceBookmark){error=null;runCatching{organization.put(item);organizationRevision++}.onFailure{error=it.message}}
+    fun removeBookmark(key:String){organization.remove(key);organizationRevision++}
+    fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onFailure{error=it.message}}
+    fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all"}
+    fun openLocation(item:SourceBookmark){sources.firstOrNull{it.id==item.sourceId}?.let{open(it,item.path)}}
+    fun setAutoDiscovery(value:Boolean){autoDiscoveryEnabled=value;getApplication<Application>().getSharedPreferences("discovery",0).edit().putBoolean("auto",value).apply();if(!value)stopDiscovery()else if(autoActive)discover(true)}
+    fun beginAutoDiscovery(){
+        if(autoActive)return;autoActive=true;discoveryAllowed=true
+        val app=getApplication<Application>()
+        val cm=app.getSystemService(android.net.ConnectivityManager::class.java)
+        val callback=object:android.net.ConnectivityManager.NetworkCallback(){
+            override fun onCapabilitiesChanged(network:android.net.Network,caps:android.net.NetworkCapabilities){
+                val local=(caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)||caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET))&&!caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+                android.os.Handler(android.os.Looper.getMainLooper()).post{
+                    val key=network.toString()
+                    if(autoActive&&autoDiscoveryEnabled&&local&&lastNetwork!=key){lastNetwork=key;discover(true)}else if(autoActive&&!local){lastNetwork=null;stopDiscovery();candidates=emptyList();discoveryMessage="当前网络不进行局域网探测"}
+                }
+            }
+            override fun onLost(network:android.net.Network){android.os.Handler(android.os.Looper.getMainLooper()).post{if(autoActive&&lastNetwork==network.toString()){lastNetwork=null;stopDiscovery();candidates=emptyList();discoveryMessage="网络已断开"}}}
+        }
+        networkCallback=callback
+        runCatching{cm.registerDefaultNetworkCallback(callback)}.onFailure{discoveryMessage="无法观察网络，可手动发现"}
+    }
+    fun endAutoDiscovery(){autoActive=false;discoveryAllowed=false;lastNetwork=null;networkCallback?.let{runCatching{getApplication<Application>().getSystemService(android.net.ConnectivityManager::class.java).unregisterNetworkCallback(it)}};networkCallback=null;stopDiscovery()}
+    override fun onCleared(){endAutoDiscovery();playChannel.cancel();stopDiscovery();cancelOperation();super.onCleared()}
 }

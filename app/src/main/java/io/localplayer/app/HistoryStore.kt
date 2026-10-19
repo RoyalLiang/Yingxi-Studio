@@ -8,7 +8,8 @@ import java.security.MessageDigest
 import io.localplayer.core.Source
 
 fun mediaLocation(source:Source):String {
-    val identity=listOf(source.protocol.name,source.authority,source.root,source.username,source.domain,source.trustedKey ?: "").joinToString("\u0000")
+    val identity=(listOf(source.protocol.name,source.authority,source.root,source.username,source.domain,source.trustedKey ?: "")+
+        if(source.protocol==io.localplayer.core.Protocol.WEBDAV)listOf(source.secure.toString()) else emptyList()).joinToString("\u0000")
     return "v1:"+MessageDigest.getInstance("SHA-256").digest(identity.toByteArray()).joinToString(""){"%02x".format(it)}
 }
 

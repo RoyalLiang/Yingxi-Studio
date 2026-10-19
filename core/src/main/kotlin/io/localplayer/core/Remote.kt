@@ -5,19 +5,23 @@ import java.io.InterruptedIOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-enum class Protocol { SMB, SFTP }
+enum class Protocol { SMB, SFTP, WEBDAV }
 
 data class Source(
     val id: String = UUID.randomUUID().toString(),
     val label: String,
     val protocol: Protocol,
     val host: String,
-    val port: Int = if (protocol == Protocol.SMB) 445 else 22,
+    val port: Int = when(protocol) { Protocol.SMB -> 445; Protocol.SFTP -> 22; Protocol.WEBDAV -> 443 },
     val root: String = if (protocol == Protocol.SMB) "" else "/",
     val username: String = "",
     val domain: String = "",
     val trustedKey: String? = null,
     val trustedAuthority: String? = null,
+    val initialPath: String = "",
+    val secure: Boolean = true,
+    val userAgent: String = "",
+    val referer: String = "",
 ) {
     val authority: String get() = "${host.lowercase()}:$port"
     fun validate() {
@@ -25,8 +29,13 @@ data class Source(
         require(port in 1..65535) { "端口应为 1–65535" }
         require(label.isNotBlank()) { "请填写来源名称" }
         if (protocol == Protocol.SMB) require(root.isNotBlank() && root.none { it == '/' || it == '\\' }) { "SMB 请填写单个共享名" }
-        else require(root.startsWith('/')) { "SFTP 根目录必须以 / 开头" }
-        Paths.clean(if (protocol == Protocol.SFTP) root else "")
+        else require(root.startsWith('/')) { "根目录必须以 / 开头" }
+        Paths.clean(if (protocol != Protocol.SMB) root else ""); Paths.clean(initialPath)
+        if(protocol == Protocol.WEBDAV) {
+            require(':' !in username) { "WebDAV 用户名不能包含冒号" }
+            require(listOf(userAgent,referer).none { '\r' in it || '\n' in it }) { "请求头不能包含换行" }
+            require(referer.isEmpty() || runCatching { java.net.URI(referer).let { it.scheme == "https" && it.host != null && it.userInfo == null } }.getOrDefault(false)) { "Referer 应为 HTTPS 地址" }
+        }
     }
 }
 
@@ -35,7 +44,7 @@ class Credentials(val password: String) {
     override fun toString(): String = "Credentials([redacted])"
 }
 
-data class Entry(val name: String, val path: String, val directory: Boolean, val size: Long) {
+data class Entry(val name: String, val path: String, val directory: Boolean, val size: Long, val createdAt: Long? = null) {
     val isVideo: Boolean get() = !directory && name.substringAfterLast('.', "").lowercase() in
         setOf("mp4", "mkv", "m4v", "mov", "webm", "avi", "ts", "m2ts", "mpg", "mpeg", "wmv", "flv", "3gp")
 }
@@ -93,6 +102,7 @@ class Protocols : Connector {
         return when (source.protocol) {
             Protocol.SMB -> SmbConnector().connect(source, credentials, cancellation)
             Protocol.SFTP -> SftpConnector().connect(source, credentials, cancellation)
+            Protocol.WEBDAV -> WebDavConnector().connect(source, credentials, cancellation)
         }
     }
 }

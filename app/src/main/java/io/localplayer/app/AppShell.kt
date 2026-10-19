@@ -1,6 +1,25 @@
 package io.localplayer.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,39 +52,68 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
     var localOpen by rememberSaveable{mutableStateOf(false)}
+    var settingsOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
-    val states=rememberSaveableStateHolder()
+    if(settingsOpen){SettingsRoute{settingsOpen=false};return}
     if(localOpen){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);return}
-    LifecycleEventEffect(Lifecycle.Event.ON_START){vm.refreshHistory();if(vm.source==null)vm.discover()}
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    LifecycleEventEffect(Lifecycle.Event.ON_START){vm.refreshHistory()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){vm.stopDiscovery();vm.cancelOperation()}
-    LaunchedEffect(tab){if(tab==AppTab.Sources&&vm.source==null&&vm.candidates.isEmpty()&&!vm.scanning)vm.discover()}
-    BackHandler(tab!=AppTab.Home&&(tab!=AppTab.Sources||vm.source==null)&&vm.draft==null){tab=AppTab.Home}
-    Scaffold(containerColor=Paper,contentWindowInsets=WindowInsets(0,0,0,0),bottomBar={
-        Column{
-            HorizontalDivider(color=Color(0xFFE6E2E3),thickness=.5.dp)
-            NavigationBar(containerColor=Paper,tonalElevation=0.dp){AppTab.entries.forEach{item ->
-                NavigationBarItem(selected=tab==item,onClick={vm.cancelOperation();tab=item},icon={Icon(item.icon,item.label)},label={Text(item.label,fontSize=12.sp)},
-                    colors=NavigationBarItemDefaults.colors(selectedIconColor=Berry,selectedTextColor=Berry,indicatorColor=Color(0xFFF7E2E8),unselectedIconColor=Muted,unselectedTextColor=Muted))
-            }}
-        }
-    }){padding ->
-        Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))){
+    LaunchedEffect(tab,lifecycleState,vm.draft==null,vm.access==null,vm.privateRequest==null){
+        vm.setDiscoveryEnabled(tab==AppTab.Home&&lifecycleState.isAtLeast(Lifecycle.State.STARTED)&&vm.draft==null&&vm.access==null&&vm.privateRequest==null)
+    }
+    DisposableEffect(vm){onDispose{vm.setDiscoveryEnabled(false)}}
+    BackHandler(tab!=AppTab.Home&&(tab!=AppTab.Sources||vm.source==null)&&vm.draft==null&&vm.access==null&&vm.privateRequest==null){tab=AppTab.Home}
+    val states=rememberSaveableStateHolder()
+    val scene=rememberGraphicsLayer()
+    Box(Modifier.fillMaxSize()){
+        // Keep the chrome out of the captured scene. List content can move beneath it.
+        Column(Modifier.fillMaxSize().drawWithContent{scene.record{this@drawWithContent.drawContent()};drawLayer(scene)}
+            .background(Paper).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal))){
             if(tab!=AppTab.Sources)StatusBanner(vm)
-            Box(Modifier.weight(1f)){
-                states.SaveableStateProvider(tab.name){when(tab){
-                    AppTab.Home->HomeScreen(vm,openLocal,{tab=AppTab.Sources},{tab=AppTab.Sources;vm.add()},{s->tab=AppTab.Sources;vm.edit(s)})
+            AnimatedContent(targetState=tab,modifier=Modifier.weight(1f),transitionSpec={
+                fadeIn(tween(220)) togetherWith fadeOut(tween(140))
+            },label="page fade"){page->
+                states.SaveableStateProvider(page.name){when(page){
+                    AppTab.Home->HomeScreen(vm,openLocal,{tab=AppTab.Sources},{tab=AppTab.Sources;vm.add()},{source->tab=AppTab.Sources;vm.open(source)},{candidate->tab=AppTab.Sources;vm.add(candidate)},requestNearby,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{tab=AppTab.Sources})
                 }}
             }
         }
+        CompositionLocalProvider(LocalGlassBackdrop provides scene){
+            GlassSurface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth(),radius=30){
+                Box(Modifier.fillMaxWidth().padding(5.dp)){
+                    BoxWithConstraints(Modifier.matchParentSize()){
+                        val width=maxWidth/AppTab.entries.size
+                        val x by animateDpAsState(width*tab.ordinal,spring(dampingRatio=.86f,stiffness=420f),label="navigation lens")
+                        Box(Modifier.offset(x=x).width(width).fillMaxHeight()
+                            .background(Brush.verticalGradient(listOf(Berry.copy(alpha=.15f),Berry.copy(alpha=.06f))),RoundedCornerShape(25.dp))
+                            .border(.7.dp,Color.White.copy(alpha=.85f),RoundedCornerShape(25.dp)))
+                    }
+                    Row(Modifier.fillMaxWidth().selectableGroup()){
+                        AppTab.entries.forEach{item->
+                            val selected=tab==item
+                            val scale by animateFloatAsState(if(selected)1.04f else .96f,spring(stiffness=500f),label="tab emphasis")
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(25.dp)).selectable(selected=selected,role=Role.Tab,onClick={vm.cancelOperation();tab=item})
+                                .heightIn(min=58.dp).padding(horizontal=4.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                                Icon(item.icon,null,tint=if(selected)Berry else Muted,modifier=Modifier.size(23.dp).graphicsLayer{scaleX=scale;scaleY=scale})
+                                Spacer(Modifier.height(3.dp))
+                                Text(item.label,fontSize=11.sp,lineHeight=14.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Medium,
+                                    color=if(selected)Berry else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SourceDialogs(vm)
     }
-    SourceDialogs(vm)
 }
 
 @Composable private fun StatusBanner(vm:LibraryViewModel){
-    if(vm.error!=null||vm.busy)Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)).padding(horizontal=20.dp,vertical=8.dp)){
+    if(vm.error!=null||vm.busy)Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=8.dp)){
         vm.error?.let{message ->Surface(color=Color(0xFFFBE9E7),shape=RoundedCornerShape(16.dp)){
             Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){Text(message,Modifier.weight(1f),fontSize=14.sp,color=Color(0xFF8C211B));TextButton(onClick={vm.error=null}){Text("关闭")}}
         }}
@@ -79,82 +127,126 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     }
 }
 
-@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onAdd:()->Unit,onSource:(io.localplayer.core.Source)->Unit){
+@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onAdd:()->Unit,onSource:(io.localplayer.core.Source)->Unit,onCandidate:(Candidate)->Unit,requestNearby:()->Unit,onSettings:()->Unit){
+    var probeConfirm by remember{mutableStateOf(false)}
+    var discoveryMenu by remember{mutableStateOf(false)}
     val continuing=vm.history.firstOrNull{!it.completed&&it.positionMs>0&&it.durationMs>0}
-    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal)),contentPadding=PaddingValues(bottom=24.dp)){
-        item{Column(Modifier.padding(start=24.dp,end=24.dp,top=20.dp,bottom=24.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐",fontSize=32.sp,fontWeight=FontWeight.Bold,color=Ink)}
-            Spacer(Modifier.height(10.dp));Text("你的影片，你的观影时刻。",fontSize=15.sp,color=Muted)
+    LazyColumn(Modifier.fillMaxSize().testTag("home-list"),contentPadding=PaddingValues(bottom=112.dp)){
+        item{Column(Modifier.padding(start=24.dp,end=24.dp,top=18.dp,bottom=20.dp)){
+            Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐",Modifier.weight(1f),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold,color=Ink);IconButton(onClick=onSettings,modifier=Modifier.testTag("open-settings")){Icon(Icons.Rounded.Settings,"设置",tint=Muted)}}
+            Spacer(Modifier.height(10.dp));Text("让喜欢的影片，触手可及。",fontSize=15.sp,color=Muted)
         }}
         if(continuing!=null)item{ContinueCard(continuing){vm.resume(continuing)}}
-        else item{Surface(Modifier.fillMaxWidth().padding(horizontal=20.dp),color=Color(0xFFF4ECEF),shape=RoundedCornerShape(26.dp)){
-            Column(Modifier.padding(24.dp)){
-                Text("从一部影片开始",fontSize=25.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                Spacer(Modifier.height(10.dp));Text("打开本机视频，或连接你的局域网来源。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
+        else item{Surface(Modifier.fillMaxWidth().padding(horizontal=20.dp),color=GroupedSurface,shape=RoundedCornerShape(26.dp)){
+            Column(Modifier.padding(22.dp)){
+                Text("现在，放映。",fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+                Spacer(Modifier.height(10.dp));Text("打开本机视频，或连接你的媒体来源。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
                 Spacer(Modifier.height(20.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp),contentPadding=PaddingValues(horizontal=20.dp,vertical=14.dp)){Icon(Icons.Rounded.PlayArrow,null);Spacer(Modifier.width(6.dp));Text("打开本机视频")}
             }
         }}
         item{Text("从这里打开",Modifier.padding(start=24.dp,top=28.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
         item{MediaRow("本机文件","通过系统文件选择器打开视频",Icons.Rounded.FolderOpen,openLocal)}
-        item{MediaRow("局域网来源",if(vm.sources.isEmpty())"连接 SMB / SFTP 媒体来源"else"${vm.sources.size} 个已保存来源",Icons.Rounded.Lan,onSources)}
+        item{MediaRow("网络来源",if(vm.sources.isEmpty())"连接 SMB / SFTP / WebDAV"else"${vm.sources.size} 个已保存来源",Icons.Rounded.Lan,onSources)}
         if(vm.sources.isNotEmpty()){
             item{Text("已保存的来源",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
             items(vm.sources.take(3),key={"source-"+it.id}){s->MediaRow(s.label,s.protocol.name,Icons.Rounded.Dns){onSource(s)}}
         }else item{TextButton(onClick=onAdd,modifier=Modifier.padding(start=16.dp)){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(8.dp));Text("添加第一个来源")}}
+        item{Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp),verticalAlignment=Alignment.CenterVertically){
+            Text("附近服务",Modifier.weight(1f),fontSize=20.sp,fontWeight=FontWeight.SemiBold)
+            Box{IconButton(onClick={discoveryMenu=true}){Icon(Icons.Rounded.MoreHoriz,"发现选项",tint=Muted)}
+                DropdownMenu(expanded=discoveryMenu,onDismissRequest={discoveryMenu=false}){
+                    DropdownMenuItem(text={Text("附近设备访问权限")},onClick={discoveryMenu=false;requestNearby()})
+                    DropdownMenuItem(text={Text("查找未广播的设备")},onClick={discoveryMenu=false;probeConfirm=true})
+                }
+            }
+        }}
+        item{Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp),verticalAlignment=Alignment.CenterVertically){
+            Text(vm.discoveryMessage,Modifier.weight(1f),fontSize=12.sp,lineHeight=18.sp,color=Muted)
+            TextButton(onClick={if(vm.scanning)vm.stopDiscovery()else vm.discover()}){Text(if(vm.scanning)"停止"else"刷新")}
+        }}
+        items(vm.candidates.take(3),key={"candidate-"+it.id}){candidate->
+            MediaRow(candidate.name,"${candidate.protocol} · ${candidate.host}${if(vm.sources.isEmpty())" · 点击连接"else" · 前往来源页连接"}",Icons.Rounded.Lan){
+                if(vm.sources.isEmpty())onCandidate(candidate)else onSources()
+            }
+        }
         val recent=vm.history.filterNot{it.media.key==continuing?.media?.key}.take(3)
         if(recent.isNotEmpty()){
             item{Text("最近播放",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
             items(recent,key={"recent-"+it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}
         }
     }
+    if(probeConfirm)AlertDialog(onDismissRequest={probeConfirm=false},title={Text("补充发现局域网候选")},
+        text={Text("仅探测当前局域网内最多一个 /24 的 22 和 445 端口，12 秒内结束，不尝试登录。端口开放仍需认证后才能浏览。")},
+        confirmButton={TextButton(onClick={probeConfirm=false;vm.probe()}){Text("开始查找")}},dismissButton={TextButton(onClick={probeConfirm=false}){Text("取消")}})
+
 }
 
-@Composable private fun ContinueCard(entry:HistoryEntry,onClick:()->Unit){
-    Surface(onClick=onClick,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),shape=RoundedCornerShape(26.dp),color=Color(0xFFF4ECEF)){
-        Column(Modifier.padding(22.dp)){
-            Text("继续观看",color=Berry,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment=Alignment.CenterVertically){
-                Column(Modifier.weight(1f).padding(end=18.dp)){
-                    Text(entry.media.title,fontSize=23.sp,lineHeight=29.sp,fontWeight=FontWeight.SemiBold,maxLines=2,overflow=TextOverflow.Ellipsis,color=Ink)
-                    Spacer(Modifier.height(8.dp));Text(entry.media.sourceLabel,fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+@Composable internal fun ContinueCard(entry:HistoryEntry,onClick:()->Unit){
+    Surface(onClick=onClick,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).padding(bottom=16.dp).testTag("continue-player"),
+        shape=RoundedCornerShape(22.dp),color=GroupedSurface,shadowElevation=1.dp){
+        Column{
+            Row(Modifier.fillMaxWidth().padding(start=12.dp,end=8.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically){
+                MediaThumbnail(entry.media,Modifier.size(44.dp))
+                Column(Modifier.weight(1f).padding(horizontal=12.dp)){
+                    Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.SemiBold,color=Ink,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp))
+                    Text("继续观看 · ${time(entry.positionMs)} / ${time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
-                BrandMark(Modifier.size(76.dp))
+                Box(Modifier.size(48.dp).semantics{contentDescription="继续播放"},contentAlignment=Alignment.Center){Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(30.dp))}
             }
-            Spacer(Modifier.height(22.dp))
-            LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(3.dp),color=Berry,trackColor=Color(0xFFE0D1D6))
-            Spacer(Modifier.height(12.dp));Row(verticalAlignment=Alignment.CenterVertically){Text("${time(entry.positionMs)} / ${time(entry.durationMs)}",Modifier.weight(1f),fontSize=12.sp,color=Muted);Text("继续播放",fontSize=14.sp,fontWeight=FontWeight.SemiBold,color=Berry);Icon(Icons.Rounded.PlayArrow,null,tint=Berry)}
+            LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry,trackColor=Berry.copy(alpha=.08f),drawStopIndicator={})
         }
     }
 }
 
 @Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit){
     var clearConfirm by rememberSaveable{mutableStateOf(false)}
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal))){
+    Column(Modifier.fillMaxSize()){
         Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("播放记录",fontSize=32.sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
+            Column(Modifier.weight(1f)){Text("播放记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
             IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空播放记录",tint=Muted)}
         }
         if(vm.history.isEmpty())Column(Modifier.fillMaxWidth().padding(32.dp),horizontalAlignment=Alignment.CenterHorizontally){
             Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有播放记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
             Spacer(Modifier.height(10.dp));Text("实际播放影片后，会自动记住进度。",fontSize=14.sp,color=Muted)
             Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("浏览局域网来源")}
-        }else LazyColumn(contentPadding=PaddingValues(bottom=24.dp)){items(vm.history,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}}
+        }else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
+            vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
+                item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
+                items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}
+            }
+        }
     }
     if(clearConfirm)AlertDialog(onDismissRequest={clearConfirm=false},title={Text("清空播放记录？")},text={Text("将清除本机的观看记录与续播进度。来源和密码会保留。")},confirmButton={TextButton(onClick={vm.clearHistory();clearConfirm=false}){Text("清空记录",color=MaterialTheme.colorScheme.error)}},dismissButton={TextButton(onClick={clearConfirm=false}){Text("取消")}})
 }
 
+internal fun historyDay(timestamp:Long):String{
+    val format=SimpleDateFormat("yyyy-MM-dd",Locale.getDefault())
+    val today=format.format(Date());val yesterday=java.util.Calendar.getInstance().apply{add(java.util.Calendar.DATE,-1)}.time
+    val value=format.format(Date(timestamp))
+    return when(value){today->"今天";format.format(yesterday)->"昨天";else->value}
+}
+
 @Composable private fun HistoryRow(entry:HistoryEntry,onPlay:()->Unit,onRestart:()->Unit,onRemove:()->Unit){
     var menu by remember{mutableStateOf(false)}
-    Row(Modifier.fillMaxWidth().clickable(onClick=onPlay).padding(start=20.dp,end=12.dp,top=12.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-        Box(Modifier.size(56.dp).background(Color(0xFFF1E8EC),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Icon(if(entry.completed)Icons.Rounded.CheckCircle else Icons.Rounded.PlayCircle,null,tint=Berry,modifier=Modifier.size(28.dp))}
-        Column(Modifier.weight(1f).padding(horizontal=14.dp)){
-            Text(entry.media.title,fontSize=16.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
-            Spacer(Modifier.height(5.dp));Text("${entry.media.sourceLabel} · ${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)}",fontSize=12.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Spacer(Modifier.height(4.dp));Text(SimpleDateFormat("MM-dd HH:mm",Locale.getDefault()).format(Date(entry.updatedAt)),fontSize=11.sp,color=Muted)
-        }
-        Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreVert,"记录操作",tint=Muted)}
-            DropdownMenu(expanded=menu,onDismissRequest={menu=false}){DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()});DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})}
+    Surface(onClick=onPlay,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=4.dp).testTag("history-row:${entry.media.key}"),
+        color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
+        Column{
+            Row(Modifier.padding(start=10.dp,end=4.dp,top=9.dp,bottom=9.dp),verticalAlignment=Alignment.CenterVertically){
+                MediaThumbnail(entry.media,Modifier.size(44.dp))
+                Column(Modifier.weight(1f).padding(horizontal=12.dp)){
+                    Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)} · ${entry.media.sourceLabel}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
+                Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(24.dp))
+                Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${entry.media.title}",tint=Muted,modifier=Modifier.size(20.dp))}
+                    DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
+                        DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()})
+                        DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
+                    }
+                }
+            }
+            LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry.copy(alpha=if(entry.completed).35f else 1f),trackColor=Berry.copy(alpha=.06f),drawStopIndicator={})
         }
     }
 }

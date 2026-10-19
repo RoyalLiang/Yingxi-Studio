@@ -1,6 +1,7 @@
 package io.localplayer.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,14 +43,14 @@ data class FileCrumb(val label:String,val key:String)
     val back={if(!files.up()){files.cancel();onClose()}}
     BackHandler{back()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){files.cancel()}
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)){
+    Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing)){
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=16.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
             TextButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,null);Spacer(Modifier.width(6.dp));Text(if(files.active==null)"返回"else"上一级")}
-            Text("本机文件",Modifier.weight(1f).padding(start=8.dp),fontSize=24.sp,fontWeight=FontWeight.SemiBold)
+            Text("本机文件",Modifier.weight(1f).padding(start=8.dp),fontSize=24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold)
             IconButton(onClick=onAddFolder){Icon(Icons.Rounded.CreateNewFolder,"添加授权文件夹",tint=Berry)}
         }
         FileBreadcrumbs(listOf(FileCrumb("本机文件","local"))+files.trail.mapIndexed{i,d->FileCrumb(d.name,"local:$i")}){index->if(index==0)files.root()else files.navigate(index-1)}
-        HorizontalDivider()
+        HorizontalDivider(color=Hairline)
         val error=files.error?:player.error
         if(error!=null)Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Text(error,Modifier.weight(1f),color=MaterialTheme.colorScheme.error);TextButton(onClick={files.error=null;player.error=null}){Text("关闭")}}
         if(files.busy)Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在读取文件夹…",Modifier.weight(1f).padding(start=12.dp));TextButton(onClick={files.cancel()}){Text("取消")}}
@@ -74,7 +75,7 @@ data class FileCrumb(val label:String,val key:String)
                 if(files.entries.isEmpty()&&!files.busy)item{Text("这个目录没有项目",Modifier.padding(24.dp),color=Muted)}
                 items(files.entries,key={it.uri.toString()}){entry->
                     MediaRow(entry.name,if(entry.directory)"文件夹"else if(entry.video)formatSize(entry.size)else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle){
-                        if(entry.directory)files.enter(entry)else if(entry.video)player.playLocal(entry.uri)else files.error="请选择视频文件"
+                        if(entry.directory)files.enter(entry)else if(entry.video)player.playLocal(entry.uri,siblings=files.entries.toList())else files.error="请选择视频文件"
                     }
                 }
             }
