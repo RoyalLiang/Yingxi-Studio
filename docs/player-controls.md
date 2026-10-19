@@ -39,3 +39,14 @@ SMB 地址支持主机、`smb://server/share/folder` 和 UNC 路径。账号和�
 这些优化减少了细碎读取和界面工作，不代表目标手机、真实 NAS 或高码率视频已经验收。现场卡顿仍需结合首帧耗时、重新缓冲、丢帧和读取耗时定位。
 
 当前 SMB/SFTP 不切换为 QUIC。HTTP/3 网络栈适用于相应 HTTP 来源；SMB over QUIC 需要匹配的客户端、服务端和部署配置，不能仅给普通 SMB 连接增加 HTTP 网络栈解决。[Media3 网络栈](https://developer.android.com/media/media3/exoplayer/network-stacks)、[Microsoft SMB over QUIC](https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-over-quic)。
+
+
+## 续播、清晰度与预览反馈
+
+首页续播在卡片原位置显示准备状态，保持当前目录浏览不变。点击来源导航、首页网络来源或历史中的来源入口时，先回到来源列表，再选择需要的目录。
+
+清晰度标签读取实际视频尺寸，按长边区分 1080P、2K、4K 等等级，竖屏同样处理。它描述媒体尺寸，不表示设备解码性能或网络速率。
+
+连续拖动时只保留一个正在处理的预览请求和最新待处理位置。新画面尚未准备好时保留上一张有效图像，并显示该图像对应的近似预览时间及更新状态；上方目标时间始终跟随手指。生成超时或格式不支持时仍保留时间定位。
+
+玻璃效果缓存模糊、折射与渐变对象；底栏指示器通过图层位移移动，减少动画引发的布局更新。

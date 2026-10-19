@@ -66,12 +66,15 @@ class FileNavigationTest {
         lateinit var vm:LibraryViewModel
         ui.runOnIdle{
             vm=ViewModelProvider(ui.activity)[LibraryViewModel::class.java]
-            vm.draft=Draft(source,password=password,remember=false)
+            vm.draft=Draft(source,password=password,remember=true)
             vm.connectDraft()
         }
         try{
             ui.waitUntil(20000){vm.source!=null&&!vm.busy}
             ui.onNodeWithText("来源").performClick()
+            ui.onNodeWithTag("source-list").assertIsDisplayed()
+            ui.onNode(hasText("Navigation fixture") and hasAnyAncestor(hasTestTag("source-list")),useUnmergedTree=true).performClick()
+            ui.waitUntil(20000){vm.source!=null&&!vm.busy}
             ui.onNodeWithText("影片").performClick()
             ui.waitUntil(20000){vm.path=="影片"&&!vm.busy}
             ui.onNodeWithTag("breadcrumb:remote:影片").assertIsDisplayed()

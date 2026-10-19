@@ -4,9 +4,15 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -28,6 +34,45 @@ class PlayerStyleTest {
         automation.executeShellCommand("screencap -p /sdcard/Download/style-$name.png").use {
             java.io.FileInputStream(it.fileDescriptor).use { stream -> stream.readBytes() }
         }
+    }
+
+    @Test fun glassSamplesTheBackdropAtInitialSizeAndAfterResize() {
+        val width=mutableStateOf(260.dp)
+        ui.activity.setContent {
+            PlayerTheme {
+                val scene=rememberGraphicsLayer()
+                Box(Modifier.fillMaxSize()) {
+                    // Only the glass draws this recorded scene, so underlying pixels cannot mask a broken effect.
+                    Box(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() } }) {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f).fillMaxHeight().background(Color.Red))
+                            Box(Modifier.weight(1f).fillMaxHeight().background(Color.Blue))
+                        }
+                    }
+                    CompositionLocalProvider(LocalGlassBackdrop provides scene) {
+                        GlassSurface(Modifier.align(androidx.compose.ui.Alignment.Center).size(width.value,120.dp).testTag("glass-sample"),dark=true){}
+                    }
+                }
+            }
+        }
+        fun assertBackdrop() {
+            ui.waitForIdle()
+            // Capture the compositor output: layer RenderEffects do not appear in software Canvas captures.
+            val bounds=ui.onNodeWithTag("glass-sample").fetchSemanticsNode().boundsInRoot
+            val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            val origin=IntArray(2)
+            ui.runOnIdle{ui.activity.window.decorView.getLocationOnScreen(origin)}
+            val y=origin[1]+bounds.center.y.toInt()
+            val left=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.25f).toInt(),y))
+            val right=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.75f).toInt(),y))
+            assertTrue("left backdrop remains red: $left",left.red-left.blue>.1f)
+            assertTrue("right backdrop remains blue: $right",right.blue-right.red>.1f)
+            image.recycle()
+        }
+        assertBackdrop()
+        ui.runOnIdle{width.value=320.dp}
+        assertBackdrop()
+        capture("glass-resized")
     }
 
     @Test fun compactResumeHandlesLongTitlesAndLargeText() {

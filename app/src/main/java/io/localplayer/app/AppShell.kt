@@ -71,24 +71,24 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
         // Keep the chrome out of the captured scene. List content can move beneath it.
         Column(Modifier.fillMaxSize().drawWithContent{scene.record{this@drawWithContent.drawContent()};drawLayer(scene)}
             .background(Paper).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top+WindowInsetsSides.Horizontal))){
-            if(tab!=AppTab.Sources)StatusBanner(vm)
             AnimatedContent(targetState=tab,modifier=Modifier.weight(1f),transitionSpec={
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{tab=AppTab.Sources},{tab=AppTab.Sources;vm.add()},{source->tab=AppTab.Sources;vm.open(source)},{candidate->tab=AppTab.Sources;vm.add(candidate)},requestNearby,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources},{tab=AppTab.Sources;vm.add()},{source->tab=AppTab.Sources;vm.open(source)},{candidate->tab=AppTab.Sources;vm.add(candidate)},requestNearby,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
-                    AppTab.History->HistoryScreen(vm,openLocal,{tab=AppTab.Sources})
+                    AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                 }}
             }
         }
+        if(tab!=AppTab.Sources&&(vm.error!=null||vm.busy))Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=104.dp)){StatusBanner(vm)}
         CompositionLocalProvider(LocalGlassBackdrop provides scene){
             GlassSurface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth(),radius=30){
                 Box(Modifier.fillMaxWidth().padding(5.dp)){
                     BoxWithConstraints(Modifier.matchParentSize()){
                         val width=maxWidth/AppTab.entries.size
-                        val x by animateDpAsState(width*tab.ordinal,spring(dampingRatio=.86f,stiffness=420f),label="navigation lens")
-                        Box(Modifier.offset(x=x).width(width).fillMaxHeight()
+                        val x = animateDpAsState(width*tab.ordinal,spring(dampingRatio=.86f,stiffness=420f),label="navigation lens")
+                        Box(Modifier.graphicsLayer{translationX=x.value.toPx()}.width(width).fillMaxHeight()
                             .background(Brush.verticalGradient(listOf(Berry.copy(alpha=.15f),Berry.copy(alpha=.06f))),RoundedCornerShape(25.dp))
                             .border(.7.dp,Color.White.copy(alpha=.85f),RoundedCornerShape(25.dp)))
                     }
@@ -96,7 +96,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                         AppTab.entries.forEach{item->
                             val selected=tab==item
                             val scale by animateFloatAsState(if(selected)1.04f else .96f,spring(stiffness=500f),label="tab emphasis")
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(25.dp)).selectable(selected=selected,role=Role.Tab,onClick={vm.cancelOperation();tab=item})
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(25.dp)).selectable(selected=selected,role=Role.Tab,onClick={if(item==AppTab.Sources)vm.closeSource()else vm.cancelOperation();tab=item})
                                 .heightIn(min=58.dp).padding(horizontal=4.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
                                 Icon(item.icon,null,tint=if(selected)Berry else Muted,modifier=Modifier.size(23.dp).graphicsLayer{scaleX=scale;scaleY=scale})
                                 Spacer(Modifier.height(3.dp))
@@ -136,7 +136,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
             Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐",Modifier.weight(1f),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold,color=Ink);IconButton(onClick=onSettings,modifier=Modifier.testTag("open-settings")){Icon(Icons.Rounded.Settings,"设置",tint=Muted)}}
             Spacer(Modifier.height(10.dp));Text("让喜欢的影片，触手可及。",fontSize=15.sp,color=Muted)
         }}
-        if(continuing!=null)item{ContinueCard(continuing){vm.resume(continuing)}}
+        if(continuing!=null)item{ContinueCard(continuing,preparing=vm.preparingKey==continuing.media.key){vm.resume(continuing)}}
         else item{Surface(Modifier.fillMaxWidth().padding(horizontal=20.dp),color=GroupedSurface,shape=RoundedCornerShape(26.dp)){
             Column(Modifier.padding(22.dp)){
                 Text("现在，放映。",fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
@@ -181,18 +181,18 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
 
 }
 
-@Composable internal fun ContinueCard(entry:HistoryEntry,onClick:()->Unit){
-    Surface(onClick=onClick,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).padding(bottom=16.dp).testTag("continue-player"),
+@Composable internal fun ContinueCard(entry:HistoryEntry,preparing:Boolean=false,onClick:()->Unit){
+    Surface(onClick=onClick,enabled=!preparing,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).padding(bottom=16.dp).testTag("continue-player"),
         shape=RoundedCornerShape(22.dp),color=GroupedSurface,shadowElevation=1.dp){
         Column{
             Row(Modifier.fillMaxWidth().padding(start=12.dp,end=8.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically){
-                MediaThumbnail(entry.media,Modifier.size(44.dp))
+                MediaThumbnail(entry.media,Modifier.width(78.dp).height(44.dp))
                 Column(Modifier.weight(1f).padding(horizontal=12.dp)){
                     Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.SemiBold,color=Ink,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
-                    Text("继续观看 · ${time(entry.positionMs)} / ${time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(if(preparing)"正在准备播放…"else"继续观看 · ${time(entry.positionMs)} / ${time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
-                Box(Modifier.size(48.dp).semantics{contentDescription="继续播放"},contentAlignment=Alignment.Center){Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(30.dp))}
+                Box(Modifier.size(48.dp).semantics{contentDescription="继续播放"},contentAlignment=Alignment.Center){if(preparing)CircularProgressIndicator(Modifier.size(24.dp).testTag("continue-loading"),color=Berry,strokeWidth=2.dp)else Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(30.dp))}
             }
             LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry,trackColor=Berry.copy(alpha=.08f),drawStopIndicator={})
         }
@@ -233,7 +233,7 @@ internal fun historyDay(timestamp:Long):String{
         color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
         Column{
             Row(Modifier.padding(start=10.dp,end=4.dp,top=9.dp,bottom=9.dp),verticalAlignment=Alignment.CenterVertically){
-                MediaThumbnail(entry.media,Modifier.size(44.dp))
+                MediaThumbnail(entry.media,Modifier.width(78.dp).height(44.dp))
                 Column(Modifier.weight(1f).padding(horizontal=12.dp)){
                     Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)} · ${entry.media.sourceLabel}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
