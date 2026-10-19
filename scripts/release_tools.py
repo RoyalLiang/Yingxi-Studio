@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from versioning import load
+from release_notes import load_notes, render_notes
 
 def run(*args): return subprocess.check_output(args, text=True).strip()
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -37,6 +38,7 @@ def verify_assets(directory):
 
 def prepare(args):
     root=Path(__file__).resolve().parents[1];version=load(root)
+    load_notes(root,version)
     if args.apk is None:args.apk=root/f'dist/yingxi-{version["versionName"]}-{version["versionCode"]}-release.apk'
     if args.tag!=version["tag"]: raise ValueError("Tag/config mismatch")
     commit=run("git","rev-parse","HEAD")
@@ -86,17 +88,18 @@ def publish(args):
             subprocess.run(["gh","release","download",release["tag_name"],"--repo",repo,"--pattern","yingxi-release.json","--dir",str(destination)],check=True)
             previous.append(json.loads((destination/"yingxi-release.json").read_text()))
     check_previous(metadata,previous)
-    if draft is None:
-        with tempfile.TemporaryDirectory() as temp:
-            notes=Path(temp)/"notes.md"
-            notes.write_text(f'映汐 {metadata["versionName"]}\n\nAndroid 15/16 · versionCode {metadata["versionCode"]}\n\nSource: `{metadata["sourceCommit"]}`\n\n本版本为预发布验证包；真实设备、NAS、无线性能与高码率请按实际样片验收。\n')
+    with tempfile.TemporaryDirectory() as temp:
+        notes=Path(temp)/"notes.md"
+        root=Path(__file__).resolve().parents[1]
+        notes.write_text(render_notes(root,metadata,metadata["sourceCommit"]),encoding="utf-8")
+        if draft is None:
             command=["gh","release","create",args.tag,"--repo",repo,"--verify-tag","--target",metadata["sourceCommit"],"--draft","--title","映汐 "+metadata["versionName"],"--notes-file",str(notes)]
             if metadata["prerelease"]: command.append("--prerelease")
             subprocess.run(command,check=True)
-    subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",*[str(p) for p in sorted(directory.iterdir())]],check=True)
-    command=["gh","release","edit",args.tag,"--repo",repo,"--draft=false","--prerelease="+str(metadata["prerelease"]).lower()]
-    command.append("--latest=false" if metadata["prerelease"] else "--latest")
-    subprocess.run(command,check=True)
+        subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",*[str(p) for p in sorted(directory.iterdir())]],check=True)
+        command=["gh","release","edit",args.tag,"--repo",repo,"--draft=false","--prerelease="+str(metadata["prerelease"]).lower(),"--notes-file",str(notes)]
+        command.append("--latest=false" if metadata["prerelease"] else "--latest")
+        subprocess.run(command,check=True)
     print("Published:",args.tag)
 
 def main():

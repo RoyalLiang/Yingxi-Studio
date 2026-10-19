@@ -1,7 +1,9 @@
 name: Signed release
 on:
   push:
+    branches: [main]
     tags: ['v*']
+    paths: ['version.json']
   workflow_dispatch:
     inputs:
       tag:
@@ -14,34 +16,58 @@ concurrency:
   group: yingxi-release
   cancel-in-progress: false
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.candidate.outputs.tag }}
+      ref: ${{ steps.candidate.outputs.ref }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      COPYFILE_DISABLE: '1'
+      REQUESTED_TAG: ${{ inputs.tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
+      ALLOW_CREATE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve version, bilingual notes and immutable source
+        id: candidate
+        shell: bash
+        run: |
+          args=(plan --tag "$REQUESTED_TAG")
+          if [ "$ALLOW_CREATE" = "true" ]; then args+=(--allow-create-tag); fi
+          python3 scripts/release_automation.py "${args[@]}"
   verify:
+    needs: plan
     uses: ./.github/workflows/ci.yml
     with:
-      ref: ${{ inputs.tag || github.ref }}
+      ref: ${{ needs.plan.outputs.ref }}
     permissions:
       contents: read
   release:
-    needs: verify
+    needs: [plan, verify]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: release
     permissions:
       contents: write
     env:
-      TAG: ${{ inputs.tag || github.ref_name }}
+      TAG: ${{ needs.plan.outputs.tag }}
       PYTHONDONTWRITEBYTECODE: '1'
       COPYFILE_DISABLE: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ needs.plan.outputs.ref }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Version, source and existing tag
+      - name: Version and source
         run: |
           python3 scripts/repository_guard.py --git
           python3 scripts/versioning.py --tag "$TAG"
-          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)"
           git merge-base --is-ancestor HEAD origin/main
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -73,6 +99,10 @@ jobs:
           YINGXI_KEY_ALIAS: ${{ secrets.YINGXI_KEY_ALIAS }}
           YINGXI_KEY_PASSWORD: ${{ secrets.YINGXI_KEY_PASSWORD }}
         run: python3 scripts/build.py :app:verifyReleaseSigning :app:assembleRelease
+      - name: Ensure immutable version tag after successful checks and build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release_automation.py ensure-tag --tag "$TAG"
       - name: Verify APK, signer and release assets
         env:
           YINGXI_SIGNER_SHA256: ${{ vars.YINGXI_SIGNER_SHA256 }}

@@ -15,6 +15,7 @@ def allowed(name):
     p = Path(name)
     if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", "__pycache__"} for part in p.parts): return False
     if name in EXACT: return True
+    if p.parent == Path("releases") and p.suffix == ".md": return True
     return ((name.startswith(("app/src/main/java/", "app/src/androidTest/java/", "core/src/main/kotlin/", "core/src/test/kotlin/")) and p.suffix == ".kt")
             or (name.startswith("app/src/main/res/") and p.suffix == ".xml")
             or (name.startswith("scripts/") and p.suffix == ".py")

@@ -1,0 +1,158 @@
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+from release_automation import ensure_tag, git, plan
+from release_notes import load_notes, render_notes
+from versioning import validate
+from release_tools import publish
+from types import SimpleNamespace
+
+
+def notes(version="1.2.3-alpha.1"):
+    return (f"# 映汐 {version} / Yingxi {version}\n\n## 中文\n\n"
+            "### 更新内容\n\n- 修复播放恢复。\n\n### 验证与限制\n\n- 自动检查通过，真机待验证。\n\n"
+            "## English\n\n### Changes\n\n- Fix playback restoration.\n\n"
+            "### Validation and limitations\n\n- Automated checks pass; phone testing remains outstanding.\n")
+
+
+class ReleaseNotesTest(unittest.TestCase):
+    def test_bilingual_content_and_exact_version_are_required(self):
+        version = validate({"versionName": "1.2.3-alpha.1", "versionCode": 9})
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "releases").mkdir()
+            path = root / "releases" / f'{version["tag"]}.md'
+            path.write_text(notes(), encoding="utf-8")
+            self.assertIn("Source commit: `abc123`", render_notes(root, version, "abc123"))
+            for invalid in (notes().split("## English")[0], notes("1.2.4"),
+                            notes().replace("- Fix playback restoration.", ""),
+                            notes().replace("- 修复播放恢复。", "- TODO"),
+                            notes().replace("### Changes", "### Other")):
+                with self.subTest(invalid=invalid):
+                    path.write_text(invalid, encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        load_notes(root, version)
+
+
+class ReleasePlanTest(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.call("init", "-q", "-b", "main")
+        self.call("config", "user.name", "Release Fixture")
+        self.call("config", "user.email", "fixture@example.invalid")
+        (self.root / "version.json").write_text(json.dumps({"versionName": "1.2.3-alpha.1", "versionCode": 9}))
+        (self.root / "releases").mkdir()
+        (self.root / "releases/v1.2.3-alpha.1.md").write_text(notes(), encoding="utf-8")
+        self.call("add", ".")
+        self.call("commit", "-qm", "Fixture")
+        self.call("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.tag = "v1.2.3-alpha.1"
+
+    def call(self, *args):
+        return git(self.root, *args)
+
+    def test_main_candidate_is_planned_without_creating_a_tag(self):
+        candidate = plan(self.root, allow_create=True)
+        self.assertEqual(candidate, {"tag": self.tag, "ref": self.call("rev-parse", "HEAD"), "create_tag": "true"})
+        self.assertEqual(self.call("tag"), "")
+        with self.assertRaises(ValueError):
+            plan(self.root)
+
+    def test_existing_tag_can_be_retried_but_never_moved(self):
+        self.call("tag", "-a", self.tag, "-m", "Fixture release")
+        self.assertEqual(plan(self.root, self.tag)["create_tag"], "false")
+        with patch("release_automation.subprocess.check_output", wraps=subprocess.check_output) as output:
+            ensure_tag(self.root, self.tag)
+            self.assertFalse(any(call.args[0][0] == "gh" for call in output.call_args_list))
+        self.call("commit", "--allow-empty", "-qm", "New source")
+        self.call("update-ref", "refs/remotes/origin/main", "HEAD")
+        with self.assertRaisesRegex(ValueError, "another commit"):
+            plan(self.root, self.tag, allow_create=True)
+
+    def test_wrong_version_and_source_outside_main_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "match version"):
+            plan(self.root, "v9.9.9", allow_create=True)
+        self.call("commit", "--allow-empty", "-qm", "Unmerged source")
+        with self.assertRaises(subprocess.CalledProcessError):
+            plan(self.root, allow_create=True)
+
+    def test_automatic_tag_requires_main_push_and_exact_source_sha(self):
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main"}):
+            with self.assertRaisesRegex(ValueError, "main push"):
+                ensure_tag(self.root, self.tag)
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "push", "GITHUB_REF": "refs/heads/main", "GITHUB_SHA": "wrong"}):
+            with self.assertRaisesRegex(ValueError, "triggering commit"):
+                ensure_tag(self.root, self.tag)
+
+    def test_automatic_tag_is_created_at_the_verified_commit(self):
+        commit = self.call("rev-parse", "HEAD")
+        original_output, original_run = subprocess.check_output, subprocess.run
+        calls = []
+
+        def output(command, **kwargs):
+            if command[0] == "gh":
+                calls.append(command)
+                self.call("tag", self.tag)
+                return json.dumps({"ref": f"refs/tags/{self.tag}", "object": {"sha": commit}})
+            return original_output(command, **kwargs)
+
+        def run(command, **kwargs):
+            if "fetch" in command:
+                return subprocess.CompletedProcess(command, 0)
+            return original_run(command, **kwargs)
+
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "push", "GITHUB_REF": "refs/heads/main",
+                                    "GITHUB_SHA": commit, "GITHUB_REPOSITORY": "owner/repo"}), \
+                patch("release_automation.subprocess.check_output", side_effect=output), \
+                patch("release_automation.subprocess.run", side_effect=run):
+            ensure_tag(self.root, self.tag)
+        self.assertEqual(len(calls), 1)
+        self.assertIn(f"sha={commit}", calls[0])
+        self.assertEqual(plan(self.root)["create_tag"], "false")
+
+
+class ReleasePublicationTest(unittest.TestCase):
+    def test_new_and_resumed_drafts_publish_the_same_bilingual_details(self):
+        metadata = {**validate({"versionName": "1.2.3-alpha.1", "versionCode": 9}),
+                    "sourceCommit": "a" * 40}
+        draft = {"tag_name": metadata["tag"], "draft": True,
+                 "target_commitish": metadata["sourceCommit"]}
+        for existing in ([], [draft]):
+            with self.subTest(existing=bool(existing)), tempfile.TemporaryDirectory() as folder:
+                seen = []
+
+                def publish_command(command, **kwargs):
+                    if "--notes-file" in command:
+                        body = Path(command[command.index("--notes-file") + 1]).read_text(encoding="utf-8")
+                        self.assertIn("## 中文", body)
+                        self.assertIn("## English", body)
+                        seen.append(command[2])
+                    return subprocess.CompletedProcess(command, 0)
+
+                with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}), \
+                        patch("release_tools.verify_assets", return_value=metadata), \
+                        patch("release_tools.run", return_value=json.dumps([existing])), \
+                        patch("release_tools.render_notes", return_value=notes()), \
+                        patch("release_tools.subprocess.run", side_effect=publish_command):
+                    publish(SimpleNamespace(output=Path(folder), tag=metadata["tag"]))
+                self.assertEqual(seen, ["edit"] if existing else ["create", "edit"])
+
+    def test_published_version_is_never_replaced(self):
+        metadata = {"tag": "v1.2.3", "sourceCommit": "a" * 40}
+        with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}), \
+                patch("release_tools.verify_assets", return_value=metadata), \
+                patch("release_tools.run", return_value=json.dumps([[{"tag_name": metadata["tag"], "draft": False}]])), \
+                patch("release_tools.subprocess.run") as command:
+            with self.assertRaisesRegex(ValueError, "never replaced"):
+                publish(SimpleNamespace(output=Path("unused"), tag=metadata["tag"]))
+            command.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

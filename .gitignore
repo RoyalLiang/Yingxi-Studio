@@ -21,6 +21,7 @@
 /docs/*
 !/docs/releasing.md
 !/docs/file-navigation.md
+!/releases/
 
 # Local build output, fixtures, environment, runtime notes and signing material.
 **/build/
