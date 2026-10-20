@@ -56,12 +56,13 @@ class PlaybackService:MediaSessionService(){
             override fun onMediaItemTransition(item:MediaItem?,reason:Int){
                 val next=item?.localConfiguration?.uri
                 player.setWakeMode(if(next?.scheme=="localplayer")C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
-                if(current!=next){PlaybackRegistry.releaseConnection(current);current=next}
+                if(current!=next){OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next}
                 persist()
             }
             override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)persist()}
             override fun onPlaybackStateChanged(state:Int){
                 if(state==Player.STATE_READY||state==Player.STATE_ENDED)persist()
+                if(state==Player.STATE_READY)OnlineSubtitles.schedule(this@PlaybackService,player)
             }
             override fun onRenderedFirstFrame(){
                 // Let the first frame and playback buffer win over optional artwork.
@@ -139,7 +140,7 @@ class PlaybackService:MediaSessionService(){
     override fun onGetSession(controllerInfo:MediaSession.ControllerInfo)=session
     override fun onDestroy(){
         val owned=requestIds
-        persist();handler.removeCallbacksAndMessages(null);session?.player?.release();session?.release();session=null
+        OnlineSubtitles.cancel();persist();handler.removeCallbacksAndMessages(null);session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.
         // This service only releases requests actually adopted by its timeline.
         PlaybackRequests.retainActive(emptySet());owned.forEach(PlaybackRequests::remove)

@@ -96,8 +96,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     init { refreshHistory() }
 
     fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{history=it}.onFailure{error=it.message}}
-    fun removeHistory(entry:HistoryEntry){if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);MediaThumbnails.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
-    fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();MediaThumbnails.clear(getApplication());store.clearPositions();refreshHistory()}
+    fun removeHistory(entry:HistoryEntry){if(selectedHistoryKey==entry.media.key)selectedHistoryKey=null;if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);MediaThumbnails.remove(getApplication(),entry.media);MediaPosters.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
+    fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();selectedHistoryKey=null;MediaThumbnails.clear(getApplication());MediaPosters.clear(getApplication());OnlineSubtitles.clear(getApplication());store.clearPositions();refreshHistory()}
     fun setDiscoveryEnabled(enabled:Boolean){discoveryEligible=enabled;refreshDiscoveryPermission()}
     fun refreshDiscoveryPermission(){
         nearbyPermissionGranted=androidx.core.content.ContextCompat.checkSelfPermission(getApplication(),android.Manifest.permission.NEARBY_WIFI_DEVICES)==android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -303,7 +303,9 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             }
         }
     }
+    var selectedHistoryKey by mutableStateOf<String?>(null);private set
     fun resume(entry:HistoryEntry,fromStart:Boolean=false){
+        selectedHistoryKey=entry.media.key
         if(preparingKey==entry.media.key)return
         error=null
         val ref=entry.media

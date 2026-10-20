@@ -147,7 +147,7 @@ class HomePolishTest {
         ui.onNodeWithText("App 版本").performClick()
         ui.onNodeWithText("本版说明").assertIsDisplayed()
         ui.onNodeWithText(BuildConfig.VERSION_CHANGES).assertIsDisplayed()
-        assertTrue(BuildConfig.VERSION_CHANGES.contains("拆掉首页的重复路牌"))
+        assertTrue(BuildConfig.VERSION_CHANGES.contains("阿里云盘"));assertTrue(BuildConfig.VERSION_CHANGES.contains("射手字幕"))
         assertFalse(BuildConfig.VERSION_CHANGES.contains("验证与限制"))
     }
 

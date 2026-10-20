@@ -9,7 +9,7 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "CONTRIBUTING.md", "versio
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
          "app/build.gradle.kts", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
-         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png", "app/src/main/res/drawable-nodpi/cloud_baidu.png"}
+         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png", "app/src/main/res/drawable-nodpi/cloud_baidu.png"}
 
 def allowed(name):
     p = Path(name)

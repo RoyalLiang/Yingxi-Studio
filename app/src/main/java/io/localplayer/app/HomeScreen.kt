@@ -1,6 +1,9 @@
 package io.localplayer.app
 
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
@@ -67,7 +70,7 @@ import androidx.compose.ui.unit.sp
                     }
                 }
                 items(recent, key = { it.media.key }) { entry ->
-                    RecentFilm(entry, vm.preparingKey == entry.media.key, columns > 1, { vm.resume(entry) }, { vm.resume(entry, true) }, { vm.removeHistory(entry) })
+                    RecentFilm(entry, vm.preparingKey == entry.media.key, vm.selectedHistoryKey==entry.media.key, columns > 1, { vm.resume(entry) }, { vm.resume(entry, true) }, { vm.removeHistory(entry) })
                 }
             }
         }
@@ -96,10 +99,15 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable private fun RecentFilm(entry: HistoryEntry, preparing: Boolean, alignTitleRows: Boolean, play: () -> Unit, restart: () -> Unit, remove: () -> Unit) {
+@Composable internal fun RecentFilm(entry: HistoryEntry, preparing: Boolean, selected: Boolean, alignTitleRows: Boolean, play: () -> Unit, restart: () -> Unit, remove: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
-    Surface(onClick = play, enabled = !preparing, color = androidx.compose.ui.graphics.Color.Transparent,
-        modifier = Modifier.fillMaxWidth().testTag("home-film:${entry.media.key}"), shape = androidx.compose.ui.graphics.RectangleShape) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Surface(onClick = play, enabled = !preparing,
+        color = if (selected) Berry.copy(alpha = .07f) else androidx.compose.ui.graphics.Color.Transparent,
+        modifier = Modifier.fillMaxWidth().testTag("home-film:${entry.media.key}")
+            .semantics { this.selected = selected }
+            .border(1.dp, if (selected) Berry.copy(alpha = .38f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp)) {
         Column {
             Box(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
                 MediaThumbnail(entry.media, Modifier.fillMaxSize())
@@ -110,13 +118,19 @@ import androidx.compose.ui.unit.sp
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
+                        MediaPosters.credit(context, entry.media)?.takeIf { it.second.startsWith("https://") }?.let { credit ->
+                            DropdownMenuItem(text = { Text("海报来源 · "+credit.first) }, onClick = {
+                                menu = false
+                                runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, credit.second.toUri())) }
+                            })
+                        }
                         DropdownMenuItem(text = { Text("移除此记录") }, onClick = { menu = false; remove() })
                     }
                 }
             }
-            Text(entry.media.title, Modifier.fillMaxWidth().padding(top = 10.dp), fontSize = 15.sp, lineHeight = 22.sp,
+            Text(entry.media.title, Modifier.fillMaxWidth().padding(start=8.dp,end=8.dp,top = 10.dp), fontSize = 15.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, minLines = if (alignTitleRows) 2 else 1, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(if (entry.completed) "已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}", Modifier.padding(top=3.dp), fontSize = 12.sp, lineHeight = 18.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (entry.completed) "已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}", Modifier.padding(start=8.dp,end=8.dp,top=3.dp,bottom=8.dp), fontSize = 12.sp, lineHeight = 18.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
