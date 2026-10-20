@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.19/yingxi-0.2.0-alpha.19-21.apk">下载 Android 安装包</a> ·
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.19">阅读版本信笺</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.20">阅读版本信笺</a> ·
   <a href="docs/player-controls.md">播放与操作</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
@@ -30,10 +30,10 @@
 <p align="center">
   <img src="assets/readme/sources.png" width="31%" alt="来源页：独立自动扫描入口">
   <img src="assets/readme/updates.png" width="31%" alt="版本页：当前版本与固定更新操作">
-  <img src="assets/readme/letter.png" width="31%" alt="版本信笺：可滚动的更新内容弹窗">
+  <img src="assets/readme/letter.png" width="31%" alt="放映站档案：人物肖像与语录">
 </p>
 
-截图来自应用实际运行界面，展示来源入口、版本页面与本版信笺。
+截图来自应用实际运行界面，展示来源入口、固定更新操作与放映站人物档案。
 
 ## 三步开始放映
 
@@ -41,7 +41,7 @@
 2. 从**来源**打开本机文件夹、添加服务器，或进入独立的**自动扫描**。网盘接入位于 WebDAV 页的接入方式中。
 3. 连接并验证来源后选择影片；下次可从最近播放继续。
 
-新版本可以在**设置 → App 版本**检查。先读信笺，再选择下载；安装仍由 Android 系统确认。
+新版本可以在**设置 → 映汐播放器 · 版本**检查。顶部可随时检查更新，当前信笺在下方独立滚动；核对安装包后交给 Android 系统安装会话，由你确认覆盖安装。
 
 ## 媒体库接入能力
 
@@ -66,6 +66,8 @@
 ## 一封来自放映站的信
 
 影像拾荒者负责把散落的影片带回片架，把失灵的路标修好。每次发版留下一封短笺：这次搬来了什么、修好了哪里，偶尔也记下柜台边的一点小事。
+
+版本页的「放映站档案」可以阅读阿汐、迟灯、弥途的档案与语录，点选图谱上的地点，沿版本足迹慢慢展开长潮之后的废土。实线记下往返信路，虚线保留尚未证实的传闻。人物、关系和信笺有共同档案，后续发版按真实改动续写。
 
 世界观让更新记录有一条连续的线；操作仍然直白，影片、来源、自动扫描和下载始终使用真实名称。读[世界观与信笺写法](docs/worldbook.md)，或直接去看一部片子。
 

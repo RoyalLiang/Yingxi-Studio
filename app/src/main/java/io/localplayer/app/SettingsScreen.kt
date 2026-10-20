@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,6 +72,7 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     }
     fun cancel(){generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"}
     fun fail(text:String){message=text;error=true}
+    fun installMessage(text:String){message=text;error=false}
     suspend fun installIntent():Intent? {
         val file=ready ?: return null;val selected=release ?: return null
         return try {
@@ -81,10 +81,8 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
                 require(hash==selected.sha256){"安装包校验失败，请重新下载"}
                 AppUpdates.verifyArchive(getApplication(),file,selected)
             }
-            val uri=FileProvider.getUriForFile(getApplication(),"${getApplication<Application>().packageName}.updates",file)
-            Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
-                .apply{clipData=android.content.ClipData.newRawUri("Yingxi update",uri)}
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            require(selected.version.code>installedVersion(getApplication()).code){"此安装包不是更新版本，请重新检查更新"}
+            UpdateInstallActivity.intent(getApplication(),file,selected)
         } catch(e:Exception){fail(e.message ?: "无法打开安装包");null}
     }
 }
@@ -92,6 +90,17 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
 @Composable internal fun SettingsRoute(vm:SettingsViewModel=viewModel(),onClose:()->Unit) {
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
+    val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle,vm) {
+        fun consume(){UpdateInstallResult.take(context)?.let{(text,error)->if(error)vm.fail(text)else vm.installMessage(text)}}
+        val resultPreferences=context.getSharedPreferences("update-install-result",android.content.Context.MODE_PRIVATE)
+        val resultListener=android.content.SharedPreferences.OnSharedPreferenceChangeListener{_,key->if(key=="text")consume()}
+        resultPreferences.registerOnSharedPreferenceChangeListener(resultListener)
+        consume()
+        val observer=androidx.lifecycle.LifecycleEventObserver{_,event->if(event==androidx.lifecycle.Lifecycle.Event.ON_RESUME)consume()}
+        lifecycle.addObserver(observer)
+        onDispose{lifecycle.removeObserver(observer);resultPreferences.unregisterOnSharedPreferenceChangeListener(resultListener)}
+    }
     var about by rememberSaveable{mutableStateOf(false)}
     val back={if(about)about=false else onClose()}
     BackHandler(onBack=back)

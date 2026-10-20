@@ -11,6 +11,8 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "CONTRIBUTING.md", "versio
          "app/build.gradle.kts", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
          "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/worldbook.md", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.png", "assets/readme/updates.png", "assets/readme/letter.png", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png", "app/src/main/res/drawable-nodpi/cloud_baidu.png"}
 
+EXACT.add("app/src/main/res/raw/world_atlas.json")
+
 def allowed(name):
     p = Path(name)
     if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", ".build", "DerivedData", "xcuserdata", "__pycache__"} for part in p.parts): return False

@@ -40,6 +40,16 @@ def load_notes(root, version):
                 raise ValueError("Field letters require substantive release content")
         if not re.search(r"拾荒|信笺|放映站", chinese) or not re.search(r"scavenger|letter|projection station", english, re.IGNORECASE):
             raise ValueError("New notes must retain the scavenger field-letter voice; see docs/worldbook.md")
+    atlas=Path(root)/"app/src/main/res/raw/world_atlas.json"
+    if atlas.is_file():
+        from worldbook import validate
+        world=validate(root)
+        names={p["name"][language] for p in world["characters"] for language in ("zh","en")}
+        for line in text.splitlines():
+            if line.startswith("> "):
+                speaker=re.search(r"(?:——| — )([^\n]+)$",line)
+                if speaker is None or speaker[1].strip() not in names:
+                    raise ValueError("Character quotations must be attributed to a known atlas character")
     return text + "\n"
 
 def render_notes(root, version, source_commit):

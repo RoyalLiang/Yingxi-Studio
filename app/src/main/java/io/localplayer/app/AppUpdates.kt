@@ -50,7 +50,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
         // Another client or Android's installer may still be reading a published APK.
         val transfer=java.util.UUID.randomUUID().toString()
         val partial=File(directory,"$transfer.apk.part")
-        val ready=File(directory,"yingxi-${release.version.code}-$transfer.apk")
+        val ready=File(directory,"yingxi-${release.version.code}-${release.sha256}-$transfer.apk")
         try {
             requireReleaseUrl(release.url)
             val connection=transport(release.url)

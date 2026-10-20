@@ -55,6 +55,7 @@ class UpdateDownloadTest {
             var lastProgress=0f
             val downloaded=client.download(candidate){value->assertTrue(value>=lastProgress&&value<=1f);lastProgress=value}.also{published=it}
             assertEquals(1f,lastProgress);assertEquals(sample.length(),downloaded.length())
+            assertTrue("Payload name must identify its verified version and digest",downloaded.name.contains(version.code.toString())&&downloaded.name.contains(hash))
             AppUpdates.verifyArchive(context,downloaded,candidate)
             val uri=androidx.core.content.FileProvider.getUriForFile(context,"${context.packageName}.updates",downloaded)
             assertEquals("content",uri.scheme)

@@ -144,10 +144,11 @@ class HomePolishTest {
     @Test fun inAppVersionNotesUseTheCurrentChangeOnlyCopy() {
         mount(fontScale=1f,width=411)
         ui.onNodeWithContentDescription("设置").performClick()
-        ui.onNodeWithText("App 版本").performClick()
+        ui.onNodeWithTag("app-version").performClick()
         capture("updates")
         ui.onNodeWithText("本版说明").performClick()
-        ui.onNodeWithText(displayReleaseNotes(BuildConfig.VERSION_NOTES,ui.activity.resources.configuration.locales[0].language)).assertIsDisplayed()
+        ui.onNodeWithTag("release-letter-body").assertIsDisplayed()
+        ui.onNode(hasTestTag("letter-paragraphs") and hasAnyAncestor(hasTestTag("release-letter-body")),useUnmergedTree=true).assertExists()
         capture("release-letter")
         assertTrue(BuildConfig.VERSION_CHANGES.contains("拾荒者信笺"))
         assertFalse(BuildConfig.VERSION_CHANGES.contains("验证与限制"))

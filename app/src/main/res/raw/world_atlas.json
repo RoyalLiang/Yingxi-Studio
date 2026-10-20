@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "chapter": {
+    "zh": "第一章 · 灯还亮着",
+    "en": "Chapter I · The light is still on"
+  },
+  "introducedIn": "0.2.0-alpha.20",
+  "premise": {
+    "zh": "长潮退去，旧世界留下无数失散的影像。放映站只是一盏灯，灯外还有整片废土。",
+    "en": "The Long Tide receded, leaving the old world’s images scattered. The station is one light; a whole wasteland lies beyond it."
+  },
+  "nodes": [
+    {
+      "id": "station",
+      "name": {
+        "zh": "映汐放映站",
+        "en": "Yingxi Station"
+      },
+      "kind": {
+        "zh": "有人守候",
+        "en": "A light kept on"
+      },
+      "x": 0.5,
+      "y": 0.48,
+      "known": true,
+      "description": {
+        "zh": "旧铁路线的最后一间放映室。长潮之后，幸存的影像在这里归档，流浪的人可以借一晚灯光。",
+        "en": "The last projection room on an old railway. After the Long Tide, surviving images are catalogued here; travelers may borrow its light for a night."
+      }
+    },
+    {
+      "id": "salt",
+      "name": {
+        "zh": "盐环列站",
+        "en": "Salt Ring Stops"
+      },
+      "kind": {
+        "zh": "路标已立",
+        "en": "Signposts standing"
+      },
+      "x": 0.19,
+      "y": 0.2,
+      "known": true,
+      "description": {
+        "zh": "盐壳包住停运的车厢，弥途把能走的路画在车门内侧。这里的地图会褪色，人却总会回来补上一笔。",
+        "en": "Salt crusts the abandoned carriages. Mitu marks passable routes inside their doors. The maps fade; someone always returns to redraw a line."
+      }
+    },
+    {
+      "id": "archive",
+      "name": {
+        "zh": "沉没档案馆",
+        "en": "Drowned Archive"
+      },
+      "kind": {
+        "zh": "等待打捞",
+        "en": "Awaiting salvage"
+      },
+      "x": 0.8,
+      "y": 0.19,
+      "known": false,
+      "description": {
+        "zh": "回声海退潮时露出的圆形屋顶。拾荒者带回过它的胶片盒，馆内还有多少层，没人说得准。",
+        "en": "A circular roof exposed at low tide. Scavengers have brought back its film cans; no one agrees how many floors remain beneath them."
+      }
+    },
+    {
+      "id": "sea",
+      "name": {
+        "zh": "回声海",
+        "en": "Echo Sea"
+      },
+      "kind": {
+        "zh": "传闻地带",
+        "en": "Beyond the charts"
+      },
+      "x": 0.2,
+      "y": 0.8,
+      "known": false,
+      "description": {
+        "zh": "潮水没过旧城，风把废弃广播送回岸上。迟灯说，海声里偶尔会多出一个本不该存在的频道。",
+        "en": "The old city lies under tidal water. Wind carries abandoned broadcasts ashore. Chideng says an impossible extra channel sometimes slips between the waves."
+      }
+    },
+    {
+      "id": "beacon",
+      "name": {
+        "zh": "远灯观测所",
+        "en": "Far Lantern Observatory"
+      },
+      "kind": {
+        "zh": "尚未抵达",
+        "en": "Not yet reached"
+      },
+      "x": 0.79,
+      "y": 0.8,
+      "known": false,
+      "description": {
+        "zh": "北脊山后的微光，只在无云的夜里出现。它是另一座有人值守的站，还是长潮留下的残像？信笺里暂时没有答案。",
+        "en": "A glimmer beyond the northern ridge, visible only on clear nights. Another staffed station, or an afterimage of the Long Tide? The letters hold no answer yet."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "station",
+      "to": "salt",
+      "known": true,
+      "label": {
+        "zh": "往返信路",
+        "en": "Letter route"
+      }
+    },
+    {
+      "from": "station",
+      "to": "archive",
+      "known": false,
+      "label": {
+        "zh": "未证实的线索",
+        "en": "An unconfirmed lead"
+      }
+    },
+    {
+      "from": "station",
+      "to": "sea",
+      "known": false,
+      "label": {
+        "zh": "未证实的线索",
+        "en": "An unconfirmed lead"
+      }
+    },
+    {
+      "from": "station",
+      "to": "beacon",
+      "known": false,
+      "label": {
+        "zh": "未证实的线索",
+        "en": "An unconfirmed lead"
+      }
+    }
+  ],
+  "characters": [
+    {
+      "id": "axi",
+      "name": {
+        "zh": "阿汐",
+        "en": "Axi"
+      },
+      "role": {
+        "zh": "影像拾荒者 · 信笺记录者",
+        "en": "Image scavenger · Letter keeper"
+      },
+      "home": "station",
+      "portrait": "scavenger",
+      "description": {
+        "zh": "旧风镜挂在帽檐上，口袋里总有一颗不配套的螺丝。嘴上嫌修理麻烦，却从不肯把还能放映的影像留在雨里。",
+        "en": "Old goggles on a cap, one mismatched screw in every pocket. Complains about repairs; never leaves a playable image out in the rain."
+      },
+      "quotes": [
+        {
+          "zh": "先别说它坏了。给我一盏灯。",
+          "en": "Don’t call it broken yet. Bring me a lamp."
+        },
+        {
+          "zh": "带回来的不只是片子，还有回去的路。",
+          "en": "We bring back more than films. We bring a way home."
+        },
+        {
+          "zh": "这一格修好了。今晚应该能早一点开场。",
+          "en": "That part is fixed. We might start a little earlier tonight."
+        }
+      ]
+    },
+    {
+      "id": "chideng",
+      "name": {
+        "zh": "迟灯",
+        "en": "Chideng"
+      },
+      "role": {
+        "zh": "放映站守夜人 · 旧设备修理师",
+        "en": "Night keeper · Old machine mender"
+      },
+      "home": "station",
+      "portrait": "keeper",
+      "description": {
+        "zh": "信笺里的守夜人有了名字。灰白的鬓角，补过三次的耳机；记得每台放映机的脾气，却总忘记自己的茶已经凉了。",
+        "en": "The night keeper from earlier letters now has a name. Grey at the temples, headphones patched three times. Remembers every projector’s temperament; forgets the tea."
+      },
+      "quotes": [
+        {
+          "zh": "灯亮着，就还有人知道往哪儿走。",
+          "en": "While the light is on, someone still knows the way."
+        },
+        {
+          "zh": "锁扣收好了。幕布是留给影像的。",
+          "en": "The clasp is put away. The screen belongs to the picture."
+        },
+        {
+          "zh": "别急，先听它转完这一圈。",
+          "en": "No hurry. Listen until it makes one full turn."
+        }
+      ]
+    },
+    {
+      "id": "mitu",
+      "name": {
+        "zh": "弥途",
+        "en": "Mitu"
+      },
+      "role": {
+        "zh": "盐环路标师 · 往返列站的递信人",
+        "en": "Salt Ring wayfinder · Letter runner"
+      },
+      "home": "salt",
+      "portrait": "wayfinder",
+      "description": {
+        "zh": "短发间别着一支褪色的红铅笔，披风的内衬画满岔路。习惯把未知标出来，因为她不愿把猜测当成路。",
+        "en": "A faded red pencil tucked into short hair, routes drawn inside a travel cape. Marks the unknown plainly: a guess is no road to send someone down."
+      },
+      "quotes": [
+        {
+          "zh": "没走过的路，我会画成虚线。",
+          "en": "A road I haven’t walked gets a dotted line."
+        },
+        {
+          "zh": "地图可以旧，路标不能含糊。",
+          "en": "A map may age. A signpost must stay clear."
+        },
+        {
+          "zh": "下一封信，等我过了盐环再寄。",
+          "en": "The next letter goes out once I cross the Salt Ring."
+        }
+      ]
+    }
+  ],
+  "chronicles": [
+    {
+      "version": "0.2.0-alpha.18",
+      "text": {
+        "zh": "守夜人把锁扣收进口袋，让影像占回幕布。",
+        "en": "The night keeper pocketed the clasp, returning the screen to the picture."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.20",
+      "text": {
+        "zh": "柜台展开第一张图谱。拾荒者与守夜人留下名字，盐环的递信人也有了自己的声音。",
+        "en": "The first atlas opens on the counter. Scavenger and night keeper leave their names; the Salt Ring runner finds a voice of her own."
+      }
+    }
+  ],
+  "boundary": {
+    "zh": "图谱呈现原创故事中的地点与人物，不代表可用的联网来源或已开放的产品功能。虚线表示尚未证实的故事线索。",
+    "en": "These places and people belong to an original story, rather than available network sources or product features. Dotted lines mark unconfirmed story leads."
+  }
+}
