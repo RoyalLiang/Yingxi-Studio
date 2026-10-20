@@ -81,7 +81,9 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
                 require(hash==selected.sha256){"安装包校验失败，请重新下载"}
                 AppUpdates.verifyArchive(getApplication(),file,selected)
             }
-            Intent(Intent.ACTION_VIEW).setDataAndType(FileProvider.getUriForFile(getApplication(),"${getApplication<Application>().packageName}.updates",file),"application/vnd.android.package-archive")
+            val uri=FileProvider.getUriForFile(getApplication(),"${getApplication<Application>().packageName}.updates",file)
+            Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
+                .apply{clipData=android.content.ClipData.newRawUri("Yingxi update",uri)}
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         } catch(e:Exception){fail(e.message ?: "无法打开安装包");null}
     }
@@ -115,14 +117,24 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     var posters by remember{mutableStateOf(prefs.posters)}
     var subtitles by remember{mutableStateOf(prefs.subtitles)}
     var bilingual by remember{mutableStateOf(prefs.bilingual)}
-    Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(18.dp)){
+    Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(14.dp)){
         Text("海报与字幕",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
-        Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));Switch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
-        Text("优先使用目录海报，再按片名匹配公开资料。仅发送片名，不发送服务器地址或账户。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
-        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));Switch(subtitles,{subtitles=it;prefs.subtitles=it;if(!it)OnlineSubtitles.cancel()})}
-        Text("没有内嵌字幕时，通过射手接口发送影片指纹和文件名查找字幕，优先简体中文，兼容双语。可在音字幕面板手动重试。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
-        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));Switch(bilingual,{bilingual=it;prefs.bilingual=it})}
-        Text("海报资料：Wikipedia / TVmaze（CC BY-SA）。具体图片版权见来源页。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
+        Text("优先使用目录海报，再按片名匹配公开资料。仅发送片名，不发送服务器地址或账户。",fontSize=12.sp,lineHeight=17.sp,color=Muted)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;if(!it)OnlineSubtitles.cancel()})}
+        Text("没有内嵌字幕时，通过射手接口发送影片指纹和文件名查找字幕，优先简体中文，兼容双语。可在音字幕面板手动重试。",fontSize=12.sp,lineHeight=17.sp,color=Muted)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it})}
+        Text("海报资料：Wikipedia / TVmaze（CC BY-SA）。具体图片版权见来源页。",fontSize=12.sp,lineHeight=17.sp,color=Muted)
         TextButton(onClick={MediaPosters.clear(context);MediaThumbnails.changes.value++}){Text("清理海报缓存")}
     }}
+}
+
+@Composable
+private fun SettingsSwitch(checked:Boolean,onCheckedChange:(Boolean)->Unit){
+    Switch(checked,onCheckedChange,colors=SwitchDefaults.colors(
+        checkedThumbColor=androidx.compose.ui.graphics.Color.White,
+        checkedTrackColor=Berry,
+        uncheckedThumbColor=androidx.compose.ui.graphics.Color.White,
+        uncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7),
+        uncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent))
 }

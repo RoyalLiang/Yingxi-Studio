@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -82,7 +84,7 @@ data class FileCrumb(val label:String,val key:String)
             LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp)){
                 if(files.entries.isEmpty()&&!files.busy)item{Text("这个目录没有项目",Modifier.padding(24.dp),color=Muted)}
                 items(files.entries,key={it.uri.toString()}){entry->
-                    MediaRow(entry.name,if(entry.directory)"文件夹"else if(entry.video)formatSize(entry.size)else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle,selected=selectedUri==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()){
+                    MediaRow(if(entry.video)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else if(entry.video)formatSize(entry.size)else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle,selected=selectedUri==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()){
                         selectedUri=entry.uri.toString()
                         if(entry.directory)files.enter(entry)else if(entry.video)player.playLocal(entry.uri,siblings=files.entries.toList())else files.error="请选择视频文件"
                     }

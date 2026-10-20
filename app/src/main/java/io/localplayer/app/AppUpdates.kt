@@ -47,8 +47,10 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
     suspend fun download(release:AppRelease,progress:suspend (Float)->Unit):File = downloads.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         require(release.version.code>installedVersion(context).code){"更新版本必须高于当前版本"}
         val directory=File(context.filesDir,"updates").apply{mkdirs()}
-        val partial=File(directory,"candidate.apk.part");val ready=File(directory,"candidate.apk")
-        ready.delete()
+        // Another client or Android's installer may still be reading a published APK.
+        val transfer=java.util.UUID.randomUUID().toString()
+        val partial=File(directory,"$transfer.apk.part")
+        val ready=File(directory,"yingxi-${release.version.code}-$transfer.apk")
         try {
             requireReleaseUrl(release.url)
             val connection=transport(release.url)
@@ -67,16 +69,17 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
                         output.write(buffer,0,n);digest.update(buffer,0,n)
                         if(count-lastReport>=256*1024 || count==release.size){progress(count.toFloat()/release.size);lastReport=count}
                     }
+                    output.fd.sync()
                 } }
                 if(count!=release.size || digest.digest().hex()!=release.sha256)throw IOException("安装包完整性校验失败，请重新下载")
             } finally { connection.disconnect() }
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             verifyArchive(context,partial,release)
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if(!partial.renameTo(ready))throw IOException("无法保存安装包")
             ready
         } catch(e:Exception) { partial.delete();throw e }
-    }
-
-    }
+    } }
 
     private fun fetch(value:String,limit:Int):ByteArray {
             val connection=transport(value)

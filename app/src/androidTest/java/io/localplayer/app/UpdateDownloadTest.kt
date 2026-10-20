@@ -48,11 +48,12 @@ class UpdateDownloadTest {
             }
         }
         val directory=File(context.filesDir,"updates")
+        var published:File?=null
         try {
             val candidate=client.check()!!
             assertEquals(version,candidate.version);assertEquals("Synthetic signed update",candidate.notes)
             var lastProgress=0f
-            val downloaded=client.download(candidate){value->assertTrue(value>=lastProgress&&value<=1f);lastProgress=value}
+            val downloaded=client.download(candidate){value->assertTrue(value>=lastProgress&&value<=1f);lastProgress=value}.also{published=it}
             assertEquals(1f,lastProgress);assertEquals(sample.length(),downloaded.length())
             AppUpdates.verifyArchive(context,downloaded,candidate)
             val uri=androidx.core.content.FileProvider.getUriForFile(context,"${context.packageName}.updates",downloaded)
@@ -61,14 +62,14 @@ class UpdateDownloadTest {
             var rejected=false
             try {client.download(candidate.copy(sha256="0".repeat(64))){} }catch(e:Exception){rejected=true}
             assertTrue("corrupt content must be rejected",rejected)
-            assertFalse(File(directory,"candidate.apk.part").exists());assertFalse(File(directory,"candidate.apk").exists())
+            assertTrue(downloaded.isFile);assertFalse(directory.listFiles().orEmpty().any{it.name.endsWith(".part")})
             var cancelled=false
             try { client.download(candidate){value->if(value>.01f)throw kotlinx.coroutines.CancellationException("cancel test")} }
             catch(e:kotlinx.coroutines.CancellationException){cancelled=true}
             assertTrue(cancelled)
-            assertFalse(File(directory,"candidate.apk.part").exists());assertFalse(File(directory,"candidate.apk").exists())
+            assertTrue(downloaded.isFile);assertFalse(directory.listFiles().orEmpty().any{it.name.endsWith(".part")})
             assertEquals(4,requests.size);assertFalse(requests.any{it.endsWith(".json")})
-        } finally {File(directory,"candidate.apk").delete();File(directory,"candidate.apk.part").delete()}
+        } finally {published?.delete()}
     }
     private fun ByteArray.hex()=joinToString(""){"%02x".format(it)}
 }

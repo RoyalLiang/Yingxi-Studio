@@ -38,11 +38,11 @@ import androidx.compose.ui.unit.sp
             Text(if(about)"版本与更新" else "设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
         }
         LazyColumn(Modifier.weight(1f).testTag("settings-list"),state=remember(about){androidx.compose.foundation.lazy.LazyListState()},
-            contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)){
+            contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             if(!about){
                 item{Surface(onClick=openAbout,shape=RoundedCornerShape(22.dp),color=GroupedSurface,
                     modifier=Modifier.fillMaxWidth().testTag("app-version")){
-                    Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically){
+                    Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
                         Icon(Icons.Rounded.Info,null,tint=Berry)
                         Column(Modifier.weight(1f).padding(horizontal=16.dp)){
                             Text("App 版本",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.sp
                 }}
                 item{Surface(onClick={letter="installed"},shape=RoundedCornerShape(20.dp),color=GroupedSurface,
                     modifier=Modifier.fillMaxWidth().testTag("installed-notes")){
-                    Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
+                    Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically){
                         Icon(Icons.Rounded.Article,null,tint=Berry)
                         Column(Modifier.weight(1f).padding(horizontal=14.dp)){
                             Text("本版说明",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)

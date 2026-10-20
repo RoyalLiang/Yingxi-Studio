@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -90,7 +92,7 @@ import androidx.compose.ui.unit.sp
                 val largeText = LocalDensity.current.fontScale > 1.4f
                 MediaThumbnail(entry.media, Modifier.width(if (largeText) 76.dp else 96.dp).aspectRatio(1.6f))
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(entry.media.title, fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(mediaDisplayTitle(entry.media.title), fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(5.dp))
                     Text(if (preparing) "正在准备…" else "${time(entry.positionMs)} / ${time(entry.durationMs)}", fontSize = 12.sp, lineHeight = 18.sp, color = Muted, maxLines = 2)
                 }
@@ -120,8 +122,8 @@ import androidx.compose.ui.unit.sp
                 PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
                 Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
-                    IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp).clip(CircleShape).background(GroupedSurface.copy(alpha=.9f))) {
-                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${entry.media.title}", tint = Ink, modifier = Modifier.size(21.dp))
+                    IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha=.18f), CircleShape).padding(1.dp))
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
@@ -135,7 +137,7 @@ import androidx.compose.ui.unit.sp
                     }
                 }
             }
-            Text(entry.media.title, Modifier.fillMaxWidth().padding(start=8.dp,end=8.dp,top = 10.dp), fontSize = 15.sp, lineHeight = 22.sp,
+            Text(mediaDisplayTitle(entry.media.title), Modifier.fillMaxWidth().padding(start=8.dp,end=8.dp,top = 10.dp), fontSize = 15.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, minLines = if (alignTitleRows) 2 else 1, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }

@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import android.Manifest
 import android.content.Intent
 import android.os.Bundle
@@ -126,7 +128,7 @@ class MainActivity:ComponentActivity(){
         }
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
             if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
-            if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
+            if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(if(entry.directory)entry.name else if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
                 if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path,busy=vm.busy&&selectedEntry==entry.path){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
         }
     }

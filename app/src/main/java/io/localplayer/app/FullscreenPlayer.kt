@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
@@ -82,7 +84,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var speedOpen by remember { mutableStateOf(false) }
     var items by remember { mutableStateOf(emptyList<MediaItem>()) }
     var index by remember { mutableIntStateOf(0) }
-    var currentTitle by remember { mutableStateOf(title) }
+    var currentTitle by remember { mutableStateOf(mediaDisplayTitle(title)) }
     var currentUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var truncated by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(1f) }
@@ -122,7 +124,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         fun refresh() {
             controller ?: return
             index = controller.currentMediaItemIndex
-            currentTitle = controller.mediaMetadata.title?.toString() ?: title
+            currentTitle = mediaDisplayTitle(controller.mediaMetadata.title?.toString() ?: title)
             currentUri = controller.currentMediaItem?.localConfiguration?.uri
             truncated = controller.mediaMetadata.extras?.getBoolean("queue-truncated") == true
             speed = controller.playbackParameters.speed
@@ -133,7 +135,15 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             videoAvailable = controller.videoSize.width > 0
             videoWidth = controller.videoSize.width; videoHeight = controller.videoSize.height
             duration = controller.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
-            error = controller.playerError?.let { "播放失败（${it.errorCodeName}），请返回重试" }
+            error = controller.playerError?.let(::playbackFailure)
+            if(error==null&&controller.playbackState==Player.STATE_READY){
+                val video=controller.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
+                if(video.isNotEmpty()&&video.none{it.isSupported}){
+                    val format=video.first().getTrackFormat(0)
+                    val codec=format.codecs?:format.sampleMimeType?:"未知编码"
+                    error="此设备无法解码该视频（$codec），请更换兼容片源"
+                }
+            }
         }
         fun timeline() { items = controller?.let { c -> (0 until c.mediaItemCount).map(c::getMediaItemAt) }.orEmpty() }
         val listener = object : Player.Listener {
@@ -186,7 +196,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     Box(Modifier.fillMaxSize().onGloballyPositioned { playerBounds=it.boundsInRoot() }.background(Color(0xFF101113)).pointerInput(Unit) {
         awaitPointerEventScope { while(true) { val event=awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial);if(event.changes.any{it.pressed&&!it.previousPressed})interaction++ } }
     }) {
-        AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true) }.also(videoView) },
+        AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true) }.also(videoView) },
             update = { it.player = controller; it.resizeMode = if (fill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT },
             onRelease = { it.player = null }, modifier = Modifier.fillMaxSize())
         if (!compact) {
