@@ -20,6 +20,17 @@ final class AliyunTests:XCTestCase {
         var seen=Set<String>()
         for _ in 0..<500{let grant=try AliyunPKCE();XCTAssertEqual(grant.verifier.count,43);XCTAssertEqual(grant.challenge.count,43);XCTAssertNotEqual(grant.verifier,grant.state);XCTAssertTrue(seen.insert(grant.verifier).inserted);XCTAssertFalse(grant.description.contains(grant.verifier))}
     }
+    func testAuthorizationAcceptsOfficialUniversalLinkAndRejectsForeignHost()async throws{
+        let grant=try AliyunPKCE()
+        CloudStub.handler={request in
+            let parts=URLComponents(url:request.url!,resolvingAgainstBaseURL:false)!
+            XCTAssertEqual(parts.queryItems?.first{$0.name=="code_challenge"}?.value,grant.challenge)
+            return(200,Data("{\"redirectUri\":\"https://www.alipan.com/applink/authorize?test=1\"}".utf8))
+        }
+        let url=try await api().authorization(grant);XCTAssertEqual(url.host,"www.alipan.com")
+        CloudStub.handler={_ in(200,Data("{\"redirectUri\":\"https://unrelated.invalid/applink/authorize\"}".utf8))}
+        do{_ = try await api().authorization(grant);XCTFail("foreign authorization URL accepted")}catch CloudError.invalidResponse{}catch{XCTFail("unexpected error")}
+    }
     func testExchangeSupportsMissingRefreshWithoutClientSecret()async throws{
         CloudStub.handler={request in
             var data=request.httpBody ?? Data()

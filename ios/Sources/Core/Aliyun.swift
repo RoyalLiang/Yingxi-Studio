@@ -92,7 +92,9 @@ public final class AliyunAPI: @unchecked Sendable {
         var parts=URLComponents(url:base.appendingPathComponent("oauth/authorize"),resolvingAgainstBaseURL:false)!
         parts.queryItems=["client_id":AliyunConfiguration.clientID,"redirect_uri":"oob","scope":AliyunConfiguration.scope,"response_type":"code","bundle_id":"io.localplayer.app","source":"appLink","code_challenge":grant.challenge,"code_challenge_method":"S256","state":grant.state].map{URLQueryItem(name:$0.key,value:$0.value)}
         let result=try await execute(URLRequest(url:parts.url!))
-        guard let value=result["redirectUri"] as? String, let url=URL(string:value),url.scheme=="smartdrive" else { throw CloudError.invalidResponse }
+        guard let value=result["redirectUri"] as? String, let url=URL(string:value),url.user==nil,url.password==nil,url.fragment==nil else { throw CloudError.invalidResponse }
+        let officialLink=url.scheme=="https" && ["www.alipan.com","alipan.com"].contains(url.host ?? "") && url.path=="/applink/authorize" && (url.port==nil || url.port==443)
+        guard url.scheme=="smartdrive" || officialLink else { throw CloudError.invalidResponse }
         return url
     }
     public func exchange(code: String, verifier: String) async throws -> AliyunToken {

@@ -85,6 +85,7 @@ enum PasswordVault {
         catch is CancellationError{}catch{message=error.localizedDescription}
     }
     func removeCloud(_ source:AliyunSource) {
+        cloudAuthorization.cancel()
         if playing?.cloudSource?.id==source.id{playing=nil}
         cloudSources.removeAll{$0.id==source.id};history.removeAll{$0.cloudSourceID==source.id};persist()
         Task{await CloudAccounts.shared.remove(source.id)}

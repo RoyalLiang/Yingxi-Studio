@@ -95,6 +95,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         pinnedIds=store.pinnedIds();sources=store.load()
     }
     fun removeSource(saved:Source){
+        if(saved.protocol==Protocol.ALIYUN)AliyunCloud.accountRemoved(saved.id)
         if(pendingReplay?.entry?.media?.sourceId==saved.id)cancelOperation()
         if(source?.id==saved.id||openingSource?.id==saved.id)closeSource()
         if(draft?.source?.id==saved.id)dismissDraft()
@@ -114,12 +115,13 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         source=null;credentials=null;path="";entries=emptyList()
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
+                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在来源的配置按钮重新授权";return@launch}
             if(request!=generation)return@launch
             if(pass!=null||saved.username.isBlank())load(saved,Credentials(pass ?: ""),location,false,false)
             else{openingSource=null;access=SourceAccess(saved,path=location)}
-        }catch(e:Exception){if(request==generation){openingSource=null;access=SourceAccess(saved,path=location);error="无法读取保存的密码，请重新认证"}}}
+        }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=location);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
     }
-    fun cloudConnected(saved:Source){sources=store.load();draft=null;open(saved)}
+    fun cloudConnected(saved:Source){sources=store.load();if(sources.none{it.id==saved.id})return;draft=null;open(saved)}
     fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
     fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
     fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
@@ -267,6 +269,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
         job=viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
+                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在来源的配置按钮重新授权";return@launch}
             if(request!=generation)return@launch
             if(pass!=null||saved.username.isBlank())prepareReplay(saved,Credentials(pass ?: ""))
             else {preparingKey=null;access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}

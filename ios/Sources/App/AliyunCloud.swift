@@ -7,6 +7,7 @@ actor CloudAccounts {
     private let api=AliyunAPI()
     private var revisions=[UUID:Int]()
     private var refreshing=[UUID:Task<AliyunToken,Error>]()
+    private var removed=Set<UUID>()
     private func key(_ id:UUID)->[String:Any] { [kSecClass as String:kSecClassGenericPassword,kSecAttrService as String:service,kSecAttrAccount as String:id.uuidString] }
     private func read(_ id:UUID) throws -> AliyunToken {
         var query=key(id);query[kSecReturnData as String]=true;query[kSecMatchLimit as String]=kSecMatchLimitOne
@@ -15,6 +16,7 @@ actor CloudAccounts {
         return token
     }
     func save(_ token:AliyunToken,id:UUID) throws {
+        guard !removed.contains(id) else{throw CloudError.unauthorized}
         let data=try JSONEncoder().encode(token)
         let attrs:[String:Any]=[kSecValueData as String:data,kSecAttrAccessible as String:kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
         let query=key(id);let result=SecItemUpdate(query as CFDictionary,attrs as CFDictionary)
@@ -23,12 +25,13 @@ actor CloudAccounts {
         revisions[id,default:0]+=1
     }
     func remove(_ id:UUID) {
+        removed.insert(id)
         revisions[id,default:0]+=1;refreshing.removeValue(forKey:id)?.cancel();SecItemDelete(key(id) as CFDictionary)
     }
     private func token(_ id:UUID,force:Bool=false) async throws -> AliyunToken {
         let current=try read(id)
         if !force && current.expires.timeIntervalSinceNow>60 {return current}
-        if let task=refreshing[id] {return try await task.value}
+        if let task=refreshing[id] {let value=try await task.value;guard !removed.contains(id) else{throw CloudError.unauthorized};return value}
         guard let refresh=current.refresh else {throw CloudError.unauthorized}
         let revision=revisions[id,default:0]
         let task=Task {try await api.refresh(refresh)};refreshing[id]=task
@@ -70,7 +73,7 @@ actor CloudAccounts {
                     do {
                         let url=try await api.authorization(grant);try Task.checkCancellation()
                         guard pending?.id==flow.id else{return}
-                        let opened=await UIApplication.shared.open(url,options:[:])
+                        let opened=await UIApplication.shared.open(url,options:url.scheme=="https" ? [.universalLinksOnly:true] : [:])
                         if !opened{finish(.failure(CloudError.notInstalled),id:flow.id)}
                     }catch{finish(.failure(error),id:flow.id)}
                 }
@@ -136,7 +139,7 @@ struct CloudConnectButton:View {
         VStack(alignment:.leading,spacing:10){
             Button{connecting=true;Task{await store.connectCloud();connecting=false}}label:{Label(connecting ? "等待阿里云盘授权…" : "登录阿里云盘",systemImage:"cloud")}.disabled(connecting)
             if connecting{Button("取消授权",role:.cancel){store.cloudAuthorization.cancel()}}
-            Text("仅申请读取权限。需安装阿里云盘官方 App；百度接入待企业主体开放。").font(.caption).foregroundStyle(.secondary)
+            Text("仅申请读取权限。需安装阿里云盘官方 App；百度网盘即将支持。").font(.caption).foregroundStyle(.secondary)
         }
     }
 }

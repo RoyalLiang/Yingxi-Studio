@@ -74,7 +74,7 @@ internal fun SavedSourceRow(source:Source,pinned:Boolean,open:()->Unit,edit:()->
                         Text(source.label,Modifier.weight(1f,false),fontSize=16.sp,lineHeight=22.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                         if(pinned)Icon(Icons.Rounded.PushPin,"已置顶",Modifier.padding(start=6.dp).size(13.dp),tint=Berry)
                     }
-                    Spacer(Modifier.height(3.dp));Text("${source.protocol} · ${source.host} · ${source.root}",fontSize=12.sp,lineHeight=18.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp));Text(if(source.protocol==io.localplayer.core.Protocol.ALIYUN)"阿里云盘 · 只读授权"else"${source.protocol} ${source.host} ${source.root}",fontSize=12.sp,lineHeight=18.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
                 IconButton(onClick={collapse();edit()}){Icon(Icons.Rounded.Tune,"修改配置 ${source.label}",tint=Muted,modifier=Modifier.size(21.dp))}
             trailing()
