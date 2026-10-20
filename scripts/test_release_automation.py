@@ -120,8 +120,8 @@ class ReleasePlanTest(unittest.TestCase):
 class ReleasePublicationTest(unittest.TestCase):
     def test_new_and_resumed_drafts_publish_the_same_bilingual_details(self):
         metadata = {**validate({"versionName": "1.2.3-alpha.1", "versionCode": 9}),
-                    "sourceCommit": "a" * 40}
-        draft = {"tag_name": metadata["tag"], "draft": True,
+                    "sourceCommit": "a" * 40,"fileName":"yingxi-1.2.3-alpha.1-9.apk"}
+        draft = {"tag_name": metadata["tag"], "draft": True, "assets": [],
                  "target_commitish": metadata["sourceCommit"]}
         for existing in ([], [draft]):
             with self.subTest(existing=bool(existing)), tempfile.TemporaryDirectory() as folder:
@@ -144,7 +144,7 @@ class ReleasePublicationTest(unittest.TestCase):
                 self.assertEqual(seen, ["edit"] if existing else ["create", "edit"])
 
     def test_ios_release_does_not_enter_android_upgrade_history(self):
-        metadata={**validate({"versionName":"1.2.3-alpha.1","versionCode":9}),"sourceCommit":"a"*40}
+        metadata={**validate({"versionName":"1.2.3-alpha.1","versionCode":9}),"sourceCommit":"a"*40,"fileName":"yingxi-1.2.3-alpha.1-9.apk"}
         ios={"tag_name":"ios-v0.1.0-alpha.1","draft":False,"assets":[{"name":"yingxi-ios-release.json"}]}
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), \
              patch("release_tools.verify_assets",return_value=metadata), \
@@ -154,19 +154,26 @@ class ReleasePublicationTest(unittest.TestCase):
             publish(SimpleNamespace(output=Path(folder),tag=metadata["tag"]))
             self.assertFalse(any(c.args[0][1:3]==["release","download"] for c in command.call_args_list))
 
-    def test_android_history_still_requires_upgrade_metadata(self):
+    def test_resumed_draft_with_extra_attachments_is_not_published(self):
+        metadata={"tag":"v1.2.3","sourceCommit":"a"*40,"fileName":"yingxi-1.2.3-9.apk"}
+        draft={"tag_name":metadata["tag"],"draft":True,"target_commitish":metadata["sourceCommit"],"assets":[{"name":"audit.json"}]}
+        with patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}),patch("release_tools.verify_assets",return_value=metadata),patch("release_tools.run",return_value=json.dumps([[draft]])),patch("release_tools.subprocess.run") as command:
+            with self.assertRaisesRegex(ValueError,"extra assets"):
+                publish(SimpleNamespace(output=Path("unused"),tag=metadata["tag"]))
+            command.assert_not_called()
+
+    def test_android_history_still_requires_verified_apk_evidence(self):
         metadata={"tag":"v1.2.3","sourceCommit":"a"*40}
-        previous={"tag_name":"v1.2.2","draft":False,"assets":[]}
-        with patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), \
-             patch("release_tools.verify_assets",return_value=metadata), \
+        previous={"id":1,"tag_name":"v1.2.2","draft":False,"assets":[]}
+        with patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), patch("release_tools.verify_assets",return_value=metadata), \
              patch("release_tools.run",return_value=json.dumps([[previous]])), \
-             patch("release_tools.subprocess.run") as command:
-            with self.assertRaisesRegex(ValueError,"lacks metadata"):
+             patch("release_tools.previous_from_apk",side_effect=ValueError("Historical APK evidence missing")), patch("release_tools.subprocess.run") as command:
+            with self.assertRaisesRegex(ValueError,"Historical APK evidence"):
                 publish(SimpleNamespace(output=Path("unused"),tag=metadata["tag"]))
             command.assert_not_called()
 
     def test_published_version_is_never_replaced(self):
-        metadata = {"tag": "v1.2.3", "sourceCommit": "a" * 40}
+        metadata = {"tag": "v1.2.3", "sourceCommit": "a" * 40,"fileName":"yingxi-1.2.3-alpha.1-9.apk"}
         with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}), \
                 patch("release_tools.verify_assets", return_value=metadata), \
                 patch("release_tools.run", return_value=json.dumps([[{"tag_name": metadata["tag"], "draft": False}]])), \

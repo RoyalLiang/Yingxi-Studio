@@ -10,7 +10,13 @@ class AliyunTest {
     @Test fun pkceUsesIndependentSecureVerifiers() {
         val grants = (1..500).map { AliyunGrant.create() }
         assertEquals(500, grants.map { it.verifier }.toSet().size)
-        grants.forEach { assertTrue(it.verifier.matches(Regex("[A-Za-z0-9_-]{43}"))); assertEquals(43, it.challenge.length); assertNotEquals(it.state, it.verifier) }
+        grants.forEach {
+            assertTrue(it.verifier.matches(Regex("[A-Za-z0-9_-]{43}")))
+            // Both first-party Aliyunpan mobile SDKs retain SHA-256 Base64 padding.
+            val officialChallenge = java.util.Base64.getUrlEncoder().encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(it.verifier.toByteArray(Charsets.US_ASCII)))
+            assertEquals(officialChallenge, it.challenge)
+            assertEquals(44, it.challenge.length); assertTrue(it.challenge.endsWith("=")); assertNotEquals(it.state, it.verifier)
+        }
         assertFalse(grants.first().toString().contains(grants.first().verifier))
         assertFalse(AliyunToken("sensitive", null, 100).toString().contains("sensitive"))
     }
@@ -24,6 +30,12 @@ class AliyunTest {
         assertEquals("app", request.queryParameter("source"))
         assertEquals(AliyunConfig.SCOPE, request.queryParameter("scope"))
         assertNull(request.queryParameter("client_secret")); assertNull(request.queryParameter("code_verifier"))
+    }
+    @Test fun api400IdentifiesSafePhaseWithoutExposingResponseMessage(): Unit = MockWebServer().use { server ->
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"code":"InvalidClientId","message":"sensitive authorization value","requestId":"safe-request-123"}"""))
+        val error=assertFailsWith<IOException>{api(server).authorization(AliyunGrant.create(),true,Cancellation())}
+        assertTrue(error.message!!.contains("创建授权链接"));assertTrue(error.message!!.contains("400"));assertTrue(error.message!!.contains("InvalidClientId"));assertTrue(error.message!!.contains("safe-request-123"))
+        assertFalse(error.message!!.contains("sensitive"));assertFalse(error.message!!.contains("authorization value"))
     }
     @Test fun exchangeAcceptsMissingRefreshTokenAndNeverSendsSecret() = MockWebServer().use { server ->
         server.enqueue(MockResponse().setBody("""{"access_token":"access-fixture","expires_in":3600}"""))

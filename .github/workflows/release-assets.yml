@@ -1,0 +1,41 @@
+name: Keep release installers only
+on:
+  push:
+    branches: [main]
+    paths: ['scripts/release_assets.py', '.github/workflows/release-assets.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-asset-cleanup
+  cancel-in-progress: false
+jobs:
+  clean:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Back up non-installer attachments
+        run: python3 scripts/release_assets.py backup --output "$RUNNER_TEMP/release-asset-backup"
+      - name: Preserve backup before any deletion
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: release-asset-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-asset-backup/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Keep source archives and installers
+        run: python3 scripts/release_assets.py apply --output "$RUNNER_TEMP/release-asset-backup"
+      - name: Preserve cleanup result
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: release-asset-result-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-asset-backup/*.json
+          if-no-files-found: warn
+          retention-days: 30

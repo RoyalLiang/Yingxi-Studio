@@ -21,7 +21,9 @@ object AliyunConfig {
 }
 
 class AliyunGrant private constructor(val verifier: String, val state: String) {
-    val challenge: String get() = encode(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)))
+    // Match both first-party mobile SDKs: retain padding on the S256 challenge.
+    // The independently generated verifier and state remain unpadded URL-safe strings.
+    val challenge: String get() = Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)))
     override fun toString() = "AliyunGrant([redacted])"
     companion object {
         private fun encode(bytes: ByteArray) = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
@@ -53,7 +55,7 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
         try {
             call.execute().use { response ->
                 if (response.code == 401) throw AliyunUnauthorized()
-                if (!response.isSuccessful) throw IOException("阿里云盘请求失败（${response.code}）")
+                if (!response.isSuccessful) throw apiFailure(request, response)
                 val body = response.body ?: throw IOException("阿里云盘返回空内容")
                 if (body.contentLength() > 4L * 1024 * 1024) throw IOException("阿里云盘响应过大")
                 val bytes = body.byteStream().readNBytes(4 * 1024 * 1024 + 1)
@@ -62,6 +64,31 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
                 catch (_: Exception) { throw IOException("阿里云盘响应格式无效") }
             }
         } finally { cancellation.release(owner) }
+    }
+
+    /** Only fixed operation names and allowlisted provider diagnostics reach the UI. */
+    private fun apiFailure(request: Request, response: okhttp3.Response): IOException {
+        val phase = when (request.url.encodedPath) {
+            "/oauth/authorize" -> "创建授权链接"
+            "/oauth/access_token" -> "换取授权令牌"
+            "/adrive/v1.0/user/getDriveInfo" -> "读取账户"
+            "/adrive/v1.0/openFile/list" -> "读取目录"
+            "/adrive/v1.0/openFile/get" -> "读取文件"
+            "/adrive/v1.0/openFile/getDownloadUrl" -> "解析播放链接"
+            else -> "访问网盘"
+        }
+        val knownCodes = setOf("AppNotExists", "InvalidClientSecret", "InvalidCode", "InvalidClientId",
+            "InvalidGrantType", "InvalidParameter", "InvalidParameter.CodeChallenge", "Forbidden", "AccessTokenInvalid",
+            "AccessTokenExpired", "InvalidAccessToken", "NotFound", "TooManyRequests")
+        val details = runCatching {
+            val body = JsonParser.parseString(response.peekBody(16 * 1024).string()).asJsonObject
+            val code = body.get("code")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
+                ?.asString?.takeIf { it in knownCodes }
+            val requestId = body.get("requestId")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
+                ?.asString?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,64}")) }
+            listOfNotNull(code, requestId?.let { "请求编号：$it" }).joinToString("；")
+        }.getOrDefault("")
+        return IOException("阿里云盘${phase}失败（${response.code}）" + if (details.isEmpty()) "" else "\n$details")
     }
     private fun post(path: String, data: JsonObject, token: String?, c: Cancellation): JsonObject {
         val request = Request.Builder().url(base.resolve(path)!!)
