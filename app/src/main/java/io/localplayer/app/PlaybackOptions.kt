@@ -1,6 +1,9 @@
 package io.localplayer.app
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -55,8 +58,10 @@ import java.util.Locale
                 }
             }
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Box(Modifier.fillMaxSize().testTag("settings-dismiss-backdrop").clickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss))
                 val panelWidth=if(maxWidth>maxHeight)(maxWidth*.42f).coerceIn(300.dp,380.dp)else minOf(maxWidth*.92f,380.dp)
-                Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel"),
+                Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel").pointerInput(Unit) { detectTapGestures(onTap = {}) },
                     shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=Paper) {
             LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {

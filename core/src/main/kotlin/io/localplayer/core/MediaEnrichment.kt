@@ -43,9 +43,9 @@ data class MediaIdentity(val title:String,val year:Int?=null,val season:Int?=nul
         fun parse(filename:String):MediaIdentity {
             val base=filename.substringAfterLast('/').substringAfterLast('\\').replace(Regex("(?i)\\.(mkv|mp4|avi|mov|m4v|ts|webm)$"),"")
             val episode=Regex("(?i)S(\\d{1,2})E(\\d{1,3})").find(base)
-            val year=Regex("(?<![0-9])(?:19|20)[0-9]{2}(?![0-9pPiI])").find(base)?.takeIf { it.range.first > 0 }
+            val year=Regex("(?<![0-9])(?:19|20)[0-9]{2}(?![0-9pPiIxX])").findAll(base).firstOrNull { it.range.first > 0 }
             val cut=listOfNotNull(episode?.range?.first,year?.range?.first,
-                Regex("(?i)(?:^|[ ._\\[(-])(?:2160p|1080p|720p|480p|WEB[- .]?DL|BluRay|BDRip|HDRip|x26[45]|H[ .]?26[45])").find(base)?.range?.first).minOrNull()?:base.length
+                Regex("(?i)(?:^|[ ._\\[(-])(?:[0-9]{3,4}[xX][0-9]{3,4}|2160p|1080p|720p|480p|WEB[- .]?DL|BluRay|BDRip|HDRip|x26[45]|H[ .]?26[45])").find(base)?.range?.first).minOrNull()?:base.length
             val title=base.take(cut).replace(Regex("\\[[^]]*]")," ").replace(Regex("[._]+")," ").trim(' ','-','(',')','[',']')
             return MediaIdentity(title.take(150),year?.value?.toIntOrNull(),episode?.groupValues?.get(1)?.toInt(),episode?.groupValues?.get(2)?.toInt())
         }
@@ -54,39 +54,81 @@ data class MediaIdentity(val title:String,val year:Int?=null,val season:Int?=nul
 }
 private fun normalize(s:String)=s.lowercase().replace(Regex("\\s*\\([^)]*(?:film|电影|電影|年)[^)]*\\)"),"").filter{it.isLetterOrDigit()}
 data class PosterMatch(val imageUrl:String,val sourceUrl:String,val credit:String)
-class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(),private val tvBase:String="https://api.tvmaze.com/",private val wikiBase:String?=null){
+/** Reject uncertain identity rather than showing a plausible but unrelated image. */
+class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(), private val tvBase:String="https://api.tvmaze.com/", private val wikiBase:String?=null) {
     fun find(id:MediaIdentity,c:Cancellation):PosterMatch? {
         if(id.title.length<2)return null
-        if(id.season!=null)runCatching{
-            val url=tvBase.toHttpUrl().resolve("search/shows")!!.newBuilder().addQueryParameter("q",id.title).build()
-            val result=JsonParser.parseString(String(http.bytes(Request.Builder().url(url).build(),c,1024*1024),Charsets.UTF_8)).asJsonArray
-            val candidates=result.map{it.asJsonObject.getAsJsonObject("show")}.filter{show->
-                normalize(show.get("name").asString)==id.normalized()&&(id.year==null||show.get("premiered")?.takeUnless{it.isJsonNull}?.asString?.take(4)?.toIntOrNull()==id.year)
-            }
-            if(candidates.size==1){val show=candidates.single();val image=show.getAsJsonObject("image")?.get("medium")?.takeUnless{it.isJsonNull}?.asString
-                if(image!=null&&image.toHttpUrl().isHttps)return PosterMatch(image,show.get("url").asString,"TVmaze · CC BY-SA")}
-        }.onFailure{c.check()}
+        if(id.season!=null) {
+            return runCatching {
+                val url=tvBase.toHttpUrl().resolve("search/shows")!!.newBuilder().addQueryParameter("q",id.title).build()
+                val result=JsonParser.parseString(String(http.bytes(Request.Builder().url(url).build(),c,1024*1024),Charsets.UTF_8)).asJsonArray
+                val candidates=result.map{it.asJsonObject.getAsJsonObject("show")}.filter { show ->
+                    normalize(show.get("name").asString)==id.normalized() &&
+                        (id.year==null||show.get("premiered")?.takeUnless{it.isJsonNull}?.asString?.take(4)?.toIntOrNull()==id.year)
+                }
+                val show=candidates.singleOrNull()?:return@runCatching null
+                val image=show.getAsJsonObject("image")?.get("medium")?.takeUnless{it.isJsonNull}?.asString?:return@runCatching null
+                val source=show.get("url").asString.toHttpUrl()
+                if(!image.toHttpUrl().isHttps||!source.isHttps)return@runCatching null
+                PosterMatch(image,source.toString(),"TVmaze CC BY-SA")
+            }.onFailure{c.check()}.getOrNull()
+        }
         val languages=if(id.title.any{it.code in 0x3400..0x9fff})listOf("zh","en")else listOf("en","zh")
-        for(lang in languages)runCatching{
-            val titles=listOfNotNull(id.year?.let{"${id.title} ($it film)"},id.year?.let{"${id.title} (${it}年电影)"},"${id.title} (film)","${id.title} (电影)",id.title).joinToString("|")
-            val url=(wikiBase?:"https://$lang.wikipedia.org/w/api.php").toHttpUrl().newBuilder()
-                .addQueryParameter("action","query").addQueryParameter("format","json").addQueryParameter("redirects","1")
-                .addQueryParameter("prop","pageimages").addQueryParameter("piprop","thumbnail").addQueryParameter("pilicense","any")
-                .addQueryParameter("pithumbsize","640").addQueryParameter("titles",titles).build()
-            val result=JsonParser.parseString(String(http.bytes(Request.Builder().url(url).build(),c,1024*1024),Charsets.UTF_8)).asJsonObject
-            val pages=result.getAsJsonObject("query")?.getAsJsonObject("pages")?:return@runCatching
-            val matches=pages.entrySet().map{it.value.asJsonObject}.filter{p->p.get("pageid")?.asLong?.let{it>0}==true&&normalize(p.get("title").asString)==id.normalized()&&p.has("thumbnail")}
-            val yearMatched=matches.filter { p -> val explicit=Regex("(?:19|20)[0-9]{2}").find(p.get("title").asString)?.value?.toInt(); id.year==null || explicit==null || explicit==id.year }
-            val ranked=yearMatched.sortedByDescending{p->if(id.year!=null&&p.get("title").asString.contains(id.year.toString()))1 else 0}
-            val page=ranked.firstOrNull()?:return@runCatching
-            if(ranked.size>1&&id.year==null)return@runCatching
-            val image=page.getAsJsonObject("thumbnail").get("source").asString.toHttpUrl()
-            if(!image.isHttps||image.host!="upload.wikimedia.org")return@runCatching
-            val title=page.get("title").asString
-            return PosterMatch(image.toString(),"https://$lang.wikipedia.org/wiki/"+java.net.URLEncoder.encode(title.replace(' ','_'),"UTF-8"),"Wikipedia · 图片版权见来源页")
-        }.onFailure{c.check()}
+        for(lang in languages) {
+            val match=runCatching {
+                val titles=listOfNotNull(id.year?.let{"${id.title} ($it film)"},id.year?.let{"${id.title} (${it}年电影)"},"${id.title} (film)","${id.title} (电影)",id.title)
+                val url=(wikiBase?:"https://$lang.wikipedia.org/w/api.php").toHttpUrl().newBuilder()
+                    .addQueryParameter("action","query").addQueryParameter("format","json").addQueryParameter("redirects","1")
+                    .addQueryParameter("converttitles","1").addQueryParameter("prop","pageimages|pageprops|categories")
+                    .addQueryParameter("piprop","thumbnail|name").addQueryParameter("pilicense","any")
+                    .addQueryParameter("cllimit","50").addQueryParameter("pithumbsize","640").addQueryParameter("titles",titles.joinToString("|")).build()
+                val result=JsonParser.parseString(String(http.bytes(Request.Builder().url(url).build(),c,1024*1024),Charsets.UTF_8)).asJsonObject
+                val query=result.getAsJsonObject("query")?:return@runCatching null
+                // Follow only conversions and redirects returned for the exact requested titles.
+                val accepted=titles.map(::normalize).toMutableSet()
+                val links=listOf("normalized","converted","redirects").flatMap{query.getAsJsonArray(it)?.toList()?:emptyList()}
+                repeat(links.size+1) { links.forEach { value ->
+                    val link=value.asJsonObject
+                    if(normalize(link.get("from").asString) in accepted)accepted+=normalize(link.get("to").asString)
+                } }
+                val pages=query.getAsJsonObject("pages")?:return@runCatching null
+                val matches=pages.entrySet().map{it.value.asJsonObject}.filter { page ->
+                    if(page.get("pageid")?.asLong?.let{it>0}!=true||!page.has("thumbnail")||page.getAsJsonObject("pageprops")?.has("disambiguation")==true)return@filter false
+                    val title=page.get("title").asString
+                    val categories=page.getAsJsonArray("categories")?.map{it.asJsonObject.get("title").asString}?:emptyList()
+                    val filmQualifier=Regex("(?i)\\([^)]*(?:\\bfilm\\b|电影|電影)[^)]*\\)").containsMatchIn(title)
+                    val explicitYears=Regex("[（(]((?:19|20)[0-9]{2})(?:\\s+film|年(?:电影|電影))").findAll(title).map{it.groupValues[1].toInt()}.toSet()
+                    val releaseYears=categories.mapNotNull { category ->
+                        Regex("(?i)^Category:((?:19|20)[0-9]{2})(?:年(?!代|背景|设定|設定)[^:]*?(?:電影|电影)(?:作品)?$|\\s+films$)")
+                            .find(category)?.groupValues?.get(1)?.toInt()
+                    }.toSet()
+                    val isFilm=filmQualifier||releaseYears.isNotEmpty()||categories.any{Regex("(?i)\\bfilms\\b|電影作品|电影作品|(?:电影|電影|片)$").containsMatchIn(it)}
+                    val years=explicitYears.ifEmpty{releaseYears}
+                    normalize(title) in accepted && isFilm && (id.year==null||id.year in years)
+                }.distinctBy{it.get("pageid").asLong}
+                val page=matches.singleOrNull()?:return@runCatching null
+                val image=page.getAsJsonObject("thumbnail").get("source").asString.toHttpUrl()
+                if(!image.isHttps||image.host!="upload.wikimedia.org")return@runCatching null
+                val title=page.get("title").asString
+                PosterMatch(image.toString(),"https://$lang.wikipedia.org/wiki/"+java.net.URLEncoder.encode(title.replace(' ','_'),"UTF-8"),"Wikipedia / Wikimedia")
+            }.onFailure{c.check()}.getOrNull()
+            if(match!=null)return match
+        }
         return null
     }
+}
+
+/** A shared folder cover is safe only when every video belongs to the same title. */
+fun posterSidecarNames(filename:String,siblings:List<String>):List<String> {
+    val stem=filename.substringBeforeLast('.',filename)
+    val specific=listOf("$stem-poster.jpg","$stem.jpg","$stem-poster.png","$stem.png")
+    val identity=MediaIdentity.parse(filename)
+    val videos=siblings.filter{Regex("(?i)\\.(mkv|mp4|avi|mov|m4v|ts|webm)$").containsMatchIn(it)}
+    val sameTitle=videos.isNotEmpty()&&videos.all { name ->
+        val candidate=MediaIdentity.parse(name)
+        candidate.normalized()==identity.normalized()&&candidate.year==identity.year&&(candidate.season==null)==(identity.season==null)
+    }
+    return specific + if(sameTitle)listOf("poster.jpg","folder.jpg","cover.jpg","poster.png","folder.png","cover.png")else emptyList()
 }
 
 data class SubtitleMatch(val url:String,val extension:String,val label:String,val delayMs:Long)

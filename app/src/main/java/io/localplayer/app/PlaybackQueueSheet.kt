@@ -1,6 +1,11 @@
 package io.localplayer.app
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -39,8 +44,10 @@ fun PlaybackQueueSheet(items: List<MediaItem>, current: Int, truncated: Boolean,
             }
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().testTag("queue-dismiss-backdrop").clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = dismiss))
             val drawerWidth = if (maxWidth > maxHeight) (maxWidth * .37f).coerceIn(280.dp, 420.dp) else minOf(maxWidth * .88f, 420.dp)
-            Surface(Modifier.align(Alignment.CenterEnd).width(drawerWidth).fillMaxHeight().testTag("playback-queue-drawer"),
+            Surface(Modifier.align(Alignment.CenterEnd).width(drawerWidth).fillMaxHeight().testTag("playback-queue-drawer").pointerInput(Unit) { detectTapGestures(onTap = {}) },
                 color = Color(0xED171C20), contentColor = Color(0xFFF7F7F6), shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)) {
                 Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)).padding(horizontal = 20.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {

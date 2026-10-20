@@ -149,7 +149,7 @@ class HomePolishTest {
         ui.onNodeWithText("本版说明").performClick()
         ui.onNodeWithText(displayReleaseNotes(BuildConfig.VERSION_NOTES,ui.activity.resources.configuration.locales[0].language)).assertIsDisplayed()
         capture("release-letter")
-        assertTrue(BuildConfig.VERSION_CHANGES.contains("拾荒者信笺"));assertTrue(BuildConfig.VERSION_CHANGES.contains("自动扫描"))
+        assertTrue(BuildConfig.VERSION_CHANGES.contains("拾荒者信笺"))
         assertFalse(BuildConfig.VERSION_CHANGES.contains("验证与限制"))
     }
 

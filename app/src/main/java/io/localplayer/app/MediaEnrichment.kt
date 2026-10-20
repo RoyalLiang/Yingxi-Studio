@@ -30,9 +30,14 @@ internal object MediaPosters {
     private val locks=Array(16){kotlinx.coroutines.sync.Mutex()}
     internal var onlineLookup:(MediaIdentity,Cancellation)->PosterMatch?={id,c->lookup.find(id,c)}
     private fun dir(c:Context)=File(c.cacheDir,"media-posters-v1").apply{mkdirs()}
-    fun credit(c:Context,m:MediaRef):Pair<String,String>?=runCatching{
-        val o=org.json.JSONObject(File(dir(c),enrichmentKey(m)+".json").readText());o.getString("credit") to o.getString("url")
+    private const val posterPolicy = 2
+    private const val posterLifetimeMs = 7L * 24 * 60 * 60 * 1000
+    private fun cachedMetadata(c:Context,m:MediaRef):org.json.JSONObject? = runCatching {
+        val data=org.json.JSONObject(File(dir(c),enrichmentKey(m)+".json").readText())
+        val age=System.currentTimeMillis()-data.getLong("fetchedAt")
+        data.takeIf{it.optInt("policy")==posterPolicy&&it.optString("title")==m.title&&age in 0 until posterLifetimeMs}
     }.getOrNull()
+    fun credit(c:Context,m:MediaRef):Pair<String,String>?=runCatching{cachedMetadata(c,m)?.let{it.getString("credit") to it.getString("url")}}.getOrNull()
     internal fun decode(data:ByteArray):Bitmap?{
         val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeByteArray(data,0,data.size,bounds)
         if(bounds.outWidth !in 1..20000||bounds.outHeight !in 1..20000)return null
@@ -54,7 +59,8 @@ internal object MediaPosters {
         lock.lock()
         try{
             val target=File(dir(context),"$id.jpg")
-            if(target.isFile)decode(target.readBytes())?.let{return@withContext it}
+            if(target.isFile&&cachedMetadata(context,media)!=null)decode(target.readBytes())?.let{return@withContext it}
+            target.delete();File(dir(context),"$id.json").delete()
             if(System.currentTimeMillis()-(failed[id]?:0)<6*60*60*1000)return@withContext null
             val token=HistoryStore(context).token(media.key)
         val generation=revision.get()
@@ -71,21 +77,20 @@ internal object MediaPosters {
                 if(revision.get()!=generation||HistoryStore(context).token(media.key)!=token||!EnrichmentPreferences(context).posters)return@withContext null
                 val temp=File(dir(context),"$id.tmp")
                 try{temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,88,it))};check(temp.renameTo(target))}finally{temp.delete()}
-                File(dir(context),"$id.json").writeText(org.json.JSONObject().put("credit",credit).put("url",url).toString())
+                File(dir(context),"$id.json").writeText(org.json.JSONObject().put("credit",credit).put("url",url).put("policy",posterPolicy).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).toString())
                 trim(context);bitmap
             }catch(e:CancellationException){throw e}catch(_:Exception){failed[id]=System.currentTimeMillis();null}
             finally{watcher.cancel(false);owner.dispose();c.close()}
         }finally{lock.unlock()}
     }
     private fun sidecar(context:Context,media:MediaRef,source:Source?,c:Cancellation):ByteArray?{
-        val stem=media.title.substringBeforeLast('.',media.title)
-        val names=listOf("$stem-poster.jpg","$stem.jpg","poster.jpg","folder.jpg","cover.jpg","poster.png","folder.png")
         if(source!=null){
             val pass=SourceStore(context).password(source.id)
             if(pass==null&&source.username.isNotBlank())return null
             return connector.connect(source,Credentials(pass?:""),c).use{session->
                 val entries=session.list(media.path?.substringBeforeLast('/',"")?:"")
-                val image=names.firstNotNullOfOrNull{n->entries.firstOrNull{!it.directory&&it.name.equals(n,true)&&it.size in 1..5L*1024*1024}}?:return@use null
+                val names=posterSidecarNames(media.title,entries.filter{!it.directory}.map{it.name})
+            val image=names.firstNotNullOfOrNull{n->entries.firstOrNull{!it.directory&&it.name.equals(n,true)&&it.size in 1..5L*1024*1024}}?:return@use null
                 session.open(image.path).use image@{file->if(file.size !in 1..5L*1024*1024)return@image null;val data=ByteArray(file.size.toInt());var n=0
                     while(n<data.size){c.check();val k=file.readAt(n.toLong(),data,n,data.size-n);if(k<=0)return@image null;n+=k};data}
             }
@@ -98,6 +103,7 @@ internal object MediaPosters {
         val fields=arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME)
         val found=mutableMapOf<String,Uri>()
         context.contentResolver.query(children,fields,null,null,null)?.use{cursor->var count=0;while(cursor.moveToNext()&&count++<2000){c.check();found[cursor.getString(1).lowercase()]=android.provider.DocumentsContract.buildDocumentUriUsingTree(uri,cursor.getString(0))}}
+        val names=posterSidecarNames(media.title,found.keys.toList())
         val image=names.firstNotNullOfOrNull{found[it.lowercase()]}?:return null
         return context.contentResolver.openInputStream(image)?.use{it.readNBytes(5*1024*1024+1)}?.takeIf{it.size<=5*1024*1024}
     }
