@@ -55,11 +55,12 @@ public final class DAVListing: NSObject, XMLParserDelegate {
     private var text="",href="",name="",responseStatus="",propStatus="",propName=""
     private var size:Int64=0,propSize:Int64=0,depth=0
     private var isDirectory=false,propDirectory=false,inResponse=false,inProps=false,readable=false,rootValid=false
+    private var selfFailure=false
     public init(source: DAVSource, directory: URL) {self.source=source;self.directory=directory}
     public func parse(_ data: Data) throws -> [DAVEntry] {
         guard data.count<=4*1024*1024 else{throw DAVError.invalidListing}
         let parser=XMLParser(data:data);parser.shouldProcessNamespaces=true;parser.shouldResolveExternalEntities=false;parser.delegate=self
-        guard parser.parse(),rootValid,entries.count<=10000 else{throw DAVError.invalidListing}
+        guard parser.parse(),rootValid,!selfFailure,entries.count<=10000 else{throw DAVError.invalidListing}
         return entries.sorted {a,b in if a.directory != b.directory{return a.directory};let order=a.name.localizedStandardCompare(b.name);return order == .orderedSame ? a.url.absoluteString < b.url.absoluteString : order == .orderedAscending}
     }
     public func parser(_ parser: XMLParser,didStartElement elementName: String,namespaceURI: String?,qualifiedName: String?,attributes: [String:String]) {
@@ -87,9 +88,15 @@ public final class DAVListing: NSObject, XMLParserDelegate {
                 inProps=false
             case "response":
                 defer{inResponse=false}
-                guard readable,responseStatus.isEmpty || responseStatus.contains(" 200 "),let url=URL(string:href,relativeTo:directory)?.absoluteURL,source.contains(url),url.user==nil,url.password==nil,url.query==nil,url.fragment==nil else{return}
-                guard url.standardized.path.trimmingCharacters(in:CharacterSet(charactersIn:"/")) != directory.standardized.path.trimmingCharacters(in:CharacterSet(charactersIn:"/")) else{return}
-                entries.append(DAVEntry(url:url,name:name.isEmpty ? url.lastPathComponent : name,directory:isDirectory,size:max(0,size)))
+                guard let url=URL(string:href,relativeTo:directory)?.absoluteURL,source.contains(url),url.user==nil,url.password==nil,url.query==nil,url.fragment==nil else{return}
+            let path=url.standardized.path.trimmingCharacters(in:CharacterSet(charactersIn:"/"))
+            let requested=directory.standardized.path.trimmingCharacters(in:CharacterSet(charactersIn:"/"))
+            let success=readable && (responseStatus.isEmpty || responseStatus.contains(" 200 "))
+            if path==requested {if !success || !isDirectory {selfFailure=true};return}
+            guard success,path.hasPrefix(requested.isEmpty ? "" : requested+"/") else{return}
+            let relative=requested.isEmpty ? path : String(path.dropFirst(requested.count+1))
+            guard !relative.isEmpty,!relative.contains("/") else{return}
+            entries.append(DAVEntry(url:url,name:name.isEmpty ? url.lastPathComponent : name,directory:isDirectory,size:max(0,size)))
                 if entries.count>10000 {parser.abortParsing()}
             default: break
             }
@@ -115,6 +122,11 @@ public final class DAVRedirectPolicy: NSObject, URLSessionTaskDelegate, @uncheck
     public init(origin: URL,browsing: Bool){self.origin=origin;self.browsing=browsing}
     public func urlSession(_ session: URLSession,task: URLSessionTask,willPerformHTTPRedirection response: HTTPURLResponse,newRequest request: URLRequest,completionHandler: @escaping (URLRequest?)->Void) {
         guard let url=request.url,url.scheme=="https",url.user==nil,url.password==nil else{completionHandler(nil);return}
+        if browsing {
+            let root=origin.standardized.path
+            let path=url.standardized.path
+            guard DAVSource.sameOrigin(origin,url),url.query==nil,url.fragment==nil,(path==root || path.hasPrefix(root.hasSuffix("/") ? root : root+"/")) else{completionHandler(nil);return}
+        }
         if !DAVSource.sameOrigin(origin,url) {
             if browsing {completionHandler(nil);return}
             var clean=request;clean.setValue(nil,forHTTPHeaderField:"Authorization");clean.setValue(nil,forHTTPHeaderField:"Cookie");completionHandler(clean)
@@ -136,4 +148,44 @@ public final class DAVClient {
         for try await byte in bytes {data.append(byte);if data.count>4*1024*1024 {throw DAVError.invalidListing}}
         return try DAVListing(source:source,directory:url).parse(data)
     }
+}
+
+/// HTTP range accounting shared by the loader and deterministic protocol tests.
+public struct RangeProgress {
+    public private(set) var offset:Int64
+    public private(set) var remaining:Int64?
+    public private(set) var total:Int64?
+    public private(set) var chunkExpected:Int64=0
+    public private(set) var chunkReceived:Int64=0
+    public init(offset:Int64,length:Int64,allToEnd:Bool) {
+        self.offset=offset;remaining=allToEnd ? nil : max(0,length)
+    }
+    public var nextLength:Int64? {
+        if remaining==0 || (total != nil && offset>=total!) {return nil}
+        return min(remaining ?? 1024*1024,1024*1024)
+    }
+    public mutating func accept(status:Int,range:String?,contentLength:Int64,encoding:String?,metadataOnly:Bool=false) throws {
+        guard offset>=0,let length=nextLength,length>0 else{throw DAVError.invalidRange}
+        guard encoding==nil || encoding!.lowercased()=="identity" else{throw DAVError.invalidRange}
+        let actualTotal:Int64
+        if status==206 {
+            let value=try ByteRange.parse(range ?? "")
+            guard value.start==offset,value.end-value.start+1<=length else{throw DAVError.invalidRange}
+            chunkExpected=value.end-value.start+1;actualTotal=value.total
+            guard contentLength<0 || contentLength==chunkExpected else{throw DAVError.invalidRange}
+        }else if status==200 && offset==0 && contentLength>0 {
+            actualTotal=contentLength;chunkExpected=contentLength
+            guard metadataOnly || contentLength<=length else{throw DAVError.rangeUnsupported}
+        }else if status==200 {throw DAVError.rangeUnsupported}
+        else{throw DAVError.rejectedResponse(status)}
+        guard total==nil || total==actualTotal else{throw DAVError.invalidRange}
+        total=actualTotal;chunkReceived=0
+        if remaining==nil {remaining=actualTotal-offset}
+        else {remaining=min(remaining!,actualTotal-offset)}
+    }
+    public mutating func receive(_ count:Int64) throws {
+        guard count>=0,count<=chunkExpected-chunkReceived,count<=(remaining ?? 0) else{throw DAVError.invalidRange}
+        offset+=count;remaining=(remaining ?? 0)-count;chunkReceived+=count
+    }
+    public func completeChunk() throws {guard chunkReceived==chunkExpected else{throw DAVError.invalidRange}}
 }
