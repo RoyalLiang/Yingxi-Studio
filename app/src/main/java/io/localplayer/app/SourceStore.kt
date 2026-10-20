@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import io.localplayer.core.Protocol
 import io.localplayer.core.Source
 import org.json.JSONArray
@@ -37,23 +38,40 @@ class SourceStore(context: Context) {
         presentation.edit().putStringSet("pinned",pins).apply()
         true
     }
-    fun save(source: Source, password: String, remember: Boolean, stillCurrent: () -> Boolean = { true }) = synchronized(orderLock) {
+    fun save(source: Source, password: String, remember: Boolean, preservePresentation: Boolean = false, stillCurrent: () -> Boolean = { true }) = synchronized(orderLock) {
         // Encrypt before updating the profile. Never fall back to plaintext on Keystore failure.
         val ciphertext = if (remember) encrypt(password) else null
         if (!stillCurrent()) return@synchronized
         secrets.edit().apply { if (ciphertext == null) remove(source.id) else putString(source.id, ciphertext) }.apply()
-        val sources = load().filterNot { it.id == source.id } + source
+        val current = load()
+        val previous = current.firstOrNull { it.id == source.id }
+        val saved = if (preservePresentation && previous != null) source.copy(label = previous.label, initialPath = previous.initialPath) else source
+        val sources = current.filterNot { it.id == source.id } + saved
         val a=JSONArray()
         sources.forEach { s -> a.put(JSONObject().put("id",s.id).put("label",s.label).put("protocol",s.protocol.name)
             .put("host",s.host).put("port",s.port).put("root",s.root).put("username",s.username).put("domain",s.domain)
             .put("trustedKey",s.trustedKey ?: "").put("trustedAuthority",s.trustedAuthority ?: "").put("initialPath",s.initialPath).put("secure",s.secure).put("userAgent",s.userAgent).put("referer",s.referer)) }
         prefs.edit().putString("sources",a.toString()).apply()
     }
+    /** Presentation edits must never decrypt, replace or forget a saved credential. */
+    fun updatePresentation(id: String, label: String, initialPath: String, folderName: String) = synchronized(orderLock) {
+        val name = label.trim()
+        require(name.isNotEmpty() && name.length <= 100) { "来源名称需为 1–100 个字符" }
+        val path = io.localplayer.core.Paths.clean(initialPath)
+        val rows = JSONArray(prefs.getString("sources", "[]"))
+        val row = (0 until rows.length()).map { rows.getJSONObject(it) }.firstOrNull { it.getString("id") == id }
+        requireNotNull(row) { "这个来源已移除" }
+        row.put("label", name).put("initialPath", path)
+        prefs.edit().putString("sources", rows.toString()).apply()
+        presentation.edit { putString("start-label:$id", if (path.isEmpty()) "来源根目录" else folderName) }
+    }
+    fun startingFolderName(source: Source): String = if (source.initialPath.isEmpty()) "来源根目录" else
+        presentation.getString("start-label:${source.id}", null) ?: if (source.protocol == Protocol.ALIYUN) "已选文件夹" else source.initialPath.substringAfterLast('/')
     fun delete(id: String) = synchronized(orderLock) {
         val a=JSONArray(prefs.getString("sources","[]"));val next=JSONArray()
         for(i in 0 until a.length()) if(a.getJSONObject(i).getString("id")!=id) next.put(a.getJSONObject(i))
         prefs.edit().putString("sources",next.toString()).apply();secrets.edit().remove(id).apply()
-        synchronized(orderLock){presentation.edit().putStringSet("pinned",pinnedIds()-id).apply()}
+        presentation.edit().putStringSet("pinned",pinnedIds()-id).remove("start-label:$id").apply()
     }
     fun password(id: String): String? = secrets.getString(id,null)?.let {
         try { decrypt(it) } catch (_: Exception) { throw java.io.IOException("本机凭据无法解密，请重新输入密码") }

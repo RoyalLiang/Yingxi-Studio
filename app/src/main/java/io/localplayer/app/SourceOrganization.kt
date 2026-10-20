@@ -38,6 +38,15 @@ class SourceOrganization(context: Context) {
     }
     fun remove(key: String) = saveBookmarks(bookmarks().filterNot { it.key == key })
     fun removeSource(sourceId: String) = saveBookmarks(bookmarks().filterNot { it.sourceId == sourceId })
+    fun moveSourceEntry(sourceId: String, oldPath: String, newPath: String, label: String) {
+        if (oldPath == newPath) return
+        val rows = bookmarks()
+        val old = rows.firstOrNull { it.sourceId == sourceId && it.path == oldPath } ?: return
+        val target = rows.firstOrNull { it.sourceId == sourceId && it.path == newPath }
+        val moved = old.copy(path = newPath, label = label, favorite = old.favorite || target?.favorite == true,
+            groupId = target?.groupId ?: old.groupId)
+        saveBookmarks(rows.filterNot { it.key == old.key || it.key == moved.key } + moved)
+    }
     private fun saveGroups(rows: List<SourceGroup>) {
         val a = JSONArray(); rows.forEach { a.put(JSONObject().put("id", it.id).put("name", it.name)) }
         prefs.edit().putString("groups", a.toString()).apply()

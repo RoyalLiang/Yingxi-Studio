@@ -61,7 +61,8 @@ class SourceInteractionTest {
         val source=unknown.copy(trustedKey=key,trustedAuthority=unknown.authority)
         mount(source)
         // Keep the saved row above the floating navigation touch area.
-        ui.onNodeWithTag("home-list").performScrollToNode(hasText(source.label))
+        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasText(source.label))
         ui.onNodeWithText(source.label).performClick()
         ui.runOnIdle{assertTrue("Saved source click must start opening its directory",vm.openingSource?.id==source.id||vm.source?.id==source.id)}
         ui.onNodeWithText("连接来源").assertDoesNotExist()
@@ -95,12 +96,14 @@ class SourceInteractionTest {
         }
     }
 
-    @Test fun savedSourceOnlyEditsFromItsConfigurationIcon(){
+    @Test fun savedSourceOnlyEditsFromItsSettingsMenu(){
         val source=Source(label="配置入口验证",protocol=Protocol.SFTP,host="10.0.2.2",port=TestFixtures.sftpPort,root="/",username=TestFixtures.username)
         mount(source)
         ui.onNodeWithText("添加第一个来源").assertDoesNotExist()
         ui.onNodeWithText("来源").performClick()
-        ui.onNodeWithContentDescription("修改配置 ${source.label}").performClick()
+        ui.onNodeWithContentDescription("来源操作 ${source.label}").performClick()
+        ui.onNodeWithText("来源设置").performClick()
+        ui.onNodeWithText("连接与账户配置").performClick()
         ui.onNodeWithText("连接来源").assertIsDisplayed()
         ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
     }

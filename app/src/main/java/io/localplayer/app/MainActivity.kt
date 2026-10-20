@@ -79,28 +79,19 @@ class MainActivity:ComponentActivity(){
 
 @Composable fun LibraryScreen(vm:LibraryViewModel,openLocal:()->Unit,requestNearby:()->Unit){
     if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm);return}
-
-    var menu by remember{mutableStateOf(false)}
-    var deleting by remember{mutableStateOf<io.localplayer.core.Source?>(null)}
-    val current=vm.openingSource ?: vm.source
-    BackHandler(enabled=current!=null&&vm.draft==null&&vm.access==null){if(vm.openingSource!=null)vm.closeSource()else vm.up()}
-    Column(Modifier.fillMaxSize().testTag(if(current==null)"source-list"else"source-browser")){
-        if(vm.source!=null)DirectoryBookmarkActions(vm)
-        Row(Modifier.fillMaxWidth().padding(start=if(current==null)24.dp else 8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-            if(current!=null)TextButton(onClick={if(vm.openingSource!=null)vm.closeSource()else vm.up()}){
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack,null,Modifier.size(20.dp));Spacer(Modifier.width(4.dp));Text(if(vm.path.isEmpty())"返回来源"else"上一级",fontSize=13.sp)
+    val current=vm.openingSource ?: vm.source ?: return
+    val selecting=vm.rootSelectionId==current.id
+    val back={if(vm.openingSource!=null)vm.closeSource()else vm.up()}
+    BackHandler(enabled=vm.draft==null&&vm.access==null){back()}
+    Column(Modifier.fillMaxSize().testTag("source-browser")){
+        Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
+            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty())"返回来源"else"上一级",tint=Berry)}
+            Column(Modifier.weight(1f).padding(horizontal=8.dp)){
+                Text(if(selecting)"选择默认目录"else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold)
+                Text(if(selecting)current.label else "${current.protocol} · 文件浏览",Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=2,overflow=TextOverflow.Ellipsis)
             }
-            Column(Modifier.weight(1f)){
-                Text(current?.label ?: "来源",fontSize=if(current==null)32.sp else 23.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Spacer(Modifier.height(5.dp));Text(if(current==null)"你的私人片库。"else"${current.protocol} · 文件浏览",fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
-            if(current==null)IconButton(onClick={vm.add()}){Icon(Icons.Rounded.Add,"添加来源",tint=Berry)}
-            else IconButton(onClick={vm.edit(current)}){Icon(Icons.Rounded.Tune,"修改配置 ${current.label}",tint=Muted)}
-            Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"更多")}
-                DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
-                    DropdownMenuItem(text={Text("打开本机文件")},onClick={menu=false;openLocal()})
-                }
-            }
+            if(selecting)TextButton(onClick={vm.closeSource()}){Text("取消")}
+            else SourceActions(vm,current,SourceBookmark(current.id,current.initialPath,current.label))
         }
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
             val parts=vm.path.split('/').filter{it.isNotEmpty()}
@@ -110,39 +101,26 @@ class MainActivity:ComponentActivity(){
             }
             HorizontalDivider(color=Hairline)
         }
+        if(selecting){
+            Row(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
+                Text("选择后，下次直接从这里进入。",Modifier.weight(1f).padding(end=8.dp),fontSize=13.sp,lineHeight=20.sp,color=Muted)
+                FilledTonalButton(onClick=vm::useCurrentFolder,enabled=!vm.busy&&vm.openingSource==null&&vm.source!=null,shape=RoundedCornerShape(16.dp)){Text("使用此文件夹")}
+            }
+        }else if(vm.source!=null)DirectoryBookmarkActions(vm)
         if(vm.busy||vm.openingSource!=null)Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
             CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在连接与读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp,color=Muted);TextButton(onClick={vm.closeSource()}){Text("取消")}
         }
-        if(current==null)LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
-            if(vm.sources.isEmpty())item{Column(Modifier.padding(32.dp)){
-                Text("尚未保存来源",fontSize=20.sp,fontWeight=FontWeight.SemiBold)
-                Spacer(Modifier.height(10.dp));Text("在首页发现设备，或点击右上角添加来源。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
-            }}else{
-                item{Row(Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=8.dp,bottom=10.dp)){
-                    Text("已保存",Modifier.weight(1f),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)
-                    Text("${vm.pinnedIds.size}/3 置顶",fontSize=12.sp,color=Muted)
-                }}
-                items(vm.sources,key={it.id}){source->SavedSourceRow(source,source.id in vm.pinnedIds,
-                    open={vm.open(source)},edit={vm.edit(source)},pin={vm.togglePin(source)},remove={deleting=source},privateAccess={vm.privateAccess(source)})}
-                item{Text("左滑置顶或删除，右滑私密访问",Modifier.padding(horizontal=24.dp,vertical=14.dp),fontSize=12.sp,color=Muted)}
-            }
-        }else{
-            if(vm.openingSource==null)Row(Modifier.padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){
-                Text("${vm.entries.size} 个项目",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={vm.browse(vm.path)}){Text("刷新")}
-            }
-            LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
-                if(vm.entries.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text("这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
-                if(vm.openingSource==null)items(vm.entries,key={it.path}){entry->MediaRow(entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
-                    if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle){if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
-            }
+        val shown=if(selecting)vm.entries.filter{it.directory}else vm.entries
+        if(vm.openingSource==null)Row(Modifier.padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){
+            Text("${shown.size} 个${if(selecting)"文件夹"else"项目"}",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={vm.browse(vm.path)},enabled=!vm.busy){Text("刷新")}
+        }
+        LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
+            if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
+            if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
+                if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle){if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
         }
     }
-    deleting?.let{source->AlertDialog(onDismissRequest={deleting=null},title={Text("删除来源？")},
-        text={Text("将移除“${source.label}”和本机保存的密码。服务器上的文件会保留。")},
-        confirmButton={TextButton(onClick={vm.removeSource(source);deleting=null}){Text("删除来源",color=MaterialTheme.colorScheme.error)}},
-        dismissButton={TextButton(onClick={deleting=null}){Text("取消")}})}
 }
-
 @Composable private fun Section(s:String){Text(s,Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
 @Composable internal fun MediaRow(title:String,subtitle:String,icon:ImageVector,click:()->Unit){
     Surface(onClick=click,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=3.dp),color=GroupedSurface,shape=RoundedCornerShape(18.dp)){
@@ -161,6 +139,7 @@ class MainActivity:ComponentActivity(){
 fun formatSize(n:Long)=when{n>=1L.shl(30)->"%.1f GB".format(n.toDouble()/(1L.shl(30)));n>=1L.shl(20)->"%.1f MB".format(n.toDouble()/(1L.shl(20)));else->"${n/1024} KB"}
 
 @Composable fun SourceDialogs(vm:LibraryViewModel,requestNearby:()->Unit={}){
+    vm.settingsSourceId?.let { id -> vm.sources.firstOrNull { it.id == id }?.let { SourceSettingsSheet(vm, it) } }
     ShareSelectionDialog(vm)
     PrivateSourceAccessPrompt(vm)
     vm.access?.let{access->AlertDialog(onDismissRequest={vm.dismissAccess()},title={Text("验证来源")},text={Column{

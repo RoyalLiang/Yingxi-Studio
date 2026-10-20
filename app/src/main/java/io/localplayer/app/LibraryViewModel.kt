@@ -49,10 +49,13 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     var scanning by mutableStateOf(false);private set
     var source by mutableStateOf<Source?>(null);private set
     var path by mutableStateOf("");private set
+    private var currentFolderName="来源根目录"
     var entries by mutableStateOf(emptyList<Entry>());private set
     var busy by mutableStateOf(false);private set
     var preparingKey by mutableStateOf<String?>(null);private set
     var discoveryPanelOpen by mutableStateOf(false)
+    var settingsSourceId by mutableStateOf<String?>(null); private set
+    var rootSelectionId by mutableStateOf<String?>(null); private set
     private var noticeSerial = 0L
     internal var notice by mutableStateOf<SourceNotice?>(null); private set
     private var errorValue by mutableStateOf<String?>(null)
@@ -139,7 +142,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     }
     fun completePrivateAccess(id:String){val request=privateRequest?.takeIf{it.id==id} ?: return;privateRequest=null;open(request.source)}
     fun cancelPrivateAccess(id:String,message:String?=null){if(privateRequest?.id!=id)return;privateRequest=null;if(message!=null)error=message}
-    fun open(saved:Source,location:String=saved.initialPath){
+    fun open(saved:Source,location:String=saved.initialPath,selectRoot:Boolean=false){
+        rootSelectionId=if(selectRoot)saved.id else null
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;draft=null;access=null;openingSource=saved
         val request=generation
         val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
@@ -152,11 +156,11 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             else{openingSource=null;access=SourceAccess(saved,path=location)}
         }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=location);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
     }
-    fun cloudConnected(saved:Source){sources=store.load();if(sources.none{it.id==saved.id})return;selectedGroup="all";error=null;draft=null;open(saved)}
+    fun cloudConnected(saved:Source){sources=store.load();val current=sources.firstOrNull{it.id==saved.id} ?: return;selectedGroup="all";error=null;draft=null;open(current)}
     fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
     fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
     fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
-    fun dismissAccess(){cancelOperation();pendingReplay=null;trust=null;access=null;openingSource=null;error=null}
+    fun dismissAccess(){cancelOperation();pendingReplay=null;trust=null;access=null;openingSource=null;rootSelectionId=null;error=null}
     fun edit(saved:Source){
         if(saved.protocol==Protocol.ALIYUN){ cloudReauthorize(); return }
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null;draft=Draft(saved)
@@ -209,6 +213,10 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     fun browse(newPath:String){val s=source ?: return;val c=credentials ?: return;load(s,c,newPath,false,false)}
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
+        val folderName=if(newPath.isEmpty())"来源根目录"else
+            entries.firstOrNull{source?.id==s.id&&it.directory&&it.path==newPath}?.name
+                ?: if(newPath==s.initialPath)store.startingFolderName(s)
+                else if(s.protocol==Protocol.ALIYUN)AliyunCloud.folderName(s.id,newPath.substringAfterLast('/'))else newPath.substringAfterLast('/')
         stopDiscovery();cancelOperation();val id=generation;val token=Cancellation();cancellation=token;busy=true;error=null
         job=viewModelScope.launch{
             try{
@@ -218,7 +226,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                     list
                 }}
                 if(id!=generation)return@launch
-                source=s;openingSource=null;credentials=c;path=newPath;entries=result;draft=null;access=null;sources=store.load();if(save)notifySuccess("来源已保存")
+                source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load();if(save)notifySuccess("来源已保存")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {
@@ -235,7 +243,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(!keepReplay)pendingReplay=null
         if(old!=null)CoroutineScope(Dispatchers.IO).launch{old.close()}
     }
-    fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;error=null}
+    fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;rootSelectionId=null;error=null}
     fun up(){if(path.isEmpty())closeSource()else browse(path.substringBeforeLast('/',""))}
     private fun remoteTarget(s:Source,c:Credentials,entry:Entry,listing:List<Entry>,fromStart:Boolean,requestedToken:HistoryToken?=null):PlayTarget? {
         val ref=MediaRef("${s.id}:${entry.path}",entry.name,s.label,s.id,entry.path,sizeBytes=entry.size,location=mediaLocation(s))
@@ -344,7 +352,38 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     }
     fun dismissDraft(){discoveryPanelOpen=false;stopDiscovery();shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
     fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除来源")}
-    fun putBookmark(item:SourceBookmark){error=null;runCatching{organization.put(item);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}
+    fun putBookmark(item:SourceBookmark){
+        error=null
+        val before=organization.bookmarks().firstOrNull{it.key==item.key}
+        runCatching{organization.put(item);organizationRevision++}.onSuccess{
+            notifySuccess(when{item.favorite!= (before?.favorite ?: false)->if(item.favorite)"已收藏"else"已取消收藏";else->"快捷入口已保存"})
+        }.onFailure{error=it.message ?: "快捷入口未保存，请重试"}
+    }
+    fun toggleFavorite(item:SourceBookmark){
+        val current=organization.bookmarks().firstOrNull{it.key==item.key} ?: item.copy(favorite=false)
+        putBookmark(current.copy(favorite=!current.favorite))
+    }
+    fun showSourceSettings(saved:Source){settingsSourceId=saved.id}
+    fun dismissSourceSettings(){settingsSourceId=null}
+    fun startingFolderName(saved:Source)=store.startingFolderName(saved)
+    fun updateSourcePresentation(saved:Source,label:String,initialPath:String=saved.initialPath,folderName:String=startingFolderName(saved),announce:Boolean=true):Boolean {
+        return runCatching{
+            val current=store.load().firstOrNull{it.id==saved.id} ?: throw IllegalArgumentException("这个来源已移除")
+            val clean=Paths.clean(initialPath)
+            store.updatePresentation(current.id,label,clean,folderName)
+            organization.moveSourceEntry(current.id,current.initialPath,clean,label.trim());organizationRevision++
+            sources=store.load()
+            if(source?.id==current.id)source=sources.first{it.id==current.id}
+            if(announce)notifySuccess("来源设置已保存")
+        }.onFailure{error=it.message ?: "来源设置未保存，请重试"}.isSuccess
+    }
+    fun beginRootSelection(saved:Source){settingsSourceId=null;open(saved,"",selectRoot=true)}
+    fun useCurrentFolder(){
+        val current=source?.takeIf{it.id==rootSelectionId} ?: return
+        if(busy||openingSource!=null)return
+        val name=currentFolderName
+        if(updateSourcePresentation(current,current.label,path,name,announce=false)){closeSource();notifySuccess("默认目录已设置")}
+    }
     fun removeBookmark(key:String){organization.remove(key);organizationRevision++;notifySuccess("已移除快捷入口")}
     fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}
     fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all";notifySuccess("已删除分组")}
