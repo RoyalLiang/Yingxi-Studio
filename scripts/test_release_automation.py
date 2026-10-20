@@ -13,10 +13,10 @@ from types import SimpleNamespace
 
 
 def notes(version="1.2.3-alpha.1"):
-    return (f"# 映汐 {version} / Yingxi {version}\n\n## 中文\n\n"
-            "### 更新内容\n\n- 修复播放恢复。\n\n### 验证与限制\n\n- 自动检查通过，真机待验证。\n\n"
-            "## English\n\n### Changes\n\n- Fix playback restoration.\n\n"
-            "### Validation and limitations\n\n- Automated checks pass; phone testing remains outstanding.\n")
+    return (f"# 映汐 {version} / Yingxi {version}\n\n## 中文\n\n【拾荒者信笺】\n\n"
+            "### 更新内容\n\n- 修好放映站的播放恢复，让离开的影片能顺着原来的路回来。\n\n"
+            "## English\n\n[Scavenger's letter]\n\n### Changes\n\n"
+            "- Repair playback restoration at the projection station so unfinished films can find their way back.\n")
 
 
 class ReleaseNotesTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class ReleaseNotesTest(unittest.TestCase):
         version=validate({"versionName":"1.2.3-alpha.1","versionCode":9})
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);(root/'releases').mkdir()
-            text="# 映汐播放器 1.2.3-alpha.1 / Yingxi 1.2.3-alpha.1\n\n## 中文\n\n- 拆掉首页重复路牌。\n\n## English\n\n- Clear the duplicate signposts from Home.\n"
+            text="# 映汐播放器 1.2.3-alpha.1 / Yingxi 1.2.3-alpha.1\n\n## 中文\n\n拾荒者信笺：\n- 拆掉首页重复路牌。\n\n## English\n\nScavenger letter:\n- Clear the duplicate signposts from Home.\n"
             (root/'releases/v1.2.3-alpha.1.md').write_text(text)
             body=render_notes(root,version,'a'*40)
             self.assertTrue(body.startswith('## 中文'))
@@ -39,10 +39,10 @@ class ReleaseNotesTest(unittest.TestCase):
             (root / "releases").mkdir()
             path = root / "releases" / f'{version["tag"]}.md'
             path.write_text(notes(), encoding="utf-8")
-            self.assertIn("Source commit: `abc123`", render_notes(root, version, "abc123"))
+            self.assertNotIn("Source commit", render_notes(root, version, "abc123"))
             for invalid in (notes().split("## English")[0], notes("1.2.4"),
-                            notes().replace("- Fix playback restoration.", ""),
-                            notes().replace("- 修复播放恢复。", "- TODO"),
+                            notes().replace("- Repair playback restoration at the projection station so unfinished films can find their way back.", ""),
+                            notes().replace("- 修好放映站的播放恢复，让离开的影片能顺着原来的路回来。", "- TODO"),
                             notes().replace("### Changes", "### Other")):
                 with self.subTest(invalid=invalid):
                     path.write_text(invalid, encoding="utf-8")

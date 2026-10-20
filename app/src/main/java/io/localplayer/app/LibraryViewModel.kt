@@ -46,7 +46,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     private var discoveryEpoch=0L
     var history by mutableStateOf(emptyList<HistoryEntry>());private set
     var candidates by mutableStateOf(emptyList<Candidate>());private set
-    var discoveryMessage by mutableStateOf("发现当前局域网中的 SMB / SFTP 服务");private set
+    var discoveryMessage by mutableStateOf("发现当前局域网中的 SMB、SFTP / SSH 和 WebDAV 服务");private set
     var scanning by mutableStateOf(false);private set
     var source by mutableStateOf<Source?>(null);private set
     var path by mutableStateOf("");private set
@@ -176,7 +176,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         discoveryPanelOpen=false
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null
         val protocol=candidate?.protocol ?: Protocol.SMB
-        draft=Draft(Source(label=candidate?.name ?: "",protocol=protocol,host=candidate?.host ?: "",port=candidate?.port ?: if(protocol==Protocol.SMB)445 else 22,root=if(protocol==Protocol.SFTP)"/"else""))
+        draft=Draft(Source(label=candidate?.name ?: "",protocol=protocol,host=candidate?.host ?: "",port=candidate?.port ?: if(protocol==Protocol.SMB)445 else 22,root=candidate?.root?:if(protocol==Protocol.SFTP)"/"else"",secure=candidate?.secure?:true),allowHttp=false)
     }
     fun connectDraft(){
         val d=draft?:return

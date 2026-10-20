@@ -10,6 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.security.MessageDigest
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.withLock
 
 internal data class AppVersion(val name:String,val code:Long) {
     val isPrerelease:Boolean get()='-' in name.substringBefore('+')
@@ -20,15 +21,17 @@ internal data class AppRelease(val version:AppVersion,val notes:String,val url:S
 
 /** Uses GitHub's APK digest and the installed signing identity. */
 internal class AppUpdates(private val context:Context,private val transport:(String)->HttpURLConnection=Companion::connect) {
+    private val downloads=kotlinx.coroutines.sync.Mutex()
     suspend fun check():AppRelease? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val current=installedVersion(context)
         val installed=context.packageManager.getPackageInfo(context.packageName,PackageManager.GET_SIGNING_CERTIFICATES)
         val signer=installed.signingInfo?.apkContentsSigners?.singleOrNull()?.toByteArray()?.let{MessageDigest.getInstance("SHA-256").digest(it).hex()}
             ?: throw IOException("无法读取当前应用签名")
         var best:AppRelease?=null
+        val checkId=java.util.UUID.randomUUID().toString()
         for(page in 1..10) {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            val releases=JSONArray(fetch("https://api.github.com/repos/$REPOSITORY/releases?per_page=100&page=$page",2*1024*1024).toString(Charsets.UTF_8))
+            val releases=JSONArray(fetch("https://api.github.com/repos/$REPOSITORY/releases?per_page=100&page=$page&_yingxi_check=$checkId",2*1024*1024).toString(Charsets.UTF_8))
             for(index in 0 until releases.length()) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 val release=releases.getJSONObject(index)
@@ -41,7 +44,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
         throw IOException("版本列表过大，未能完整检查，请到发布页查看")
     }
 
-    suspend fun download(release:AppRelease,progress:suspend (Float)->Unit):File = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    suspend fun download(release:AppRelease,progress:suspend (Float)->Unit):File = downloads.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         require(release.version.code>installedVersion(context).code){"更新版本必须高于当前版本"}
         val directory=File(context.filesDir,"updates").apply{mkdirs()}
         val partial=File(directory,"candidate.apk.part");val ready=File(directory,"candidate.apk")
@@ -71,6 +74,8 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
             if(!partial.renameTo(ready))throw IOException("无法保存安装包")
             ready
         } catch(e:Exception) { partial.delete();throw e }
+    }
+
     }
 
     private fun fetch(value:String,limit:Int):ByteArray {
@@ -144,7 +149,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
                 val host=url.host ?: throw IOException("无效的更新地址")
                 if(url.scheme!="https" || url.userInfo!=null || !(host=="github.com"||host=="api.github.com"||host.endsWith(".githubusercontent.com")))throw IOException("已阻止非官方更新下载地址")
                 val connection=url.toURL().openConnection() as HttpURLConnection
-                connection.connectTimeout=10000;connection.readTimeout=20000;connection.instanceFollowRedirects=false
+                connection.useCaches=false;connection.setRequestProperty("Cache-Control","no-cache");connection.connectTimeout=10000;connection.readTimeout=20000;connection.instanceFollowRedirects=false
                 connection.setRequestProperty("User-Agent","Yingxi-Android-Updater")
                 connection.setRequestProperty("Accept","application/vnd.github+json")
                 if(connection.responseCode in setOf(301,302,303,307,308)) {

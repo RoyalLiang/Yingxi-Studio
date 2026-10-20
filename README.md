@@ -1,44 +1,81 @@
-# 映汐播放器 · Yingxi Player
+<p align="center">
+  <img src="assets/brand/yingxi-icon.png" width="104" alt="映汐应用图标">
+</p>
 
-![映汐](assets/brand/yingxi-icon-preview.png)
+<h1 align="center">映汐 · Yingxi Player</h1>
 
-简易、好用的 Android 本地与局域网视频播放器。当前为 **alpha**，面向 Android 15 / 16 手机；以 IINA 的产品理念为参考，使用 Kotlin、Jetpack Compose 和 Media3 原生实现。
+<p align="center">长潮退去之后，总有一些影像值得带回放映室。</p>
 
-- 首页、来源、播放记录；断点续播与记录清理。
-- 首页自动发现 SMB/SFTP 服务，SMB 认证后选择共享；来源与目录支持收藏、分组和本机加密密码。发现候选仍需连接验证。
-- 本机文件夹经 Android 系统授权后，在应用内显示返回按钮和可点击面包屑；也可通过系统选择单个视频。
-- 本机文件夹和 SMB/SFTP 同目录视频队列：上一集、下一集、选集与自动连续播放；按目录显示顺序，末项播放结束后停止。
-- 默认横屏影院悬浮播放，六档 0.75–4× 倍速、右侧半透明选集、细进度条；亮度、音量和带真实关键帧预览的进度手势。支持可用音轨/字幕选择、关闭字幕、本机 SRT/VTT。
-- 播放中回到桌面自动画中画，也可手动进入；“后台播放”入口保留声音，媒体通知提供播放/暂停、切集、拖动和返回当前播放。
-- OpenList / WebDAV 作为长期来源，认证、目录浏览、Range 拖动播放；跨站重定向不传递挂载账号密码。
-- 首页右上角设置：版本说明、检查更新、校验后下载并调用 Android 安装器。
-- 凭据仅在本机加密保存，SFTP 需核验主机指纹。
+<p align="center"><strong>一款简洁的 Android 本地与局域网视频播放器。</strong><br>打开文件、连上自己的媒体库，然后安心看完一部片子。</p>
 
-## 安装与构建
+<p align="center">
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.15/yingxi-0.2.0-alpha.15-17.apk">下载 Android 安装包</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.15">阅读版本信笺</a> ·
+  <a href="docs/player-controls.md">播放与操作</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
+</p>
 
-验证包来自 Actions 的 Debug artifact；签名 alpha 包来自 GitHub Releases，二者用途与签名分开。正式发布密钥与此前调试签名不同，签名版不能直接覆盖旧调试安装；卸载会清除本机记录及来源配置。
+<p align="center">
+  <img alt="Android 15 / 16" src="https://img.shields.io/badge/Android-15%20%2F%2016-3D8060">
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/actions/workflows/ci.yml"><img alt="Android CI" src="https://github.com/RoyalLiang/Yingxi-Studio/actions/workflows/ci.yml/badge.svg"></a>
+</p>
 
-使用 JDK 17、Android SDK 36 / Build Tools 36.0.0：
+## 先把影片放到手边
 
-```sh
-python3 -m unittest discover -s scripts -p 'test_*.py'
-python3 scripts/build.py :core:test :app:assembleDebug :app:lintDebug
-```
+- **从自己的媒体库开始**：系统文件与文件夹、SMB、SFTP、WebDAV、阿里云盘官方接入。
+- **离开之后，再接着看**：最近播放、断点续播、同目录队列与选集，配合来源收藏和分组。
+- **把播放留给画面**：沉浸全屏、手势控制、关键帧预览、倍速、音轨和字幕；支持画中画与后台音频。
+- **给片架补上封面**：优先读取目录海报，再查询公开海报；没有内嵌字幕时可按影片指纹匹配中文字幕。
 
-脚本在项目外暂存构建，输出版本化 APK 和 SHA256。`JAVA_HOME`、`ANDROID_HOME` 可指定工具链；`PLAYER_BUILD_DIR` 可指定暂存目录。普通本地文件系统也可运行 `sh gradlew :app:assembleDebug`。
+<p align="center">
+  <img src="assets/readme/sources.png" width="31%" alt="来源页：独立自动扫描入口">
+  <img src="assets/readme/updates.png" width="31%" alt="版本页：当前版本与固定更新操作">
+  <img src="assets/readme/letter.png" width="31%" alt="版本信笺：可滚动的更新内容弹窗">
+</p>
 
-`version.json` 为版本配置来源，当前 `0.2.0-alpha.4` / code `6`。版本名称、Android 安装序号相互独立，不把 alpha 阶段或版本基数写死。详见[版本与发布](docs/releasing.md)。
+截图来自应用实际运行界面，展示来源入口、版本页面与本版信笺。
 
-## 验证边界
+## 三步开始放映
 
-受控环回协议测试和 Android 模拟器功能结果不代表一加 Turbo 6V 或真实 NAS 的兼容性与流畅度。未广播服务、隔离网络和非默认端口可能需要手动添加或补充探测。
+1. 在 Android 15 / 16 手机上安装上方正式签名 APK。
+2. 从**来源**打开本机文件夹、添加服务器，或进入独立的**自动扫描**。网盘接入位于 WebDAV 页的接入方式中。
+3. 连接并验证来源后选择影片；下次可从最近播放继续。
 
-Home、锁屏或显式后台入口保留播放；播放器返回按钮、关闭画中画或从最近任务划掉应用会结束播放。画中画依赖系统支持和用户许可。当前不承诺 TV、投屏、媒体墙、SMB1、私钥登录、ASS/PGS 与完整 HDR 矩阵。外部字幕目前由用户选择，不自动匹配 NAS 配套字幕。
+新版本可以在**设置 → App 版本**检查。先读信笺，再选择下载；安装仍由 Android 系统确认。
 
-队列只保存在本机内存，最多包含点选视频附近的 200 项；超出时选集面板会说明。点选项恢复进度，后续项从头播放；系统单文件选择和本机历史重开仅播放该文件。进程结束后需从来源重新打开队列。
+## 媒体库接入能力
 
-[播放操作与局域网来源](docs/player-controls.md) · [文件导航](docs/file-navigation.md) · [工程与数据规则](CONTRIBUTING.md) · [第三方许可资料](third_party)
+| 方式 | 接入与浏览 | 自动发现 | 播放与续播 |
+|---|---|---|---|
+| 本机文件与文件夹 | Android 系统授权 | 系统选择器 | 支持 |
+| SMB | 匿名或账户，共享目录 | SMB 服务广播；可补充查找端口候选 | 支持 |
+| SFTP | 账户与主机密钥核验 | SFTP / SSH 服务广播；可补充查找端口候选 | 支持 |
+| WebDAV | HTTP / HTTPS、NAS 与 OpenList | WebDAV 广播及声明 DAV 能力的 HTTP / HTTPS 广播 | 支持 |
+| 阿里云盘 | 官方授权接入 | 手动授权 | 支持 |
 
-项目许可证尚待维护者决定；第三方依赖保留各自许可与 NOTICE。IINA 用作设计参考，未复用其图标。
+自动发现只列候选；连接成功后才能浏览影片。未广播的服务可以手动输入地址，普通网页不会直接当作 WebDAV 媒体库。
 
-[网盘挂载与设置](docs/network-settings.md) · [iOS / iPadOS 方案](docs/apple-platform-plan.md)
+海报、字幕的匹配方式、来源和开关见[海报与字幕](docs/media-enrichment.md)。播放格式取决于设备可用的解码器。
+
+## 放映站最近在忙什么
+
+![最近七天源码提交活跃度](assets/readme/activity.svg)
+
+图表按项目 Git 历史生成，是注明截止提交的快照，随发版更新。[原始统计数据](docs/project-metrics.json)可核对每日提交数。功能支持以本页矩阵和对应文档为准，不把活跃度当作性能指标。
+
+## 一封来自放映站的信
+
+影像拾荒者负责把散落的影片带回片架，把失灵的路标修好。每次发版留下一封短笺：这次搬来了什么、修好了哪里，偶尔也记下柜台边的一点小事。
+
+世界观让更新记录有一条连续的线；操作仍然直白，影片、来源、自动扫描和下载始终使用真实名称。读[世界观与信笺写法](docs/worldbook.md)，或直接去看一部片子。
+
+## 参与修缮
+
+使用 Kotlin、Jetpack Compose 与 Media3 实现，以 IINA 的产品理念为参考，遵循 Android 的权限、系统文件选择与安装流程。
+
+- [工程与数据规则](CONTRIBUTING.md)
+- [文件导航](docs/file-navigation.md) · [来源设置](docs/network-settings.md)
+- [云盘接入](docs/cloud-integrations.md) · [版本与发布](docs/releasing.md)
+- [第三方许可资料](third_party)
+
+项目许可证尚待维护者决定；第三方依赖保留各自许可与 NOTICE。IINA 用作产品参考，未复用其图标。

@@ -13,8 +13,8 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-data class Candidate(val name:String,val host:String,val port:Int,val protocol:Protocol,val hint:String) {
-    val id get()="${protocol.name}:$host:$port"
+data class Candidate(val name:String,val host:String,val port:Int,val protocol:Protocol,val hint:String,val secure:Boolean=true,val root:String="") {
+    val id get()=protocol.name+":"+host+":"+port+if(protocol==Protocol.WEBDAV)":"+secure+":"+root else ""
 }
 
 /** Standard service advertisements only. No fake entries or authentication from discovery callbacks. */
@@ -23,19 +23,19 @@ class Discovery(context:Context,private val found:(Candidate)->Unit,private val 
     private val manager=context.getSystemService(NsdManager::class.java)
     private val main=Handler(Looper.getMainLooper())
     private val listeners=mutableListOf<NsdManager.DiscoveryListener>()
-    private val queue=ArrayDeque<Pair<NsdServiceInfo,Pair<Protocol,String>>>()
+    private val queue=ArrayDeque<Pair<NsdServiceInfo,DiscoveryKind>>()
     private var resolving=false
     private var active=true
     fun start() {
-        listOf("_smb._tcp." to Protocol.SMB,"_sftp-ssh._tcp." to Protocol.SFTP,"_ssh._tcp." to Protocol.SFTP).forEach { (type,protocol) ->
-            val hint=if(type=="_ssh._tcp.") "SSH 候选 · SFTP 待验证" else "服务广播 · 等待连接"
+        DiscoveryRecords.kinds.forEach { kind ->
+            val type=kind.type
             val listener=object:NsdManager.DiscoveryListener {
                 override fun onDiscoveryStarted(serviceType:String){}
                 override fun onStartDiscoveryFailed(serviceType:String,errorCode:Int){ main.post{if(active)message("部分服务发现不可用，可手动添加来源（$errorCode）")} }
                 override fun onStopDiscoveryFailed(serviceType:String,errorCode:Int){}
                 override fun onDiscoveryStopped(serviceType:String){}
                 override fun onServiceLost(serviceInfo:NsdServiceInfo){}
-                override fun onServiceFound(info:NsdServiceInfo){main.post{if(active){queue.add(info to (protocol to hint));resolveNext()}}}
+                override fun onServiceFound(info:NsdServiceInfo){main.post{if(active){queue.add(info to kind);resolveNext()}}}
             }
             listeners+=listener
             runCatching { manager.discoverServices(type,NsdManager.PROTOCOL_DNS_SD,listener) }.onFailure { message("发现未启动，请检查网络或手动添加") }
@@ -47,7 +47,7 @@ class Discovery(context:Context,private val found:(Candidate)->Unit,private val 
         try { manager.resolveService(info,object:NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo:NsdServiceInfo,errorCode:Int){main.post{resolving=false;resolveNext()}}
             override fun onServiceResolved(serviceInfo:NsdServiceInfo){main.post{
-                if(active) serviceInfo.host?.hostAddress?.let { host -> found(Candidate(serviceInfo.serviceName,host,serviceInfo.port,kind.first,kind.second)) }
+                if(active) serviceInfo.host?.hostAddress?.let { host -> DiscoveryRecords.candidate(kind,serviceInfo.serviceName,host,serviceInfo.port,serviceInfo.attributes)?.let(found) }
                 resolving=false;resolveNext()
             }}
         }) }catch(_:Exception){resolving=false;resolveNext()}

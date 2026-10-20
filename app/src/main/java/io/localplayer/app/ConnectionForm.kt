@@ -4,6 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -57,6 +61,19 @@ import io.localplayer.core.Protocol
     ) {
         BackHandler(enabled = nested) { currentBack() }
         val sheetView = LocalView.current
+        val updateSystemBars=remember(sheetView){Runnable{
+            if(sheetView.isAttachedToWindow){
+                (sheetView.parent as? DialogWindowProvider)?.window?.let{window->
+                    WindowCompat.getInsetsController(window,sheetView).apply{
+                        isAppearanceLightStatusBars=true
+                        isAppearanceLightNavigationBars=true
+                    }
+                }
+            }
+        }}
+        SideEffect{sheetView.removeCallbacks(updateSystemBars);sheetView.post(updateSystemBars)}
+        DisposableEffect(sheetView){onDispose{sheetView.removeCallbacks(updateSystemBars)}}
+
         DisposableEffect(sheetView, nested) {
             // Material3 1.3.2 owns the dialog dispatcher. Register on that window so
             // nested Back changes content without starting the sheet's hide animation.
@@ -76,7 +93,7 @@ import io.localplayer.core.Protocol
                     FlowRow(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(), maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 3) {
                         Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol ->
                             ChoicePill(if (protocol == Protocol.WEBDAV) "WebDAV" else protocol.name,
-                                d.source.protocol == protocol, Modifier.weight(1f)) {
+                                d.source.protocol == protocol && !vm.discoveryPanelOpen, Modifier.weight(1f)) {
                                 focus.clearFocus()
                                 vm.discoveryPanelOpen = false
                                 vm.stopDiscovery()
@@ -85,6 +102,22 @@ import io.localplayer.core.Protocol
                         }
                     }
                     Spacer(Modifier.height(12.dp))
+                Surface(onClick={
+                    focus.clearFocus();vm.discoveryPanelOpen=true
+                    if(vm.nearbyPermissionGranted)vm.discover()else requestNearby()
+                },shape=RoundedCornerShape(17.dp),color=if(vm.discoveryPanelOpen)Berry.copy(alpha=.07f)else GroupedSurface,
+                    modifier=Modifier.fillMaxWidth().testTag("auto-scan-entry").semantics{selected=vm.discoveryPanelOpen}
+                        .border(1.dp,if(vm.discoveryPanelOpen)Berry.copy(alpha=.3f)else Hairline,RoundedCornerShape(17.dp))){
+                    Row(Modifier.padding(horizontal=14.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
+                        Icon(Icons.Rounded.WifiFind,null,tint=Berry,modifier=Modifier.size(22.dp))
+                        Column(Modifier.weight(1f).padding(start=12.dp)){
+                            Text("自动扫描",fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+                            Text("SMB · SFTP / SSH · WebDAV",fontSize=12.sp,color=Muted)
+                        }
+                        Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 }
                 Crossfade(targetState = panel, animationSpec = tween(200), label = "source-configuration", modifier = Modifier.weight(1f)) { visible ->
                     when (visible) {
@@ -95,8 +128,7 @@ import io.localplayer.core.Protocol
                             item { Text("OpenList、NAS 或自建服务，可通过 WebDAV 连接。", fontSize = 13.sp, lineHeight = 20.sp, color = Muted) }
                         }
                         else -> ConnectionFields(vm, drafts[Protocol.valueOf(visible)] ?: d, webDav = visible == Protocol.WEBDAV.name,
-                            chooseCloud = { focus.clearFocus(); manualWebDav = false },
-                            scan = { focus.clearFocus(); vm.discoveryPanelOpen = true; if (vm.nearbyPermissionGranted) vm.discover() else requestNearby() })
+                        chooseCloud = { focus.clearFocus(); manualWebDav = false })
                     }
                 }
             }
@@ -107,16 +139,12 @@ import io.localplayer.core.Protocol
     }
 }
 
-@Composable private fun ConnectionFields(vm: LibraryViewModel, d: Draft, webDav: Boolean, chooseCloud: () -> Unit, scan: () -> Unit) {
+@Composable private fun ConnectionFields(vm: LibraryViewModel, d: Draft, webDav: Boolean, chooseCloud: () -> Unit) {
     var showPassword by remember(d.source.id) { mutableStateOf(false) }
     var advanced by remember(d.source.id, d.source.protocol) { mutableStateOf(d.source.initialPath.isNotEmpty()) }
     LazyColumn(Modifier.fillMaxSize().testTag("connection-form"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (webDav) item { TextButton(onClick = chooseCloud) { Text("选择网盘接入") } }
-        else if (vm.sources.none { it.id == d.source.id }) item {
-            OutlinedButton(onClick = scan, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("scan-nearby"), shape = RoundedCornerShape(16.dp)) {
-                Icon(Icons.Rounded.WifiFind, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("扫描附近设备")
-            }
-        }
+
         item { Text("服务器", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
         if (webDav) {
             item { PlayerField("WebDAV 地址", d.webDavUrl, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)) { vm.draft = d.copy(webDavUrl = it) } }
@@ -202,7 +230,7 @@ import io.localplayer.core.Protocol
         item { TextButton(onClick = { probeConfirm = true }) { Text("补充查找未广播的设备") } }
     }
     if (probeConfirm) AlertDialog(onDismissRequest = { probeConfirm = false }, title = { Text("补充发现局域网候选") },
-        text = { Text("将探测当前 /24 局域网的 22/445 端口，最多 12 个并发。仅在你信任的网络中使用。") },
+        text = { Text("将探测当前 /24 局域网的 22/445 端口，最多 16 个并发。仅在你信任的网络中使用。") },
         confirmButton = { TextButton(onClick = { probeConfirm = false; if (vm.nearbyPermissionGranted) vm.probe() else requestNearby() }) { Text("开始查找") } },
         dismissButton = { TextButton(onClick = { probeConfirm = false }) { Text("取消") } })
 }
