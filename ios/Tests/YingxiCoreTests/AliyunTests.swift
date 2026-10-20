@@ -46,7 +46,8 @@ final class AliyunTests:XCTestCase {
         do{_ = try await api().list("fixture-token",drive:"drive",parent:"root");XCTFail("repeated pagination accepted")}catch CloudError.invalidResponse{}catch{XCTFail("unexpected error")}
     }
     func testDownloadRejectsCredentialsAndCleartext()async throws{
-        for value in ["http://cdn.example.invalid/video","https://"+"user:password@cdn.example.invalid/video"]{
+        var embedded=URLComponents();embedded.scheme="https";embedded.host="cdn.example.invalid";embedded.user="user";embedded.password="password";embedded.path="/video"
+        for value in ["http://cdn.example.invalid/video",embedded.url!.absoluteString]{
             CloudStub.handler={_ in(200,try JSONSerialization.data(withJSONObject:["url":value]))}
             do{_ = try await api().download("fixture-token",drive:"drive",file:"file");XCTFail("unsafe URL accepted")}catch CloudError.invalidResponse{}catch{XCTFail("unexpected error")}
         }

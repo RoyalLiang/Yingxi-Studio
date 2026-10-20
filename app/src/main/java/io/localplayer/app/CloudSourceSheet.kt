@@ -90,7 +90,7 @@ import kotlinx.coroutines.CancellationException
                 }
             } }
         }
-        Text("网盘直连授权尚未启用；打开 App 不会自动添加播放来源。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
+        Text("阿里云盘仅申请读取权限；百度正式接入需企业主体。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
     }
     if(authorizing) Text("正在等待阿里云盘授权，可返回重试。",color=Muted)
     authError?.let{message->AlertDialog(onDismissRequest={authError=null},title={Text("授权未完成")},text={Text(message)},confirmButton={TextButton(onClick={authError=null}){Text("知道了")}})}
