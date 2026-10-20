@@ -130,7 +130,7 @@ class SourceUpdateRegressionTest {
         ui.onNodeWithTag("confirm-update").assertIsDisplayed()
         capture("world15-letter")
         ui.onNodeWithText("稍后").performClick()
-        ui.onNodeWithTag("available-version").assertTextEquals(version)
+        ui.onNodeWithTag("available-version",useUnmergedTree=true).assertTextEquals(version)
         ui.onNodeWithTag("download-update").assertIsDisplayed()
     }
 }
