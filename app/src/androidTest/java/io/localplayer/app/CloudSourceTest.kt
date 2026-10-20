@@ -65,6 +65,6 @@ class CloudSourceTest {
         startPicker();ui.onNodeWithText("接入配置").assertDoesNotExist()
         ui.onNode(hasText("AppID",substring=true) and hasSetTextAction()).assertDoesNotExist()
         ui.onNode(hasText("AppKey",substring=true) and hasSetTextAction()).assertDoesNotExist()
-        ui.onNodeWithText("网盘直连授权尚未启用；打开 App 不会自动添加播放来源。").assertIsDisplayed()
+        ui.onNodeWithText("阿里云盘仅申请读取权限；百度正式接入需企业主体。").assertIsDisplayed()
     }
 }
