@@ -1,26 +1,59 @@
 # 网盘官方接入：开发者配置
 
-网盘开放平台的申请、AppID / AppKey、签名及回调配置由应用开发者完成。普通用户不填写这些参数；完成正式接入后，用户只需跳转官方 App 登录并授权。
+开放平台申请、客户端标识、应用签名及权限由开发者配置，普通用户不填写 AppID 或密钥。本文区分平台登记、授权开发和实际可播放三个阶段。
 
 ## 当前版本边界
 
-Android WebDAV 添加页默认展示阿里云盘、百度网盘图标。点击会检查并打开已安装的官方 App；未安装时显示提示并提供官网入口。停用或无法启动的 App 显示暂不可用。当前官方 OAuth 适配尚未启用，打开 App 只进入它的正常启动页面，不是授权动作，不会创建可播放网盘来源。没有使用未核实的授权/设置页深链。
+Android WebDAV 添加页显示阿里云盘、百度网盘图标，并检查、打开已安装的官方 App；未安装时提示并提供官网入口。当前尚未接入 OAuth、回跳、令牌管理和网盘文件读取。打开官方 App 不代表已授权，也不会自动添加来源。
 
-已有 OpenList、NAS 或自建 WebDAV 地址可点 **使用 WebDAV 地址**，保留原有认证、浏览和播放。iOS 初版只提供手动 HTTPS WebDAV；网盘官方授权尚未接入。
+已有 OpenList、NAS 或自建 WebDAV 服务可点“使用 WebDAV 地址”，继续认证、浏览和播放。iOS alpha 目前只提供手动 HTTPS WebDAV。
 
-## 开发者申请顺序
+## 阿里云盘：个人开发者配置
 
-1. 阿里云盘从 [官方 Android SDK](https://github.com/alibaba/aliyunpan-android-sdk) 的接入说明进入申请流程；百度网盘从 [开放平台](https://yun.baidu.com/union/home) 申请应用。按平台实际要求选择 Android / iOS 等应用类型，完成资格和权限审核；不承诺自动获批。
-2. Android 当前包名为 `io.localplayer.app`。正式签名 SHA-1 为 `4F:BB:64:F1:5E:19:03:D6:60:DD:23:63:0D:63:3E:B5:AD:06:C3:DE`，SHA-256 为 `3D:9A:4C:A9:72:7E:B3:38:9E:3F:A4:3E:43:88:8A:D0:75:75:D6:44:7B:19:EF:A7:D7:41:9E:08:E2:C8:1D:A8`。不要登记调试包签名。
-3. iOS 默认 Bundle ID 为 `io.localplayer.app`；需在自己的 Apple 开发者团队登记可用标识，具体签名、URL 回调和平台 SDK 要求取决于实际申请结果。
-4. 将 `deploy/cloud-integrations.example.json` 的纯文件内容复制到 gitignored 的 `deploy/cloud-integrations.local.json`。仅填写公开 `clientId`，以及平台要求并确认的 HTTPS `redirectUri`；尚未确定的回调地址留空。
-5. 运行 `python3 scripts/cloud_config.py --config deploy/cloud-integrations.local.json --require-registration`。工具只输出字段是否齐备，不输出参数值。模板及校验器属于开发者准备工具，不进入普通用户配置流程。
-6. 申请和权限确认后，再按实际官方 SDK / OAuth 契约接通 App 授权回跳、令牌安全存储/刷新、文件读取与播放，并重新构建和验收。当前模板不是已接通的运行时 OAuth 配置；填完公开参数不会自动启用尚未实现的适配器。
+从[官方开发者门户](https://www.alipan.com/developer/f)登录。按平台显示的条件完成实人及其他必要认证；当前官方页面注明，一个开发者账号只能添加一个应用，可修改、不可删除。可创建应用并不等于所有接口能力已获批或已通过运行验证。
 
-不要把 Secret Key、网盘密码、Cookie、Access Token 或 Refresh Token 放进该 JSON、聊天、Git 或 APK。若官方方案需要客户端秘密，使用服务端秘密配置。后续可提供公开 AppID、获批权限范围和回调要求，再推进对接。
+新建应用填写：
 
-阿里云盘官方 SDK 需要应用 `app_id`，提供 PKCE 与服务端令牌方式；百度网盘官方服务基于 OAuth。[阿里云盘 SDK](https://github.com/alibaba/aliyunpan-android-sdk)、[百度官方 OAuth 说明](https://github.com/baidu-netdisk/mcp)
+| 字段 | 映汐播放器配置 |
+|---|---|
+| 应用名称 | 映汐播放器 |
+| 应用说明 | 个人媒体播放器，通过官方授权供用户浏览、播放自己的视频；不共享账号、令牌或下载链接 |
+| 获取用户授权 | 获取用户头像昵称、读取用户云盘所有文件 |
+| 公开客户端 | 启用 |
+| 移动端接入 | 启用 Android 与 iOS |
+| Android 应用包名 | `io.localplayer.app` |
+| Android 应用签名 MD5 | `31d2ad9e8be856bb532919fb2c047c41` |
+| iOS Bundle ID | 当前 alpha 为 `io.localplayer.app`；自行签名改名后须同步修改平台配置 |
+| 授权回调 URI | 原生 PKCE 路径留空，不编造 HTTPS 地址 |
 
-## 资源与安装检测
+签名 MD5 已从正式 alpha.6 APK 的证书读取，不能使用调试包证书或对 SHA 摘要文本再次取 MD5。[官方 Android 接入说明](https://www.yuque.com/aliyundrive/zpfszx/qkwg88uf4t483tdi)要求公开客户端、移动端接入及签名 MD5。
 
-图标来自两家官网公开引用资源，仅标识服务，商标归各自权利人。地址、处理方式和摘要见 `third_party/cloud-brand-assets.json`。Android 仅在 `<queries>` 中声明两家官方 App 的包名，不申请完整应用清单权限。[Android 包可见性文档](https://developer.android.com/training/package-visibility/declaring)
+双平台官方原生 PKCE 实现使用 `redirect_uri=oob`，无需自有 HTTPS 回调域名：[Android 实现](https://github.com/alibaba/aliyunpan-android-sdk/blob/main/opensdk/src/main/java/com/alicloud/databox/opensdk/auth/AliyunpanPKCECredentials.kt#L40-L49)、[iOS 实现](https://github.com/alibaba/aliyunpan-ios-sdk/blob/main/Sources/AliyunpanSDK/AliyunpanCredentials/AliyunpanPKCECredentials.swift#L22-L32)。官方 SDK 支持唤起已安装的网盘 App；未安装时可回退 H5。当前播放器仍是未安装提示，后续接入时应明确产品选择，不能把启动 App 当成 SDK 授权完成。
+
+新建应用默认为“普通应用”，不是“认证应用”。平台分级会影响接口配额、下载链接有效期和文件分段并发；升级条件及当前规则见[官方应用分级](https://www.yuque.com/aliyundrive/zpfszx/mqocg38hlxzc5vcd)。本次登记不代替后续接口能力及播放验证。
+
+只登记播放所需的用户基本信息和文件读取范围，不申请文件写入、共享相册或分享管理。具体可用接口、额度与审核状态以平台后台和后续调用结果为准。官方总流程与权限说明见[接入流程](https://www.yuque.com/aliyundrive/zpfszx/btw0tw)、[权限列表](https://www.yuque.com/aliyundrive/zpfszx/dspik0)。
+
+## 百度网盘：个人主体的限制
+
+百度官方资料目前注明，正式开放平台仅限企业开发者注册调用；个人体验密钥不可用于正式环境。因此个人主体先保留入口，不能宣称已完成正式接入。[百度官方说明](https://github.com/baidu-netdisk/mcp#使用准备)、[企业申请入口](https://pan.baidu.com/union/apply)。
+
+将来具备企业主体后，按注册、认证、创建应用和接入授权流程申请。不要承诺一定唤起百度网盘 App：目前核对的第一方示例是浏览器或二维码授权。[官方授权示例](https://github.com/baidu-netdisk/baidu-drive-sdk-go/blob/main/examples/auth/main.go)。官方 SDK 使用 `basic,netdisk`；“播放器仅调用读取接口”是产品实现约束，不等于平台提供了更细的只读授权范围。
+
+若采用服务端授权码换令牌，需要在开发者后端保存 SecretKey，回调与平台登记一致；不能把它打入 APK/IPA。自建后端是该接入方案的架构选择，不是已经核实的百度全平台统一硬性要求。
+
+## 保存开发者本地配置
+
+将 `deploy/cloud-integrations.example.json` 复制为已忽略的 `deploy/cloud-integrations.local.json`。只记录公开 `clientId`；阿里云盘原生 PKCE 的 `redirectUri` 留空。若选择有真实服务的 HTTPS 回调方案，才填写对应 URI。禁止把 AppSecret、账号密码、授权码或令牌存入此文件、聊天、Git 或安装包。
+
+只申请了阿里云盘时运行：
+
+```sh
+python3 scripts/cloud_config.py --config deploy/cloud-integrations.local.json --provider aliyunpan --require-registration
+```
+
+不加 `--provider` 时检查两家配置；加 `--require-registration` 要求所选平台已记录客户端标识。工具只输出字段是否齐备，不输出标识值。空回调原本即受支持，不需要为通过校验填假域名。
+
+此校验不联系平台，不检查审核、SDK 回调或网盘读取，也不会启用尚未开发的授权功能。下一阶段仍需接入并核对固定版本的 SDK/PKCE、回跳、令牌保存与撤销、目录和播放地址读取，再验证真实授权与视频 Range 播放。
+
+品牌资源来源见 `third_party/cloud-brand-assets.json`；Android 包可见性只查询两个官方包，不使用全量应用查询权限。
