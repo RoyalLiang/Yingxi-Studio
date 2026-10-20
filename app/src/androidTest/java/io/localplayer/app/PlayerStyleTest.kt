@@ -59,15 +59,23 @@ class PlayerStyleTest {
             ui.waitForIdle()
             // Capture the compositor output: layer RenderEffects do not appear in software Canvas captures.
             val bounds=ui.onNodeWithTag("glass-sample").fetchSemanticsNode().boundsInRoot
-            val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             val origin=IntArray(2)
             ui.runOnIdle{ui.activity.window.decorView.getLocationOnScreen(origin)}
             val y=origin[1]+bounds.center.y.toInt()
-            val left=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.25f).toInt(),y))
-            val right=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.75f).toInt(),y))
+            var left=Color.Transparent
+            var right=Color.Transparent
+            // Compose idleness precedes SurfaceFlinger composition. Poll actual pixels, retaining
+            // the effect assertions so a persistently missing backdrop still fails.
+            ui.waitUntil(5_000) {
+                val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+                try {
+                    left=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.25f).toInt(),y))
+                    right=Color(image.getPixel(origin[0]+(bounds.left+bounds.width*.75f).toInt(),y))
+                    left.red-left.blue>.1f && right.blue-right.red>.1f
+                } finally { image.recycle() }
+            }
             assertTrue("left backdrop remains red: $left",left.red-left.blue>.1f)
             assertTrue("right backdrop remains blue: $right",right.blue-right.red>.1f)
-            image.recycle()
         }
         assertBackdrop()
         ui.runOnIdle{width.value=320.dp}
@@ -130,7 +138,7 @@ class PlayerStyleTest {
         ui.onAllNodesWithText("播放记录").filter(hasClickAction()).onFirst().performClick()
         capture("history")
         ui.onNodeWithText("首页").performClick()
-        ui.onNodeWithText("映汐").assertIsDisplayed()
+        ui.onNodeWithText("映汐播放器").assertIsDisplayed()
         ui.runOnUiThread {
             ui.activity.setContent {
                 PlayerTheme {
