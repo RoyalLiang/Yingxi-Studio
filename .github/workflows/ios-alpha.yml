@@ -22,12 +22,14 @@ jobs:
           persist-credentials: false
       - name: Build and validate iOS 27 alpha
         run: python3 scripts/build_ios.py --output "$RUNNER_TEMP/ios-alpha"
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+      - if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: yingxi-ios-${{ github.sha }}
           path: |
             ${{ runner.temp }}/ios-alpha/*.ipa
             ${{ runner.temp }}/ios-alpha/*.zip
+            ${{ runner.temp }}/ios-alpha/*.log
             ${{ runner.temp }}/ios-alpha/*.json
             ${{ runner.temp }}/ios-alpha/*.png
             ${{ runner.temp }}/ios-alpha/IOS-SHA256SUMS
