@@ -44,9 +44,26 @@ class PreviewPlaybackTest {
             ui.waitUntil(10_000){main{player.playbackState==Player.STATE_READY&&player.currentPosition in 1500..2500}}
             Thread.sleep(1000) // Let the independent reader warm while the video session remains paused.
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput {
-                down(Offset(width*.3f,height*.34f));moveTo(Offset(width*.65f,height*.34f),300)
+                down(Offset(width*.3f,height*.34f));moveTo(Offset(width*.34f,height*.34f),300)
             }
             ui.waitUntil(2000){ui.onAllNodesWithContentDescription("进度预览").fetchSemanticsNodes().isNotEmpty()}
+            val first=ui.onNodeWithContentDescription("进度预览").fetchSemanticsNode().boundsInRoot
+            ui.onNodeWithTag("playback-gesture-surface").performTouchInput { moveTo(Offset(width*.39f,height*.34f),300) }
+            ui.waitForIdle()
+            val second=ui.onNodeWithContentDescription("进度预览").fetchSemanticsNode().boundsInRoot
+            assertTrue("Preview must follow the moving seek thumb",second.center.x>first.center.x+40)
+            val thumb=ui.onNodeWithTag("progress-thumb",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+            assertTrue("Preview belongs above the timeline",second.bottom<thumb.top)
+            ui.onNodeWithText("拖动以调整进度").assertDoesNotExist()
+            ui.onNodeWithText("约 ",substring=true).assertDoesNotExist()
+            ui.onNodeWithText("正在生成预览…").assertDoesNotExist()
+            val screen=ui.onNodeWithTag("playback-gesture-surface").fetchSemanticsNode().boundsInRoot
+            for(fraction in listOf(.27f,.55f)) {
+                ui.onNodeWithTag("playback-gesture-surface").performTouchInput { moveTo(Offset(width*fraction,height*.34f),300) }
+                ui.waitForIdle()
+                val edge=ui.onNodeWithContentDescription("进度预览").fetchSemanticsNode().boundsInRoot
+                assertTrue("Preview must remain inside the screen at both seek extremes",edge.left>=screen.left&&edge.right<=screen.right)
+            }
             assertTrue("Extracting a preview must not seek or resume the playing session",main{!player.isPlaying&&player.currentPosition in 1500..2500})
             instrumentation.uiAutomation.executeShellCommand("screencap -p /sdcard/Download/home-polish-real-preview.png").use{
                 java.io.FileInputStream(it.fileDescriptor).use{stream->stream.readBytes()}

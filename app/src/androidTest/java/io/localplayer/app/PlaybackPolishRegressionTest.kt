@@ -36,6 +36,20 @@ class PlaybackPolishRegressionTest {
         } } }
     }
 
+    @Test fun lockedControlsAppearOnlyAfterATapAndHideAgain() {
+        landscape();player()
+        ui.onNodeWithContentDescription("锁定方向与控件").performClick()
+        ui.onNodeWithContentDescription("解锁方向与控件").assertDoesNotExist()
+        ui.onNodeWithTag("playback-gesture-surface").performTouchInput { click(center) }
+        ui.onNodeWithContentDescription("解锁方向与控件").assertIsDisplayed()
+        ui.mainClock.advanceTimeBy(3100)
+        ui.onNodeWithContentDescription("解锁方向与控件").assertDoesNotExist()
+        ui.onNodeWithTag("playback-gesture-surface").performTouchInput { click(center) }
+        capture("unlock")
+        ui.onNodeWithContentDescription("解锁方向与控件").performClick()
+        ui.onNodeWithContentDescription("锁定方向与控件").assertIsDisplayed()
+    }
+
     @Test fun toolbarKeepsTimeLeftAndActionsAtRightIncludingLargeText() {
         landscape()
         listOf(1f,1.5f).forEach { scale ->
@@ -75,6 +89,7 @@ class PlaybackPolishRegressionTest {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
             if(show.value) PlaybackQueueSheet(items,0,false,{show.value=false},{})
         } } }
+        ui.onNodeWithText("名称升序 · 同名按可用创建时间排序").assertDoesNotExist()
         ui.onNodeWithTag("playback-queue-drawer").performTouchInput { click(Offset(width-4f,4f)) }
         ui.onNodeWithTag("playback-queue-drawer").assertIsDisplayed()
         ui.onNodeWithTag("queue-dismiss-backdrop").performTouchInput { click(Offset(width*.08f,height*.5f)) }

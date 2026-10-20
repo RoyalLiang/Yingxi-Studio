@@ -14,6 +14,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import java.io.Closeable
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,10 +47,43 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
     private var session: Session? = null
     @Volatile private var active: PreviewDecoder? = null
     @Volatile private var lastFrame: Pair<Uri, PreviewFrame>? = null
-    private fun bucket(timeMs: Long) = timeMs.coerceAtLeast(0) / 5000 * 5000
+    private fun bucket(timeMs: Long) = timeMs.coerceAtLeast(0) / 1000 * 1000
     internal fun cached(uri: Uri, timeMs: Long): PreviewFrame? = if(closed.get())null else
         cache.get("$uri:${bucket(timeMs)}")?.let { PreviewFrame(it, bucket(timeMs)) }
     internal fun latest(uri: Uri): PreviewFrame? = if(closed.get())null else lastFrame?.takeIf { it.first == uri }?.second
+
+    /** Cached targets bypass a busy reader; queued misses collapse to the latest position. */
+    internal fun frames(uri: Uri, positions: Flow<Long>): Flow<PreviewFrame> = flow {
+        coroutineScope {
+            val requested = java.util.concurrent.atomic.AtomicLong(-1)
+            val requests = Channel<Long>(Channel.CONFLATED)
+            val results = Channel<PreviewFrame>(Channel.CONFLATED)
+            val producer = launch {
+                try {
+                    positions.map(::bucket).distinctUntilChanged().collect { time ->
+                        requested.set(time)
+                        cached(uri,time)?.let { results.send(it) }
+                        requests.send(time)
+                    }
+                } finally { requests.close() }
+            }
+            val reader = launch {
+                try {
+                    for(time in requests) {
+                        if(time!=requested.get())continue
+                        try {
+                            val bitmap=withTimeoutOrNull(2500) { get(uri,time) }
+                            if(bitmap!=null&&time==requested.get())results.send(PreviewFrame(bitmap,time))
+                        } catch(e:CancellationException) { throw e }
+                        catch(_:Exception) { /* A failed preview must not interrupt video playback. */ }
+                    }
+                } finally { results.close() }
+            }
+            try {
+                for(frame in results)if(frame.timeMs==requested.get())emit(frame)
+            } finally { producer.cancel();reader.cancel();requests.cancel();results.cancel() }
+        }
+    }
 
     internal fun releaseReader() {
         if(closed.get())return

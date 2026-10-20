@@ -43,6 +43,11 @@ class SourceUpdateRegressionTest {
     }
     @Test fun newSourceSheetUsesDarkStatusIconsOnItsLightSurface(){
         mount();ui.runOnIdle{vm.add()};ui.waitForIdle()
+        ui.waitUntil(5000) {
+            var focused=false
+            ui.runOnUiThread { focused=WindowInspector.getGlobalWindowViews().any { it.hasWindowFocus()&&it!==ui.activity.window.decorView } }
+            focused
+        }
         ui.runOnIdle{
             val dialog=WindowInspector.getGlobalWindowViews().last{it.hasWindowFocus()&&it!==ui.activity.window.decorView}
             val appearance=dialog.windowInsetsController!!.systemBarsAppearance

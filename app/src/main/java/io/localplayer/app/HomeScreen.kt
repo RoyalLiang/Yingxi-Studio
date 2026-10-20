@@ -3,6 +3,8 @@ package io.localplayer.app
 import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -15,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -103,15 +107,17 @@ import androidx.compose.ui.unit.sp
 @Composable internal fun RecentFilm(entry: HistoryEntry, preparing: Boolean, selected: Boolean, alignTitleRows: Boolean, play: () -> Unit, restart: () -> Unit, remove: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    Surface(onClick = play, enabled = !preparing,
-        color = if (selected) Berry.copy(alpha = .07f) else androidx.compose.ui.graphics.Color.Transparent,
+    Surface(
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth().testTag("home-film:${entry.media.key}")
-            .semantics { this.selected = selected }
-            .border(1.dp, if (selected) Berry.copy(alpha = .38f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(16.dp)),
+            .clickable(enabled=!preparing,interactionSource=remember { MutableInteractionSource() },indication=null,onClick=play)
+            .semantics { this.selected = selected },
         shape = RoundedCornerShape(16.dp)) {
         Column {
-            Box(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp))
+                .border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(16.dp)).testTag("film-poster:${entry.media.key}")) {
                 MediaThumbnail(entry.media, Modifier.fillMaxSize())
+                PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
                 Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
                     IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp).clip(CircleShape).background(GroupedSurface.copy(alpha=.9f))) {
@@ -131,7 +137,19 @@ import androidx.compose.ui.unit.sp
             }
             Text(entry.media.title, Modifier.fillMaxWidth().padding(start=8.dp,end=8.dp,top = 10.dp), fontSize = 15.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, minLines = if (alignTitleRows) 2 else 1, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(if (entry.completed) "已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}", Modifier.padding(start=8.dp,end=8.dp,top=3.dp,bottom=8.dp), fontSize = 12.sp, lineHeight = 18.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+    }
+}
+
+/** A dark scrim stays behind white status text even over a completely white poster. */
+@Composable internal fun PosterPlaybackStatus(entry:HistoryEntry,modifier:Modifier=Modifier) {
+    Column(modifier.fillMaxWidth().background(Brush.verticalGradient(
+        0f to Color.Transparent,.4f to Color.Black.copy(alpha=.76f),1f to Color.Black.copy(alpha=.88f)))
+        .padding(start=10.dp,end=10.dp,top=20.dp,bottom=9.dp).testTag("film-status:${entry.media.key}")) {
+        Text(if(entry.completed)"已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}",
+            color=Color.White,fontSize=11.sp,lineHeight=16.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(3.dp),
+            color=Color(0xFFFFB5C8),trackColor=Color.White.copy(alpha=.35f),drawStopIndicator={})
     }
 }

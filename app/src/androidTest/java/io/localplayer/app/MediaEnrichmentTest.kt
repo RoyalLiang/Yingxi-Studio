@@ -5,6 +5,10 @@ import android.net.Uri
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.dp
@@ -80,9 +84,44 @@ class MediaEnrichmentTest {
         val node=ui.onNodeWithTag("home-film:"+media.key)
         node.assertIsNotSelected()
         val before=node.fetchSemanticsNode().boundsInRoot
+        val title=ui.onNodeWithText(media.title,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        val status=ui.onNodeWithText("00:02 / 02:00",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        assertTrue("Playback status must sit inside the poster, above its title",status.bottom<title.top)
+        val unselected=node.captureToImage().asAndroidBitmap()
         node.performClick().assertIsSelected()
+        ui.mainClock.advanceTimeBy(500) // Let the touch ripple finish before comparing the selected state.
         assertEquals(before,node.fetchSemanticsNode().boundsInRoot)
-        File(context.cacheDir,"enrichment-selected.png").outputStream().use{node.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it)}
+        val selectedImage=node.captureToImage().asAndroidBitmap()
+        File(context.cacheDir,"enrichment-selected.png").outputStream().use{selectedImage.compress(Bitmap.CompressFormat.PNG,100,it)}
+        File(context.cacheDir,"enrichment-unselected.png").outputStream().use{unselected.compress(Bitmap.CompressFormat.PNG,100,it)}
+        val belowPoster=(title.top-before.top).toInt()
+        for(y in belowPoster until unselected.height)for(x in 0 until unselected.width) {
+            assertEquals("Selection must not paint the title area at $x,$y",unselected.getPixel(x,y),selectedImage.getPixel(x,y))
+        }
+    }
+
+    @Test fun posterStatusKeepsWhiteTextReadableOverWhiteAndBlackImages() {
+        val entries=listOf(Color.White,Color.Black).mapIndexed { index,color ->
+            HistoryEntry(MediaRef("contrast-$index","高对比海报","本机"),65000,7200000,1,false) to color
+        }
+        ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
+            Column(Modifier.width(220.dp)) {
+                entries.forEach { (entry,color) ->
+                    Box(Modifier.fillMaxWidth().aspectRatio(1.6f).background(color)) {
+                        PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
+                    }
+                }
+            }
+        } } }
+        entries.forEach { (entry,_) ->
+            val status=ui.onNodeWithTag("film-status:${entry.media.key}",useUnmergedTree=true)
+            val image=status.captureToImage().asAndroidBitmap()
+            val white=androidx.core.graphics.ColorUtils.calculateLuminance(android.graphics.Color.WHITE)
+            val background=image.getPixel(2,image.height/2)
+            val contrast=(white+.05)/(androidx.core.graphics.ColorUtils.calculateLuminance(background)+.05)
+            assertTrue("Status scrim must preserve at least 4.5:1 contrast",contrast>=4.5)
+            File(context.cacheDir,"poster-${entry.media.key}.png").outputStream().use{image.compress(Bitmap.CompressFormat.PNG,100,it)}
+        }
     }
     @Test fun sidecarPosterUsesShortReadsCachesAndRespectsSourceIdentity()=runBlocking{
         EnrichmentPreferences(context).posters=true
