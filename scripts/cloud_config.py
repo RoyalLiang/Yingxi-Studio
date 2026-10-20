@@ -29,8 +29,9 @@ def validate(value):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=Path,required=True);p.add_argument('--require-registration',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=Path,required=True);p.add_argument('--require-registration',action='store_true');p.add_argument('--provider',choices=('aliyunpan','baidu'));a=p.parse_args()
     result=validate(json.loads(a.config.read_text(encoding='utf-8')))
+    if a.provider:result={a.provider:result[a.provider]}
     print(json.dumps(result,ensure_ascii=False,indent=2))
     if a.require_registration and not all(v['registrationPresent'] for v in result.values()):raise SystemExit('Developer platform registration is incomplete')
 

@@ -18,3 +18,23 @@ class CloudConfigTests(unittest.TestCase):
     def test_extra_providers_cannot_change_launch_targets(self):
         x=self.sample();x['providers']['other']={'clientId':'public','redirectUri':''}
         with self.assertRaises(ValueError):cloud_config.validate(x)
+
+    def test_native_registration_can_leave_redirect_empty(self):
+        x=self.sample();x['providers']['aliyunpan']['clientId']='public-client'
+        result=cloud_config.validate(x)['aliyunpan']
+        self.assertTrue(result['registrationPresent']);self.assertFalse(result['redirectRecorded'])
+        self.assertFalse(result['accountAuthorizationEnabled'])
+
+    def test_selected_provider_does_not_require_other_provider_registration(self):
+        import json,subprocess,sys,tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'public.json';data=self.sample()
+            data['providers']['aliyunpan']['clientId']='public-client'
+            path.write_text(json.dumps(data))
+            command=[sys.executable,str(Path(cloud_config.__file__)),'--config',str(path),'--require-registration']
+            selected=subprocess.run(command+['--provider','aliyunpan'],capture_output=True,text=True)
+            self.assertEqual(selected.returncode,0,selected.stderr)
+            self.assertEqual(set(json.loads(selected.stdout)),{'aliyunpan'})
+            self.assertNotIn('public-client',selected.stdout)
+            self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
