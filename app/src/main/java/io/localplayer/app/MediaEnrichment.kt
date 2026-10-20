@@ -9,6 +9,7 @@ import androidx.media3.common.*
 import io.localplayer.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.io.File
 import java.security.MessageDigest
 
@@ -25,6 +26,8 @@ internal object MediaPosters {
     private val http=EnrichmentHttp()
     private val lookup=PosterLookup(http)
     private val failed=java.util.concurrent.ConcurrentHashMap<String,Long>()
+    val changes=MutableStateFlow(0L)
+    fun retryMissing(){revision.incrementAndGet();failed.clear();changes.update{it+1}}
     private val revision=java.util.concurrent.atomic.AtomicLong()
     internal var connector:Connector=AppConnectors()
     private val locks=Array(16){kotlinx.coroutines.sync.Mutex()}
@@ -72,14 +75,14 @@ internal object MediaPosters {
                 val bitmap=local?.let(::decode)?:onlineLookup(MediaIdentity.parse(media.title),c)?.let{match->
                     credit=match.credit;url=match.sourceUrl
                     decode(http.get(match.imageUrl,c,5*1024*1024))
-                }?:run{failed[id]=System.currentTimeMillis();return@withContext null}
+                }?:run{c.check();if(revision.get()==generation)failed[id]=System.currentTimeMillis();return@withContext null}
                 ensureActive();c.check()
                 if(revision.get()!=generation||HistoryStore(context).token(media.key)!=token||!EnrichmentPreferences(context).posters)return@withContext null
                 val temp=File(dir(context),"$id.tmp")
                 try{temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,88,it))};check(temp.renameTo(target))}finally{temp.delete()}
                 File(dir(context),"$id.json").writeText(org.json.JSONObject().put("credit",credit).put("url",url).put("policy",posterPolicy).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).toString())
                 trim(context);bitmap
-            }catch(e:CancellationException){throw e}catch(_:Exception){failed[id]=System.currentTimeMillis();null}
+            }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&revision.get()==generation)failed[id]=System.currentTimeMillis();null}
             finally{watcher.cancel(false);owner.dispose();c.close()}
         }finally{lock.unlock()}
     }

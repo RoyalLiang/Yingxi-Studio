@@ -26,16 +26,20 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 
 data class FileCrumb(val label:String,val key:String)
 
-@Composable fun FileBreadcrumbs(crumbs:List<FileCrumb>,onSelect:(Int)->Unit){
+@Composable fun FileBreadcrumbs(crumbs:List<FileCrumb>,onSelect:((Int)->Unit)?=null){
     val scroll=rememberScrollState()
     LaunchedEffect(crumbs,scroll.maxValue){scroll.animateScrollTo(scroll.maxValue)}
     Row(Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically){
         crumbs.forEachIndexed{index,crumb->
             if(index>0)Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,Modifier.size(16.dp),tint=Muted)
-            TextButton(onClick={onSelect(index)},enabled=index!=crumbs.lastIndex,modifier=Modifier.heightIn(min=48.dp).testTag("breadcrumb:${crumb.key}")){
-                Text(crumb.label,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=200.dp),fontSize=14.sp,fontWeight=if(index==crumbs.lastIndex)FontWeight.SemiBold else FontWeight.Normal,
-                    color=if(index==crumbs.lastIndex)Ink else Berry)
+            val text: @Composable () -> Unit = {
+                Text(crumb.label,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=200.dp),fontSize=14.sp,
+                    fontWeight=if(index==crumbs.lastIndex)FontWeight.SemiBold else FontWeight.Normal,color=if(index==crumbs.lastIndex)Ink else Muted)
             }
+            if(onSelect!=null)TextButton(onClick={onSelect(index)},enabled=index!=crumbs.lastIndex,
+                modifier=Modifier.heightIn(min=48.dp).testTag("breadcrumb:${crumb.key}")){text()}
+            else Box(Modifier.heightIn(min=48.dp).padding(horizontal=12.dp).testTag("breadcrumb:${crumb.key}"),contentAlignment=Alignment.Center){text()}
+
         }
     }
 }

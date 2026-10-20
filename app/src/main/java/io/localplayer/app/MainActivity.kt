@@ -82,25 +82,30 @@ class MainActivity:ComponentActivity(){
     if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm);return}
     val current=vm.openingSource ?: vm.source ?: return
     val selecting=vm.rootSelectionId==current.id
-    var selectedEntry by remember(current.id){mutableStateOf<String?>(null)}
+    var selectedEntry by remember(current.id,vm.path){mutableStateOf<String?>(null)}
     val back={if(vm.openingSource!=null)vm.closeSource()else vm.up()}
     BackHandler(enabled=vm.draft==null&&vm.access==null){back()}
     Column(Modifier.fillMaxSize().testTag("source-browser")){
         Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty())"返回来源"else"上一级",tint=Berry)}
+            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty()||!selecting&&vm.path==current.initialPath)"返回来源"else"上一级",tint=Berry)}
             Column(Modifier.weight(1f).padding(horizontal=8.dp)){
                 Text(if(selecting)"选择默认目录"else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 if(selecting)Text(current.label,Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
             if(selecting)TextButton(onClick={vm.closeSource()}){Text("取消")}
-            else SourceActions(vm,current,SourceBookmark(current.id,current.initialPath,current.label))
+            else SourceActions(vm,current,vm.currentDirectoryBookmark()?:SourceBookmark(current.id,current.initialPath,current.label))
         }
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
-            val parts=vm.path.split('/').filter{it.isNotEmpty()}
-            FileBreadcrumbs(listOf(FileCrumb("来源","sources"),FileCrumb(source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"},"remote:"))+
-                parts.mapIndexed{i,name->FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,name)else name,"remote:"+parts.take(i+1).joinToString("/"))}){index->
-                if(index==0)vm.closeSource()else vm.browse(parts.take(index-1).joinToString("/"))
+            val root=source.initialPath.takeIf{!selecting&&(vm.path==it||vm.path.startsWith(it+"/"))}.orEmpty()
+            val relative=vm.path.removePrefix(root).trimStart('/')
+            val parts=relative.split('/').filter{it.isNotEmpty()}
+            val rootName=if(root.isNotEmpty())vm.startingFolderName(source)else source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"}
+            val crumbs=listOf(FileCrumb(rootName,"remote:$root"))+parts.mapIndexed{i,name->
+                FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,name)else name,
+                    "remote:"+listOf(root,parts.take(i+1).joinToString("/")).filter{it.isNotEmpty()}.joinToString("/"))
             }
+            if(selecting)FileBreadcrumbs(crumbs){index->vm.browse(parts.take(index).joinToString("/"))}
+            else FileBreadcrumbs(crumbs)
             HorizontalDivider(color=Hairline)
         }
         if(selecting){
@@ -108,18 +113,21 @@ class MainActivity:ComponentActivity(){
                 Text("选择后，下次直接从这里进入。",Modifier.weight(1f).padding(end=8.dp),fontSize=13.sp,lineHeight=20.sp,color=Muted)
                 FilledTonalButton(onClick=vm::useCurrentFolder,enabled=!vm.busy&&vm.openingSource==null&&vm.source!=null,shape=RoundedCornerShape(16.dp)){Text("使用此文件夹")}
             }
-        }else if(vm.source!=null)DirectoryBookmarkActions(vm)
-        if(vm.busy||vm.openingSource!=null)Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
-            CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在连接与读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp,color=Muted);TextButton(onClick={vm.closeSource()}){Text("取消")}
         }
         val shown=if(selecting)vm.entries.filter{it.directory}else vm.entries
-        if(vm.openingSource==null)Row(Modifier.padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){
-            Text("${shown.size} 个${if(selecting)"文件夹"else"项目"}",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={vm.browse(vm.path)},enabled=!vm.busy){Text("刷新")}
+        Row(Modifier.fillMaxWidth().padding(start=20.dp,end=12.dp).heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically){
+            if(vm.busy||vm.openingSource!=null){
+                CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp)
+                Text("正在读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=13.sp,color=Muted,maxLines=1)
+            }else Text("${shown.size} 个${if(selecting)"文件夹"else"项目"}",Modifier.weight(1f),fontSize=13.sp,color=Muted)
+            TextButton(onClick={if(vm.busy||vm.openingSource!=null){selectedEntry=null;if(vm.openingSource!=null)vm.closeSource()else vm.cancelOperation()}else vm.browse(vm.path)}){
+                Text(if(vm.busy||vm.openingSource!=null)"取消"else"刷新")
+            }
         }
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
             if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
             if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
-                if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
+                if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path,busy=vm.busy&&selectedEntry==entry.path){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
         }
     }
 }
