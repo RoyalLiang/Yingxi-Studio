@@ -1,0 +1,6 @@
+Cloud service brand identifiers
+
+Aliyunpan and Baidu Netdisk icons are used only to identify their respective services. The trademarks remain with their respective owners; no affiliation or authorization is implied. The source URLs and SHA-256 hashes are recorded in cloud-brand-assets.json.
+
+Aliyunpan: https://www.alipan.com/
+Baidu Netdisk: https://pan.baidu.com/

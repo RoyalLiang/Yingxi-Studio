@@ -1,6 +1,6 @@
 # iOS 与 iPadOS 的实现路径
 
-本文件是迁移方案；当前仓库只有 Android 实现，没有 iOS／iPadOS 应用或验证结果。
+本文件记录平台边界与后续迁移方向。仓库现已加入独立的 SwiftUI / AVFoundation iOS 初版工程，实际构建、签名状态与验证范围见 [iOS alpha](ios-alpha.md) 及发布附带报告；不能将方案视为全功能迁移已完成。
 
 ## 建议保留原生播放器，逐步共享业务逻辑
 

@@ -34,6 +34,7 @@ jobs:
           python3 scripts/repository_guard.py --git
           python3 scripts/versioning.py
           python3 scripts/release_notes.py
+          python3 scripts/cloud_config.py --config deploy/cloud-integrations.example.json
           python3 -m unittest discover -s scripts -p 'test_*.py'
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:

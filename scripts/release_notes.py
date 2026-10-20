@@ -9,7 +9,7 @@ from versioning import load
 def load_notes(root, version):
     path = root / "releases" / f'{version["tag"]}.md'
     text = path.read_text(encoding="utf-8").strip()
-    if not text.startswith(f'# 映汐 {version["versionName"]} / Yingxi {version["versionName"]}\n'):
+    if not any(text.startswith(f'# {name} {version["versionName"]} / Yingxi {version["versionName"]}\n') for name in ('映汐', '映汐播放器')):
         raise ValueError("Release notes title must match version.json")
     headings = list(re.finditer(r"^## (.+)$", text, re.MULTILINE))
     if [heading[1] for heading in headings] != ["中文", "English"]:

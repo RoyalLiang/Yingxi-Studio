@@ -1,0 +1,20 @@
+[
+  {
+    "provider": "Aliyunpan",
+    "sourcePage": "https://www.alipan.com/",
+    "sourceAsset": "https://img.alicdn.com/imgextra/i2/O1CN01DOYcs71v3B6bOemVM_!!6000000006116-2-tps-512-512.png",
+    "packagedPath": "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png",
+    "sha256": "186e7554043990870ad2d729c8554477aea1dd8744cceca6a84aeea21f0b4637",
+    "processing": "Decoded and re-encoded pixels without ancillary metadata",
+    "purpose": "Service identification; trademarks remain with their owners"
+  },
+  {
+    "provider": "Baidu Netdisk",
+    "sourcePage": "https://pan.baidu.com/",
+    "sourceAsset": "https://nd-static.bdstatic.com/m-static/wp-brand/img/logo-pan.6af52c5e.png",
+    "packagedPath": "app/src/main/res/drawable-nodpi/cloud_baidu.png",
+    "sha256": "ae5789b2b32174d6f6da9639c25217e785b60788d9ade3e59f0915219d31422c",
+    "processing": "Decoded and re-encoded pixels without ancillary metadata",
+    "purpose": "Service identification; trademarks remain with their owners"
+  }
+]
