@@ -62,12 +62,19 @@ class PlaybackService:MediaSessionService(){
             override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)persist()}
             override fun onPlaybackStateChanged(state:Int){
                 if(state==Player.STATE_READY||state==Player.STATE_ENDED)persist()
-                if(state==Player.STATE_READY)player.currentMediaItem?.let{item->
-                    val ref=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
-                    val uri=item.localConfiguration?.uri
-                    if(ref!=null&&uri!=null)MediaThumbnails.warm(this@PlaybackService,ref,uri)
-                }
             }
+            override fun onRenderedFirstFrame(){
+                // Let the first frame and playback buffer win over optional artwork.
+                val item=player.currentMediaItem ?: return
+                handler.postDelayed({
+                    if(player.currentMediaItem?.mediaId==item.mediaId&&player.playbackState==Player.STATE_READY){
+                        val ref=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+                        val uri=item.localConfiguration?.uri
+                        if(ref!=null&&uri!=null)MediaThumbnails.warm(this@PlaybackService,ref,uri)
+                    }
+                },2000)
+            }
+
             override fun onPositionDiscontinuity(oldPosition:Player.PositionInfo,newPosition:Player.PositionInfo,reason:Int){
                 // At an automatic transition the Player already points at the NEXT item.
                 // Save the old item's final position before updating the new item.

@@ -117,9 +117,9 @@ fun SourcesCatalog(vm: LibraryViewModel) {
             ?: SourceBookmark(source.id, vm.path, if (vm.path.isEmpty()) source.label else if(source.protocol==io.localplayer.core.Protocol.ALIYUN) AliyunCloud.folderName(source.id,vm.path.substringAfterLast('/')) else vm.path.substringAfterLast('/'))
     }
     var organize by remember { mutableStateOf(false) }
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = { vm.toggleFavorite(item) }) { Icon(if (item.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(if (item.favorite) "取消收藏" else "收藏文件夹", maxLines = 1) }
-        TextButton(onClick = { organize = true }) { Icon(Icons.Rounded.FolderCopy, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("分组", maxLines = 1) }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp).testTag("directory-actions"), horizontalArrangement = Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+        TextButton(onClick = { vm.toggleFavorite(item) }) { Icon(if (item.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(if (item.favorite) "取消收藏" else "收藏文件夹",maxLines=1,softWrap=false) }
+        TextButton(onClick = { organize = true }) { Icon(Icons.Rounded.FolderCopy, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("分组",maxLines=1,softWrap=false) }
     }
     if (organize) BookmarkOrganizer(vm, item) { organize = false }
 }

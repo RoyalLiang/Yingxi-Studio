@@ -51,6 +51,27 @@ class WebDavTest {
         }
     }
 
+    @Test fun slowStreamReturnsAvailableBytesWithoutFillingReadAheadWindow() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-0/2097152").setBody("x"))
+            server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-2097151/2097152")
+                .setBody(Buffer().write(ByteArray(2097152){(it%251).toByte()})).throttleBody(8192,200,TimeUnit.MILLISECONDS))
+            val pool=Executors.newSingleThreadExecutor()
+            val session=WebDavConnector().connect(source(server),Credentials("secret"))
+            val file=ReadAheadFile(session.open("slow.mp4"))
+            try {
+                val output=ByteArray(8192)
+                val started=System.nanoTime()
+                val result=pool.submit<Int>{file.readAt(0,output,0,output.size)}
+                val n=result.get(3,TimeUnit.SECONDS)
+                val elapsed=TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started)
+                assertTrue(elapsed<700,"First bytes blocked behind read-ahead: ${elapsed}ms")
+                assertTrue(n>0)
+                assertContentEquals(ByteArray(n){(it%251).toByte()},output.copyOf(n))
+            } finally {file.close();session.close();pool.shutdownNow()}
+        }
+    }
+
     @Test fun rejectsIgnoredOrMismatchedRangeAndAuthenticationFailure() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("whole file"))

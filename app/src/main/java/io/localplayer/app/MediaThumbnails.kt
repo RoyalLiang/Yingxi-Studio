@@ -79,7 +79,7 @@ internal object MediaThumbnails {
         }
         if (activeUri == null && SystemClock.elapsedRealtime() - (failed[cacheKey] ?: Long.MIN_VALUE / 2) < 60_000) return@withContext null
         val cancellation = Cancellation()
-        val timeout = timer.schedule({ cancellation.close() }, 8, TimeUnit.SECONDS)
+        val timeout = timer.schedule({ cancellation.close() }, 20, TimeUnit.SECONDS)
         var retriever: MediaMetadataRetriever? = null
         var preview: PlaybackLease? = null
         try {
