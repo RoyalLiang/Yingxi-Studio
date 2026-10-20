@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -42,7 +44,7 @@ object PlaybackRequests {
                 putBoolean("queue-truncated",target.truncated)
             }
             MediaItem.Builder().setUri(entry.uri).setMediaId(entry.uri.toString())
-                .setMediaMetadata(MediaMetadata.Builder().setTitle(entry.media.title).setExtras(extras).build()).build()
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(mediaDisplayTitle(entry.media.title)).setExtras(extras).build()).build()
         }
     }
 }

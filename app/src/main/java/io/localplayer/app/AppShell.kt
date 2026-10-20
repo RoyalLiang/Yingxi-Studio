@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.mediaDisplayTitle
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -166,11 +168,11 @@ internal fun historyDay(timestamp:Long):String{
             Row(Modifier.padding(start=10.dp,end=4.dp,top=9.dp,bottom=9.dp),verticalAlignment=Alignment.CenterVertically){
                 MediaThumbnail(entry.media,Modifier.width(78.dp).height(44.dp))
                 Column(Modifier.weight(1f).padding(horizontal=12.dp)){
-                    Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(mediaDisplayTitle(entry.media.title),fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)} · ${entry.media.sourceLabel}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
                 Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(24.dp))
-                Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${entry.media.title}",tint=Muted,modifier=Modifier.size(20.dp))}
+                Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${mediaDisplayTitle(entry.media.title)}",tint=Muted,modifier=Modifier.size(20.dp))}
                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                         DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()})
                         DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
