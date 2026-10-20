@@ -126,7 +126,7 @@ public final class AliyunAPI: @unchecked Sendable {
             if a.directory != b.directory { return a.directory }
             let order=a.name.localizedStandardCompare(b.name)
             if order != .orderedSame { return order == .orderedAscending }
-            if a.created != b.created { return (a.created ?? .distantPast) < (b.created ?? .distantPast) }
+            if a.created != b.created { return (a.created ?? .distantFuture) < (b.created ?? .distantFuture) }
             return a.id < b.id
         }
     }

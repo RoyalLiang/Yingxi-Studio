@@ -52,6 +52,8 @@ enum PasswordVault {
     @Published var importing=false
     private let defaults=UserDefaults.standard
     private var historyEpoch=0
+    private var playbackGeneration=0
+    private var cloudGeneration=0
     init(){cloudSources=read("cloud-sources",as:[AliyunSource].self) ?? [];sources=read("sources",as:[DAVSource].self) ?? [];history=read("history",as:[PlayedVideo].self) ?? [];scanFiles()}
     nonisolated static var mediaDirectory: URL {FileManager.default.urls(for:.documentDirectory,in:.userDomainMask)[0].appendingPathComponent("Imported",isDirectory:true)}
     private func read<T:Decodable>(_ key:String,as:T.Type)->T? {guard let data=defaults.data(forKey:key) else{return nil};return try? JSONDecoder().decode(T.self,from:data)}
@@ -74,31 +76,39 @@ enum PasswordVault {
     }
     func add(_ source:DAVSource,password:String) throws {try PasswordVault.save(password,id:source.id);sources.append(source);persist()}
     func remove(_ source:DAVSource){if playing?.source?.id==source.id{playing=nil};sources.removeAll{$0.id==source.id};history.removeAll{$0.sourceID==source.id};PasswordVault.remove(source.id);persist()}
-    func playLocal(_ url:URL){let id="local:"+url.lastPathComponent;let previous=history.first{$0.id==id};let record=previous ?? PlayedVideo(id:id,title:url.lastPathComponent,localFile:url.lastPathComponent,position:0,duration:0,updated:Date());playing=PlaybackTarget(title:record.title,url:url,source:nil,password:"",history:record,historyEpoch:historyEpoch)}
-    func playRemote(_ entry:DAVEntry,source:DAVSource){let id=source.id.uuidString+":"+entry.url.absoluteString;let record=history.first{$0.id==id} ?? PlayedVideo(id:id,title:entry.name,sourceID:source.id,remoteURL:entry.url,position:0,duration:0,updated:Date());playing=PlaybackTarget(title:entry.name,url:entry.url,source:source,password:PasswordVault.read(source.id),history:record,historyEpoch:historyEpoch)}
+    func playLocal(_ url:URL){playbackGeneration+=1;let id="local:"+url.lastPathComponent;let previous=history.first{$0.id==id};let record=previous ?? PlayedVideo(id:id,title:url.lastPathComponent,localFile:url.lastPathComponent,position:0,duration:0,updated:Date());playing=PlaybackTarget(title:record.title,url:url,source:nil,password:"",history:record,historyEpoch:historyEpoch)}
+    func playRemote(_ entry:DAVEntry,source:DAVSource){playbackGeneration+=1;let id=source.id.uuidString+":"+entry.url.absoluteString;let record=history.first{$0.id==id} ?? PlayedVideo(id:id,title:entry.name,sourceID:source.id,remoteURL:entry.url,position:0,duration:0,updated:Date());playing=PlaybackTarget(title:entry.name,url:entry.url,source:source,password:PasswordVault.read(source.id),history:record,historyEpoch:historyEpoch)}
     func resume(_ record:PlayedVideo){
         if let id=record.cloudSourceID,let file=record.cloudFileID{guard let source=cloudSources.first(where:{$0.id==id})else{message="原网盘来源已不存在";return};Task{await playCloud(file,title:record.title,source:source)};return}
         if let file=record.localFile{let url=Self.mediaDirectory.appendingPathComponent(file);guard FileManager.default.fileExists(atPath:url.path) else{message="原文件已不存在";return};playLocal(url)}else if let id=record.sourceID,let source=sources.first(where:{$0.id==id}),let url=record.remoteURL{playRemote(DAVEntry(url:url,name:record.title,directory:false,size:0),source:source)}else{message="原来源已不存在"}}
     func record(_ target:PlaybackTarget,position:Double,duration:Double){guard target.historyEpoch==historyEpoch, (target.source==nil || sources.contains(where:{$0.id==target.source?.id})) && (target.cloudSource==nil || cloudSources.contains(where:{$0.id==target.cloudSource?.id})),position.isFinite,duration.isFinite,duration>0 else{return};var row=target.history;row.position=max(0,min(position,duration));row.duration=duration;row.updated=Date();history.removeAll{$0.id==row.id};history.insert(row,at:0);history=Array(history.prefix(100));persist()}
     func connectCloud() async {
-        do{let source=try await cloudAuthorization.authorize(known:cloudSources);try Task.checkCancellation();cloudSources.removeAll{$0.id==source.id};cloudSources.append(source);persist()}
-        catch is CancellationError{}catch{message=error.localizedDescription}
+        cloudGeneration+=1
+        let generation=cloudGeneration
+        do{
+            let source=try await cloudAuthorization.authorize(known:cloudSources)
+            guard generation==cloudGeneration,!Task.isCancelled else{if !cloudSources.contains(where:{$0.id==source.id}){await CloudAccounts.shared.remove(source.id)};return}
+            cloudSources.removeAll{$0.id==source.id};cloudSources.append(source);persist()
+        }catch is CancellationError{}catch{if generation==cloudGeneration{message=error.localizedDescription}}
     }
     func removeCloud(_ source:AliyunSource) {
+        playbackGeneration+=1
+        cloudGeneration+=1
         cloudAuthorization.cancel()
         if playing?.cloudSource?.id==source.id{playing=nil}
         cloudSources.removeAll{$0.id==source.id};history.removeAll{$0.cloudSourceID==source.id};persist()
         Task{await CloudAccounts.shared.remove(source.id)}
     }
     func playCloud(_ file:String,title:String,source:AliyunSource) async {
-        let epoch=historyEpoch
+        playbackGeneration+=1
+        let generation=playbackGeneration,epoch=historyEpoch
         do {
             let url=try await CloudAccounts.shared.download(source,file:file);try Task.checkCancellation()
-            guard cloudSources.contains(where:{$0.id==source.id}),epoch==historyEpoch else{return}
+            guard cloudSources.contains(where:{$0.id==source.id}),epoch==historyEpoch,generation==playbackGeneration else{return}
             let id="aliyun:"+source.id.uuidString+":"+file
             let record=history.first{$0.id==id} ?? PlayedVideo(id:id,title:title,cloudSourceID:source.id,cloudFileID:file,position:0,duration:0,updated:Date())
             playing=PlaybackTarget(title:title,url:url,source:nil,password:"",history:record,cloudSource:source,cloudFileID:file,historyEpoch:epoch)
-        }catch is CancellationError{}catch{message=error.localizedDescription}
+        }catch is CancellationError{}catch{if generation==playbackGeneration{message=error.localizedDescription}}
     }
     func clearHistory(){historyEpoch+=1;history=[];persist()}
 }

@@ -49,6 +49,16 @@ class AliyunTest {
         assertFailsWith<IOException> { api(server).drive("fixture", Cancellation()) }
         assertEquals(3, server.requestCount)
     }
+    @Test fun connectorUsesStableIdsWithFolderFirstNaturalOrdering(): Unit = MockWebServer().use { server ->
+        server.enqueue(MockResponse().setBody("""{"items":[{"file_id":"ten","name":"Episode10.mp4","type":"file"},{"file_id":"folder","name":"剧集","type":"folder"},{"file_id":"two","name":"Episode2.mp4","type":"file"}]}"""))
+        val access=object:AliyunAccess{override fun <T> authorized(cancellation:Cancellation,action:(String)->T)=action("fixture")}
+        val source=Source(label="cloud",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
+        AliyunConnector(api(server),access).connect(source,Credentials(""),Cancellation()).use { session ->
+            val rows=session.list("parent")
+            assertEquals(listOf("剧集","Episode2.mp4","Episode10.mp4"),rows.map{it.name})
+            assertEquals(listOf("parent/folder","parent/two","parent/ten"),rows.map{it.path})
+        }
+    }
     @Test fun rangeReadsSeekAndRefreshForbiddenLinkOnceWithoutBearer() = MockWebServer().use { server ->
         server.enqueue(MockResponse().setResponseCode(403))
         server.enqueue(MockResponse().setResponseCode(206).addHeader("Content-Range", "bytes 0-7/8").setBody("abcdefgh"))
@@ -77,6 +87,31 @@ class AliyunTest {
         val c = Cancellation(); c.close()
         assertFailsWith<java.io.InterruptedIOException> { api(server).drive("fixture", c) }
         assertEquals(0, server.requestCount)
+    }
+    @Test fun closingHandleInterruptsAnInFlightSignedUrlResolution(): Unit = MockWebServer().use { server ->
+        server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+        val failure=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val parent=Cancellation()
+        val file=AliyunRangeFile(8,parent){handle -> api(server).drive("fixture",handle);server.url("/cdn").toString()}
+        val reader=Thread{try{file.readAt(0,ByteArray(1),0,1)}catch(t:Throwable){failure.set(t)}}
+        reader.start();assertNotNull(server.takeRequest(5,java.util.concurrent.TimeUnit.SECONDS))
+        val start=System.nanoTime();file.close();val elapsed=(System.nanoTime()-start)/1_000_000
+        reader.join(3000);assertFalse(reader.isAlive);assertTrue(elapsed<1500,"Handle close must cancel URL resolution promptly")
+        assertTrue(failure.get() is IOException);assertEquals(1,server.requestCount)
+        parent.check() // Closing one file must not cancel the reusable session.
+    }
+    @Test fun closingHandleDoesNotWaitForAnotherAccountsRefreshLock() {
+        val lock=java.util.concurrent.locks.ReentrantLock();lock.lock()
+        val entered=java.util.concurrent.CountDownLatch(1)
+        val failure=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val file=AliyunRangeFile(8,Cancellation()){handle -> entered.countDown();handle.withLock(lock){"https://cdn.example.invalid/video"}}
+        val reader=Thread{try{file.readAt(0,ByteArray(1),0,1)}catch(t:Throwable){failure.set(t)}}
+        try {
+            reader.start();assertTrue(entered.await(3,java.util.concurrent.TimeUnit.SECONDS))
+            val start=System.nanoTime();file.close();assertTrue((System.nanoTime()-start)/1_000_000<1500)
+            reader.join(3000);assertFalse(reader.isAlive);assertTrue(failure.get() is IOException)
+            assertTrue(lock.isHeldByCurrentThread)
+        }finally{lock.unlock();file.close();reader.join(3000)}
     }
     private fun api(server: MockWebServer) = AliyunApi(server.url("/"), OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).build())
 }

@@ -15,7 +15,7 @@ internal object AliyunCloud {
     private lateinit var store: SourceStore
     private val api = AliyunApi()
     private val names = ConcurrentHashMap<String, String>()
-    private val accountLock = Any()
+    private val accountLock = java.util.concurrent.locks.ReentrantLock(true)
     private data class Pending(val grant: AliyunGrant, val created: Long, val completion: CompletableDeferred<Source>, val cancellation: Cancellation, val claimed: java.util.concurrent.atomic.AtomicBoolean = java.util.concurrent.atomic.AtomicBoolean(false))
     private var pending: Pending? = null
     fun accountRemoved(sourceId: String) {
@@ -58,7 +58,7 @@ internal object AliyunCloud {
                 val drive = api.drive(token.access, flow.cancellation)
                 val source = Source(id = "aliyun:${drive.userId}:${drive.driveId}", label = "阿里云盘 · ${drive.name}", protocol = Protocol.ALIYUN,
                     host = "openapi.alipan.com", root = "/", username = drive.userId, domain = drive.driveId)
-                synchronized(accountLock) {
+                flow.cancellation.withLock(accountLock) {
                     flow.cancellation.check()
                     if (!flow.completion.isActive) throw IOException("授权已取消")
                     store.save(source, encode(token), true) { synchronized(this@AliyunCloud) { pending === flow && flow.completion.isActive } }
@@ -74,10 +74,10 @@ internal object AliyunCloud {
         catch (_: Exception) { throw AliyunUnauthorized() }
     fun connector(source: Source): Connector = AliyunConnector(api, object : AliyunAccess {
         override fun <T> authorized(cancellation: Cancellation, action: (String) -> T): T {
-            fun token(force: Boolean): AliyunToken = synchronized(accountLock) {
+            fun token(force: Boolean): AliyunToken = cancellation.withLock(accountLock) {
                 val encoded = store.password(source.id) ?: throw AliyunUnauthorized()
                 val current = decode(encoded)
-                if (!force && current.expiresAt > System.currentTimeMillis() + 60_000) return@synchronized current
+                if (!force && current.expiresAt > System.currentTimeMillis() + 60_000) return@withLock current
                 val refresh = current.refresh ?: throw AliyunUnauthorized()
                 val updated = try { api.refresh(refresh, cancellation) } catch (_: Exception) { cancellation.check(); throw AliyunUnauthorized() }
                 // Source deletion or a newer login must not be undone by a late refresh.
