@@ -22,7 +22,6 @@ private fun cloudFailureMessage(e:Exception):String = when(e) {
     else -> "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"
 }
 
-
 class LibraryViewModel internal constructor(app:Application,private val sourceConnector:Connector):AndroidViewModel(app) {
     constructor(app:Application):this(app,AppConnectors())
     private val store=SourceStore(app)
@@ -30,7 +29,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     var organizationRevision by mutableIntStateOf(0);private set
     var shareChoices by mutableStateOf<List<String>?>(null);private set
     var selectedGroup by mutableStateOf("all")
-    var autoDiscoveryEnabled by mutableStateOf(app.getSharedPreferences("discovery",0).getBoolean("auto",true));private set
+    var autoDiscoveryEnabled by mutableStateOf(app.getSharedPreferences("discovery",0).getBoolean("auto",false));private set
     var nearbyPermissionGranted by mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(app,android.Manifest.permission.NEARBY_WIFI_DEVICES)==android.content.pm.PackageManager.PERMISSION_GRANTED);private set
     private var discoveryEligible=false
     private var autoActive=false
@@ -53,7 +52,31 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     var entries by mutableStateOf(emptyList<Entry>());private set
     var busy by mutableStateOf(false);private set
     var preparingKey by mutableStateOf<String?>(null);private set
-    var error by mutableStateOf<String?>(null)
+    var discoveryPanelOpen by mutableStateOf(false)
+    private var noticeSerial = 0L
+    internal var notice by mutableStateOf<SourceNotice?>(null); private set
+    private var errorValue by mutableStateOf<String?>(null)
+    var error: String?
+        get() = errorValue
+        set(value) {
+            errorValue = value
+            if (value != null) notice = SourceNotice(++noticeSerial, value, true)
+            else if (notice?.isError == true) notice = null
+        }
+    internal fun notifySuccess(text: String) { errorValue = null; notice = SourceNotice(++noticeSerial, text, false) }
+    internal fun dismissNotice(id: Long) {
+        if (notice?.id != id) return
+        if (notice?.isError == true) errorValue = null
+        notice = null
+    }
+    fun switchDraftProtocol(protocol: Protocol) {
+        val current = draft ?: return
+        if (current.source.protocol == protocol || protocol == Protocol.ALIYUN) return
+        stopDiscovery(); cancelOperation(); error = null; discoveryPanelOpen = false
+        draft = current.copy(source = current.source.copy(protocol = protocol,
+            root = if (protocol == Protocol.SMB) "" else "/", initialPath = "", trustedKey = null, trustedAuthority = null),
+            port = when (protocol) { Protocol.SMB -> "445"; Protocol.SFTP -> "22"; else -> "443" }, browsePath = null)
+    }
     var draft by mutableStateOf<Draft?>(null)
     var trust by mutableStateOf<HostKeyRequired?>(null);private set
     private var credentials:Credentials?=null
@@ -100,7 +123,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     }
     fun togglePin(saved:Source){
         if(!store.togglePinned(saved.id)){error="最多置顶 3 个来源，请先取消一个置顶";return}
-        pinnedIds=store.pinnedIds();sources=store.load()
+        pinnedIds=store.pinnedIds();sources=store.load();notifySuccess(if(saved.id in pinnedIds)"已置顶来源"else"已取消置顶")
     }
     fun removeSource(saved:Source){
         if(saved.protocol==Protocol.ALIYUN)AliyunCloud.accountRemoved(saved.id)
@@ -109,7 +132,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(draft?.source?.id==saved.id)dismissDraft()
         if(access?.source?.id==saved.id)dismissAccess()
         if(privateRequest?.source?.id==saved.id)privateRequest=null
-        organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load()
+        organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除来源")
     }
     fun privateAccess(saved:Source){
         stopDiscovery();cancelOperation();draft=null;access=null;openingSource=null;privateRequest=PrivateSourceRequest(saved)
@@ -143,6 +166,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:Exception){error=e.message}}
     }
     fun add(candidate:Candidate?=null){
+        discoveryPanelOpen=false
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null
         val protocol=candidate?.protocol ?: Protocol.SMB
         draft=Draft(Source(label=candidate?.name ?: "",protocol=protocol,host=candidate?.host ?: "",port=candidate?.port ?: if(protocol==Protocol.SMB)445 else 22,root=if(protocol==Protocol.SFTP)"/"else""))
@@ -194,7 +218,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                     list
                 }}
                 if(id!=generation)return@launch
-                source=s;openingSource=null;credentials=c;path=newPath;entries=result;draft=null;access=null;sources=store.load()
+                source=s;openingSource=null;credentials=c;path=newPath;entries=result;draft=null;access=null;sources=store.load();if(save)notifySuccess("来源已保存")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {
@@ -318,12 +342,12 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             }
         }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)error="本机文件无法读取，请通过“打开本机视频”重新选择"}finally{if(request==generation)preparingKey=null}}
     }
-    fun dismissDraft(){shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
-    fun deleteDraft(){draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds()}
-    fun putBookmark(item:SourceBookmark){error=null;runCatching{organization.put(item);organizationRevision++}.onFailure{error=it.message}}
-    fun removeBookmark(key:String){organization.remove(key);organizationRevision++}
-    fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onFailure{error=it.message}}
-    fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all"}
+    fun dismissDraft(){discoveryPanelOpen=false;stopDiscovery();shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
+    fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除来源")}
+    fun putBookmark(item:SourceBookmark){error=null;runCatching{organization.put(item);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}
+    fun removeBookmark(key:String){organization.remove(key);organizationRevision++;notifySuccess("已移除快捷入口")}
+    fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}
+    fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all";notifySuccess("已删除分组")}
     fun openLocation(item:SourceBookmark){sources.firstOrNull{it.id==item.sourceId}?.let{open(it,item.path)}}
     fun setAutoDiscovery(value:Boolean){autoDiscoveryEnabled=value;getApplication<Application>().getSharedPreferences("discovery",0).edit().putBoolean("auto",value).apply();if(!value)stopDiscovery()else if(autoActive)discover(true)}
     fun beginAutoDiscovery(){

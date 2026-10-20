@@ -29,7 +29,7 @@ class CloudSourceTest {
         assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK))
         ui.waitUntil(5000){runCatching{ui.onNodeWithTag("cloud-provider-picker").assertIsDisplayed()}.isSuccess}
         ui.onNodeWithText("SMB").performClick()
-        ui.onNode(hasText("服务器地址 / SMB 链接") and hasSetTextAction()).assertIsDisplayed()
+        ui.onNode(hasText("服务器地址") and hasSetTextAction()).assertIsDisplayed()
     }
     @Test fun absentAppsShowExplicitPromptWithoutCreatingSources() {
         val apps=AndroidCloudApps(context);CloudProvider.entries.forEach{assertEquals(CloudAppStatus.NOT_INSTALLED,apps.status(it))}

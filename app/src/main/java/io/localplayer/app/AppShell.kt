@@ -51,6 +51,7 @@ import java.util.Locale
 private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",Icons.Rounded.Home),Sources("来源",Icons.Rounded.Dns),History("播放记录",Icons.Rounded.History)}
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
+    SourceFeedbackLifetime(vm)
     var localOpen by rememberSaveable{mutableStateOf(false)}
     var settingsOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
@@ -60,8 +61,8 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LifecycleEventEffect(Lifecycle.Event.ON_START){vm.refreshHistory()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){vm.stopDiscovery();vm.cancelOperation()}
-    LaunchedEffect(tab,lifecycleState,vm.draft==null,vm.access==null,vm.privateRequest==null){
-        vm.setDiscoveryEnabled(tab==AppTab.Home&&lifecycleState.isAtLeast(Lifecycle.State.STARTED)&&vm.draft==null&&vm.access==null&&vm.privateRequest==null)
+    LaunchedEffect(tab,lifecycleState,vm.discoveryPanelOpen){
+        vm.setDiscoveryEnabled(tab==AppTab.Sources&&vm.discoveryPanelOpen&&lifecycleState.isAtLeast(Lifecycle.State.STARTED))
     }
     DisposableEffect(vm){onDispose{vm.setDiscoveryEnabled(false)}}
     BackHandler(tab!=AppTab.Home&&(tab!=AppTab.Sources||vm.source==null)&&vm.draft==null&&vm.access==null&&vm.privateRequest==null){tab=AppTab.Home}
@@ -75,14 +76,15 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources},{tab=AppTab.Sources;vm.add()},{source->tab=AppTab.Sources;vm.open(source)},{candidate->tab=AppTab.Sources;vm.add(candidate)},requestNearby,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources},{source->tab=AppTab.Sources;vm.open(source)},{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                 }}
             }
         }
-        if(tab!=AppTab.Sources&&(vm.error!=null||vm.busy))Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=104.dp)){StatusBanner(vm)}
+        if(tab!=AppTab.Sources&&vm.busy)Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=104.dp)){StatusBanner(vm)}
         CompositionLocalProvider(LocalGlassBackdrop provides scene){
+        if(vm.draft==null&&vm.access==null)SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=100.dp))
             GlassSurface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth(),radius=30){
                 Box(Modifier.fillMaxWidth().padding(5.dp)){
                     BoxWithConstraints(Modifier.matchParentSize()){
@@ -108,16 +110,17 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                 }
             }
         }
-        SourceDialogs(vm)
+        SourceDialogs(vm,requestNearby)
     }
 }
 
 @Composable private fun StatusBanner(vm:LibraryViewModel){
-    if(vm.error!=null||vm.busy)Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=8.dp)){
-        vm.error?.let{message ->Surface(color=Color(0xFFFBE9E7),shape=RoundedCornerShape(16.dp)){
-            Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){Text(message,Modifier.weight(1f),fontSize=14.sp,color=Color(0xFF8C211B));TextButton(onClick={vm.error=null}){Text("关闭")}}
-        }}
-        if(vm.busy)Row(verticalAlignment=Alignment.CenterVertically){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在连接与读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp);TextButton(onClick={vm.cancelOperation()}){Text("取消")}}
+    if(vm.busy)GlassSurface(Modifier.padding(horizontal=20.dp),radius=24){
+        Row(Modifier.padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
+            CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp)
+            Text("正在连接与读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp)
+            TextButton(onClick={vm.cancelOperation()}){Text("取消")}
+        }
     }
 }
 
@@ -127,9 +130,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     }
 }
 
-@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onAdd:()->Unit,onSource:(io.localplayer.core.Source)->Unit,onCandidate:(Candidate)->Unit,requestNearby:()->Unit,onSettings:()->Unit){
-    var probeConfirm by remember{mutableStateOf(false)}
-    var discoveryMenu by remember{mutableStateOf(false)}
+@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onSource:(io.localplayer.core.Source)->Unit,onSettings:()->Unit){
     val continuing=vm.history.firstOrNull{!it.completed&&it.positionMs>0&&it.durationMs>0}
     LazyColumn(Modifier.fillMaxSize().testTag("home-list"),contentPadding=PaddingValues(bottom=112.dp)){
         item{Column(Modifier.padding(start=24.dp,end=24.dp,top=18.dp,bottom=20.dp)){
@@ -150,24 +151,6 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
         if(vm.sources.isNotEmpty()){
             item{Text("已保存的来源",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
             items(vm.sources.take(3),key={"source-"+it.id}){s->MediaRow(s.label,s.protocol.name,Icons.Rounded.Dns){onSource(s)}}
-        }else item{TextButton(onClick=onAdd,modifier=Modifier.padding(start=16.dp)){Icon(Icons.Rounded.Add,null);Spacer(Modifier.width(8.dp));Text("添加第一个来源")}}
-        item{Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp),verticalAlignment=Alignment.CenterVertically){
-            Text("附近服务",Modifier.weight(1f),fontSize=20.sp,fontWeight=FontWeight.SemiBold)
-            Box{IconButton(onClick={discoveryMenu=true}){Icon(Icons.Rounded.MoreHoriz,"发现选项",tint=Muted)}
-                DropdownMenu(expanded=discoveryMenu,onDismissRequest={discoveryMenu=false}){
-                    DropdownMenuItem(text={Text("附近设备访问权限")},onClick={discoveryMenu=false;requestNearby()})
-                    DropdownMenuItem(text={Text("查找未广播的设备")},onClick={discoveryMenu=false;probeConfirm=true})
-                }
-            }
-        }}
-        item{Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp),verticalAlignment=Alignment.CenterVertically){
-            Text(vm.discoveryMessage,Modifier.weight(1f),fontSize=12.sp,lineHeight=18.sp,color=Muted)
-            TextButton(onClick={if(vm.scanning)vm.stopDiscovery()else vm.discover()}){Text(if(vm.scanning)"停止"else"刷新")}
-        }}
-        items(vm.candidates.take(3),key={"candidate-"+it.id}){candidate->
-            MediaRow(candidate.name,"${candidate.protocol} · ${candidate.host}${if(vm.sources.isEmpty())" · 点击连接"else" · 前往来源页连接"}",Icons.Rounded.Lan){
-                if(vm.sources.isEmpty())onCandidate(candidate)else onSources()
-            }
         }
         val recent=vm.history.filterNot{it.media.key==continuing?.media?.key}.take(3)
         if(recent.isNotEmpty()){
@@ -175,9 +158,6 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
             items(recent,key={"recent-"+it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}
         }
     }
-    if(probeConfirm)AlertDialog(onDismissRequest={probeConfirm=false},title={Text("补充发现局域网候选")},
-        text={Text("仅探测当前局域网内最多一个 /24 的 22 和 445 端口，12 秒内结束，不尝试登录。端口开放仍需认证后才能浏览。")},
-        confirmButton={TextButton(onClick={probeConfirm=false;vm.probe()}){Text("开始查找")}},dismissButton={TextButton(onClick={probeConfirm=false}){Text("取消")}})
 
 }
 
