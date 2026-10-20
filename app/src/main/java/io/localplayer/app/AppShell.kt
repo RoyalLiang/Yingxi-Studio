@@ -76,7 +76,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources},{source->tab=AppTab.Sources;vm.open(source)},{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                 }}
@@ -84,7 +84,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
         }
         if(tab!=AppTab.Sources&&vm.busy)Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=104.dp)){StatusBanner(vm)}
         CompositionLocalProvider(LocalGlassBackdrop provides scene){
-        if(vm.draft==null&&vm.access==null)SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=100.dp))
+        if(vm.draft==null&&vm.access==null&&vm.settingsSourceId==null)SourceFeedback(vm,Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top=12.dp))
             GlassSurface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth(),radius=30){
                 Box(Modifier.fillMaxWidth().padding(5.dp)){
                     BoxWithConstraints(Modifier.matchParentSize()){
@@ -130,7 +130,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     }
 }
 
-@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onSource:(io.localplayer.core.Source)->Unit,onSettings:()->Unit){
+@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSettings:()->Unit){
     val continuing=vm.history.firstOrNull{!it.completed&&it.positionMs>0&&it.durationMs>0}
     LazyColumn(Modifier.fillMaxSize().testTag("home-list"),contentPadding=PaddingValues(bottom=112.dp)){
         item{Column(Modifier.padding(start=24.dp,end=24.dp,top=18.dp,bottom=20.dp)){
@@ -141,17 +141,12 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
         else item{Surface(Modifier.fillMaxWidth().padding(horizontal=20.dp),color=GroupedSurface,shape=RoundedCornerShape(26.dp)){
             Column(Modifier.padding(22.dp)){
                 Text("现在，放映。",fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                Spacer(Modifier.height(10.dp));Text("打开本机视频，或连接你的媒体来源。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
+                Spacer(Modifier.height(10.dp));Text("从本机挑选一部影片，开始放映。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
                 Spacer(Modifier.height(20.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp),contentPadding=PaddingValues(horizontal=20.dp,vertical=14.dp)){Icon(Icons.Rounded.PlayArrow,null);Spacer(Modifier.width(6.dp));Text("打开本机视频")}
             }
         }}
         item{Text("从这里打开",Modifier.padding(start=24.dp,top=28.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
         item{MediaRow("本机文件","通过系统文件选择器打开视频",Icons.Rounded.FolderOpen,openLocal)}
-        item{MediaRow("网络来源",if(vm.sources.isEmpty())"连接 SMB / SFTP / WebDAV"else"${vm.sources.size} 个已保存来源",Icons.Rounded.Lan,onSources)}
-        if(vm.sources.isNotEmpty()){
-            item{Text("已保存的来源",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
-            items(vm.sources.take(3),key={"source-"+it.id}){s->MediaRow(s.label,s.protocol.name,Icons.Rounded.Dns){onSource(s)}}
-        }
         val recent=vm.history.filterNot{it.media.key==continuing?.media?.key}.take(3)
         if(recent.isNotEmpty()){
             item{Text("最近播放",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}

@@ -61,7 +61,7 @@ internal object AliyunCloud {
                 flow.cancellation.withLock(accountLock) {
                     flow.cancellation.check()
                     if (!flow.completion.isActive) throw IOException("授权已取消")
-                    store.save(source, encode(token), true) { synchronized(this@AliyunCloud) { pending === flow && flow.completion.isActive } }
+                    store.save(source, encode(token), true, preservePresentation = true) { synchronized(this@AliyunCloud) { pending === flow && flow.completion.isActive } }
                 }
                 flow.completion.complete(source)
             } catch (_: CancellationException) { flow.completion.cancel() }
@@ -82,7 +82,7 @@ internal object AliyunCloud {
                 val updated = try { api.refresh(refresh, cancellation) } catch (_: Exception) { cancellation.check(); throw AliyunUnauthorized() }
                 // Source deletion or a newer login must not be undone by a late refresh.
                 if (store.password(source.id) != encoded || store.load().none { it.id == source.id }) throw AliyunUnauthorized()
-                store.save(source, encode(AliyunToken(updated.access, updated.refresh ?: current.refresh, updated.expiresAt)), true) { store.password(source.id) == encoded && store.load().any { it.id == source.id } }
+                store.save(source, encode(AliyunToken(updated.access, updated.refresh ?: current.refresh, updated.expiresAt)), true, preservePresentation = true) { store.password(source.id) == encoded && store.load().any { it.id == source.id } }
                 updated
             }
             val current = token(false)

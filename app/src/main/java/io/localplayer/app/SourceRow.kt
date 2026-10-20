@@ -1,11 +1,12 @@
 package io.localplayer.app
 
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,7 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -26,59 +27,80 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.localplayer.core.Protocol
 import io.localplayer.core.Source
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
-@Composable
-internal fun SavedSourceRow(source:Source,pinned:Boolean,open:()->Unit,edit:()->Unit,pin:()->Unit,remove:()->Unit,privateAccess:()->Unit,trailing:@Composable RowScope.()->Unit={}){
-    val density=LocalDensity.current
-    val leftLimit=with(density){96.dp.toPx()}
-    val rightLimit=with(density){144.dp.toPx()}
-    var offset by remember(source.id){mutableFloatStateOf(0f)}
-    val scope=rememberCoroutineScope()
-    var settling by remember{mutableStateOf<Job?>(null)}
-    val settle:(Float)->Unit={target->settling?.cancel();settling=scope.launch{animate(offset,target,animationSpec=tween(180)){value,_->offset=value}}}
-    val collapse={settle(0f)}
-    Box(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=4.dp).height(IntrinsicSize.Min)
-        .clip(RoundedCornerShape(20.dp)).testTag("source-row:${source.id}")){
-        if(offset>0f)Button(onClick={collapse();privateAccess()},modifier=Modifier.align(Alignment.CenterStart).width(96.dp).fillMaxHeight(),
-            shape=RoundedCornerShape(0.dp),contentPadding=PaddingValues(4.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF414655))){
-            Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.Fingerprint,null);Spacer(Modifier.height(3.dp));Text("私密访问",fontSize=12.sp,maxLines=1)}
+// One quiet row, one menu. Revealed actions remain separate, deliberate taps.
+@Composable internal fun SavedSourceRow(
+    source: Source, pinned: Boolean, favorite: Boolean, folder: String,
+    revealed: Boolean, onReveal: () -> Unit, open: () -> Unit, pin: () -> Unit,
+    remove: () -> Unit, privateAccess: () -> Unit, actions: @Composable (() -> Unit) -> Unit,
+) {
+    val density = LocalDensity.current
+    val leftLimit = with(density) { 92.dp.toPx() }
+    val rightLimit = with(density) { 168.dp.toPx() }
+    var offset by remember(source.id) { mutableFloatStateOf(0f) }
+    var dragging by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var settling by remember { mutableStateOf<Job?>(null) }
+    val settle: (Float) -> Unit = { target ->
+        settling?.cancel()
+        settling = scope.launch { animate(offset, target, animationSpec = spring(dampingRatio = .84f, stiffness = 480f)) { value, _ -> offset = value } }
+    }
+    val collapse = { settle(0f) }
+    LaunchedEffect(revealed) { if (!revealed) settle(0f) }
+    val interactions = remember { MutableInteractionSource() }
+    val pressed by interactions.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed && !dragging) .985f else 1f, spring(stiffness = 650f), label = "source press")
+    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).height(IntrinsicSize.Min)
+        .clip(RoundedCornerShape(22.dp)).testTag("source-row:${source.id}")) {
+        if (offset > 1f) SwipeAction("私密访问", Icons.Rounded.Fingerprint, Modifier.align(Alignment.CenterStart).width(82.dp).fillMaxHeight(), false) { collapse(); privateAccess() }
+        if (offset < -1f) Row(Modifier.align(Alignment.CenterEnd).width(158.dp).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SwipeAction(if (pinned) "取消置顶" else "置顶", Icons.Rounded.PushPin, Modifier.weight(1f).fillMaxHeight(), false) { collapse(); pin() }
+            SwipeAction("删除", Icons.Rounded.DeleteOutline, Modifier.weight(1f).fillMaxHeight(), true) { collapse(); remove() }
         }
-        if(offset<0f)Row(Modifier.align(Alignment.CenterEnd).width(144.dp).fillMaxHeight()){
-            Button(onClick={collapse();pin()},modifier=Modifier.weight(1f).fillMaxHeight(),shape=RoundedCornerShape(0.dp),contentPadding=PaddingValues(2.dp),
-                colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF73604A))){
-                Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(if(pinned)Icons.Rounded.PushPin else Icons.Rounded.VerticalAlignTop,null);Spacer(Modifier.height(3.dp));Text(if(pinned)"取消置顶"else"置顶",fontSize=12.sp,maxLines=1)}
-            }
-            Button(onClick={collapse();remove()},modifier=Modifier.weight(1f).fillMaxHeight(),shape=RoundedCornerShape(0.dp),contentPadding=PaddingValues(2.dp),
-                colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.error)){
-                Column(horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.DeleteOutline,null);Spacer(Modifier.height(3.dp));Text("删除",fontSize=12.sp)}
-            }
-        }
-        Surface(onClick={if(offset!=0f)collapse()else open()},color=GroupedSurface,shape=RoundedCornerShape(20.dp),
-            modifier=Modifier.fillMaxWidth().offset{IntOffset(offset.roundToInt(),0)}
-                .semantics{customActions=listOf(
-                    CustomAccessibilityAction(if(pinned)"取消置顶"else"置顶"){pin();true},
-                    CustomAccessibilityAction("删除来源"){remove();true},
-                    CustomAccessibilityAction("私密访问"){privateAccess();true})}
-                .draggable(orientation=Orientation.Horizontal,state=rememberDraggableState{delta->offset=(offset+delta).coerceIn(-rightLimit,leftLimit)},
-                    onDragStarted={settling?.cancel()},onDragStopped={velocity->
-                        settle(when{offset>leftLimit*.35f||velocity>800f->leftLimit;offset< -rightLimit*.3f||velocity< -800f->-rightLimit;else->0f})
-                    })){
-            Row(Modifier.heightIn(min=76.dp).padding(start=14.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically){
-                Box(Modifier.size(40.dp).background(Berry.copy(alpha=.07f),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center){Icon(Icons.Rounded.Dns,null,tint=Berry,modifier=Modifier.size(22.dp))}
-                Column(Modifier.weight(1f).padding(start=12.dp,end=6.dp)){
-                    Row(verticalAlignment=Alignment.CenterVertically){
-                        Text(source.label,Modifier.weight(1f,false),fontSize=16.sp,lineHeight=22.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                        if(pinned)Icon(Icons.Rounded.PushPin,"已置顶",Modifier.padding(start=6.dp).size(13.dp),tint=Berry)
+        Surface(onClick = { if (abs(offset) > 1f) collapse() else open() }, interactionSource = interactions,
+            color = GroupedSurface, shape = RoundedCornerShape(22.dp),
+            modifier = Modifier.fillMaxWidth().offset { IntOffset(offset.roundToInt(), 0) }.graphicsLayer { scaleX = scale; scaleY = scale }
+                .semantics { customActions = listOf(
+                    CustomAccessibilityAction(if (pinned) "取消置顶" else "置顶") { pin(); true },
+                    CustomAccessibilityAction("删除来源") { remove(); true },
+                    CustomAccessibilityAction("私密访问") { privateAccess(); true }) }
+                .draggable(orientation = Orientation.Horizontal, state = rememberDraggableState { delta ->
+                    val next = offset + delta
+                    offset = when { next > leftLimit -> leftLimit + (next - leftLimit) * .2f; next < -rightLimit -> -rightLimit + (next + rightLimit) * .2f; else -> next }
+                }, onDragStarted = { dragging = true; settling?.cancel(); onReveal() }, onDragStopped = { velocity ->
+                    dragging = false
+                    settle(when { offset > leftLimit * .4f || velocity > 900f -> leftLimit; offset < -rightLimit * .35f || velocity < -900f -> -rightLimit; else -> 0f })
+                })) {
+            Row(Modifier.heightIn(min = 86.dp).padding(start = 18.dp, end = 6.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(source.label, Modifier.testTag("source-title:${source.id}"), fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(5.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        if (pinned) Icon(Icons.Rounded.PushPin, "已置顶", Modifier.size(12.dp), tint = Berry)
+                        if (favorite) Icon(Icons.Rounded.Star, "已收藏来源", Modifier.size(12.dp), tint = Berry)
+                        Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", fontSize = 12.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Spacer(Modifier.height(3.dp));Text(if(source.protocol==io.localplayer.core.Protocol.ALIYUN)"阿里云盘 · 只读授权"else"${source.protocol} ${source.host} ${source.root}",fontSize=12.sp,lineHeight=18.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    if (source.initialPath.isNotEmpty()) Text("进入 $folder", Modifier.padding(top = 4.dp), fontSize = 12.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                IconButton(onClick={collapse();edit()}){Icon(Icons.Rounded.Tune,"修改配置 ${source.label}",tint=Muted,modifier=Modifier.size(21.dp))}
-            trailing()
+                actions(collapse)
             }
+        }
+    }
+}
+
+@Composable private fun SwipeAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, destructive: Boolean, click: () -> Unit) {
+    val tint = if (destructive) MaterialTheme.colorScheme.error else Berry
+    FilledTonalButton(onClick = click, modifier = modifier.padding(vertical = 4.dp), shape = RoundedCornerShape(20.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(containerColor = tint.copy(alpha = .10f), contentColor = tint), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, Modifier.size(23.dp)); Spacer(Modifier.height(6.dp))
+            Text(label, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }

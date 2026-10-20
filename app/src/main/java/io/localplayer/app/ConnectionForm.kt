@@ -101,7 +101,7 @@ import io.localplayer.core.Protocol
                 }
             }
             CompositionLocalProvider(LocalGlassBackdrop provides scene) {
-                SourceFeedback(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp))
+                SourceFeedback(vm, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
             }
         }
     }
