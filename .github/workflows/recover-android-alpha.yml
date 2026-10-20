@@ -1,7 +1,8 @@
 name: Recover Android alpha 6 publication
 on:
   push:
-    branches: [dev_release_recovery]
+    branches: [main]
+    paths: ['.github/workflows/recover-android-alpha.yml']
 permissions:
   contents: write
 jobs:
