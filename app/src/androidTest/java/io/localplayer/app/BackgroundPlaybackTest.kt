@@ -312,14 +312,14 @@ class BackgroundPlaybackTest {
             await("native notification resumed player"){main{player.isPlaying}}
             android.util.Log.i("BackgroundTest","$label: native notification pause/play verified")
             snapshot("$label-notification")
-            await("native media notification title"){clickSystemText(setOf(target.queue[1].media.title))}
+            await("native media notification title"){clickSystemText(setOf(io.localplayer.core.mediaDisplayTitle(target.queue[1].media.title)))}
             await("native notification opens current player"){main{activity.hasWindowFocus()&&!activity.isInPictureInPictureMode}}
             ready()
             assertEquals(1,main{player.currentMediaItemIndex});assertEquals(2,main{player.mediaItemCount})
             assertTrue(main{player.currentPosition>=6900&&player.isPlaying})
             platform.transportControls.pause();await("pause before snapshot"){main{!player.playWhenReady}}
             ui.mainClock.advanceTimeBy(500);ui.waitForIdle()
-            ui.onNodeWithText(target.queue[1].media.title).assertIsDisplayed()
+            ui.onNodeWithText(io.localplayer.core.mediaDisplayTitle(target.queue[1].media.title)).assertIsDisplayed()
             ui.onNodeWithText("选集 2/2").assertIsDisplayed()
             snapshot("$label-restored")
             // Android's standard Previous first restarts an item when beyond its threshold.

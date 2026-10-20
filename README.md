@@ -9,8 +9,8 @@
 <p align="center"><strong>一款简洁的 Android 本地与局域网视频播放器。</strong><br>打开文件、连上自己的媒体库，然后安心看完一部片子。</p>
 
 <p align="center">
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.17/yingxi-0.2.0-alpha.17-19.apk">下载 Android 安装包</a> ·
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.17">阅读版本信笺</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.19/yingxi-0.2.0-alpha.19-21.apk">下载 Android 安装包</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.19">阅读版本信笺</a> ·
   <a href="docs/player-controls.md">播放与操作</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>

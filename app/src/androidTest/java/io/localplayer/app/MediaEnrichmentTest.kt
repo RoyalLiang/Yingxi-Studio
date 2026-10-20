@@ -84,7 +84,7 @@ class MediaEnrichmentTest {
         val node=ui.onNodeWithTag("home-film:"+media.key)
         node.assertIsNotSelected()
         val before=node.fetchSemanticsNode().boundsInRoot
-        val title=ui.onNodeWithText(media.title,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        val title=ui.onNodeWithText(io.localplayer.core.mediaDisplayTitle(media.title),useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         val status=ui.onNodeWithText("00:02 / 02:00",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         assertTrue("Playback status must sit inside the poster, above its title",status.bottom<title.top)
         val unselected=node.captureToImage().asAndroidBitmap()
