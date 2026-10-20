@@ -24,6 +24,8 @@
 !/docs/player-controls.md
 !/docs/network-settings.md
 !/docs/apple-platform-plan.md
+!/docs/cloud-integrations.md
+!/docs/ios-alpha.md
 !/releases/
 
 # Local build output, fixtures, environment, runtime notes and signing material.
@@ -55,3 +57,14 @@ local.properties
 ._*
 __MACOSX/
 .AppleDouble/
+
+!/ios/
+!/deploy/
+/deploy/*
+!/deploy/cloud-integrations.example.json
+**/DerivedData/
+**/xcuserdata/
+*.xcuserstate
+
+**/.build/
+._*

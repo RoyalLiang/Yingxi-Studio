@@ -9,14 +9,15 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "CONTRIBUTING.md", "versio
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
          "app/build.gradle.kts", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
-         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md"}
+         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png", "app/src/main/res/drawable-nodpi/cloud_baidu.png"}
 
 def allowed(name):
     p = Path(name)
-    if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", "__pycache__"} for part in p.parts): return False
+    if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", ".build", "DerivedData", "xcuserdata", "__pycache__"} for part in p.parts): return False
     if name in EXACT: return True
     if p.parent == Path("releases") and p.suffix == ".md": return True
-    return ((name.startswith(("app/src/main/java/", "app/src/androidTest/java/", "core/src/main/kotlin/", "core/src/test/kotlin/")) and p.suffix == ".kt")
+    return ((name.startswith("ios/") and p.suffix in {".swift", ".plist", ".pbxproj", ".xcscheme", ".json", ".md", ".png"}) or
+        (name.startswith(("app/src/main/java/", "app/src/androidTest/java/", "core/src/main/kotlin/", "core/src/test/kotlin/")) and p.suffix == ".kt")
             or (name.startswith("app/src/main/res/") and p.suffix == ".xml")
             or (name.startswith("scripts/") and p.suffix == ".py")
             or (name.startswith(".github/workflows/") and p.suffix == ".yml")
