@@ -39,6 +39,25 @@ class AliyunToken(val access: String, val refresh: String?, val expiresAt: Long)
     override fun toString() = "AliyunToken([redacted])"
 }
 class AliyunUnauthorized : IOException("阿里云盘授权已失效，请重新授权")
+enum class AliyunOperation(val title: String) {
+    AUTHORIZE("创建授权链接"), TOKEN("换取授权令牌"), ACCOUNT("读取账户"),
+    DIRECTORY("读取目录"), FILE("读取文件"), DOWNLOAD("解析播放链接"), OTHER("访问网盘")
+}
+/** The only provider details allowed to cross the UI error boundary. */
+class AliyunApiFailure(operation: AliyunOperation, status: Int, code: String? = null, requestId: String? = null) :
+    IOException("阿里云盘${operation.title}失败（$status）" + details(code, requestId)) {
+    companion object {
+        private val knownCodes = setOf("AppNotExists", "InvalidClientSecret", "InvalidCode", "InvalidClientId",
+            "InvalidGrantType", "InvalidParameter", "InvalidParameter.CodeChallenge", "Forbidden", "AccessTokenInvalid",
+            "AccessTokenExpired", "InvalidAccessToken", "NotFound", "TooManyRequests", "PermissionDenied",
+            "ForbiddenDriveLocked", "ForbiddenDriveNotValid")
+        private fun details(code: String?, requestId: String?): String {
+            val values = listOfNotNull(code?.takeIf { it in knownCodes },
+                requestId?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,64}")) }?.let { "请求编号：$it" })
+            return if (values.isEmpty()) "" else "\n" + values.joinToString("；")
+        }
+    }
+}
 data class AliyunDrive(val userId: String, val name: String, val driveId: String)
 data class AliyunItem(val id: String, val name: String, val directory: Boolean, val size: Long, val createdAt: Long?)
 
@@ -67,28 +86,25 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
     }
 
     /** Only fixed operation names and allowlisted provider diagnostics reach the UI. */
-    private fun apiFailure(request: Request, response: okhttp3.Response): IOException {
+    private fun apiFailure(request: Request, response: okhttp3.Response): AliyunApiFailure {
         val phase = when (request.url.encodedPath) {
-            "/oauth/authorize" -> "创建授权链接"
-            "/oauth/access_token" -> "换取授权令牌"
-            "/adrive/v1.0/user/getDriveInfo" -> "读取账户"
-            "/adrive/v1.0/openFile/list" -> "读取目录"
-            "/adrive/v1.0/openFile/get" -> "读取文件"
-            "/adrive/v1.0/openFile/getDownloadUrl" -> "解析播放链接"
-            else -> "访问网盘"
+            "/oauth/authorize" -> AliyunOperation.AUTHORIZE
+            "/oauth/access_token" -> AliyunOperation.TOKEN
+            "/adrive/v1.0/user/getDriveInfo" -> AliyunOperation.ACCOUNT
+            "/adrive/v1.0/openFile/list" -> AliyunOperation.DIRECTORY
+            "/adrive/v1.0/openFile/get" -> AliyunOperation.FILE
+            "/adrive/v1.0/openFile/getDownloadUrl" -> AliyunOperation.DOWNLOAD
+            else -> AliyunOperation.OTHER
         }
-        val knownCodes = setOf("AppNotExists", "InvalidClientSecret", "InvalidCode", "InvalidClientId",
-            "InvalidGrantType", "InvalidParameter", "InvalidParameter.CodeChallenge", "Forbidden", "AccessTokenInvalid",
-            "AccessTokenExpired", "InvalidAccessToken", "NotFound", "TooManyRequests")
         val details = runCatching {
             val body = JsonParser.parseString(response.peekBody(16 * 1024).string()).asJsonObject
             val code = body.get("code")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
-                ?.asString?.takeIf { it in knownCodes }
+                ?.asString
             val requestId = body.get("requestId")?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
-                ?.asString?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,64}")) }
-            listOfNotNull(code, requestId?.let { "请求编号：$it" }).joinToString("；")
-        }.getOrDefault("")
-        return IOException("阿里云盘${phase}失败（${response.code}）" + if (details.isEmpty()) "" else "\n$details")
+                ?.asString
+            code to requestId
+        }.getOrDefault(null to null)
+        return AliyunApiFailure(phase, response.code, details.first, details.second)
     }
     private fun post(path: String, data: JsonObject, token: String?, c: Cancellation): JsonObject {
         val request = Request.Builder().url(base.resolve(path)!!)
@@ -124,7 +140,7 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
     }
     fun drive(token: String, c: Cancellation): AliyunDrive {
         val result = post("adrive/v1.0/user/getDriveInfo", JsonObject(), token, c)
-        return AliyunDrive(result.text("user_id"), result.get("name")?.asString ?: "阿里云盘", result.text("default_drive_id"))
+        return AliyunDrive(result.text("user_id"), result.get("name")?.takeUnless { it.isJsonNull }?.asString ?: "阿里云盘", result.text("default_drive_id"))
     }
     fun list(token: String, drive: String, parent: String, c: Cancellation): List<AliyunItem> {
         val items = ArrayList<AliyunItem>(); val markers = HashSet<String>(); var marker = ""
@@ -150,8 +166,8 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
     }
     private fun item(o: JsonObject): AliyunItem {
         val id = o.text("file_id"); if (id.any { it == '/' || it == '\\' } || id in setOf(".", "..")) throw IOException("文件标识无效")
-        val created = o.get("created_at")?.asString?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
-        return AliyunItem(id, o.text("name"), o.text("type") == "folder", o.get("size")?.asLong ?: 0, created)
+        val created = o.get("created_at")?.takeUnless { it.isJsonNull }?.asString?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+        return AliyunItem(id, o.text("name"), o.text("type") == "folder", o.get("size")?.takeUnless { it.isJsonNull }?.asLong ?: 0, created)
     }
     private fun JsonObject.text(key: String) = get(key)?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() } ?: throw IOException("阿里云盘响应缺少 $key")
     private fun json(vararg entries: Pair<String, String>) = JsonObject().apply { entries.forEach { addProperty(it.first, it.second) } }

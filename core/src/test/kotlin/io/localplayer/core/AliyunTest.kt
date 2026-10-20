@@ -33,9 +33,20 @@ class AliyunTest {
     }
     @Test fun api400IdentifiesSafePhaseWithoutExposingResponseMessage(): Unit = MockWebServer().use { server ->
         server.enqueue(MockResponse().setResponseCode(400).setBody("""{"code":"InvalidClientId","message":"sensitive authorization value","requestId":"safe-request-123"}"""))
-        val error=assertFailsWith<IOException>{api(server).authorization(AliyunGrant.create(),true,Cancellation())}
+        val error=assertFailsWith<AliyunApiFailure>{api(server).authorization(AliyunGrant.create(),true,Cancellation())}
         assertTrue(error.message!!.contains("创建授权链接"));assertTrue(error.message!!.contains("400"));assertTrue(error.message!!.contains("InvalidClientId"));assertTrue(error.message!!.contains("safe-request-123"))
         assertFalse(error.message!!.contains("sensitive"));assertFalse(error.message!!.contains("authorization value"))
+    }
+    @Test fun providerDiagnosticsRejectArbitraryResponseValues() {
+        val error=AliyunApiFailure(AliyunOperation.DIRECTORY,400,"Bearer sensitive-value","sensitive token with spaces")
+        assertEquals("阿里云盘读取目录失败（400）",error.message)
+        for(code in listOf("PermissionDenied","ForbiddenDriveLocked","ForbiddenDriveNotValid")) {
+            assertTrue(AliyunApiFailure(AliyunOperation.DIRECTORY,403,code).message!!.contains(code))
+        }
+    }
+    @Test fun accountNameMayBeNullWithoutLosingRequiredIdentifiers() = MockWebServer().use { server ->
+        server.enqueue(MockResponse().setBody("""{"user_id":"user","name":null,"default_drive_id":"drive"}"""))
+        assertEquals(AliyunDrive("user","阿里云盘","drive"),api(server).drive("fixture",Cancellation()))
     }
     @Test fun exchangeAcceptsMissingRefreshTokenAndNeverSendsSecret() = MockWebServer().use { server ->
         server.enqueue(MockResponse().setBody("""{"access_token":"access-fixture","expires_in":3600}"""))
@@ -53,6 +64,17 @@ class AliyunTest {
         assertNotNull(result.last().createdAt)
         assertEquals("Bearer fixture-token", server.takeRequest().getHeader("Authorization"))
         assertTrue(server.takeRequest().body.readUtf8().contains("next"))
+    }
+    @Test fun connectorAcceptsNullableFolderMetadata(): Unit = MockWebServer().use { server ->
+        server.enqueue(MockResponse().setBody("""{"items":[{"file_id":"folder","name":"剧集","type":"folder","size":null,"created_at":null},{"file_id":"video","name":"01.mp4","type":"file","size":128,"created_at":null}],"next_marker":null}"""))
+        val access=object:AliyunAccess{override fun <T> authorized(cancellation:Cancellation,action:(String)->T):T=action("fixture")}
+        val source=Source(label="cloud",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
+        AliyunConnector(api(server),access).connect(source,Credentials(""),Cancellation()).use { session ->
+            val rows=session.list("")
+            assertEquals(listOf("剧集","01.mp4"),rows.map{it.name})
+            assertTrue(rows[0].directory);assertEquals(0L,rows[0].size);assertNull(rows[0].createdAt)
+            assertEquals(128L,rows[1].size);assertNull(rows[1].createdAt)
+        }
     }
     @Test fun repeatedPaginationAndApiRedirectsAreRejected() = MockWebServer().use { server ->
         repeat(2) { server.enqueue(MockResponse().setBody("""{"items":[],"next_marker":"repeat"}""")) }

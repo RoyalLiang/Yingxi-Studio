@@ -15,8 +15,16 @@ data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""
     val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV)source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
 data class SourceAccess(val source:Source,val password:String="",val remember:Boolean=false,val path:String="")
 private data class ReplayRequest(val entry:HistoryEntry,val fromStart:Boolean,val token:HistoryToken)
+private class ReplaySourceChanged:java.io.IOException("来源身份已变更，请从来源重新选择影片")
+private class ReplayFileMissing:java.io.IOException("原文件不存在或不可读取，请在来源中重新选择")
+private fun cloudFailureMessage(e:Exception):String = when(e) {
+    is AliyunApiFailure,is AliyunUnauthorized,is ReplaySourceChanged,is ReplayFileMissing -> e.message ?: "阿里云盘读取失败，请重试"
+    else -> "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"
+}
 
-class LibraryViewModel(app:Application):AndroidViewModel(app) {
+
+class LibraryViewModel internal constructor(app:Application,private val sourceConnector:Connector):AndroidViewModel(app) {
+    constructor(app:Application):this(app,AppConnectors())
     private val store=SourceStore(app)
     val organization=SourceOrganization(app)
     var organizationRevision by mutableIntStateOf(0);private set
@@ -121,7 +129,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
             else{openingSource=null;access=SourceAccess(saved,path=location)}
         }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=location);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
     }
-    fun cloudConnected(saved:Source){sources=store.load();if(sources.none{it.id==saved.id})return;draft=null;open(saved)}
+    fun cloudConnected(saved:Source){sources=store.load();if(sources.none{it.id==saved.id})return;selectedGroup="all";error=null;draft=null;open(saved)}
     fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
     fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
     fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
@@ -180,7 +188,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         stopDiscovery();cancelOperation();val id=generation;val token=Cancellation();cancellation=token;busy=true;error=null
         job=viewModelScope.launch{
             try{
-                val result=withContext(Dispatchers.IO){AppConnectors().connect(s,c,token).use{session->
+                val result=withContext(Dispatchers.IO){sourceConnector.connect(s,c,token).use{session->
                     val list=session.list(newPath);token.check()
                     if(save)store.save(s,c.password,remember){id==generation}
                     list
@@ -189,7 +197,11 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                 source=s;openingSource=null;credentials=c;path=newPath;entries=result;draft=null;access=null;sources=store.load()
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
-            catch(e:Exception){if(id==generation)error=if(e is IllegalArgumentException)e.message else "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"}
+            catch(e:Exception){if(id==generation)error=when {
+                s.protocol==Protocol.ALIYUN -> cloudFailureMessage(e)
+                s.protocol!=Protocol.ALIYUN && e is IllegalArgumentException -> e.message
+                else -> "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"
+            }}
             finally{if(id==generation){busy=false;cancellation=null;openingSource=null}}
         }
     }
@@ -233,12 +245,12 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
             var prepared:PlayTarget?=null
             try {
                 withContext(Dispatchers.IO){
-                    if(replay.entry.media.location!=null&&replay.entry.media.location!=mediaLocation(s))throw java.io.IOException("来源身份已变更，请从来源重新选择影片")
+                    if(replay.entry.media.location!=null&&replay.entry.media.location!=mediaLocation(s))throw ReplaySourceChanged()
                     val parent=replay.entry.media.path?.substringBeforeLast('/',"") ?: ""
-                    val listing=AppConnectors().connect(s,c,token).use{it.list(parent)}
+                    val listing=sourceConnector.connect(s,c,token).use{it.list(parent)}
                     token.check()
                     val file=listing.firstOrNull{!it.directory&&it.isVideo&&it.path==replay.entry.media.path}
-                        ?: throw java.io.IOException("原文件不存在或不可读取，请在来源中重新选择")
+                        ?: throw ReplayFileMissing()
                     if(save)store.save(s,c.password,remember){id==generation}
                     prepared=remoteTarget(s,c,file,listing,replay.fromStart,replay.token)
                 }
@@ -248,7 +260,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                 if(save)sources=store.load()
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;access=SourceAccess(s,c.password,store.hasPassword(s.id),replay.entry.media.path?.substringBeforeLast('/',"") ?: "")}}
-            catch(e:Exception){if(id==generation){error=e.message ?: "无法准备播放，请重试"}}
+            catch(e:Exception){if(id==generation){error=if(s.protocol==Protocol.ALIYUN)cloudFailureMessage(e)else e.message ?: "无法准备播放，请重试"}}
             finally{
                 prepared?.release()
                 withContext(NonCancellable+Dispatchers.IO){token.close()}
