@@ -105,7 +105,7 @@ class MainActivity:ComponentActivity(){
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
             val parts=vm.path.split('/').filter{it.isNotEmpty()}
             FileBreadcrumbs(listOf(FileCrumb("来源","sources"),FileCrumb(source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"},"remote:"))+
-                parts.mapIndexed{i,name->FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(name)else name,"remote:"+parts.take(i+1).joinToString("/"))}){index->
+                parts.mapIndexed{i,name->FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,name)else name,"remote:"+parts.take(i+1).joinToString("/"))}){index->
                 if(index==0)vm.closeSource()else vm.browse(parts.take(index-1).joinToString("/"))
             }
             HorizontalDivider(color=Hairline)

@@ -16,7 +16,7 @@
 
 目录查询最多读取 4 MiB，不解析外部实体；仅接受来源内的目录条目。跨站 HTTPS 媒体重定向不携带来源 Authorization 或 Cookie。每个媒体读取分块最多 1 MiB，取消时终止对应网络任务。远程服务器需要有效证书和 HTTP Range 支持；不关闭 TLS 验证，不支持明文 HTTP。
 
-网盘 OAuth、SMB、SFTP、额外视频容器/解码器，以及 Android 完整的自定义全屏手势尚未迁移。此版不能视为 Android 的功能对齐版本。
+SMB、SFTP、额外视频容器/解码器，以及 Android 完整的自定义全屏手势尚未迁移。此版不能视为 Android 的功能对齐版本。
 
 ## 构建与验证
 
@@ -31,3 +31,5 @@ python3 scripts/build_ios.py --output <临时输出目录>
 流程执行核心 Swift 测试，构建 unsigned iphoneos 和 simulator App，创建本次独占的 iOS 27 模拟器，生成受控 H.264 测试片，检查真实解码尺寸与播放时间，并在结束后只关闭和删除该模拟器。最终成功记录以发布附带的报告为准，不把源代码存在等同构建通过。
 
 设备 IPA 仍需重签。Apple 签名分发要求见 [Apple beta 分发文档](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)；SDK 要求见 [Xcode 系统要求](https://developer.apple.com/xcode/system-requirements)；云构建环境见 [GitHub Xcode 27 公告](https://github.com/actions/runner-images/issues/14404)。
+
+阿里云盘接入使用公开客户端 PKCE、官方 AppLink 与原生回跳，令牌保存在 Keychain；目录与历史保存稳定文件标识，临时链接仅供当前播放。详细配置和真机验证边界见 [网盘接入](cloud-integrations.md)。自行签名时保持已登记 Bundle ID，否则应同步开放平台配置。

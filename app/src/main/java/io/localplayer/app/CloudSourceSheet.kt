@@ -85,12 +85,12 @@ import kotlinx.coroutines.CancellationException
                     Column(Modifier.fillMaxWidth().padding(vertical=22.dp,horizontal=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Image(painterResource(p.icon),contentDescription=null,modifier=Modifier.size(48.dp))
                         Text(p.title,fontSize=17.sp,fontWeight=FontWeight.SemiBold)
-                        Text(when(statuses[p]){CloudAppStatus.AVAILABLE->if(p==CloudProvider.ALIYUNPAN)"登录并授权"else"接入准备中";CloudAppStatus.NOT_INSTALLED->"未安装";else->"App 暂不可用"},fontSize=13.sp,color=Muted)
+                        Text(when(statuses[p]){CloudAppStatus.AVAILABLE->if(p==CloudProvider.ALIYUNPAN)"登录并授权"else"即将支持";CloudAppStatus.NOT_INSTALLED->"未安装";else->"App 暂不可用"},fontSize=13.sp,color=Muted)
                     }
                 }
             } }
         }
-        Text("阿里云盘仅申请读取权限；百度正式接入需企业主体。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
+        Text("阿里云盘仅申请读取权限，你可以随时移除账户。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
     }
     if(authorizing) Text("正在等待阿里云盘授权，可返回重试。",color=Muted)
     authError?.let{message->AlertDialog(onDismissRequest={authError=null},title={Text("授权未完成")},text={Text(message)},confirmButton={TextButton(onClick={authError=null}){Text("知道了")}})}

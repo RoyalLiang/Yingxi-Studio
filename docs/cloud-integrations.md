@@ -2,11 +2,25 @@
 
 开放平台申请、客户端标识、应用签名及权限由开发者配置，普通用户不填写 AppID 或密钥。本文区分平台登记、授权开发和实际可播放三个阶段。
 
-## 当前版本边界
+## 当前接入实现与验证边界
 
-Android WebDAV 添加页显示阿里云盘、百度网盘图标，并检查、打开已安装的官方 App；未安装时提示并提供官网入口。当前尚未接入 OAuth、回跳、令牌管理和网盘文件读取。打开官方 App 不代表已授权，也不会自动添加来源。
+Android 与 iOS 已加入阿里云盘公开客户端 PKCE 登录、原生回跳、账户安全存储、默认盘目录分页与视频分段读取。未安装官方 App 时提示安装。只有换码成功且读取到真实账户与默认盘标识后才添加来源。百度正式接入仍受主体条件限制，保留入口；已有 OpenList、NAS 或自建 WebDAV 继续通过地址连接。
 
-已有 OpenList、NAS 或自建 WebDAV 服务可点“使用 WebDAV 地址”，继续认证、浏览和播放。iOS alpha 目前只提供手动 HTTPS WebDAV。
+公开 AppID 编译在 Kotlin `AliyunConfig` 与 Swift `AliyunConfiguration` 中；两端均不接受 AppSecret。修改 AppID 后需同步回调 scheme 和平台包名/签名登记，并重新构建。`cloud_config.py` 只核对开发者登记资料，不会动态修改已安装应用。
+
+当前官方公开授权入口已用注册 AppID 核对：Android `source=app` 返回 `smartdrive` URI；iOS `source=appLink` 返回官方 HTTPS `/applink/authorize` Universal Link。完整的真实账号授权、目录与视频仍需在真机完成，不把接口可达或受控测试写成网盘联调通过。
+
+## 安全设计决策
+
+沿用官方原生协议，自行实现小型适配层，避免直接继承 SDK 的令牌持久化和 PKCE 生成方式。固定研究版本为 Android `7a1f62c1d657372d52603eccf7a219aa9a947069`、iOS `66cdb2679e9cbacd7f682e43e784cf481f200a5a`。
+
+- 每次授权生成 32 字节安全随机 verifier 与独立 state，以 S256 绑定授权码；会话 10 分钟超时、回调单次消费、取消与来源移除使旧请求失效。Android 官方原生回调允许只有 code/error extras，因此 state 返回时严格比较，未返回时仍必须由当前 PKCE verifier 成功换码。iOS 要求回传 state 匹配。
+- Android 跳转仅指定官方包；iOS 只接受官方 AppLink 域名/路径或官方 scheme。公开回调的到达本身不代表授权成功。
+- Android 使用现有 Keystore AES-GCM 凭据库；iOS 使用仅本机 Keychain。元数据与历史不保存令牌或签名下载 URL，只保存账户、盘、文件标识。移除账户清除本机令牌与来源；如需撤销平台授权，在阿里云盘官方授权管理中操作。
+- Bearer 仅发送给固定 API 源，API 不自动重定向。CDN 播放请求不含 Bearer，验证 Range 与内容长度，链接 403 时只重新解析并重试一次。分页响应、条目数与内存读取有上限，取消会停止对应传输。
+- refresh_token 可缺省；存在时尝试不携带 Secret 的刷新，失败或过期则重新授权。公开客户端的刷新能力仍需平台联调，不以 SDK 可选字段当作已获保证。
+
+风险涉及账户访问和凭据生命周期，须独立审查；不会为此增加写文件、分享等权限。回退可移除本机云盘来源或重新安装上一版本；Android 安装序号不回退，不覆盖已发布标签。
 
 ## 阿里云盘：个人开发者配置
 
@@ -54,6 +68,6 @@ python3 scripts/cloud_config.py --config deploy/cloud-integrations.local.json --
 
 不加 `--provider` 时检查两家配置；加 `--require-registration` 要求所选平台已记录客户端标识。工具只输出字段是否齐备，不输出标识值。空回调原本即受支持，不需要为通过校验填假域名。
 
-此校验不联系平台，不检查审核、SDK 回调或网盘读取，也不会启用尚未开发的授权功能。下一阶段仍需接入并核对固定版本的 SDK/PKCE、回跳、令牌保存与撤销、目录和播放地址读取，再验证真实授权与视频 Range 播放。
+此校验不联系平台，不检查审核、回跳或网盘读取。真实授权与视频 Range 播放仍以真机联调证据为准。
 
 品牌资源来源见 `third_party/cloud-brand-assets.json`；Android 包可见性只查询两个官方包，不使用全量应用查询权限。

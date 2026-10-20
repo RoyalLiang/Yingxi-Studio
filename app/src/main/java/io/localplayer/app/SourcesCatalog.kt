@@ -99,7 +99,7 @@ fun SourcesCatalog(vm: LibraryViewModel, requestNearby: () -> Unit, openLocal: (
     val revision = vm.organizationRevision
     val item = remember(source.id, vm.path, revision) {
         vm.organization.bookmarks().firstOrNull { it.sourceId == source.id && it.path == vm.path }
-            ?: SourceBookmark(source.id, vm.path, if (vm.path.isEmpty()) source.label else vm.path.substringAfterLast('/'))
+            ?: SourceBookmark(source.id, vm.path, if (vm.path.isEmpty()) source.label else if(source.protocol==io.localplayer.core.Protocol.ALIYUN) AliyunCloud.folderName(source.id,vm.path.substringAfterLast('/')) else vm.path.substringAfterLast('/'))
     }
     var organize by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.End) {

@@ -18,8 +18,13 @@ internal object AliyunCloud {
     private val accountLock = Any()
     private data class Pending(val grant: AliyunGrant, val created: Long, val completion: CompletableDeferred<Source>, val cancellation: Cancellation, val claimed: java.util.concurrent.atomic.AtomicBoolean = java.util.concurrent.atomic.AtomicBoolean(false))
     private var pending: Pending? = null
+    fun accountRemoved(sourceId: String) {
+        val flow = synchronized(this) { pending.also { pending = null } }
+        flow?.completion?.cancel(); flow?.cancellation?.close()
+        names.keys.removeAll { it.startsWith(sourceId+":") }
+    }
     fun initialize(app: Context) { context = app.applicationContext; store = SourceStore(context) }
-    fun folderName(id: String) = names[id] ?: "文件夹"
+    fun folderName(sourceId: String,id: String) = names[sourceId+":"+id] ?: "文件夹"
 
     suspend fun authorize(): Source {
         if (AndroidCloudApps(context).status(CloudProvider.ALIYUNPAN) != CloudAppStatus.AVAILABLE) throw IOException("未安装或无法打开阿里云盘，请先安装官方 App")
@@ -56,7 +61,7 @@ internal object AliyunCloud {
                 synchronized(accountLock) {
                     flow.cancellation.check()
                     if (!flow.completion.isActive) throw IOException("授权已取消")
-                    store.save(source, encode(token), true)
+                    store.save(source, encode(token), true) { synchronized(this@AliyunCloud) { pending === flow && flow.completion.isActive } }
                 }
                 flow.completion.complete(source)
             } catch (_: CancellationException) { flow.completion.cancel() }
@@ -83,7 +88,7 @@ internal object AliyunCloud {
             val current = token(false)
             return try { action(current.access) } catch (_: AliyunUnauthorized) { action(token(true).access) }
         }
-    }) { id, name -> names[id] = name }
+    }) { id, name -> names[source.id+":"+id] = name }
 }
 
 internal class AppConnectors : Connector {

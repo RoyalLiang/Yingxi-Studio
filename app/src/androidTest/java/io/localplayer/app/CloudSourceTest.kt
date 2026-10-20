@@ -65,6 +65,6 @@ class CloudSourceTest {
         startPicker();ui.onNodeWithText("接入配置").assertDoesNotExist()
         ui.onNode(hasText("AppID",substring=true) and hasSetTextAction()).assertDoesNotExist()
         ui.onNode(hasText("AppKey",substring=true) and hasSetTextAction()).assertDoesNotExist()
-        ui.onNodeWithText("阿里云盘仅申请读取权限；百度正式接入需企业主体。").assertIsDisplayed()
+        ui.onNodeWithText("阿里云盘仅申请读取权限，你可以随时移除账户。").assertIsDisplayed()
     }
 }
