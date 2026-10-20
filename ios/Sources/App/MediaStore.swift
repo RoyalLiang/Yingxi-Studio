@@ -32,7 +32,7 @@ enum PasswordVault {
         let key:[String:Any]=[kSecClass as String:kSecClassGenericPassword,kSecAttrService as String:service,kSecAttrAccount as String:id.uuidString]
         let attrs:[String:Any]=[kSecValueData as String:Data(value.utf8),kSecAttrAccessible as String:kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
         let result=SecItemUpdate(key as CFDictionary,attrs as CFDictionary)
-        if result==errSecItemNotFound {var add=key;attrs.forEach{add[$0.key]=$0.value};guard SecItemAdd(add as CFDictionary,nil)==errSecSuccess else{throw NSError(domain:"Keychain",code:Int(result),userInfo:[NSLocalizedDescriptionKey:"无法保存来源凭据"])} }
+        if result==errSecItemNotFound {var add=key;attrs.forEach{add[$0.key]=$0.value};let added=SecItemAdd(add as CFDictionary,nil);guard added==errSecSuccess else{throw NSError(domain:"Keychain",code:Int(added),userInfo:[NSLocalizedDescriptionKey:"无法保存来源凭据"])} }
         else if result != errSecSuccess {throw NSError(domain:"Keychain",code:Int(result),userInfo:[NSLocalizedDescriptionKey:"无法更新来源凭据"])}
     }
     static func remove(_ id: UUID){SecItemDelete([kSecClass as String:kSecClassGenericPassword,kSecAttrService as String:service,kSecAttrAccount as String:id.uuidString] as CFDictionary)}

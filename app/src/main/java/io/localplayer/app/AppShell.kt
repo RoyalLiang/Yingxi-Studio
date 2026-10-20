@@ -133,7 +133,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     val continuing=vm.history.firstOrNull{!it.completed&&it.positionMs>0&&it.durationMs>0}
     LazyColumn(Modifier.fillMaxSize().testTag("home-list"),contentPadding=PaddingValues(bottom=112.dp)){
         item{Column(Modifier.padding(start=24.dp,end=24.dp,top=18.dp,bottom=20.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐",Modifier.weight(1f),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold,color=Ink);IconButton(onClick=onSettings,modifier=Modifier.testTag("open-settings")){Icon(Icons.Rounded.Settings,"设置",tint=Muted)}}
+            Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐播放器",Modifier.weight(1f),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold,color=Ink);IconButton(onClick=onSettings,modifier=Modifier.testTag("open-settings")){Icon(Icons.Rounded.Settings,"设置",tint=Muted)}}
             Spacer(Modifier.height(10.dp));Text("让喜欢的影片，触手可及。",fontSize=15.sp,color=Muted)
         }}
         if(continuing!=null)item{ContinueCard(continuing,preparing=vm.preparingKey==continuing.media.key){vm.resume(continuing)}}

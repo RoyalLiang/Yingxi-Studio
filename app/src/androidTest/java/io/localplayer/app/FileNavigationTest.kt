@@ -56,7 +56,7 @@ class FileNavigationTest {
             Thread.sleep(300)
             ui.runOnIdle{assertNull(files.active);assertTrue(files.folders.none{it.tree==tree})}
             ui.onNodeWithText("返回").performClick()
-            ui.onNodeWithText("映汐").assertIsDisplayed()
+            ui.onNodeWithText("映汐播放器").assertIsDisplayed()
         }finally{ui.runOnIdle{files.folders.firstOrNull{it.tree==tree}?.let{files.remove(it)};files.root()}}
     }
 

@@ -48,6 +48,7 @@ class WebDavPlaybackTest {
                 ui.onNodeWithText("来源").performClick()
                 ui.onNodeWithContentDescription("添加来源").performClick()
                 ui.onNodeWithText("WebDAV").performClick()
+                ui.onNodeWithTag("manual-webdav").performClick()
                 ui.onNode(hasText("WebDAV 地址") and hasSetTextAction()).assertIsDisplayed()
                 // Fill form state without opening an IME that can recycle LazyColumn nodes.
                 ui.runOnIdle {

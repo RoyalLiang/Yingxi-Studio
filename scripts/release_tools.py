@@ -93,7 +93,7 @@ def publish(args):
         root=Path(__file__).resolve().parents[1]
         notes.write_text(render_notes(root,metadata,metadata["sourceCommit"]),encoding="utf-8")
         if draft is None:
-            command=["gh","release","create",args.tag,"--repo",repo,"--verify-tag","--target",metadata["sourceCommit"],"--draft","--title","映汐 "+metadata["versionName"],"--notes-file",str(notes)]
+            command=["gh","release","create",args.tag,"--repo",repo,"--verify-tag","--target",metadata["sourceCommit"],"--draft","--title","映汐播放器 "+metadata["versionName"],"--notes-file",str(notes)]
             if metadata["prerelease"]: command.append("--prerelease")
             subprocess.run(command,check=True)
         subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",*[str(p) for p in sorted(directory.iterdir())]],check=True)

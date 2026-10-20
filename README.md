@@ -1,4 +1,4 @@
-# 映汐 · Yingxi
+# 映汐播放器 · Yingxi Player
 
 ![映汐](assets/brand/yingxi-icon-preview.png)
 

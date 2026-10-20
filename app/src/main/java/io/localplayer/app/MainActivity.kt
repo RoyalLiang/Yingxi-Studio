@@ -161,12 +161,13 @@ class MainActivity:ComponentActivity(){
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun ExistingConnectionDialog(vm:LibraryViewModel,d:Draft){
+@Composable internal fun ExistingConnectionDialog(vm:LibraryViewModel,d:Draft,onChooseCloud:(()->Unit)?=null,onDismiss:(()->Unit)?=null){
     var showPassword by remember{mutableStateOf(false)}
     val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)
-    ModalBottomSheet(onDismissRequest={vm.dismissDraft()},sheetState=sheetState,containerColor=Paper.copy(alpha=.97f),
+    ModalBottomSheet(onDismissRequest={if(onDismiss!=null)onDismiss()else vm.dismissDraft()},sheetState=sheetState,containerColor=Paper.copy(alpha=.97f),
         shape=RoundedCornerShape(topStart=32.dp,topEnd=32.dp),scrimColor=Ink.copy(alpha=.22f)){
         SheetGlassEffect()
+        BackHandler(enabled=onDismiss!=null){onDismiss?.invoke()}
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-form"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             item{Column(Modifier.padding(bottom=8.dp)){
                 Text("连接来源",fontSize=26.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold)
@@ -177,7 +178,8 @@ class MainActivity:ComponentActivity(){
                     if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=when(p){Protocol.SMB->"445";Protocol.SFTP->"22";Protocol.WEBDAV->"443"},browsePath=null)
                 }}
             }}
-            item{Text("服务器",Modifier.padding(start=4.dp,top=8.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
+            if(onChooseCloud!=null)item{TextButton(onClick=onChooseCloud){Text("选择网盘接入")}}
+        item{Text("服务器",Modifier.padding(start=4.dp,top=8.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
             item{Field("名称（可选）",d.source.label){vm.draft=d.copy(source=d.source.copy(label=it))}}
             if(d.source.protocol==Protocol.WEBDAV){
                 item{PlayerField("WebDAV 地址",d.webDavUrl,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri)){vm.draft=d.copy(webDavUrl=it)}}

@@ -27,7 +27,7 @@ import io.localplayer.core.Protocol
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun ConnectionDialog(vm: LibraryViewModel, d: Draft) {
-    if(d.source.protocol==Protocol.WEBDAV){ExistingConnectionDialog(vm,d);return}
+    if(d.source.protocol==Protocol.WEBDAV){WebDavConnectionDialog(vm,d);return}
 
     var showPassword by remember { mutableStateOf(false) }
     var advanced by remember(d.source.id) { mutableStateOf(d.source.initialPath.isNotEmpty()) }

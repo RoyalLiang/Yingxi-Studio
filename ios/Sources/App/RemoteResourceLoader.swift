@@ -43,7 +43,7 @@ private final class RangeWork:NSObject,URLSessionDataDelegate, @unchecked Sendab
             guard progress.offset<=Int64.max-length else{throw DAVError.invalidRange}
             req.setValue("bytes=\(progress.offset)-\(progress.offset+length-1)",forHTTPHeaderField:"Range")
             req.setValue("identity",forHTTPHeaderField:"Accept-Encoding")
-            if let validator{req.setValue(validator,forHTTPHeaderField:"If-Range")}
+            if let validator,validator.hasPrefix("\"") {req.setValue(validator,forHTTPHeaderField:"If-Range")}
             let config=URLSessionConfiguration.ephemeral;config.httpCookieStorage=nil;config.urlCredentialStorage=nil
             let callbacks=OperationQueue();callbacks.maxConcurrentOperationCount=1;callbacks.underlyingQueue=queue
             session=URLSession(configuration:config,delegate:self,delegateQueue:callbacks);task=session?.dataTask(with:req);task?.resume()

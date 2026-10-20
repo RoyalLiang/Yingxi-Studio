@@ -95,7 +95,7 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
     }
     val offerInstall={
         if(context.packageManager.canRequestPackageInstalls())install()
-        else runCatching{permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:${context.packageName}")))}.onFailure{vm.fail("请在系统设置中允许映汐安装应用")}
+        else runCatching{permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:${context.packageName}")))}.onFailure{vm.fail("请在系统设置中允许映汐播放器安装应用")}
         Unit
     }
     LaunchedEffect(vm.ready) { if(vm.ready!=null&&!vm.installationOffered){vm.installationOffered=true;offerInstall()} }
@@ -106,7 +106,7 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
         }
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
             if(!about) {
-                item{Text("关于映汐",Modifier.padding(start=4.dp),fontSize=13.sp,color=Muted,fontWeight=FontWeight.SemiBold)}
+                item{Text("关于映汐播放器",Modifier.padding(start=4.dp),fontSize=13.sp,color=Muted,fontWeight=FontWeight.SemiBold)}
                 item{Surface(onClick={about=true},shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("app-version")){
                     Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically){
                         Icon(Icons.Rounded.Info,null,tint=Berry);Spacer(Modifier.width(16.dp))
@@ -115,7 +115,7 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
                     }
                 }}
             } else {
-                item{Column(Modifier.padding(horizontal=4.dp)){Text("映汐 ${vm.version.name}",fontSize=24.sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(6.dp));Text("安装版本号 ${vm.version.code}",fontSize=13.sp,color=Muted)}}
+                item{Column(Modifier.padding(horizontal=4.dp)){Text("映汐播放器 ${vm.version.name}",fontSize=24.sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(6.dp));Text("安装版本号 ${vm.version.code}",fontSize=13.sp,color=Muted)}}
                 item{Column(Modifier.padding(horizontal=4.dp)){Text("本版说明",fontSize=18.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(12.dp));Text(CURRENT_NOTES,fontSize=14.sp,lineHeight=23.sp,color=Muted)}}
                 item{Button(onClick=vm::check,enabled=!vm.busy,shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("check-updates")){Text("检查更新")}}
                 vm.message?.let { text -> item{Text(text,color=if(vm.error)MaterialTheme.colorScheme.error else Muted,fontSize=14.sp,lineHeight=21.sp)} }
@@ -125,7 +125,7 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
                     if(!vm.busy)item{Button(onClick={if(vm.ready!=null)offerInstall()else vm.download()},modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),shape=RoundedCornerShape(18.dp)){Text(if(vm.ready!=null)"安装更新" else "下载并安装")}}
                 }
                 if(vm.busy)item{TextButton(onClick=vm::cancel){Text("取消")}}
-                item{Text("更新来自映汐 GitHub 发布页；下载后校验包名、版本、完整性与签名，安装时需系统确认。",fontSize=12.sp,lineHeight=19.sp,color=Muted)}
+                item{Text("更新来自映汐播放器 GitHub 发布页；下载后校验包名、版本、完整性与签名，安装时需系统确认。",fontSize=12.sp,lineHeight=19.sp,color=Muted)}
             }
         }
     }
