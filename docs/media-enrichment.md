@@ -28,3 +28,13 @@
 - 公开服务可达性与真实影片命中率是不同证据。合成视频的射手查询返回无匹配；公开历史指纹命中三份候选，实际适配器成功解码两份中文字幕并拒绝一份无法可靠识别编码的结果。Wikipedia 影片海报和 TVmaze 剧集海报均完成查询与下载。没有使用私人云盘凭据或用户影片库验证字幕覆盖率，也没有进行一加真机验收。
 
 协议与资料来源：[TVmaze API](https://www.tvmaze.com/api)、[MediaWiki PageImages](https://www.mediawiki.org/wiki/API:Pageimages)、[SPlayer 开源项目](https://github.com/tomasen/splayer)。字幕协议由映汐独立实现，没有复制 SPlayer 源码。
+
+## 匹配与缓存更新
+
+片名匹配保留续集编号、年份和季集。Wikipedia 查询接受本次精确片名产生的规范化、简繁转换和重定向，例如“小丑2”可以解析到《小丑：雙重瘋狂》。请求允许页面的非自由海报图片，避免默认仅自由图片时挑到其他插图。只有影片页面且年份证据相符时才采用；消歧义、多候选或年份不明时保留视频帧回退。剧集在 TVmaze 未找到唯一匹配时不回退到同名电影。
+
+带有片名的目录封面始终优先。通用 `poster.jpg`、`folder.jpg`、`cover.jpg` 及对应 PNG 仅用于目录内的视频均属于同一片名和年份的情况，避免混合电影目录串图。
+
+海报缓存记录匹配规则版本、片名和获取时间。旧规则结果、片名改变、元数据缺失或超过 7 天的结果会重新查询。当前规则不确定时不继续保留旧海报；仍可使用视频预览帧。设置中的海报缓存清理继续可用。
+
+“小丑2”的回归夹具来自 [Wikipedia 官方 API](https://zh.wikipedia.org/w/api.php?action=query&format=json&redirects=1&converttitles=1&titles=%E5%B0%8F%E4%B8%912&prop=pageimages%7Cpageprops%7Ccategories&pilicense=any&pithumbsize=640&cllimit=50)，采集于 2026-10-20；它验证该时点的公开资料响应，不表示已读取用户媒体目录或核对用户此前的错误图片。

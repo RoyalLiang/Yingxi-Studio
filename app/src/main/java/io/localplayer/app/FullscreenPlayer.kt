@@ -273,28 +273,30 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 val shown = if (dragging) target else position
                 PlayerTimeline(shown,duration,buffered,dragging,seekable,
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false})
-                FlowRow(Modifier.fillMaxWidth().testTag("playback-toolbar"), horizontalArrangement = Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
-                    Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight(), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                    Box {
-                        TextButton(onClick = { speedOpen = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("playback-speed")) { Text(speedLabel(speed), color = PlayerInk, fontSize = 14.sp) }
-                        MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
-                            DropdownMenu(expanded = speedOpen, onDismissRequest = { speedOpen = false }) {
-                                Column(Modifier.width(260.dp).padding(12.dp)) {
-                                    Text("播放倍速", color = PlayerInk, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
-                                    listOf(.75f, 1f, 1.25f, 1.5f, 2f, 4f).chunked(3).forEach { row -> Row {
-                                        row.forEach { value -> TextButton(onClick = { controller?.setPlaybackSpeed(value); PlaybackPreferences(context).speed = value; speedOpen = false },
-                                            modifier = Modifier.weight(1f).heightIn(min = 48.dp).background(if (speed == value) PlayerAccent else Color.Transparent, RoundedCornerShape(10.dp))) {
-                                            Text(speedLabel(value), modifier = Modifier.testTag("speed-option-$value"), color = if (speed == value) Color(0xFF302029) else PlayerInk)
+                Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        Box {
+                            TextButton(onClick = { speedOpen = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("playback-speed")) { Text(speedLabel(speed), color = PlayerInk, fontSize = 14.sp) }
+                            MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
+                                DropdownMenu(expanded = speedOpen, onDismissRequest = { speedOpen = false }) {
+                                    Column(Modifier.width(260.dp).padding(12.dp)) {
+                                        Text("播放倍速", color = PlayerInk, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
+                                        listOf(.75f, 1f, 1.25f, 1.5f, 2f, 4f).chunked(3).forEach { row -> Row {
+                                            row.forEach { value -> TextButton(onClick = { controller?.setPlaybackSpeed(value); PlaybackPreferences(context).speed = value; speedOpen = false },
+                                                modifier = Modifier.weight(1f).heightIn(min = 48.dp).background(if (speed == value) PlayerAccent else Color.Transparent, RoundedCornerShape(10.dp))) {
+                                                Text(speedLabel(value), modifier = Modifier.testTag("speed-option-$value"), color = if (speed == value) Color(0xFF302029) else PlayerInk)
+                                            } }
                                         } }
-                                    } }
+                                    }
                                 }
                             }
                         }
+                        TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("音字幕", color = PlayerInk) }
+                        PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill })
+                        TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
+                        PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
                     }
-                    TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("音字幕", color = PlayerInk) }
-                    PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill })
-                    TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
-                    PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
                 }
             }
         }
@@ -311,9 +313,12 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             Text(if(frame!=null)"约 ${time(frameAt)}${if(frameLoading)" · 更新中"else""}"else if(frameLoading)"正在生成预览…"else"拖动以调整进度",
                 color=Color(0xFFC8CDD1),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=4.dp,bottom=9.dp))
         }
-        if (!compact && !dragging) hud?.let { (name, value) -> Surface(Modifier.align(Alignment.Center).width(180.dp), shape = RoundedCornerShape(16.dp), color = PlayerPanel) {
-            Column(Modifier.padding(18.dp)) { Text("$name  $value%", color = PlayerInk, fontSize = 16.sp); Spacer(Modifier.height(12.dp)); LinearProgressIndicator(progress = { value / 100f }, color = PlayerInk, trackColor = Color(0x55FFFFFF), modifier = Modifier.fillMaxWidth()) }
-        } }
+        if (!compact && !dragging) hud?.let { (name, value) ->
+            PlayerAdjustmentHud(name, value, Modifier
+                .align(if (name == "亮度") Alignment.CenterStart else Alignment.CenterEnd)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(horizontal = 24.dp))
+        }
         if (!compact && locked) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp).background(PlayerPanel, CircleShape)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
         if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption)
@@ -346,4 +351,32 @@ internal fun playbackTime(ms: Long): String {
                         drawLine(Color(0x88FFFFFF), Offset(0f, size.height / 2), Offset(size.width * (buffered / max).coerceIn(0f, 1f), size.height / 2), stroke)
                         drawLine(PlayerAccent, Offset(0f, size.height / 2), Offset(size.width * (state.value / max).coerceIn(0f, 1f), size.height / 2), stroke)
                     } })
+}
+
+/** Peripheral feedback keeps the picture and subtitles unobscured. */
+@Composable
+internal fun PlayerAdjustmentHud(name: String, value: Int, modifier: Modifier = Modifier) {
+    val percent = value.coerceIn(0, 100)
+    val brightness = name == "亮度"
+    Surface(modifier.width(56.dp).testTag(if (brightness) "brightness-hud" else "volume-hud")
+        .semantics { contentDescription = "$name $percent%" },
+        shape = RoundedCornerShape(24.dp), color = Color(0x99171C20), contentColor = PlayerInk) {
+        Column(Modifier.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(if (brightness) Icons.Rounded.BrightnessMedium else if (percent == 0) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
+                contentDescription = null, modifier = Modifier.size(20.dp))
+            Canvas(Modifier.width(8.dp).height(112.dp)) {
+                val gap = 3.dp.toPx()
+                val step = size.height / 16
+                repeat(16) { index ->
+                    val lit = percent > 0 && index < kotlin.math.ceil(percent / 100f * 16).toInt()
+                    drawRoundRect(if (lit) PlayerInk.copy(alpha = .9f) else PlayerInk.copy(alpha = .18f),
+                        topLeft = Offset(0f, size.height - (index + 1) * step),
+                        size = androidx.compose.ui.geometry.Size(size.width, step - gap),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+                }
+            }
+            Text("$percent%", fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
+        }
+    }
 }

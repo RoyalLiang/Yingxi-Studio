@@ -95,7 +95,7 @@ class MediaEnrichmentTest {
         MediaPosters.onlineLookup={_,_->throw AssertionError("Directory poster must take priority")}
         MediaPosters.connector=object:Connector{
             override fun connect(source:Source,credentials:Credentials,cancellation:Cancellation)=object:RemoteSession{
-                override fun list(path:String)=listOf(Entry("poster.jpg","poster.jpg",false,bytes.size.toLong()))
+                override fun list(path:String)=listOf(Entry("Film.mp4","Film.mp4",false,100000),Entry("poster.jpg","poster.jpg",false,bytes.size.toLong()))
                 override fun open(path:String):RemoteFile{
                     opens.incrementAndGet()
                     return object:RemoteFile{
@@ -115,6 +115,16 @@ class MediaEnrichmentTest {
             val poster=MediaPosters.load(context,media)
             assertNotNull(poster);assertEquals(160,poster!!.width);assertEquals(240,poster.height)
             assertNotNull(MediaPosters.load(context,media));assertEquals(1,opens.get())
+            val metadata=File(context.cacheDir,"media-posters-v1/${enrichmentKey(media)}.json")
+            val expired=org.json.JSONObject(metadata.readText()).put("fetchedAt",System.currentTimeMillis()-8L*24*60*60*1000)
+            metadata.writeText(expired.toString())
+            assertNull(MediaPosters.credit(context,media))
+            assertNotNull(MediaPosters.load(context,media));assertEquals(2,opens.get())
+            metadata.writeText(org.json.JSONObject(metadata.readText()).put("policy",1).toString())
+            assertNotNull(MediaPosters.load(context,media));assertEquals(3,opens.get())
+            metadata.writeText("{\"credit\":\"old\",\"url\":\"\"}")
+            assertNotNull(MediaPosters.load(context,media));assertEquals(4,opens.get())
+
             SourceStore(context).save(source.copy(root="/different"),"",true)
             assertNull(MediaPosters.load(context,media))
             EnrichmentPreferences(context).posters=false
