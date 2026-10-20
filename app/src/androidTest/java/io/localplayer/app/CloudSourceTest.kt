@@ -18,7 +18,7 @@ class CloudSourceTest {
         ui.onNodeWithText("WebDAV").performClick();ui.onNodeWithTag("cloud-provider-picker").assertIsDisplayed()
     }
     private fun capture(name:String) {
-        ui.waitForIdle();val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        ui.waitForIdle();Thread.sleep(700);InstrumentationRegistry.getInstrumentation().waitForIdleSync();val image=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         try {java.io.File(context.getExternalFilesDir(null),"cloud-$name.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}}finally{image.recycle()}
     }
     @Test fun providerSelectionAndManualWebDavStayDistinct() {
