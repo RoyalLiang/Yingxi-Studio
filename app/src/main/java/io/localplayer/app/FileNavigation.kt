@@ -34,7 +34,7 @@ data class FileCrumb(val label:String,val key:String)
             if(index>0)Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,Modifier.size(16.dp),tint=Muted)
             val text: @Composable () -> Unit = {
                 Text(crumb.label,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=200.dp),fontSize=14.sp,
-                    fontWeight=if(index==crumbs.lastIndex)FontWeight.SemiBold else FontWeight.Normal,color=if(index==crumbs.lastIndex)Ink else Muted)
+                    fontWeight=if(index==crumbs.lastIndex)FontWeight.SemiBold else FontWeight.Normal,color=if(index==crumbs.lastIndex)Ink else if(onSelect!=null)Berry else Muted)
             }
             if(onSelect!=null)TextButton(onClick={onSelect(index)},enabled=index!=crumbs.lastIndex,
                 modifier=Modifier.heightIn(min=48.dp).testTag("breadcrumb:${crumb.key}")){text()}

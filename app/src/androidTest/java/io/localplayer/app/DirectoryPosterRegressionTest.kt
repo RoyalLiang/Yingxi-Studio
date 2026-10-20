@@ -33,6 +33,11 @@ class DirectoryPosterRegressionTest {
         MediaPosters.connector=oldConnector;MediaPosters.onlineLookup=oldLookup
         EnrichmentPreferences(app).posters=posters
     }
+    private fun capture(name:String){
+        ui.waitForIdle();android.os.SystemClock.sleep(700)
+        val bitmap=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        try{java.io.File(app.getExternalFilesDir(null),"browser17-$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}}finally{bitmap.recycle()}
+    }
     private fun browser(initial:String="",blockChild:Boolean=false):Source {
         val source=Source(id="directory-"+UUID.randomUUID(),label="测试片库",protocol=Protocol.WEBDAV,host="directory.invalid",initialPath=initial)
         SourceStore(app).save(source,"",true);saved+=source
@@ -46,16 +51,16 @@ class DirectoryPosterRegressionTest {
                 override fun close(){}
             }
         }
-        ui.runOnUiThread{vm=LibraryViewModel(app,connector);owner.put("browser",vm);vm.open(source)
-            ui.activity.setContent{PlayerTheme{LibraryScreen(vm,{},{})}}}
-        ui.waitUntil(5000){vm.source!=null&&!vm.busy};ui.waitForIdle();return source
+        ui.runOnUiThread{vm=LibraryViewModel(app,connector);owner.put("browser",vm)
+            val files=LocalFilesViewModel(app);owner.put("files",files);ui.activity.setContent{PlayerTheme{AppShell(vm,files,{},{},{})}}}
+        ui.onNodeWithText("来源").performClick();ui.runOnIdle{vm.open(source)};ui.waitUntil(5000){vm.source!=null&&!vm.busy};ui.waitForIdle();return source
     }
     @Test fun folderLoadingKeepsPressedRowAtItsOriginalPosition(){
         browser(blockChild=true)
         val row=ui.onNodeWithText("子文件夹");val before=row.fetchSemanticsNode().boundsInRoot
         row.performClick();ui.runOnIdle{assertTrue(vm.busy)}
         row.assertIsSelected()
-        assertEquals("Loading must not move the pressed folder",before,row.fetchSemanticsNode().boundsInRoot)
+        assertEquals("Loading must not move the pressed folder",before,row.fetchSemanticsNode().boundsInRoot);capture("folder-loading")
         gate.countDown();ui.waitUntil(5000){vm.path=="child"&&!vm.busy}
         ui.onNodeWithText("子文件夹").assertIsNotSelected()
     }
@@ -63,14 +68,14 @@ class DirectoryPosterRegressionTest {
         val source=browser();ui.runOnIdle{vm.browse("child")};ui.waitUntil(5000){vm.path=="child"&&!vm.busy}
         ui.onNodeWithTag("directory-actions").assertDoesNotExist()
         ui.onNodeWithTag("source-menu:"+source.id).performClick()
-        ui.onNodeWithText("收藏").performClick()
+        capture("directory-menu");ui.onNodeWithText("收藏").performClick()
         ui.runOnIdle{assertTrue(vm.organization.bookmarks().any{it.sourceId==source.id&&it.path=="child"&&it.favorite})}
     }
     @Test fun chosenRootBreadcrumbHasNoParentOrClickActions(){
         browser("private/films")
         ui.onAllNodes(hasTestTag("breadcrumb:sources")).assertCountEquals(0)
         ui.onAllNodes(hasText("private")).assertCountEquals(0)
-        ui.onNodeWithTag("breadcrumb:remote:private/films").assertHasNoClickAction()
+        ui.onNodeWithTag("breadcrumb:remote:private/films").assertHasNoClickAction();capture("root")
         ui.onNodeWithTag("breadcrumb:remote:private/films").performTouchInput{click()}
         ui.runOnIdle{assertEquals("private/films",vm.path);vm.up();assertNull(vm.source)}
     }
@@ -84,7 +89,7 @@ class DirectoryPosterRegressionTest {
         MediaPosters.onlineLookup={_,_->attempts.incrementAndGet();null}
         MediaPosters.connector=object:Connector{
             override fun connect(source:Source,credentials:Credentials,cancellation:Cancellation)=object:RemoteSession{
-                override fun list(path:String)=if(available.get())listOf(Entry("poster.jpg","poster.jpg",false,bytes.size.toLong()))else emptyList()
+                override fun list(path:String)=listOf(Entry(media.title,"film.mp4",false,100000)) + if(available.get())listOf(Entry("poster.jpg","poster.jpg",false,bytes.size.toLong()))else emptyList()
                 override fun open(path:String)=object:RemoteFile{
                     override val size=bytes.size.toLong()
                     override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int{val n=minOf(length,bytes.size-position.toInt());if(n<=0)return -1;bytes.copyInto(buffer,offset,position.toInt(),position.toInt()+n);return n}
@@ -94,13 +99,14 @@ class DirectoryPosterRegressionTest {
             }
         }
         EnrichmentPreferences(app).posters=true
-        ui.runOnUiThread{vm=LibraryViewModel(app);owner.put("home",vm);ui.activity.setContent{PlayerTheme{HomeScreen(vm,{},{},{})}}}
+        ui.runOnUiThread{vm=LibraryViewModel(app);owner.put("home",vm);val files=LocalFilesViewModel(app);owner.put("files",files);ui.activity.setContent{PlayerTheme{AppShell(vm,files,{},{},{})}}}
         try{
             ui.waitUntil(5000){attempts.get()>0}
             ui.activityRule.scenario.moveToState(Lifecycle.State.CREATED);available.set(true)
             ui.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
             ui.waitUntil(5000){MediaPosters.credit(app,media)!=null}
-            ui.waitUntil(5000){runCatching{ui.onNodeWithTag("media-thumbnail:"+media.key).assertIsDisplayed()}.isSuccess}
+            ui.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-film:"+media.key))
+            ui.waitUntil(5000){runCatching{ui.onNodeWithTag("media-thumbnail:"+media.key,useUnmergedTree=true).assertIsDisplayed()}.isSuccess};capture("home-poster")
         }finally{MediaPosters.remove(app,media)}
     }
 }

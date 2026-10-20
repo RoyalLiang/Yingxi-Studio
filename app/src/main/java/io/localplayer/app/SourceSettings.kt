@@ -32,7 +32,7 @@ import io.localplayer.core.Source
         }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.widthIn(min = 240.dp, max = 300.dp),
             shape = RoundedCornerShape(22.dp), containerColor = GroupedSurface, tonalElevation = 0.dp) {
-            Text(source.label, Modifier.padding(horizontal = 18.dp, vertical = 12.dp), fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
+            Text(current.label, Modifier.padding(horizontal = 18.dp, vertical = 12.dp), fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(color = Hairline)
             DropdownMenuItem(text = { Text("来源设置") }, leadingIcon = { Icon(Icons.Rounded.Tune, null) }, onClick = { expanded = false; vm.showSourceSettings(source) })
             DropdownMenuItem(text = { Text(if (current.favorite) "取消收藏" else "收藏") }, leadingIcon = { Icon(if (current.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null) }, onClick = { expanded = false; vm.toggleFavorite(current) })

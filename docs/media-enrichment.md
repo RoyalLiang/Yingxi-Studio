@@ -38,3 +38,5 @@
 海报缓存记录匹配规则版本、片名和获取时间。旧规则结果、片名改变、元数据缺失或超过 7 天的结果会重新查询。当前规则不确定时不继续保留旧海报；仍可使用视频预览帧。设置中的海报缓存清理继续可用。
 
 “小丑2”的回归夹具来自 [Wikipedia 官方 API](https://zh.wikipedia.org/w/api.php?action=query&format=json&redirects=1&converttitles=1&titles=%E5%B0%8F%E4%B8%912&prop=pageimages%7Cpageprops%7Ccategories&pilicense=any&pithumbsize=640&cllimit=50)，采集于 2026-10-20；它验证该时点的公开资料响应，不表示已读取用户媒体目录或核对用户此前的错误图片。
+
+返回首页或将应用切回前台时，会重试缺失的海报，已有且有效的海报继续使用缓存。旧请求在取消或刷新后不能重新写入失败结果；暂时不可读的来源可在恢复连接后再次尝试，标题与同目录海报的匹配规则仍保持一致。
