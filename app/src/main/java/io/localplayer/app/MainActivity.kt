@@ -89,8 +89,8 @@ class MainActivity:ComponentActivity(){
         Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty())"返回来源"else"上一级",tint=Berry)}
             Column(Modifier.weight(1f).padding(horizontal=8.dp)){
-                Text(if(selecting)"选择默认目录"else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold)
-                Text(if(selecting)current.label else "${current.protocol} · 文件浏览",Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(if(selecting)"选择默认目录"else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(selecting)Text(current.label,Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
             if(selecting)TextButton(onClick={vm.closeSource()}){Text("取消")}
             else SourceActions(vm,current,SourceBookmark(current.id,current.initialPath,current.label))

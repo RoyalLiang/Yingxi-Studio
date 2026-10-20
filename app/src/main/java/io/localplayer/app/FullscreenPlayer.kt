@@ -166,8 +166,10 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         val uri=currentUri ?: return@LaunchedEffect
         if(!videoAvailable||buffering||compact)return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            delay(500)
-            try { withTimeoutOrNull(1500) { previews.get(uri,position) } }
+            delay(3000)
+            if(PlaybackMetrics.snapshot().firstFrameMs==null)return@repeatOnLifecycle
+            if(controller!=null&&controller.isPlaying&&controller.bufferedPosition-controller.currentPosition<5000)return@repeatOnLifecycle
+            try { withTimeoutOrNull(12000) { previews.get(uri,position) } }
             catch(e:CancellationException){throw e}
             catch(_:Exception){ /* A missing preview must never interrupt playback. */ }
         }
@@ -182,7 +184,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 if(cached!=null){frame=cached.bitmap;frameAt=cached.timeMs}
                 frameLoading = cached==null
                 try {
-                    val next = withTimeoutOrNull(1500) { previews.get(uri, requested) }
+                    val next = withTimeoutOrNull(12000) { previews.get(uri, requested) }
                     if (next != null) { frame = next; frameAt = requested }
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { /* Retain a valid frame and its original timestamp. */ }
@@ -239,7 +241,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 })
         }
         if ((buffering || controller == null) && error == null) CircularProgressIndicator(Modifier.align(Alignment.Center).size(84.dp), color = PlayerInk)
-        if (!compact && visible && !locked && !queue) {
+        if (!compact && visible && !locked && !queue && !settings) {
             if (!dragging) {
                 Row(Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color(0xB8101113), Color.Transparent)))
@@ -255,7 +257,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     if (smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; lock(true) })
                 }
-                if (!speedOpen) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                if (!speedOpen) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
                     PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
                     IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(72.dp).background(Color(0x8C101113), CircleShape)) {
@@ -269,18 +271,10 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6101113))))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = 24.dp, vertical = 8.dp)) {
                 val shown = if (dragging) target else position
-                Slider(value = shown.toFloat().coerceIn(0f, duration.coerceAtLeast(1).toFloat()), onValueChange = { dragging = true; target = it.toLong() },
-                    onValueChangeFinished = { controller?.seekTo(target); position = target; dragging = false }, valueRange = 0f..duration.coerceAtLeast(1).toFloat(), enabled = seekable && duration > 0,
-                    modifier = Modifier.fillMaxWidth().height(48.dp).testTag("playback-progress"),
-                    thumb = { Box(Modifier.size(if (dragging) 13.dp else 9.dp).background(PlayerInk, CircleShape)) },
-                    track = { state -> Canvas(Modifier.fillMaxWidth().height(if (dragging) 5.dp else 3.dp)) {
-                        val max = duration.coerceAtLeast(1).toFloat()
-                        drawLine(Color(0x55FFFFFF), Offset(0f, size.height / 2), Offset(size.width, size.height / 2), size.height)
-                        drawLine(Color(0x88FFFFFF), Offset(0f, size.height / 2), Offset(size.width * (buffered / max).coerceIn(0f, 1f), size.height / 2), size.height)
-                        drawLine(PlayerAccent, Offset(0f, size.height / 2), Offset(size.width * (state.value / max).coerceIn(0f, 1f), size.height / 2), size.height)
-                    } })
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(124.dp).heightIn(min=48.dp).wrapContentHeight(), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                PlayerTimeline(shown,duration,buffered,dragging,seekable,
+                    change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false})
+                FlowRow(Modifier.fillMaxWidth().testTag("playback-toolbar"), horizontalArrangement = Arrangement.spacedBy(2.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
+                    Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight(), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     Box {
                         TextButton(onClick = { speedOpen = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("playback-speed")) { Text(speedLabel(speed), color = PlayerInk, fontSize = 14.sp) }
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
@@ -333,4 +327,23 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
 internal fun playbackTime(ms: Long): String {
     val sec = ms.coerceAtLeast(0) / 1000
     return if (sec >= 3600) "%d:%02d:%02d".format(sec / 3600, sec / 60 % 60, sec % 60) else "%02d:%02d".format(sec / 60, sec % 60)
+}
+
+/** The track and the painted thumb share one measured center line and a 48 dp touch target. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable internal fun PlayerTimeline(position:Long,duration:Long,buffered:Long,dragging:Boolean,enabled:Boolean,
+    change:(Long)->Unit,finish:()->Unit) {
+                Slider(value = position.toFloat().coerceIn(0f, duration.coerceAtLeast(1).toFloat()), onValueChange = { change(it.toLong()) },
+                    onValueChangeFinished = finish, valueRange = 0f..duration.coerceAtLeast(1).toFloat(), enabled = enabled && duration > 0,
+                    modifier = Modifier.fillMaxWidth().height(48.dp).testTag("playback-progress"),
+                    thumb = { Canvas(Modifier.size(24.dp).testTag("progress-thumb")) {
+                        drawCircle(PlayerInk,radius=(if(dragging)6.5.dp else 4.5.dp).toPx(),center=center)
+                    } },
+                    track = { state -> Canvas(Modifier.fillMaxWidth().height(24.dp).testTag("progress-track")) {
+                        val stroke=(if(dragging)5.dp else 3.dp).toPx()
+                        val max = duration.coerceAtLeast(1).toFloat()
+                        drawLine(Color(0x55FFFFFF), Offset(0f, size.height / 2), Offset(size.width, size.height / 2), stroke)
+                        drawLine(Color(0x88FFFFFF), Offset(0f, size.height / 2), Offset(size.width * (buffered / max).coerceIn(0f, 1f), size.height / 2), stroke)
+                        drawLine(PlayerAccent, Offset(0f, size.height / 2), Offset(size.width * (state.value / max).coerceIn(0f, 1f), size.height / 2), stroke)
+                    } })
 }

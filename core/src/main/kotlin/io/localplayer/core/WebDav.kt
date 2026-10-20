@@ -147,13 +147,10 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
                     }
                     val requested=minOf(length.toLong(),size-position).toInt()
                     val input=active.body?.byteStream() ?: throw IOException("文件响应为空")
-                    var count=0
-                    while(count<requested) {
-                        ensureOpen()
-                        val n=input.read(buffer,offset+count,requested-count)
-                        if(n<0)throw IOException("远程文件读取中断")
-                        count+=n
-                    }
+                    // RemoteFile permits short reads. Never wait for the whole read-ahead
+                    // window: that blocks extractors and the first video frame on slow links.
+                    val count=input.read(buffer,offset,requested)
+                    if(count<0)throw IOException("远程文件读取中断")
                     cursor+=count;ensureOpen();return count
                 } finally {
                     // close may run before request publishes its Response; release it here too.
@@ -164,7 +161,7 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
                 if(done.compareAndSet(false,true)) {
                     // Track the Call before execute, so waiting for headers is cancellable.
                     currentCall.getAndSet(null)?.cancel()
-                    release(response);response=null
+                    synchronized(this) { release(response);response=null }
                 }
             }
         }

@@ -196,9 +196,9 @@ class PlayerStyleTest {
                     }
                 }
             }
-            ui.onNodeWithText("1.5×").performClick()
-            ui.onNodeWithText("1.5×").assertIsSelected()
-            val header = ui.onNodeWithText("播放设置").captureToImage().toPixelMap()
+            ui.onNodeWithText("播放速度").assertDoesNotExist()
+            ui.onNodeWithText("1.5×").assertDoesNotExist()
+            val header = ui.onNodeWithText("音轨与字幕").captureToImage().toPixelMap()
             var brightPixels = 0
             for (y in 0 until header.height) for (x in 0 until header.width) {
                 val pixel = header[x,y]
@@ -209,7 +209,7 @@ class PlayerStyleTest {
             ui.onNodeWithTag("playback-settings-list").performScrollToNode(hasText("关闭字幕"))
             ui.onNodeWithText("关闭字幕").performClick()
             ui.onNodeWithText("关闭字幕").assertIsSelected()
-            assertEquals(1.5f, prefs.speed)
+            assertEquals(previousSpeed, prefs.speed)
             assertTrue(prefs.subtitlesDisabled)
         } finally {
             ui.runOnUiThread { controller.release() }

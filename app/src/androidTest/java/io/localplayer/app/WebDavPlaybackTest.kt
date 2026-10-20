@@ -70,7 +70,44 @@ class WebDavPlaybackTest {
                 val player=future.get(15,TimeUnit.SECONDS);controller=player
                 ui.onNodeWithText(server.names.first()).performClick()
                 await(detail={main{"state=${player.playbackState}, playing=${player.isPlaying}, ready=${player.playWhenReady}, suppressed=${player.playbackSuppressionReason}, items=${player.mediaItemCount}, title=${player.currentMediaItem?.mediaMetadata?.title}, duration=${player.duration}, video=${player.videoSize.width}x${player.videoSize.height}, error=${player.playerError?.cause}, rangeRequests=${server.positions.size}"}}){main{player.isPlaying&&player.videoSize.width>0&&player.duration>90000}}
+                await{PlaybackMetrics.snapshot().firstFrameMs!=null}
+                println("DAV first frame: ${PlaybackMetrics.snapshot().firstFrameMs} ms")
+                main{player.pause()}
+                val preview=PreviewFrames(context)
+                val probesBefore=server.previewProbes.get()
+                try {
+                    val uri=PlaybackRegistry.add(saved,Credentials(server.password),server.names.last(),server.names.last())
+                    try { kotlinx.coroutines.runBlocking {
+                        assertNotNull(kotlinx.coroutines.withTimeout(12000){preview.get(uri,15000)})
+                        assertNotNull(kotlinx.coroutines.withTimeout(12000){preview.get(uri,60000)})
+                    }
+                    }finally{PlaybackRegistry.remove(uri)}
+                    assertEquals("Seek previews reuse one file probe",1,server.previewProbes.get()-probesBefore)
+                }finally{preview.close()}
+                ui.onNodeWithContentDescription("播放设置").performClick()
+                val panel=ui.onNodeWithTag("audio-subtitle-panel").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+                val display=instrumentation.uiAutomation.takeScreenshot()
+                try {
+                    assertTrue("Track panel must leave video visible",panel.width<display.width*.65f)
+                    assertTrue("Track panel must fit vertically",panel.height<=display.height)
+                    var colorful=0
+                    for(y in display.height/4 until display.height*3/4 step 12)for(x in display.width/8 until display.width/3 step 12){
+                        val pixel=display.getPixel(x,y)
+                        val channels=listOf(android.graphics.Color.red(pixel),android.graphics.Color.green(pixel),android.graphics.Color.blue(pixel))
+                        if(channels.max()-channels.min()>40&&channels.max()>60)colorful++
+                    }
+                    assertTrue("Rendered video must remain visible beside the panel, not black",colorful>20)
+                    File(context.getExternalFilesDir(null),"audio-subtitle-panel.png").outputStream().use{display.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+                }finally{display.recycle()}
+                ui.onNodeWithText("播放速度").assertDoesNotExist()
+                ui.onNodeWithContentDescription("关闭音轨与字幕").performClick()
+                ui.onNodeWithTag("playback-speed").performClick()
+                ui.onNodeWithTag("speed-option-1.0",useUnmergedTree=true).performClick()
                 assertEquals(2,main{player.mediaItemCount})
+                ui.onNodeWithTag("playback-progress").performTouchInput{down(center);moveBy(androidx.compose.ui.geometry.Offset(24f,0f))}
+                try {
+                    ui.waitUntil(15000){ui.onAllNodesWithContentDescription("进度预览").fetchSemanticsNodes().isNotEmpty()}
+                }finally{ui.onNodeWithTag("playback-progress").performTouchInput{up()}}
                 main{player.pause();player.seekTo(75000);player.play()}
                 await{main{player.isPlaying&&player.currentPosition>=75000&&player.playerError==null}}
                 main{player.seekToNextMediaItem()}
@@ -99,6 +136,7 @@ class WebDavPlaybackTest {
 private class DavFixture(private val media:File):java.io.Closeable {
     val username="reader";val password=UUID.randomUUID().toString()
     val names=listOf("01-海边.mp4","02-落日.mp4")
+    val previewProbes=java.util.concurrent.atomic.AtomicInteger()
     val positions=java.util.Collections.synchronizedList(mutableListOf<Long>())
     private val server=ServerSocket(0,16,java.net.InetAddress.getByName("127.0.0.1"))
     val port get()=server.localPort
@@ -123,8 +161,9 @@ private class DavFixture(private val media:File):java.io.Closeable {
         val range=headers["range"]?.removePrefix("bytes=") ?: "0-"
         val start=range.substringBefore('-').toLong();val end=range.substringAfter('-').toLongOrNull() ?: media.length()-1
         positions.add(start)
+        if(range=="0-0"&&URI(first[1]).path.endsWith(names.last()))previewProbes.incrementAndGet()
         header("206 Partial Content",end-start+1,"Content-Type: video/mp4\r\nContent-Range: bytes $start-$end/${media.length()}\r\n")
-        RandomAccessFile(media,"r").use { input->input.seek(start);var remaining=end-start+1;val buffer=ByteArray(65536);while(remaining>0){val n=input.read(buffer,0,minOf(buffer.size.toLong(),remaining).toInt());if(n<0)break;output.write(buffer,0,n);remaining-=n} }
+        RandomAccessFile(media,"r").use { input->input.seek(start);var remaining=end-start+1;val buffer=ByteArray(8192);while(remaining>0){val n=input.read(buffer,0,minOf(buffer.size.toLong(),remaining).toInt());if(n<0)break;output.write(buffer,0,n);output.flush();remaining-=n;if(remaining>0&&end>0)Thread.sleep(40)} }
     }
     override fun close(){server.close();pool.shutdownNow()}
 }

@@ -7,6 +7,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
@@ -30,31 +33,36 @@ import java.util.Locale
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit){
     val context=LocalContext.current
-    val speedColumns=if(LocalDensity.current.fontScale>1.3f)2 else 3
     val prefs=remember(context){PlaybackPreferences(context)}
     var tracks by remember(controller){mutableStateOf(controller.currentTracks)}
     var parameters by remember(controller){mutableStateOf(controller.trackSelectionParameters)}
-    var speed by remember(controller){mutableFloatStateOf(controller.playbackParameters.speed)}
     DisposableEffect(controller){
         val listener=object:Player.Listener{
             override fun onTracksChanged(value:Tracks){tracks=value}
             override fun onTrackSelectionParametersChanged(value:TrackSelectionParameters){parameters=value}
-            override fun onPlaybackParametersChanged(value:PlaybackParameters){speed=value.speed}
         }
         controller.addListener(listener);onDispose{controller.removeListener(listener)}
     }
     MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFFFFA1BC),surface=Color(0xFF202126),onSurface=Paper,onPrimary=Color(0xFF53102A),secondaryContainer=Color(0xFF67273B),onSecondaryContainer=Paper)){
-        ModalBottomSheet(onDismissRequest=onDismiss,containerColor=MaterialTheme.colorScheme.surface.copy(alpha=.97f),contentColor=Paper,scrimColor=Color(0x990D0D13),shape=RoundedCornerShape(topStart=32.dp,topEnd=32.dp)){
-            SheetGlassEffect()
-            LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(start=24.dp,end=24.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                item{Text("播放设置",fontSize=25.sp,fontWeight=FontWeight.SemiBold)}
-                item{Text("播放速度",fontSize=17.sp,fontWeight=FontWeight.Medium)}
-                item{Column(verticalArrangement=Arrangement.spacedBy(4.dp)){
-                    listOf(.75f,1f,1.25f,1.5f,2f,4f).chunked(speedColumns).forEach{row->Row(Modifier.fillMaxWidth().background(Color(0xFF303138),RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        row.forEach{value->ChoicePill(speedLabel(value),speed==value,Modifier.weight(1f),dark=true){controller.setPlaybackSpeed(value);prefs.speed=value}}
-                    }}
-                }}
-                item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
+        Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+            val view=androidx.compose.ui.platform.LocalView.current
+            SideEffect {
+                (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { window ->
+                    androidx.core.view.WindowInsetsControllerCompat(window,view).apply {
+                        hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                        systemBarsBehavior=androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                }
+            }
+            BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                val panelWidth=if(maxWidth>maxHeight)(maxWidth*.42f).coerceIn(300.dp,380.dp)else minOf(maxWidth*.92f,380.dp)
+                Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel"),
+                    shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=Paper) {
+            LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Text("音轨与字幕",Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
+                    IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭音轨与字幕")}
+                } }
                 item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val audio=tracks.groups.filter{it.type==C.TRACK_TYPE_AUDIO}
                 val audioAutomatic=parameters.overrides.keys.none{it.type==C.TRACK_TYPE_AUDIO}
@@ -83,6 +91,8 @@ import java.util.Locale
                 }}
                 if(texts.isEmpty())item{Text("影片没有内嵌字幕，可以载入本机 SRT / VTT 文件。",fontSize=13.sp,lineHeight=20.sp,color=Color(0xFFB9B9BF))}
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
+            }
+                }
             }
         }
     }
