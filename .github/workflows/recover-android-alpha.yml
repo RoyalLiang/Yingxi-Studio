@@ -1,0 +1,12 @@
+name: Recover Android alpha 6 publication
+on:
+  push:
+    branches: [dev_release_recovery]
+permissions:
+  contents: write
+jobs:
+  recover:
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: v0.2.0-alpha.6
+    secrets: inherit
