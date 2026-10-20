@@ -145,9 +145,11 @@ class HomePolishTest {
         mount(fontScale=1f,width=411)
         ui.onNodeWithContentDescription("设置").performClick()
         ui.onNodeWithText("App 版本").performClick()
-        ui.onNodeWithText("本版说明").assertIsDisplayed()
-        ui.onNodeWithText(BuildConfig.VERSION_CHANGES).assertIsDisplayed()
-        assertTrue(BuildConfig.VERSION_CHANGES.contains("阿里云盘"));assertTrue(BuildConfig.VERSION_CHANGES.contains("射手字幕"))
+        capture("updates")
+        ui.onNodeWithText("本版说明").performClick()
+        ui.onNodeWithText(displayReleaseNotes(BuildConfig.VERSION_NOTES,ui.activity.resources.configuration.locales[0].language)).assertIsDisplayed()
+        capture("release-letter")
+        assertTrue(BuildConfig.VERSION_CHANGES.contains("拾荒者信笺"));assertTrue(BuildConfig.VERSION_CHANGES.contains("自动扫描"))
         assertFalse(BuildConfig.VERSION_CHANGES.contains("验证与限制"))
     }
 

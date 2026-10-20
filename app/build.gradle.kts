@@ -16,8 +16,7 @@ require(Regex("$number\\.$number\\.$number(?:-$pre(?:\\.$pre)*)?(?:\\+[0-9A-Za-z
 require(appVersionCode in 1L..2100000000L) { "versionCode must be in 1..2100000000" }
 val notesFile = rootProject.file("releases/v$appVersionName.md")
 val versionChanges = if (notesFile.isFile) notesFile.readText().substringAfter("## 中文", "")
-    .substringBefore("## English").substringBefore("### 验证与限制").lineSequence()
-    .filter { it.startsWith("- ") }.joinToString("\n") { it.removePrefix("- ") } else ""
+    .substringBefore("## English").substringBefore("### 验证与限制").trim() else ""
 
 val signingNames = listOf("YINGXI_KEYSTORE_PATH", "YINGXI_KEYSTORE_PASSWORD", "YINGXI_KEY_ALIAS", "YINGXI_KEY_PASSWORD")
 val signing = signingNames.associateWith { providers.environmentVariable(it).orNull }
@@ -63,6 +62,7 @@ android {
     defaultConfig { applicationId = "io.localplayer.app"; minSdk = 35; targetSdk = 36; versionCode = appVersionCode.toInt(); versionName = appVersionName; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
     defaultConfig {
         buildConfigField("String", "VERSION_CHANGES", groovy.json.JsonOutput.toJson(versionChanges))
+        buildConfigField("String", "VERSION_NOTES", groovy.json.JsonOutput.toJson(if(notesFile.isFile)notesFile.readText()else ""))
         mapOf("PLAYER_TEST_PASSWORD" to "fixture_password", "PLAYER_TEST_USERNAME" to "fixture_username", "PLAYER_SMB_FIXTURE_PORT" to "fixture_smb_port", "PLAYER_SFTP_FIXTURE_PORT" to "fixture_sftp_port").forEach { (env, argument) ->
             providers.environmentVariable(env).orNull?.let { testInstrumentationRunnerArguments[argument] = it }
         }

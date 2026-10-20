@@ -103,7 +103,7 @@ class SourcePresentationTest {
         capture("sources")
         ui.onNodeWithContentDescription("添加来源").performClick()
         capture("smb")
-        ui.onNodeWithTag("scan-nearby").performClick()
+        ui.onNodeWithTag("auto-scan-entry").performClick()
         ui.onNodeWithTag("source-discovery").assertIsDisplayed()
         capture("discovery")
         ui.onNodeWithText("返回手动输入").performClick()
