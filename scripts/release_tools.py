@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare audited APK-only release assets; publish without replacing releases."""
+"""Prepare audited installers and tagged source archives; never replace a release."""
 import argparse
 import hashlib
 import json
@@ -12,9 +12,36 @@ import zipfile
 from pathlib import Path
 from versioning import load, validate
 from release_notes import load_notes, render_notes
+from repository_guard import allowed, inspect
 
 def run(*args): return subprocess.check_output(args, text=True).strip()
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def verify_source_archive(path, version, commit):
+    prefix=f'yingxi-{version["versionName"]}/'
+    with zipfile.ZipFile(path) as archive:
+        if archive.testzip() is not None or archive.comment.decode('ascii') != commit:
+            raise ValueError('Source archive does not match the immutable commit')
+        names=set()
+        for item in archive.infolist():
+            if item.is_dir(): continue
+            if not item.filename.startswith(prefix): raise ValueError('Unexpected source archive root')
+            name=item.filename[len(prefix):]
+            if name in names or '\\' in name or not allowed(name) or any(p in {'..','.',''} for p in name.split('/')) or (item.external_attr>>16)&0o170000==0o120000:
+                raise ValueError('Unsafe source archive entry: '+name)
+            names.add(name)
+            if inspect(name,archive.read(item)): raise ValueError('Source archive guard rejected: '+name)
+        if not {'version.json','README.md'}.issubset(names): raise ValueError('Incomplete source archive')
+        stored=json.loads(archive.read(prefix+'version.json'))
+        if any(stored.get(k)!=version[k] for k in ['versionName','versionCode']): raise ValueError('Source archive version mismatch')
+
+def prepare_source_archive(root, version, commit, output):
+    name=f'source-code-{version["versionName"]}.zip'
+    path=output/name
+    data=subprocess.check_output(['git','-C',str(root),'archive','--format=zip',f'--prefix=yingxi-{version["versionName"]}/',commit])
+    path.write_bytes(data)
+    verify_source_archive(path,version,commit)
+    return {'sourceFileName':name,'sourceSha256':sha(path),'sourceSizeBytes':path.stat().st_size}
 
 def check_previous(current, previous):
     for item in previous:
@@ -26,6 +53,9 @@ def check_previous(current, previous):
 def verify_assets(directory):
     manifest=json.loads((directory/"yingxi-release.json").read_text())
     expected={manifest["fileName"],"yingxi-release.json","third-party-notices.txt","dependencies.json","SHA256SUMS"}
+    if manifest.get('formatVersion',1)>=2:
+        if manifest.get('sourceFileName')!=f'source-code-{manifest["versionName"]}.zip': raise ValueError('Missing or invalid source archive')
+        expected.add(manifest['sourceFileName'])
     if {p.name for p in directory.iterdir()} != expected: raise ValueError("Unexpected or missing release assets")
     seen=set()
     for line in (directory/"SHA256SUMS").read_text().splitlines():
@@ -34,6 +64,10 @@ def verify_assets(directory):
         seen.add(name)
     if seen!=expected-{"SHA256SUMS"}: raise ValueError("Release checksum coverage is incomplete")
     if sha(directory/manifest["fileName"])!=manifest["sha256"]: raise ValueError("APK checksum mismatch")
+    if manifest.get('formatVersion',1)>=2:
+        source=directory/manifest['sourceFileName']
+        if sha(source)!=manifest['sourceSha256'] or source.stat().st_size!=manifest['sourceSizeBytes']: raise ValueError('Source archive checksum mismatch')
+        verify_source_archive(source,manifest,manifest['sourceCommit'])
     return manifest
 
 
@@ -92,7 +126,8 @@ def prepare(args):
         if any(any(p.startswith("._") or p in {".DS_Store","__MACOSX"} for p in Path(n).parts) for n in apk.namelist()): raise ValueError("APK contains mac metadata")
         for asset in ("third-party-notices.txt","dependencies.json"):
             (output/asset).write_bytes(apk.read("assets/"+asset))
-    metadata={"formatVersion":1,**version,"sourceCommit":commit,"fileName":name,"sizeBytes":args.apk.stat().st_size,"sha256":sha(args.apk),"signerSha256":fingerprint}
+    source=prepare_source_archive(root,version,commit,output)
+    metadata={"formatVersion":2,**version,"sourceCommit":commit,"fileName":name,"sizeBytes":args.apk.stat().st_size,"sha256":sha(args.apk),"signerSha256":fingerprint,**source}
     (output/"yingxi-release.json").write_text(json.dumps(metadata,indent=2)+"\n")
     (output/"SHA256SUMS").write_text("".join(sha(p)+"  "+p.name+"\n" for p in sorted(output.iterdir())))
     verify_assets(output)
@@ -105,12 +140,14 @@ def publish(args):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",repo): raise ValueError("Invalid repository identity")
     releases=json.loads(run("gh","api",f"repos/{repo}/releases","--paginate","--slurp"))
     previous=[];draft=None
+    published_names={metadata['fileName']}
+    if metadata.get('sourceFileName'): published_names.add(metadata['sourceFileName'])
     with tempfile.TemporaryDirectory() as temp:
         for release in (r for page in releases for r in page):
             if release["tag_name"]==args.tag:
                 if not release["draft"]: raise ValueError("This version is already published; releases are never replaced")
                 if release["target_commitish"]!=metadata["sourceCommit"]: raise ValueError("Existing draft belongs to a different commit")
-                if any(asset['name']!=metadata['fileName'] for asset in release['assets']):
+                if any(asset['name'] not in published_names for asset in release['assets']):
                     raise ValueError('Existing draft has extra assets; back them up and clean them before publication')
                 draft=release;continue
             if release["draft"]: continue
@@ -127,7 +164,7 @@ def publish(args):
             command=["gh","release","create",args.tag,"--repo",repo,"--verify-tag","--target",metadata["sourceCommit"],"--draft","--title","映汐播放器 "+metadata["versionName"],"--notes-file",str(notes)]
             if metadata["prerelease"]: command.append("--prerelease")
             subprocess.run(command,check=True)
-        subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",str(directory/metadata['fileName'])],check=True)
+        subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",*[str(directory/name) for name in sorted(published_names)]],check=True)
         command=["gh","release","edit",args.tag,"--repo",repo,"--draft=false","--prerelease="+str(metadata["prerelease"]).lower(),"--notes-file",str(notes)]
         command.append("--latest=false" if metadata["prerelease"] else "--latest")
         subprocess.run(command,check=True)

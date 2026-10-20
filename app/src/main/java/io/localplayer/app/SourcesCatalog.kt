@@ -49,7 +49,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
             Column(Modifier.weight(1f)) {
                 Text("来源", fontSize = 32.sp, letterSpacing = (-.7).sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text(if (vm.sources.isEmpty()) "连接你的私人片库。" else "${vm.sources.size} 个来源 · 你的私人片库", fontSize = 14.sp, color = Muted)
+                Text(if (vm.sources.isEmpty()) "连接你的私人片库。" else "${vm.sources.size} 个来源", fontSize = 14.sp, color = Muted)
             }
             FilledTonalButton(onClick = { vm.add() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "添加来源" }, shape = RoundedCornerShape(16.dp)) {
                 Icon(Icons.Rounded.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("新建", maxLines = 1)
@@ -58,9 +58,9 @@ fun SourcesCatalog(vm: LibraryViewModel) {
         if (vm.sources.isNotEmpty() || groups.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = vm.selectedGroup == "all", onClick = { vm.selectedGroup = "all" }, label = { Text("全部") })
-                    FilterChip(selected = vm.selectedGroup == "favorites", onClick = { vm.selectedGroup = "favorites" }, label = { Text("收藏") })
-                    groups.forEach { group -> FilterChip(selected = vm.selectedGroup == group.id, onClick = { vm.selectedGroup = group.id }, label = { Text(group.name) }) }
+                    SourceFilter("全部",vm.selectedGroup == "all") { vm.selectedGroup = "all" }
+                    SourceFilter("收藏",vm.selectedGroup == "favorites") { vm.selectedGroup = "favorites" }
+                    groups.forEach { group -> SourceFilter(group.name,vm.selectedGroup == group.id) { vm.selectedGroup = group.id } }
                 }
                 IconButton(onClick = { groupDialog = true }) { Icon(Icons.Rounded.FolderCopy, "管理分组", tint = Muted) }
             }
@@ -82,6 +82,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
                 if (item.path == source.initialPath) SavedSourceRow(source, source.id in vm.pinnedIds, item.favorite, vm.startingFolderName(source),
                     revealed = revealedId == source.id, onReveal = { revealedId = source.id },
                     open = { vm.openLocation(item) }, pin = { vm.togglePin(source) }, remove = { deleting = source }, privateAccess = { vm.privateAccess(source) },
+                    selected = vm.selectedSourceId == source.id,
                     actions = { collapse -> SourceActions(vm, source, item, collapse) })
                 else Surface(onClick = { vm.openLocation(item) }, color = GroupedSurface, shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
                     Row(Modifier.padding(start = 18.dp, end = 6.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -107,6 +108,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
     if (groupDialog) SourceGroupDialog(vm, groups) { groupDialog = false }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun DirectoryBookmarkActions(vm: LibraryViewModel) {
     val source = vm.source ?: return
     val revision = vm.organizationRevision
@@ -115,9 +117,9 @@ fun SourcesCatalog(vm: LibraryViewModel) {
             ?: SourceBookmark(source.id, vm.path, if (vm.path.isEmpty()) source.label else if(source.protocol==io.localplayer.core.Protocol.ALIYUN) AliyunCloud.folderName(source.id,vm.path.substringAfterLast('/')) else vm.path.substringAfterLast('/'))
     }
     var organize by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = { vm.toggleFavorite(item) }) { Icon(if (item.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(if (item.favorite) "取消收藏" else "收藏文件夹") }
-        TextButton(onClick = { organize = true }) { Icon(Icons.Rounded.FolderCopy, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("分组") }
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.End) {
+        TextButton(onClick = { vm.toggleFavorite(item) }) { Icon(if (item.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text(if (item.favorite) "取消收藏" else "收藏文件夹", maxLines = 1) }
+        TextButton(onClick = { organize = true }) { Icon(Icons.Rounded.FolderCopy, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("分组", maxLines = 1) }
     }
     if (organize) BookmarkOrganizer(vm, item) { organize = false }
 }
@@ -127,12 +129,12 @@ fun BookmarkOrganizer(vm: LibraryViewModel, initial: SourceBookmark, dismiss: ()
     var item by remember(initial) { mutableStateOf(initial) }
     val groups = vm.organization.groups()
     AlertDialog(onDismissRequest = dismiss, title = { Text("分组与快捷入口") }, text = {
-        Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(initial.label, fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
             Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = item.favorite, onCheckedChange = { item = item.copy(favorite = it) }); Text("收藏此入口") }
             Text("分组", Modifier.padding(vertical = 8.dp), color = Muted)
-            TextButton(onClick = { item = item.copy(groupId = null) }) { Text(if (item.groupId == null) "✓ 未分组" else "未分组") }
-            groups.forEach { group -> TextButton(onClick = { item = item.copy(groupId = group.id) }) { Text((if (item.groupId == group.id) "✓ " else "") + group.name) } }
+            SelectionRow("未分组", item.groupId == null) { item = item.copy(groupId = null) }
+            groups.forEach { group -> SelectionRow(group.name, item.groupId == group.id) { item = item.copy(groupId = group.id) } }
             if (initial.path.isNotEmpty()) TextButton(onClick = { vm.removeBookmark(initial.key); dismiss() }) { Text("移除此快捷入口", color = MaterialTheme.colorScheme.error) }
             TextButton(onClick = { vm.sources.firstOrNull { it.id == item.sourceId }?.let(vm::showSourceSettings); dismiss() }) { Text("来源设置") }
         }
@@ -143,10 +145,10 @@ fun BookmarkOrganizer(vm: LibraryViewModel, initial: SourceBookmark, dismiss: ()
     var selected by remember { mutableStateOf<SourceGroup?>(null) }
     var name by remember { mutableStateOf("") }
     AlertDialog(onDismissRequest = dismiss, title = { Text("管理分组") }, text = {
-        Column {
-            Row(Modifier.horizontalScroll(rememberScrollState())) { TextButton(onClick = { selected = null; name = "" }) { Text("新分组") }; groups.forEach { group -> TextButton(onClick = { selected = group; name = group.name }) { Text(group.name) } } }
+        Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState())) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { SourceFilter("新分组", selected == null) { selected = null; name = "" }; groups.forEach { group -> SourceFilter(group.name, selected?.id == group.id) { selected = group; name = group.name } } }
             PlayerField("分组名称", name) { name = it }
-            selected?.let { group -> TextButton(onClick = { vm.deleteGroup(group.id); dismiss() }) { Text("删除分组，保留来源和收藏", color = MaterialTheme.colorScheme.error) } }
+            selected?.let { group -> TextButton(onClick = { vm.deleteGroup(group.id); dismiss() }) { Text("删除分组", color = MaterialTheme.colorScheme.error, maxLines = 1) } }
         }
     }, confirmButton = { TextButton(onClick = { vm.saveGroup(name, selected?.id); if (vm.error == null) dismiss() }, enabled = name.isNotBlank()) { Text("保存") } }, dismissButton = { TextButton(onClick = dismiss) { Text("取消") } })
 }

@@ -116,7 +116,7 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
                 }}
             } else {
                 item{Column(Modifier.padding(horizontal=4.dp)){Text("映汐播放器 ${vm.version.name}",fontSize=24.sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(6.dp));Text("安装版本号 ${vm.version.code}",fontSize=13.sp,color=Muted)}}
-                item{Column(Modifier.padding(horizontal=4.dp)){Text("本版说明",fontSize=18.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(12.dp));Text(CURRENT_NOTES,fontSize=14.sp,lineHeight=23.sp,color=Muted)}}
+                if(BuildConfig.VERSION_CHANGES.isNotBlank())item{Column(Modifier.padding(horizontal=4.dp)){Text("本版说明",fontSize=18.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(12.dp));Text(BuildConfig.VERSION_CHANGES,fontSize=14.sp,lineHeight=23.sp,color=Muted)}}
                 item{Button(onClick=vm::check,enabled=!vm.busy,shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).testTag("check-updates")){Text("检查更新")}}
                 vm.message?.let { text -> item{Text(text,color=if(vm.error)MaterialTheme.colorScheme.error else Muted,fontSize=14.sp,lineHeight=21.sp)} }
                 vm.progress?.let { value -> item{Column{LinearProgressIndicator(progress={value},modifier=Modifier.fillMaxWidth());Spacer(Modifier.height(8.dp));Text("${(value*100).toInt()}%",fontSize=13.sp,color=Muted)}} }
@@ -130,10 +130,3 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
         }
     }
 }
-
-private const val CURRENT_NOTES="""新增独立设置页与版本更新入口。
-支持将 OpenList / WebDAV 挂载服务保存为来源，认证后浏览与播放。
-优化品牌开屏过渡，修复系统深色模式下浅色界面的状态栏对比度。
-包含同目录播放队列、断点续播、画中画及后台播放。
-
-当前为验证版本，真实网盘速率与手机兼容性仍需按实际环境验收。"""

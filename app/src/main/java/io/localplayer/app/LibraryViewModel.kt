@@ -38,6 +38,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     private val historyStore=HistoryStore(app)
     var sources by mutableStateOf(store.load());private set
     var pinnedIds by mutableStateOf(store.pinnedIds());private set
+    var selectedSourceId by mutableStateOf<String?>(null);private set
     var access by mutableStateOf<SourceAccess?>(null);private set
     var openingSource by mutableStateOf<Source?>(null);private set
     var privateRequest by mutableStateOf<PrivateSourceRequest?>(null);private set
@@ -129,6 +130,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         pinnedIds=store.pinnedIds();sources=store.load();notifySuccess(if(saved.id in pinnedIds)"已置顶来源"else"已取消置顶")
     }
     fun removeSource(saved:Source){
+        if(selectedSourceId==saved.id)selectedSourceId=null
         if(saved.protocol==Protocol.ALIYUN)AliyunCloud.accountRemoved(saved.id)
         if(pendingReplay?.entry?.media?.sourceId==saved.id)cancelOperation()
         if(source?.id==saved.id||openingSource?.id==saved.id)closeSource()
@@ -143,6 +145,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     fun completePrivateAccess(id:String){val request=privateRequest?.takeIf{it.id==id} ?: return;privateRequest=null;open(request.source)}
     fun cancelPrivateAccess(id:String,message:String?=null){if(privateRequest?.id!=id)return;privateRequest=null;if(message!=null)error=message}
     fun open(saved:Source,location:String=saved.initialPath,selectRoot:Boolean=false){
+        selectedSourceId=saved.id
         rootSelectionId=if(selectRoot)saved.id else null
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;draft=null;access=null;openingSource=saved
         val request=generation

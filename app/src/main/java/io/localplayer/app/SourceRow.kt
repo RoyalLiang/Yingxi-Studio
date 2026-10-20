@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -38,7 +40,7 @@ import kotlin.math.roundToInt
 @Composable internal fun SavedSourceRow(
     source: Source, pinned: Boolean, favorite: Boolean, folder: String,
     revealed: Boolean, onReveal: () -> Unit, open: () -> Unit, pin: () -> Unit,
-    remove: () -> Unit, privateAccess: () -> Unit, actions: @Composable (() -> Unit) -> Unit,
+    remove: () -> Unit, privateAccess: () -> Unit, selected: Boolean = false, actions: @Composable (() -> Unit) -> Unit,
 ) {
     val density = LocalDensity.current
     val leftLimit = with(density) { 92.dp.toPx() }
@@ -64,9 +66,10 @@ import kotlin.math.roundToInt
             SwipeAction("删除", Icons.Rounded.DeleteOutline, Modifier.weight(1f).fillMaxHeight(), true) { collapse(); remove() }
         }
         Surface(onClick = { if (abs(offset) > 1f) collapse() else open() }, interactionSource = interactions,
-            color = GroupedSurface, shape = RoundedCornerShape(22.dp),
+            color = if(selected) Berry.copy(alpha=.045f) else GroupedSurface, shape = RoundedCornerShape(22.dp),
+            border = BorderStroke(1.dp,if(selected)Berry.copy(alpha=.24f)else androidx.compose.ui.graphics.Color.Transparent),
             modifier = Modifier.fillMaxWidth().offset { IntOffset(offset.roundToInt(), 0) }.graphicsLayer { scaleX = scale; scaleY = scale }
-                .semantics { customActions = listOf(
+                .semantics { this.selected = selected; customActions = listOf(
                     CustomAccessibilityAction(if (pinned) "取消置顶" else "置顶") { pin(); true },
                     CustomAccessibilityAction("删除来源") { remove(); true },
                     CustomAccessibilityAction("私密访问") { privateAccess(); true }) }
@@ -79,9 +82,10 @@ import kotlin.math.roundToInt
                 })) {
             Row(Modifier.heightIn(min = 86.dp).padding(start = 18.dp, end = 6.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(end = 8.dp)) {
-                    Text(source.label, Modifier.testTag("source-title:${source.id}"), fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text(source.label, Modifier.testTag("source-title:${source.id}"), fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(5.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        if (selected) Icon(Icons.Rounded.Check, "已选择来源", Modifier.size(14.dp), tint = Berry)
                         if (pinned) Icon(Icons.Rounded.PushPin, "已置顶", Modifier.size(12.dp), tint = Berry)
                         if (favorite) Icon(Icons.Rounded.Star, "已收藏来源", Modifier.size(12.dp), tint = Berry)
                         Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", fontSize = 12.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)

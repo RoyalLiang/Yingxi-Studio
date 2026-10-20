@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import io.localplayer.core.Protocol
 
 /** All protocols share one Android window. Only the configuration body crossfades. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable internal fun ConnectionDialog(vm: LibraryViewModel, d: Draft, requestNearby: () -> Unit = {}) {
     var manualWebDav by remember(d.source.id) { mutableStateOf(d.webDavUrl.trim() !in listOf("", "https://")) }
     val focus = LocalFocusManager.current
@@ -73,7 +73,7 @@ import io.localplayer.core.Protocol
                     Spacer(Modifier.height(6.dp))
                     Text("输入地址，连接你的媒体库。", fontSize = 14.sp, color = Muted)
                     Spacer(Modifier.height(20.dp))
-                    Row(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()) {
+                    FlowRow(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(), maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 3) {
                         Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol ->
                             ChoicePill(if (protocol == Protocol.WEBDAV) "WebDAV" else protocol.name,
                                 d.source.protocol == protocol, Modifier.weight(1f)) {

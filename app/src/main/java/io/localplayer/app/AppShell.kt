@@ -76,7 +76,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                 }}
@@ -127,50 +127,6 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
 @Composable fun BrandMark(modifier:Modifier=Modifier){
     Box(modifier.background(Berry,RoundedCornerShape(24)),contentAlignment=Alignment.Center){
         Icon(painterResource(R.drawable.ic_brand_foreground),contentDescription=null,tint=Color.Unspecified,modifier=Modifier.fillMaxSize())
-    }
-}
-
-@Composable private fun HomeScreen(vm:LibraryViewModel,openLocal:()->Unit,onSettings:()->Unit){
-    val continuing=vm.history.firstOrNull{!it.completed&&it.positionMs>0&&it.durationMs>0}
-    LazyColumn(Modifier.fillMaxSize().testTag("home-list"),contentPadding=PaddingValues(bottom=112.dp)){
-        item{Column(Modifier.padding(start=24.dp,end=24.dp,top=18.dp,bottom=20.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){BrandMark(Modifier.size(36.dp));Spacer(Modifier.width(12.dp));Text("映汐播放器",Modifier.weight(1f),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold,color=Ink);IconButton(onClick=onSettings,modifier=Modifier.testTag("open-settings")){Icon(Icons.Rounded.Settings,"设置",tint=Muted)}}
-            Spacer(Modifier.height(10.dp));Text("让喜欢的影片，触手可及。",fontSize=15.sp,color=Muted)
-        }}
-        if(continuing!=null)item{ContinueCard(continuing,preparing=vm.preparingKey==continuing.media.key){vm.resume(continuing)}}
-        else item{Surface(Modifier.fillMaxWidth().padding(horizontal=20.dp),color=GroupedSurface,shape=RoundedCornerShape(26.dp)){
-            Column(Modifier.padding(22.dp)){
-                Text("现在，放映。",fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                Spacer(Modifier.height(10.dp));Text("从本机挑选一部影片，开始放映。",fontSize=14.sp,lineHeight=21.sp,color=Muted)
-                Spacer(Modifier.height(20.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp),contentPadding=PaddingValues(horizontal=20.dp,vertical=14.dp)){Icon(Icons.Rounded.PlayArrow,null);Spacer(Modifier.width(6.dp));Text("打开本机视频")}
-            }
-        }}
-        item{Text("从这里打开",Modifier.padding(start=24.dp,top=28.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
-        item{MediaRow("本机文件","通过系统文件选择器打开视频",Icons.Rounded.FolderOpen,openLocal)}
-        val recent=vm.history.filterNot{it.media.key==continuing?.media?.key}.take(3)
-        if(recent.isNotEmpty()){
-            item{Text("最近播放",Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold)}
-            items(recent,key={"recent-"+it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}
-        }
-    }
-
-}
-
-@Composable internal fun ContinueCard(entry:HistoryEntry,preparing:Boolean=false,onClick:()->Unit){
-    Surface(onClick=onClick,enabled=!preparing,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).padding(bottom=16.dp).testTag("continue-player"),
-        shape=RoundedCornerShape(22.dp),color=GroupedSurface,shadowElevation=1.dp){
-        Column{
-            Row(Modifier.fillMaxWidth().padding(start=12.dp,end=8.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically){
-                MediaThumbnail(entry.media,Modifier.width(78.dp).height(44.dp))
-                Column(Modifier.weight(1f).padding(horizontal=12.dp)){
-                    Text(entry.media.title,fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.SemiBold,color=Ink,maxLines=1,overflow=TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(3.dp))
-                    Text(if(preparing)"正在准备播放…"else"继续观看 · ${time(entry.positionMs)} / ${time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
-                }
-                Box(Modifier.size(48.dp).semantics{contentDescription="继续播放"},contentAlignment=Alignment.Center){if(preparing)CircularProgressIndicator(Modifier.size(24.dp).testTag("continue-loading"),color=Berry,strokeWidth=2.dp)else Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(30.dp))}
-            }
-            LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry,trackColor=Berry.copy(alpha=.08f),drawStopIndicator={})
-        }
     }
 }
 
