@@ -196,7 +196,7 @@ class SourceInteractionTest {
             val bounds=ui.onNodeWithTag("history-row:${media.key}").getUnclippedBoundsInRoot()
             assertTrue("Mini-player row should stay compact",bounds.bottom.value-bounds.top.value<=84f)
             capture("history")
-            ui.onNodeWithContentDescription("记录操作 ${media.title}").performClick()
+            ui.onNodeWithContentDescription("记录操作 ${io.localplayer.core.mediaDisplayTitle(media.title)}").performClick()
             ui.onNodeWithText("从头播放").assertIsDisplayed()
             ui.onNodeWithText("移除此记录").assertIsDisplayed()
         }finally{store.remove(media.key)}

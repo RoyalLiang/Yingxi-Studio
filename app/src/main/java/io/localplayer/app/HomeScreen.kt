@@ -121,9 +121,11 @@ import androidx.compose.ui.unit.sp
                 MediaThumbnail(entry.media, Modifier.fillMaxSize())
                 PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
+                Box(Modifier.fillMaxWidth().height(64.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
+                    androidx.compose.ui.graphics.Color.Black.copy(alpha=.65f),androidx.compose.ui.graphics.Color.Black.copy(alpha=.5f),androidx.compose.ui.graphics.Color.Transparent))))
                 Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
                     IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha=.18f), CircleShape).padding(1.dp))
+                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp))
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
