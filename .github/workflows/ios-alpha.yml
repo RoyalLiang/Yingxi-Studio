@@ -1,7 +1,7 @@
 name: iOS alpha
 on:
   push:
-    branches: [main, dev_ios_alpha]
+    branches: [main, dev_ios_alpha, dev_aliyun_integration]
     paths: ['ios/**', 'scripts/build_ios.py', 'scripts/publish_ios.py', '.github/workflows/ios-alpha.yml']
   workflow_dispatch:
 permissions:

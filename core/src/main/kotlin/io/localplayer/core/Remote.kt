@@ -5,14 +5,14 @@ import java.io.InterruptedIOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-enum class Protocol { SMB, SFTP, WEBDAV }
+enum class Protocol { SMB, SFTP, WEBDAV, ALIYUN }
 
 data class Source(
     val id: String = UUID.randomUUID().toString(),
     val label: String,
     val protocol: Protocol,
     val host: String,
-    val port: Int = when(protocol) { Protocol.SMB -> 445; Protocol.SFTP -> 22; Protocol.WEBDAV -> 443 },
+    val port: Int = when(protocol) { Protocol.SMB -> 445; Protocol.SFTP -> 22; Protocol.WEBDAV, Protocol.ALIYUN -> 443 },
     val root: String = if (protocol == Protocol.SMB) "" else "/",
     val username: String = "",
     val domain: String = "",
@@ -70,6 +70,7 @@ class HostKeyRequired(val source: Source, val fingerprint: String, val previous:
 class Cancellation : Closeable {
     private val cancelled = AtomicBoolean(false)
     private val resources = mutableListOf<Closeable>()
+    fun release(resource: Closeable) { synchronized(resources) { resources.remove(resource) } }
     fun check() { if (cancelled.get() || Thread.currentThread().isInterrupted) throw InterruptedIOException("操作已取消") }
     fun own(resource: Closeable) {
         synchronized(resources) {
@@ -103,6 +104,7 @@ class Protocols : Connector {
             Protocol.SMB -> SmbConnector().connect(source, credentials, cancellation)
             Protocol.SFTP -> SftpConnector().connect(source, credentials, cancellation)
             Protocol.WEBDAV -> WebDavConnector().connect(source, credentials, cancellation)
+            Protocol.ALIYUN -> throw java.io.IOException("请通过映汐的阿里云盘账户连接")
         }
     }
 }

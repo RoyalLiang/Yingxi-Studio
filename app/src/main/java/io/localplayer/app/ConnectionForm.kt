@@ -36,8 +36,8 @@ import io.localplayer.core.Protocol
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-form"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Column { Text("连接来源", fontSize = 26.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(6.dp)); Text("输入地址，连接你的媒体库。", fontSize = 14.sp, color = Muted) } }
             item { Row(Modifier.fillMaxWidth().background(Color(0xFFE8E8EE), RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()) {
-                Protocol.entries.forEach { protocol -> ChoicePill(if(protocol==Protocol.WEBDAV)"WebDAV" else protocol.name, d.source.protocol == protocol, Modifier.weight(1f)) {
-                    if (d.source.protocol != protocol) vm.draft = d.copy(source = d.source.copy(protocol = protocol, root = if (protocol != Protocol.SMB) "/" else "", initialPath = "", trustedKey = null, trustedAuthority = null), port = when(protocol){Protocol.SFTP->"22";Protocol.SMB->"445";Protocol.WEBDAV->"443"},browsePath=null)
+                Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol -> ChoicePill(if(protocol==Protocol.WEBDAV)"WebDAV" else protocol.name, d.source.protocol == protocol, Modifier.weight(1f)) {
+                    if (d.source.protocol != protocol) vm.draft = d.copy(source = d.source.copy(protocol = protocol, root = if (protocol != Protocol.SMB) "/" else "", initialPath = "", trustedKey = null, trustedAuthority = null), port = when(protocol){Protocol.SFTP->"22";Protocol.SMB->"445";Protocol.WEBDAV,Protocol.ALIYUN->"443"},browsePath=null)
                 } }
             } }
             item { PlayerField(if (d.source.protocol == Protocol.SMB) "服务器地址 / SMB 链接" else "主机 / IP", d.source.host, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)) { vm.draft = d.copy(source = d.source.copy(host = it, trustedKey = null, trustedAuthority = null)) } }

@@ -119,10 +119,13 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
             else{openingSource=null;access=SourceAccess(saved,path=location)}
         }catch(e:Exception){if(request==generation){openingSource=null;access=SourceAccess(saved,path=location);error="无法读取保存的密码，请重新认证"}}}
     }
+    fun cloudConnected(saved:Source){sources=store.load();draft=null;open(saved)}
+    fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
     fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
     fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
     fun dismissAccess(){cancelOperation();pendingReplay=null;trust=null;access=null;openingSource=null;error=null}
     fun edit(saved:Source){
+        if(saved.protocol==Protocol.ALIYUN){ cloudReauthorize(); return }
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;access=null;openingSource=null;draft=Draft(saved)
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){store.password(saved.id)}
@@ -175,7 +178,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
         stopDiscovery();cancelOperation();val id=generation;val token=Cancellation();cancellation=token;busy=true;error=null
         job=viewModelScope.launch{
             try{
-                val result=withContext(Dispatchers.IO){Protocols().connect(s,c,token).use{session->
+                val result=withContext(Dispatchers.IO){AppConnectors().connect(s,c,token).use{session->
                     val list=session.list(newPath);token.check()
                     if(save)store.save(s,c.password,remember){id==generation}
                     list
@@ -230,7 +233,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
                 withContext(Dispatchers.IO){
                     if(replay.entry.media.location!=null&&replay.entry.media.location!=mediaLocation(s))throw java.io.IOException("来源身份已变更，请从来源重新选择影片")
                     val parent=replay.entry.media.path?.substringBeforeLast('/',"") ?: ""
-                    val listing=Protocols().connect(s,c,token).use{it.list(parent)}
+                    val listing=AppConnectors().connect(s,c,token).use{it.list(parent)}
                     token.check()
                     val file=listing.firstOrNull{!it.directory&&it.isVideo&&it.path==replay.entry.media.path}
                         ?: throw java.io.IOException("原文件不存在或不可读取，请在来源中重新选择")

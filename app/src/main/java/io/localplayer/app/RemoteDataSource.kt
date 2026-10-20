@@ -22,7 +22,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
-class PlaybackLease(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=Protocols()) : java.io.Closeable {
+class PlaybackLease(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=AppConnectors()) : java.io.Closeable {
     private val cancellation=Cancellation()
     private var session: RemoteSession?=null
     private var closed=false

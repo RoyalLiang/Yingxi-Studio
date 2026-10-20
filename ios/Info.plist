@@ -52,5 +52,20 @@
 	</array>
 	<key>YingxiAlphaVersion</key>
 	<string>$(YINGXI_ALPHA_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.localplayer.app.aliyun</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>smartdrive53a4ba437a8146819b5ebf05235e2762</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>smartdrive</string>
+	</array>
 </dict>
 </plist>

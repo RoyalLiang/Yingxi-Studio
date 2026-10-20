@@ -105,7 +105,7 @@ class MainActivity:ComponentActivity(){
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
             val parts=vm.path.split('/').filter{it.isNotEmpty()}
             FileBreadcrumbs(listOf(FileCrumb("来源","sources"),FileCrumb(source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"},"remote:"))+
-                parts.mapIndexed{i,name->FileCrumb(name,"remote:"+parts.take(i+1).joinToString("/"))}){index->
+                parts.mapIndexed{i,name->FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(name)else name,"remote:"+parts.take(i+1).joinToString("/"))}){index->
                 if(index==0)vm.closeSource()else vm.browse(parts.take(index-1).joinToString("/"))
             }
             HorizontalDivider(color=Hairline)
@@ -174,8 +174,8 @@ class MainActivity:ComponentActivity(){
                 Spacer(Modifier.height(6.dp));Text("让你的私人片库，近在眼前。",fontSize=14.sp,color=Muted)
             }}
             item{Row(Modifier.fillMaxWidth().background(Color(0xFFE8E8EE),RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()){
-                Protocol.entries.forEach{p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)){
-                    if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=when(p){Protocol.SMB->"445";Protocol.SFTP->"22";Protocol.WEBDAV->"443"},browsePath=null)
+                Protocol.entries.filter { it != Protocol.ALIYUN }.forEach{p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)){
+                    if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=when(p){Protocol.SMB->"445";Protocol.SFTP->"22";Protocol.WEBDAV,Protocol.ALIYUN->"443"},browsePath=null)
                 }}
             }}
             if(onChooseCloud!=null)item{TextButton(onClick=onChooseCloud){Text("选择网盘接入")}}

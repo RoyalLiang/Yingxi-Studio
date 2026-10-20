@@ -1,5 +1,10 @@
 // !$*UTF8*$!
 {archiveVersion=1; classes={}; objectVersion=56; objects={
+000000000000000000000070 = {isa=PBXFileReference; lastKnownFileType=sourcecode.swift; path="Sources/Core/Aliyun.swift"; sourceTree="<group>"; };
+0000000000000000000000D4 = {isa=PBXBuildFile; fileRef=000000000000000000000070; };
+000000000000000000000071 = {isa=PBXFileReference; lastKnownFileType=sourcecode.swift; path="Sources/App/AliyunCloud.swift"; sourceTree="<group>"; };
+0000000000000000000000D5 = {isa=PBXBuildFile; fileRef=000000000000000000000071; };
+
 000000000000000000000064 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/Core/WebDAV.swift"; sourceTree = "<group>"; };
 0000000000000000000000C8 = {isa = PBXBuildFile; fileRef = 000000000000000000000064; };
 000000000000000000000065 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/App/MediaStore.swift"; sourceTree = "<group>"; };
@@ -14,10 +19,10 @@
 0000000000000000000000D2 = {isa=PBXBuildFile; fileRef=00000000000000000000006E; };
 00000000000000000000006F = {isa=PBXFileReference; explicitFileType=wrapper.application; includeInIndex=0; path=YingxiPlayer.app; sourceTree=BUILT_PRODUCTS_DIR; };
 000000000000000000000001 = {isa=PBXProject; attributes={LastUpgradeCheck=2700;}; buildConfigurationList=000000000000000000000014; compatibilityVersion="Xcode 14.0"; developmentRegion=zh-Hans; hasScannedForEncodings=0; knownRegions=(en,zh-Hans,Base); mainGroup=000000000000000000000002; productRefGroup=000000000000000000000003; projectDirPath=""; projectRoot=""; targets=(000000000000000000000004); };
-000000000000000000000002 = {isa=PBXGroup; children=(000000000000000000000064,000000000000000000000065,000000000000000000000066,000000000000000000000067,000000000000000000000068,00000000000000000000006E,000000000000000000000003); sourceTree="<group>"; };
+000000000000000000000002 = {isa=PBXGroup; children=(000000000000000000000070,000000000000000000000064,000000000000000000000065,000000000000000000000066,000000000000000000000067,000000000000000000000068,00000000000000000000006E,000000000000000000000003); sourceTree="<group>"; };
 000000000000000000000003 = {isa=PBXGroup; children=(00000000000000000000006F); name=Products; sourceTree="<group>"; };
 000000000000000000000004 = {isa=PBXNativeTarget; buildConfigurationList=000000000000000000000015; buildPhases=(000000000000000000000005,000000000000000000000006,000000000000000000000007); buildRules=(); dependencies=(); name=YingxiPlayer; productName=YingxiPlayer; productReference=00000000000000000000006F; productType="com.apple.product-type.application"; };
-000000000000000000000005 = {isa=PBXSourcesBuildPhase; buildActionMask=2147483647; files=(0000000000000000000000C8,0000000000000000000000C9,0000000000000000000000CA,0000000000000000000000CB,0000000000000000000000CC); runOnlyForDeploymentPostprocessing=0; };
+000000000000000000000005 = {isa=PBXSourcesBuildPhase; buildActionMask=2147483647; files=(0000000000000000000000D4,0000000000000000000000C8,0000000000000000000000C9,0000000000000000000000CA,0000000000000000000000CB,0000000000000000000000CC); runOnlyForDeploymentPostprocessing=0; };
 000000000000000000000006 = {isa=PBXResourcesBuildPhase; buildActionMask=2147483647; files=(0000000000000000000000D2); runOnlyForDeploymentPostprocessing=0; };
 000000000000000000000007 = {isa=PBXFrameworksBuildPhase; buildActionMask=2147483647; files=(); runOnlyForDeploymentPostprocessing=0; };
 00000000000000000000001E = {isa=XCBuildConfiguration; name=Debug; buildSettings={CLANG_ENABLE_MODULES=YES; SDKROOT=iphoneos; IPHONEOS_DEPLOYMENT_TARGET=27.0; SWIFT_VERSION=5.0; }; };

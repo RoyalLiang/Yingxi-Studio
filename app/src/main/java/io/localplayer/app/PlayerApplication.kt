@@ -7,6 +7,7 @@ import java.security.Security
 class PlayerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        AliyunCloud.initialize(this)
         // SSHJ uses the ECDSA KeyFactory alias missing from Android's reduced BC.
         // Replace only this process's BC entry with the bundled implementation,
         // at the lowest priority. AndroidKeyStore and default Conscrypt stay first.

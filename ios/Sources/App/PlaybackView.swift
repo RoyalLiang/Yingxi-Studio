@@ -18,7 +18,9 @@ final class OrientationDelegate:NSObject,UIApplicationDelegate {
     init(target:PlaybackTarget,store:MediaStore){
         self.target=target;self.store=store
         let asset:AVURLAsset
-        if let source=target.source {let remote=RemoteResourceLoader(source:source,password:target.password,url:target.url);loader=remote;asset=remote.asset()}
+        if let source=target.cloudSource,let file=target.cloudFileID {
+            let remote=RemoteResourceLoader(url:target.url){try await CloudAccounts.shared.download(source,file:file)};loader=remote;asset=remote.asset()
+        } else if let source=target.source {let remote=RemoteResourceLoader(source:source,password:target.password,url:target.url);loader=remote;asset=remote.asset()}
         else{asset=AVURLAsset(url:target.url)}
         let item=AVPlayerItem(asset:asset);player=AVPlayer(playerItem:item)
         try? AVAudioSession.sharedInstance().setCategory(.playback,mode:.moviePlayback)
