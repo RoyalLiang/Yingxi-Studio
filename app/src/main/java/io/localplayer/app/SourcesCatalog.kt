@@ -28,70 +28,68 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 
 @Composable
-fun SourcesCatalog(vm: LibraryViewModel, requestNearby: () -> Unit, openLocal: () -> Unit) {
-    val context = LocalContext.current
+fun SourcesCatalog(vm: LibraryViewModel) {
     val revision = vm.organizationRevision
     val groups = remember(revision) { vm.organization.groups() }
-    val saved = remember(revision) { vm.organization.bookmarks() }
-    val roots = vm.sources.map { source -> saved.firstOrNull { it.sourceId == source.id && it.path == source.initialPath }
-        ?.copy(label=source.label) ?: SourceBookmark(source.id, source.initialPath, source.label) }
-    val bookmarks = roots + saved.filter { item -> roots.none { it.key == item.key } && vm.sources.any { it.id == item.sourceId } }
+    val bookmarks = remember(vm.sources, revision) {
+        val saved = vm.organization.bookmarks()
+        val roots = vm.sources.map { source ->
+            saved.firstOrNull { it.sourceId == source.id && it.path == source.initialPath }?.copy(label = source.label)
+                ?: SourceBookmark(source.id, source.initialPath, source.label)
+        }
+        roots + saved.filter { item -> roots.none { it.key == item.key } && vm.sources.any { it.id == item.sourceId } }
+    }
     val shown = bookmarks.filter { vm.selectedGroup == "all" || vm.selectedGroup == "favorites" && it.favorite || it.groupId == vm.selectedGroup }
     var deleting by remember { mutableStateOf<io.localplayer.core.Source?>(null) }
     var organize by remember { mutableStateOf<SourceBookmark?>(null) }
     var groupDialog by remember { mutableStateOf(false) }
-    var probeConfirm by remember { mutableStateOf(false) }
-    val granted=vm.nearbyPermissionGranted
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refreshDiscoveryPermission() }
     Column(Modifier.fillMaxSize().testTag("source-list")) {
-        vm.error?.let { message -> Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Text(message, Modifier.weight(1f), color = MaterialTheme.colorScheme.error, fontSize = 13.sp); TextButton(onClick = { vm.error = null }) { Text("关闭") } } }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("来源", Modifier.weight(1f), fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = { groupDialog = true }) { Icon(Icons.Rounded.CreateNewFolder, "管理分组", tint = Berry) }
-            TextButton(onClick = { vm.add() }, modifier=Modifier.semantics { contentDescription="添加来源" }) { Icon(Icons.Rounded.Add, null); Text("添加") }
-        }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = vm.selectedGroup == "all", onClick = { vm.selectedGroup = "all" }, label = { Text("全部") })
-            FilterChip(selected = vm.selectedGroup == "favorites", onClick = { vm.selectedGroup = "favorites" }, label = { Text("收藏") })
-            groups.forEach { group -> FilterChip(selected = vm.selectedGroup == group.id, onClick = { vm.selectedGroup = group.id }, label = { Text(group.name) }) }
-        }
-        Surface(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), shape = RoundedCornerShape(16.dp), color = GroupedSurface) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.WifiFind, null, tint = Berry, modifier = Modifier.size(24.dp))
-                    Text(vm.discoveryMessage, Modifier.weight(1f).padding(start = 12.dp), fontSize = 12.sp, color = Muted)
-                    TextButton(onClick = { if (!granted) requestNearby() else if (vm.scanning) vm.stopDiscovery() else vm.discover(true) }) { Text(if (!granted) "允许发现" else if (vm.scanning) "停止" else "重试") }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("首页自动发现局域网设备", Modifier.weight(1f), fontSize = 13.sp)
-                    Switch(checked = vm.autoDiscoveryEnabled, onCheckedChange = vm::setAutoDiscovery, modifier = Modifier.testTag("auto-discovery"))
-                }
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp, top = 20.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("来源", fontSize = 32.sp, letterSpacing = (-.7).sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                Text(if (vm.sources.isEmpty()) "连接你的私人片库。" else "${vm.sources.size} 个来源 · 你的私人片库", fontSize = 14.sp, color = Muted)
+            }
+            FilledTonalButton(onClick = { vm.add() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "添加来源" }, shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Rounded.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("新建", maxLines = 1)
             }
         }
-        LazyColumn(Modifier.weight(1f).padding(bottom=96.dp).testTag("source-bookmarks"), contentPadding = PaddingValues(bottom = 16.dp)) {
-            item { MediaRow("打开本机视频", "本机文件与授权目录", Icons.Rounded.Folder, openLocal) }
-            if (shown.isEmpty()) item { Text(if (vm.selectedGroup == "favorites") "还没有收藏的来源或文件夹" else "这个分组还没有来源", Modifier.padding(24.dp), color = Muted) }
+        if (vm.sources.isNotEmpty() || groups.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = vm.selectedGroup == "all", onClick = { vm.selectedGroup = "all" }, label = { Text("全部") })
+                    FilterChip(selected = vm.selectedGroup == "favorites", onClick = { vm.selectedGroup = "favorites" }, label = { Text("收藏") })
+                    groups.forEach { group -> FilterChip(selected = vm.selectedGroup == group.id, onClick = { vm.selectedGroup = group.id }, label = { Text(group.name) }) }
+                }
+                IconButton(onClick = { groupDialog = true }) { Icon(Icons.Rounded.FolderCopy, "管理分组", tint = Muted) }
+            }
+        }
+        LazyColumn(Modifier.weight(1f).testTag("source-bookmarks"), contentPadding = PaddingValues(top = 8.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (shown.isEmpty()) item {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(76.dp).background(Berry.copy(alpha = .07f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
+                        Icon(if (vm.selectedGroup == "favorites") Icons.Rounded.StarOutline else Icons.Rounded.VideoLibrary, null, Modifier.size(34.dp), tint = Berry)
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有收藏" else "这个分组还没有来源", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(10.dp))
+                    Text(if (vm.sources.isEmpty()) "点击右上角新建，连接 NAS、服务器或网盘。\n支持 SMB、SFTP 和 WebDAV。" else "收藏来源或把文件夹添加到分组，便能快速找到它。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
             items(shown, key = { it.key }) { item ->
                 val source = vm.sources.first { it.id == item.sourceId }
-                if(item.path==source.initialPath) SavedSourceRow(source,source.id in vm.pinnedIds,
-                    open={vm.openLocation(item)},edit={vm.edit(source)},pin={vm.togglePin(source)},remove={deleting=source},privateAccess={vm.privateAccess(source)},
-                    trailing={BookmarkActions(vm,item){organize=item}})
-                else Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically){
-                    Box(Modifier.weight(1f)){MediaRow(item.label,"${source.protocol} · ${source.host} / ${item.path}",Icons.Rounded.Folder){vm.openLocation(item)}}
-                    BookmarkActions(vm,item){organize=item}
+                if (item.path == source.initialPath) SavedSourceRow(source, source.id in vm.pinnedIds,
+                    open = { vm.openLocation(item) }, edit = { vm.edit(source) }, pin = { vm.togglePin(source) }, remove = { deleting = source }, privateAccess = { vm.privateAccess(source) }, trailing = { BookmarkActions(vm, item) { organize = item } })
+                else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { MediaRow(item.label, "${source.protocol} · ${source.host} / ${item.path}", Icons.Rounded.Folder) { vm.openLocation(item) } }
+                    BookmarkActions(vm, item) { organize = item }
                 }
             }
-            item { Text("附近设备 · 待验证", Modifier.padding(start=24.dp,top=24.dp,bottom=8.dp),fontSize=20.sp,fontWeight=FontWeight.SemiBold) }
-            if (vm.candidates.isEmpty()) item { Text(if (vm.scanning) "正在寻找共享服务…" else "未广播的设备可输入地址或补充发现。", Modifier.padding(horizontal = 24.dp, vertical = 12.dp), color = Muted, fontSize = 13.sp) }
-            items(vm.candidates, key = { it.id }) { candidate -> MediaRow(candidate.name, "${candidate.protocol} · ${candidate.host}:${candidate.port}\n${candidate.hint}", Icons.Rounded.Lan) { vm.add(candidate) } }
-            item { TextButton(onClick = { probeConfirm = true }, modifier = Modifier.padding(start = 16.dp)) { Text("补充发现当前局域网") } }
         }
     }
-    deleting?.let { source -> AlertDialog(onDismissRequest={deleting=null},title={Text("删除来源？")},text={Text("移除 ${source.label} 及其快捷入口，服务器上的文件不受影响。")},confirmButton={TextButton(onClick={vm.removeSource(source);deleting=null}){Text("删除来源")}},dismissButton={TextButton(onClick={deleting=null}){Text("取消")}}) }
-    organize?.let { item -> BookmarkOrganizer(vm, item, { organize = null }) }
-    if (groupDialog) SourceGroupDialog(vm, groups, { groupDialog = false })
-    if (probeConfirm) AlertDialog(onDismissRequest = { probeConfirm = false }, title = { Text("补充发现") }, text = { Text("仅在当前 Wi-Fi 或以太网内，有限探测 22/445 端口，约 12 秒，可随时停止。候选仍需验证账户权限。") },
-        confirmButton = { TextButton(onClick = { probeConfirm = false; if (granted) vm.probe() else requestNearby() }) { Text("开始") } }, dismissButton = { TextButton(onClick = { probeConfirm = false }) { Text("取消") } })
+    deleting?.let { source -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("删除来源？") }, text = { Text("移除 ${source.label} 及其快捷入口，服务器上的文件不受影响。") }, confirmButton = { TextButton(onClick = { vm.removeSource(source); deleting = null }) { Text("删除来源") } }, dismissButton = { TextButton(onClick = { deleting = null }) { Text("取消") } }) }
+    organize?.let { item -> BookmarkOrganizer(vm, item) { organize = null } }
+    if (groupDialog) SourceGroupDialog(vm, groups) { groupDialog = false }
 }
 
 @Composable fun DirectoryBookmarkActions(vm: LibraryViewModel) {

@@ -61,7 +61,7 @@ class SourceInteractionTest {
         val source=unknown.copy(trustedKey=key,trustedAuthority=unknown.authority)
         mount(source)
         // Keep the saved row above the floating navigation touch area.
-        ui.onNodeWithTag("home-list").performScrollToNode(hasText("附近服务"))
+        ui.onNodeWithTag("home-list").performScrollToNode(hasText(source.label))
         ui.onNodeWithText(source.label).performClick()
         ui.runOnIdle{assertTrue("Saved source click must start opening its directory",vm.openingSource?.id==source.id||vm.source?.id==source.id)}
         ui.onNodeWithText("连接来源").assertDoesNotExist()
@@ -124,7 +124,7 @@ class SourceInteractionTest {
         ui.onNodeWithText("置顶").performClick()
         ui.runOnIdle{assertEquals(3,vm.pinnedIds.size);assertTrue(vm.error?.contains("最多置顶") == true)}
         assertEquals(sources.take(3).map{it.id}.toSet(),SourceStore(context).pinnedIds())
-        ui.onNodeWithText("关闭").performClick()
+        ui.onNodeWithContentDescription("关闭提示").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${sources[0].id}"))
         ui.onNodeWithTag("source-row:${sources[0].id}").performTouchInput{swipeLeft()}
         ui.onNodeWithText("取消置顶").performClick()

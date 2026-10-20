@@ -67,7 +67,7 @@ class MainActivity:ComponentActivity(){
                     localFiles.add(uri)
                 }.onFailure{localFiles.error="无法保存文件夹授权，请重新选择"}
             }}
-            val nearby=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted ->model.refreshDiscoveryPermission();if(granted)model.discover()else model.error="未授予附近设备访问权限，本机文件仍可打开"}
+            val nearby=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted ->model.refreshDiscoveryPermission();if(granted){if(model.discoveryPanelOpen)model.discover()}else model.error="未授予附近设备访问权限，本机文件仍可打开"}
         LaunchedEffect(model){model.plays.collect{target ->
             if(openingPlayer||!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))target.release()
             else {openingPlayer=true;runCatching{startActivity(PlaybackActivity.intent(this@MainActivity,target),android.app.ActivityOptions.makeCustomAnimation(this@MainActivity,R.anim.player_enter,R.anim.player_exit).toBundle())}.onFailure{PlaybackRequests.remove(target.playId);openingPlayer=false;model.error="无法打开播放器"}}
@@ -78,7 +78,7 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun LibraryScreen(vm:LibraryViewModel,openLocal:()->Unit,requestNearby:()->Unit){
-    if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm,requestNearby,openLocal);return}
+    if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm);return}
 
     var menu by remember{mutableStateOf(false)}
     var deleting by remember{mutableStateOf<io.localplayer.core.Source?>(null)}
@@ -110,9 +110,6 @@ class MainActivity:ComponentActivity(){
             }
             HorizontalDivider(color=Hairline)
         }
-        vm.error?.let{message->Surface(color=Color(0xFFFBE9E7),shape=RoundedCornerShape(16.dp),modifier=Modifier.padding(horizontal=20.dp,vertical=8.dp)){
-            Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically){Text(message,Modifier.weight(1f),color=Color(0xFF8C211B),fontSize=14.sp);TextButton(onClick={vm.error=null}){Text("关闭")}}
-        }}
         if(vm.busy||vm.openingSource!=null)Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
             CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在连接与读取…",Modifier.weight(1f).padding(start=12.dp),fontSize=14.sp,color=Muted);TextButton(onClick={vm.closeSource()}){Text("取消")}
         }
@@ -160,75 +157,10 @@ class MainActivity:ComponentActivity(){
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun ExistingConnectionDialog(vm:LibraryViewModel,d:Draft,onChooseCloud:(()->Unit)?=null,onDismiss:(()->Unit)?=null){
-    var showPassword by remember{mutableStateOf(false)}
-    val sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)
-    ModalBottomSheet(onDismissRequest={if(onDismiss!=null)onDismiss()else vm.dismissDraft()},sheetState=sheetState,containerColor=Paper.copy(alpha=.97f),
-        shape=RoundedCornerShape(topStart=32.dp,topEnd=32.dp),scrimColor=Ink.copy(alpha=.22f)){
-        SheetGlassEffect()
-        BackHandler(enabled=onDismiss!=null){onDismiss?.invoke()}
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-form"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-            item{Column(Modifier.padding(bottom=8.dp)){
-                Text("连接来源",fontSize=26.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(6.dp));Text("让你的私人片库，近在眼前。",fontSize=14.sp,color=Muted)
-            }}
-            item{Row(Modifier.fillMaxWidth().background(Color(0xFFE8E8EE),RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()){
-                Protocol.entries.filter { it != Protocol.ALIYUN }.forEach{p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)){
-                    if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=when(p){Protocol.SMB->"445";Protocol.SFTP->"22";Protocol.WEBDAV,Protocol.ALIYUN->"443"},browsePath=null)
-                }}
-            }}
-            if(onChooseCloud!=null)item{TextButton(onClick=onChooseCloud){Text("选择网盘接入")}}
-        item{Text("服务器",Modifier.padding(start=4.dp,top=8.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
-            item{Field("名称（可选）",d.source.label){vm.draft=d.copy(source=d.source.copy(label=it))}}
-            if(d.source.protocol==Protocol.WEBDAV){
-                item{PlayerField("WebDAV 地址",d.webDavUrl,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri)){vm.draft=d.copy(webDavUrl=it)}}
-                item{Text("填写完整地址；OpenList 通常是 https://你的服务器/dav/。",Modifier.padding(horizontal=4.dp),fontSize=12.sp,lineHeight=18.sp,color=Muted)}
-                if(d.webDavUrl.trim().startsWith("http://"))item{Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                    Checkbox(checked=d.allowHttp,onCheckedChange={vm.draft=d.copy(allowHttp=it)},modifier=Modifier.testTag("allow-http"))
-                    Column(Modifier.weight(1f)){Text("允许明文 HTTP",fontSize=14.sp);Text("仅用于可信网络；账号与影片在传输中不加密。",fontSize=12.sp,color=Muted)}
-                }}
-            }else{
-            item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){
-                PlayerField("主机 / IP",d.source.host,Modifier.weight(1f),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri)){vm.draft=d.copy(source=d.source.copy(host=it,trustedKey=null,trustedAuthority=null))}
-                PlayerField("端口",d.port,Modifier.width(96.dp),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number)){vm.draft=d.copy(port=it,source=d.source.copy(trustedKey=null,trustedAuthority=null))}
-            }}
-            item{Field(if(d.source.protocol==Protocol.SMB)"共享名"else"路径",d.source.root){vm.draft=d.copy(source=d.source.copy(root=it))}}
-            item{Text(if(d.source.protocol==Protocol.SMB)"填写共享名，例如 media，不含主机地址。"else"填写服务器上的目录，例如 /media。",Modifier.padding(horizontal=4.dp),fontSize=12.sp,lineHeight=18.sp,color=Muted)}
-            }
-            item{Text("身份验证",Modifier.padding(start=4.dp,top=8.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
-            item{Field(if(d.source.protocol==Protocol.SMB)"用户名（可匿名）"else"用户名",d.source.username){vm.draft=d.copy(source=d.source.copy(username=it))}}
-            item{PlayerField("密码",d.password,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password),
-                transformation=if(showPassword)VisualTransformation.None else PasswordVisualTransformation(),trailing={
-                    IconButton(onClick={showPassword=!showPassword}){Icon(if(showPassword)Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,if(showPassword)"隐藏密码"else"显示密码",tint=Muted,modifier=Modifier.size(20.dp))}
-                }){vm.draft=d.copy(password=it)}}
-            if(d.source.protocol==Protocol.SMB)item{Field("域（可选）",d.source.domain){vm.draft=d.copy(source=d.source.copy(domain=it))}}
-            if(d.source.protocol==Protocol.WEBDAV){
-                item{Text("播放请求头（可选）",Modifier.padding(start=4.dp,top=8.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
-                item{Text("仅在挂载服务要求时填写，例如百度网盘的 User-Agent。",Modifier.padding(horizontal=4.dp),fontSize=12.sp,color=Muted)}
-                item{Field("User-Agent（可选）",d.source.userAgent){vm.draft=d.copy(source=d.source.copy(userAgent=it))}}
-                item{Field("Referer（可选，HTTPS）",d.source.referer){vm.draft=d.copy(source=d.source.copy(referer=it))}}
-            }
-            item{Surface(color=GroupedSurface,shape=RoundedCornerShape(16.dp)){
-                Row(Modifier.fillMaxWidth().padding(start=16.dp,end=10.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
-                    Column(Modifier.weight(1f)){Text("记住密码",fontSize=15.sp,fontWeight=FontWeight.Medium);Text("仅在这台设备加密保存",fontSize=12.sp,color=Muted)}
-                    Switch(checked=d.remember,onCheckedChange={vm.draft=d.copy(remember=it)},modifier=Modifier.semantics{contentDescription="记住密码"})
-                }
-            }}
-            vm.error?.let{message->item{Text(message,color=MaterialTheme.colorScheme.error,fontSize=14.sp)}}
-            item{Button(onClick={vm.connectDraft()},enabled=!vm.busy,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp).padding(top=4.dp),shape=RoundedCornerShape(18.dp),contentPadding=PaddingValues(16.dp)){
-                if(vm.busy){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp,color=MaterialTheme.colorScheme.onPrimary);Spacer(Modifier.width(10.dp))}
-                Text(if(vm.busy)"正在连接…"else"连接并浏览",fontSize=16.sp)
-            }}
-            if(vm.busy)item{TextButton(onClick={vm.cancelOperation()},modifier=Modifier.fillMaxWidth()){Text("取消连接")}}
-            if(vm.sources.any{it.id==d.source.id})item{TextButton(onClick={vm.deleteDraft()},modifier=Modifier.fillMaxWidth()){Text("移除此来源",color=MaterialTheme.colorScheme.error)}}
-        }
-    }
-}
 @Composable fun Field(label:String,value:String,change:(String)->Unit){PlayerField(label,value,change=change)}
 fun formatSize(n:Long)=when{n>=1L.shl(30)->"%.1f GB".format(n.toDouble()/(1L.shl(30)));n>=1L.shl(20)->"%.1f MB".format(n.toDouble()/(1L.shl(20)));else->"${n/1024} KB"}
 
-@Composable fun SourceDialogs(vm:LibraryViewModel){
+@Composable fun SourceDialogs(vm:LibraryViewModel,requestNearby:()->Unit={}){
     ShareSelectionDialog(vm)
     PrivateSourceAccessPrompt(vm)
     vm.access?.let{access->AlertDialog(onDismissRequest={vm.dismissAccess()},title={Text("验证来源")},text={Column{
@@ -238,7 +170,7 @@ fun formatSize(n:Long)=when{n>=1L.shl(30)->"%.1f GB".format(n.toDouble()/(1L.shl
         Row(verticalAlignment=Alignment.CenterVertically){Text("在本机记住密码",Modifier.weight(1f),fontSize=14.sp);Switch(checked=access.remember,onCheckedChange={vm.updateAccess(remember=it)})}
         vm.error?.let{Text(it,color=MaterialTheme.colorScheme.error,fontSize=13.sp)}
     }},confirmButton={TextButton(onClick={vm.connectAccess()},enabled=!vm.busy){Text(if(vm.busy)"正在连接…"else"打开来源")}},dismissButton={TextButton(onClick={vm.dismissAccess()}){Text("取消")}})}
-    vm.draft?.let{d ->ConnectionDialog(vm,d)}
+    vm.draft?.let{d ->ConnectionDialog(vm,d,requestNearby)}
     vm.trust?.let{t ->AlertDialog(onDismissRequest={vm.rejectKey()},title={Text(if(t.previous==null)"核验 SFTP 服务器身份" else "服务器身份发生变化")},text={Column{
         Text("请通过服务器管理员或独立渠道核对指纹。未信任前不会发送账号认证信息。")
         Spacer(Modifier.height(12.dp));Text(t.source.authority,fontWeight=FontWeight.Bold)

@@ -30,33 +30,7 @@ import io.localplayer.core.Protocol
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun WebDavConnectionDialog(vm:LibraryViewModel,d:Draft) {
-    var manual by rememberSaveable(d.source.id){mutableStateOf(d.webDavUrl.trim()!="https://" && d.webDavUrl.isNotBlank())}
-    if(manual){ExistingConnectionDialog(vm,d,onChooseCloud={manual=false},onDismiss={manual=false});return}
-    val state=rememberModalBottomSheetState(skipPartiallyExpanded=true)
-    ModalBottomSheet(onDismissRequest={vm.dismissDraft()},sheetState=state,containerColor=Paper.copy(alpha=.97f),
-        shape=RoundedCornerShape(topStart=32.dp,topEnd=32.dp),scrimColor=Ink.copy(alpha=.22f)) {
-        SheetGlassEffect()
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-form"),
-            contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            item { Column(Modifier.padding(bottom=8.dp)) {
-                Text("连接来源",fontSize=26.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(6.dp));Text("让你的私人片库，近在眼前。",fontSize=14.sp,color=Muted)
-            } }
-            item { Row(Modifier.fillMaxWidth().background(GroupedSurface,RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()) {
-                Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)) {
-                    if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=if(p==Protocol.SMB)"445"else"22",browsePath=null)
-                } }
-            } }
-            item { CloudProviderPicker(onConnected=vm::cloudConnected) }
-            item { OutlinedButton(onClick={manual=true},modifier=Modifier.fillMaxWidth().heightIn(min=54.dp).testTag("manual-webdav"),shape=RoundedCornerShape(18.dp)) {Text("使用 WebDAV 地址")} }
-            item { Text("已有 OpenList、NAS 或自建服务地址，可直接连接。",Modifier.padding(horizontal=4.dp),fontSize=13.sp,lineHeight=19.sp,color=Muted) }
-        }
-    }
-}
-
-@Composable internal fun CloudProviderPicker(gateway:CloudAppGateway?=null,onConnected:((io.localplayer.core.Source)->Unit)?=null) {
+@Composable internal fun CloudProviderPicker(gateway:CloudAppGateway?=null,onConnected:((io.localplayer.core.Source)->Unit)?=null,onFailureMessage:((String)->Unit)?=null) {
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
     var authorizing by remember{mutableStateOf(false)}
@@ -77,7 +51,7 @@ import kotlinx.coroutines.CancellationException
             CloudProvider.entries.forEach { p->Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
                 GlassSurface(Modifier.fillMaxWidth().testTag("cloud-open-${p.name}").clickable(role=Role.Button) {
                     if(p==CloudProvider.ALIYUNPAN && gateway==null && onConnected!=null && statuses[p]==CloudAppStatus.AVAILABLE){
-                        if(!authorizing)authorizationJob=scope.launch{authorizing=true;try{onConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){authError=e.message ?: "授权失败，请重试"}finally{authorizing=false}}
+                        if(!authorizing)authorizationJob=scope.launch{authorizing=true;try{onConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){val message=e.message ?: "授权失败，请重试";if(onFailureMessage!=null)onFailureMessage(message)else authError=message}finally{authorizing=false}}
                         return@clickable
                     }
                     val result=apps.open(p);statuses=CloudProvider.entries.associateWith(apps::status)
