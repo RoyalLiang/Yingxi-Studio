@@ -178,20 +178,22 @@ interface AliyunAccess { fun <T> authorized(cancellation: Cancellation, action: 
 class AliyunConnector(private val api: AliyunApi, private val access: AliyunAccess, private val rememberName: (String, String) -> Unit = { _, _ -> }) : Connector {
     override fun connect(source: Source, credentials: Credentials, cancellation: Cancellation): RemoteSession {
         require(source.protocol == Protocol.ALIYUN && source.domain.isNotBlank())
+        cancellation.check()
+        val sessionCancellation=Cancellation().also(cancellation::own)
         return object : RemoteSession {
             private fun id(path: String) = Paths.clean(path).substringAfterLast('/').ifEmpty { "root" }
-            override fun list(path: String): List<Entry> = access.authorized(cancellation) { token ->
-                api.list(token, source.domain, id(path), cancellation).map { item ->
+            override fun list(path: String): List<Entry> = access.authorized(sessionCancellation) { token ->
+                api.list(token, source.domain, id(path), sessionCancellation).map { item ->
                     rememberName(item.id, item.name)
                     Entry(item.name, Paths.join(path, item.id), item.directory, item.size, item.createdAt)
                 }.sortedWith(MediaOrdering.entries)
             }
             override fun open(path: String): RemoteFile {
-                val file = access.authorized(cancellation) { api.file(it, source.domain, id(path), cancellation) }
+                val file = access.authorized(sessionCancellation) { api.file(it, source.domain, id(path), sessionCancellation) }
                 if (file.directory || file.size <= 0) throw IOException("该文件无法播放")
-                return AliyunRangeFile(file.size, cancellation) { handle -> access.authorized(handle) { api.download(it, source.domain, file.id, handle) } }
+                return AliyunRangeFile(file.size, sessionCancellation) { handle -> access.authorized(handle) { api.download(it, source.domain, file.id, handle) } }
             }
-            override fun close() { cancellation.close() }
+            override fun close() { sessionCancellation.close();cancellation.release(sessionCancellation) }
         }
     }
 }

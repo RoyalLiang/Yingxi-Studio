@@ -90,6 +90,14 @@ import java.util.Locale
                     }}
                 }}
                 if(texts.isEmpty())item{Text("影片没有内嵌字幕，可以载入本机 SRT / VTT 文件。",fontSize=13.sp,lineHeight=20.sp,color=Color(0xFFB9B9BF))}
+                item {
+                    val state by OnlineSubtitles.status.collectAsState()
+                    val message=state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.second
+                    OutlinedButton(onClick={OnlineSubtitles.request(context,controller)},enabled=message!="正在匹配字幕…",modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-subtitles")){
+                        Text(message?:"自动匹配在线字幕",maxLines=2)
+                    }
+                    Text("射手字幕 · 按影片指纹匹配",fontSize=12.sp,color=Color(0xFFB9B9BF))
+                }
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
             }
                 }

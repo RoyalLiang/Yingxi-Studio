@@ -118,7 +118,8 @@ internal object MediaThumbnails {
                 })
             }
             cancellation.check()
-            val bitmap = retriever.getScaledFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
+            val bitmap = retriever.embeddedPicture?.let(MediaPosters::decode)
+                ?: retriever.getScaledFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
                 ?: retriever.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
                 ?: return@withContext null
             cancellation.check()
@@ -170,7 +171,11 @@ internal fun MediaThumbnail(media: MediaRef, modifier: Modifier = Modifier) {
     val bitmap by key(media.key,media.location,media.sizeBytes,media.localUri) {
         produceState<Bitmap?>(null, revision) {
             // Keep the displayed frame while other cache entries notify observers.
-            value = MediaThumbnails.load(context, media)
+            coroutineScope {
+                launch { MediaPosters.load(context,media)?.let { value=it } }
+                val frame=MediaThumbnails.load(context,media)
+                if(value==null)value=frame
+            }
         }
     }
     Box(modifier.clip(RoundedCornerShape(13.dp)).background(Berry.copy(alpha = .08f)), contentAlignment = Alignment.Center) {

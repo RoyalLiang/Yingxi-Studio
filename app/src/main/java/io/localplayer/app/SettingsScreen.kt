@@ -104,9 +104,10 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
             Text(if(about)"版本与更新" else "设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold)
         }
-        LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+        LazyColumn(Modifier.weight(1f),state=remember(about){androidx.compose.foundation.lazy.LazyListState()},contentPadding=PaddingValues(horizontal=20.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
             if(!about) {
-                item{Text("关于映汐播放器",Modifier.padding(start=4.dp),fontSize=13.sp,color=Muted,fontWeight=FontWeight.SemiBold)}
+                item { EnrichmentSettings() }
+            item{Text("关于映汐播放器",Modifier.padding(start=4.dp),fontSize=13.sp,color=Muted,fontWeight=FontWeight.SemiBold)}
                 item{Surface(onClick={about=true},shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("app-version")){
                     Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically){
                         Icon(Icons.Rounded.Info,null,tint=Berry);Spacer(Modifier.width(16.dp))
@@ -129,4 +130,22 @@ internal class SettingsViewModel(app:Application):AndroidViewModel(app) {
             }
         }
     }
+}
+
+@Composable internal fun EnrichmentSettings(){
+    val context=LocalContext.current
+    val prefs=remember(context){EnrichmentPreferences(context)}
+    var posters by remember{mutableStateOf(prefs.posters)}
+    var subtitles by remember{mutableStateOf(prefs.subtitles)}
+    var bilingual by remember{mutableStateOf(prefs.bilingual)}
+    Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(18.dp)){
+        Text("海报与字幕",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));Switch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
+        Text("优先使用目录海报，再按片名匹配公开资料。仅发送片名，不发送服务器地址或账户。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));Switch(subtitles,{subtitles=it;prefs.subtitles=it;if(!it)OnlineSubtitles.cancel()})}
+        Text("没有内嵌字幕时，通过射手接口发送影片指纹和文件名查找字幕，优先简体中文，兼容双语。可在音字幕面板手动重试。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
+        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));Switch(bilingual,{bilingual=it;prefs.bilingual=it})}
+        Text("海报资料：Wikipedia / TVmaze（CC BY-SA）。具体图片版权见来源页。",fontSize=12.sp,lineHeight=19.sp,color=Muted)
+        TextButton(onClick={MediaPosters.clear(context);MediaThumbnails.changes.value++}){Text("清理海报缓存")}
+    }}
 }

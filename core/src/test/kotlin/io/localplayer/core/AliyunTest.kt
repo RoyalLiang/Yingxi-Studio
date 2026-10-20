@@ -7,6 +7,30 @@ import java.io.IOException
 import kotlin.test.*
 
 class AliyunTest {
+    @Test fun parentCancellationStillStopsDirectorySession() = MockWebServer().use { server ->
+        val parent=Cancellation()
+        val access=object:AliyunAccess{override fun <T> authorized(cancellation:Cancellation,action:(String)->T):T=action("synthetic-token")}
+        val source=Source(label="Cloud",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
+        val session=AliyunConnector(api(server),access).connect(source,Credentials(""),parent)
+        parent.close()
+        assertFailsWith<java.io.InterruptedIOException>{session.list("")}
+        session.close()
+        assertEquals(0,server.requestCount)
+    }
+
+    @Test fun closingDirectorySessionDoesNotCancelHistoryReplay() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""{"items":[{"file_id":"video","name":"01.mp4","type":"file","size":42}],"next_marker":""}"""))
+            val parent=Cancellation()
+            val access=object:AliyunAccess{override fun <T> authorized(cancellation:Cancellation,action:(String)->T):T=action("synthetic-token")}
+            val source=Source(label="Cloud",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
+            val files=AliyunConnector(api(server),access).connect(source,Credentials(""),parent).use{it.list("")}
+            parent.check()
+            assertEquals("video",files.single().path)
+            parent.close()
+        }
+    }
+
     @Test fun pkceUsesIndependentSecureVerifiers() {
         val grants = (1..500).map { AliyunGrant.create() }
         assertEquals(500, grants.map { it.verifier }.toSet().size)
