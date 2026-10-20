@@ -27,6 +27,6 @@ def main():
         if obj['type']!='commit' or obj['sha']!=metadata['sourceCommit']:raise ValueError('Existing tag refers to a different source; no overwrite allowed')
     elif '404' not in ref.stderr:raise ValueError('Cannot verify release tag state')
     command=['gh','release','create',tag,'--repo',repo,'--target',metadata['sourceCommit'],'--title','映汐播放器 iOS '+metadata['versionName']+'（未签名）','--prerelease','--notes-file',str(out/'release-notes.md')]
-    subprocess.run(command+[str(p) for p in assets]+[str(out/'IOS-SHA256SUMS')],check=True)
+    subprocess.run(command+[str(p) for p in assets if p.suffix in {'.ipa','.zip'}],check=True)
 
 if __name__=='__main__':main()

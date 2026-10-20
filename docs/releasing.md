@@ -44,7 +44,11 @@
 
 ## 发布资产与验证边界
 
-Release 仅上传版本化签名 APK、`SHA256SUMS`、`yingxi-release.json`、第三方声明和依赖清单。元数据记录源码 SHA、版本、APK SHA256 和证书指纹；本地账户、服务器地址、测试数据和运行日志不上传。
+Release 只附加版本化签名 APK；源码 ZIP/TAR 由 GitHub 自动提供。校验清单、元数据、第三方声明、依赖和验证截图保留在 CI artifacts 与本地交付记录，不作为 Release 附件。APK 内保留第三方许可声明。
+
+更新器从 GitHub APK asset 的文件名、大小和 `sha256:` digest 读取候选信息，下载后核对摘要，并用当前安装应用的签名证书授权覆盖安装。缺 digest 时不降级为仅核对大小。旧版依赖 JSON 附件，精简后可能需要手动安装新版本一次。
+
+发布历史从不可变标签下的 `version.json` 及历史正式 APK 实际验签读取，继续校验全部 Android 渠道的版本码递增和签名连续性；证据不足时拒绝发布。清理既有附件前，先将原文件与摘要保存到 CI artifact，备份成功后再按 asset ID 和未变的摘要删除；安装包与源码保留。
 
 本地构建、CI 成功、GitHub Release 发布和实际手机运行是不同证据。双语说明应明确目标真机、现场 NAS、无线网络和高码率媒体是否实际验证。发布成功不能代替这些验收。
 
@@ -58,3 +62,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
 发布后的真实状态见 [GitHub Actions](https://github.com/RoyalLiang/Yingxi-Studio/actions) 和 [GitHub Releases](https://github.com/RoyalLiang/Yingxi-Studio/releases)。
+
+## iOS 发布暂停
+
+按用户要求暂停后续 iOS 自动发布；工作流只接受手动构建，发布 job 禁用。已发布版本保留安装包与自动源码，审计附件转入内部记录。恢复发布需要用户明确要求，不自动递增 iOS 版本。

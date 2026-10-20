@@ -1,8 +1,6 @@
 name: iOS alpha
+# iOS publishing is paused at the user's request. Manual builds retain CI artifacts only.
 on:
-  push:
-    branches: [main, dev_ios_alpha, dev_aliyun_integration]
-    paths: ['ios/**', 'scripts/build_ios.py', 'scripts/publish_ios.py', '.github/workflows/ios-alpha.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +36,7 @@ jobs:
           compression-level: 0
           retention-days: 14
   publish:
-    if: github.ref == 'refs/heads/main'
+    if: ${{ false }} # Publishing paused; do not enable without the user's request.
     needs: build
     runs-on: ubuntu-24.04
     permissions:

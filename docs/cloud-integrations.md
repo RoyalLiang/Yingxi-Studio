@@ -10,6 +10,10 @@ Android 与 iOS 已加入阿里云盘公开客户端 PKCE 登录、原生回跳�
 
 当前官方公开授权入口已用注册 AppID 核对：Android `source=app` 返回 `smartdrive` URI；iOS `source=appLink` 返回官方 HTTPS `/applink/authorize` Universal Link。完整的真实账号授权、目录与视频仍需在真机完成，不把接口可达或受控测试写成网盘联调通过。
 
+Android 真机联调反馈：已在阿里云盘同意授权，回到播放器后 HTTP 400，范围缩小至换码或账户读取，尚未取得具体阶段及官方业务错误码。alpha.8 起错误框显示固定操作名称、允许显示的官方错误码和请求编号；不显示服务端原始消息、请求 URL、授权码或令牌。排查时只提供错误框和操作步骤，无需发送凭据。公开授权入口在主机与 Android 模拟器成功，不等于真实回跳、换码或账户读取已经通过。
+
+Android alpha.8 的 S256 challenge 保留 Base64 末尾 `=`，与已核对版本的两端官方 SDK 一致。verifier 仍为 32 字节强随机值的 URL-safe 编码。先前使用无补位 challenge；本次协议兼容性调整不等于已经证实真机 400 根因，也未改变暂停发布的 iOS 安装包。
+
 ## 安全设计决策
 
 沿用官方原生协议，自行实现小型适配层，避免直接继承 SDK 的令牌持久化和 PKCE 生成方式。固定研究版本为 Android `7a1f62c1d657372d52603eccf7a219aa9a947069`、iOS `66cdb2679e9cbacd7f682e43e784cf481f200a5a`。

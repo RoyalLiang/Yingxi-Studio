@@ -27,14 +27,17 @@ class UpdateDownloadTest {
         val signer=MessageDigest.getInstance("SHA-256").digest(archive.signingInfo!!.apkContentsSigners.single().toByteArray()).hex()
         val hash=sample.inputStream().use { input->val digest=MessageDigest.getInstance("SHA-256");val buffer=ByteArray(65536);while(true){val n=input.read(buffer);if(n<0)break;digest.update(buffer,0,n)};digest.digest().hex() }
         val prefix="https://github.com/${AppUpdates.REPOSITORY}/releases/download/v${version.name}/"
-        val manifest=JSONObject().put("formatVersion",1).put("versionName",version.name).put("versionCode",version.code).put("fileName","candidate.apk").put("sizeBytes",sample.length()).put("sha256",hash).put("signerSha256",signer)
+        val assetName="yingxi-${version.name}-${version.code}.apk"
         val release=JSONObject().put("tag_name","v${version.name}").put("prerelease",true).put("body","Synthetic signed update")
-            .put("assets",JSONArray().put(JSONObject().put("name","yingxi-release.json").put("browser_download_url",prefix+"yingxi-release.json"))
-                .put(JSONObject().put("name","candidate.apk").put("size",sample.length()).put("browser_download_url",prefix+"candidate.apk")))
+            .put("assets",JSONArray().put(JSONObject().put("name",assetName).put("state","uploaded").put("digest","sha256:"+hash).put("size",sample.length()).put("browser_download_url",prefix+assetName)))
+        val installed=installedVersion(context)
+        val legacyName="yingxi-${installed.name}-${installed.code}.apk"
+        val legacy=JSONObject().put("tag_name","v${installed.name}").put("prerelease",true)
+            .put("assets",JSONArray().put(JSONObject().put("name",legacyName).put("size",1))) // Old digest-less asset cannot block a newer update.
         val requests=mutableListOf<String>()
         val client=AppUpdates(context){url->
             requests.add(url)
-            val bytes=when { url.startsWith("https://api.github.com/")->JSONArray().put(release).toString().toByteArray();url.endsWith("yingxi-release.json")->manifest.toString().toByteArray();else->null }
+            val bytes=when { url.startsWith("https://api.github.com/")->JSONArray().put(release).put(legacy).toString().toByteArray();else->null }
             object:HttpURLConnection(URL(url)) {
                 override fun disconnect(){}
                 override fun usingProxy()=false
@@ -64,7 +67,7 @@ class UpdateDownloadTest {
             catch(e:kotlinx.coroutines.CancellationException){cancelled=true}
             assertTrue(cancelled)
             assertFalse(File(directory,"candidate.apk.part").exists());assertFalse(File(directory,"candidate.apk").exists())
-            assertEquals(5,requests.size)
+            assertEquals(4,requests.size);assertFalse(requests.any{it.endsWith(".json")})
         } finally {File(directory,"candidate.apk").delete();File(directory,"candidate.apk.part").delete()}
     }
     private fun ByteArray.hex()=joinToString(""){"%02x".format(it)}

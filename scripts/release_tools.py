@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
-from versioning import load
+from versioning import load, validate
 from release_notes import load_notes, render_notes
 
 def run(*args): return subprocess.check_output(args, text=True).strip()
@@ -35,6 +35,35 @@ def verify_assets(directory):
     if seen!=expected-{"SHA256SUMS"}: raise ValueError("Release checksum coverage is incomplete")
     if sha(directory/manifest["fileName"])!=manifest["sha256"]: raise ValueError("APK checksum mismatch")
     return manifest
+
+
+def historical_apk(version, release):
+    if release['tag_name'] != version['tag']:
+        raise ValueError('Historical tag and source version disagree')
+    name=f'yingxi-{version["versionName"]}-{version["versionCode"]}.apk'
+    matches=[a for a in release['assets'] if a['name']==name]
+    if len(matches)!=1:
+        raise ValueError('Historical release must contain its unique official APK')
+    return name
+
+
+def previous_from_apk(root, repo, release, destination):
+    tag=release['tag_name']
+    if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?',tag):
+        raise ValueError('Unrecognized Android release tag')
+    version=validate(json.loads(run('git','-C',str(root),'show',f'refs/tags/{tag}:version.json')))
+    name=historical_apk(version,release)
+    subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',f'refs/tags/{tag}','origin/main'],check=True)
+    subprocess.run(['gh','release','download',tag,'--repo',repo,'--pattern',name,'--dir',str(destination)],check=True)
+    sdk=Path(os.environ.get('ANDROID_HOME') or os.environ['ANDROID_SDK_ROOT'])/'build-tools/36.0.0'
+    badging=run(str(sdk/'aapt'),'dump','badging',str(destination/name))
+    package=re.search(r"package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'",badging)
+    if not package or package.groups()!=('io.localplayer.app',str(version['versionCode']),version['versionName']) or 'application-debuggable' in badging:
+        raise ValueError('Historical APK does not match its tagged source')
+    signature=run(str(sdk/'apksigner'),'verify','--verbose','--print-certs',str(destination/name))
+    signer=re.search(r'Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]{64})',signature)
+    if not signer:raise ValueError('Historical APK has no verified signer')
+    return {**version,'signerSha256':signer.group(1).lower()}
 
 def prepare(args):
     root=Path(__file__).resolve().parents[1];version=load(root)
@@ -81,14 +110,14 @@ def publish(args):
             if release["tag_name"]==args.tag:
                 if not release["draft"]: raise ValueError("This version is already published; releases are never replaced")
                 if release["target_commitish"]!=metadata["sourceCommit"]: raise ValueError("Existing draft belongs to a different commit")
+                if any(asset['name']!=metadata['fileName'] for asset in release['assets']):
+                    raise ValueError('Existing draft has extra assets; back them up and clean them before publication')
                 draft=release;continue
             if release["draft"]: continue
             # iOS has an independent version/signing history and a separate manifest.
             if re.fullmatch(r"ios-v\d+\.\d+\.\d+-alpha\.\d+", release["tag_name"]): continue
-            if not any(a["name"]=="yingxi-release.json" for a in release["assets"]): raise ValueError("Published version history lacks metadata; migrate it before publishing")
             destination=Path(temp)/str(release["id"]);destination.mkdir()
-            subprocess.run(["gh","release","download",release["tag_name"],"--repo",repo,"--pattern","yingxi-release.json","--dir",str(destination)],check=True)
-            previous.append(json.loads((destination/"yingxi-release.json").read_text()))
+            previous.append(previous_from_apk(Path(run("git","rev-parse","--show-toplevel")),repo,release,destination))
     check_previous(metadata,previous)
     with tempfile.TemporaryDirectory() as temp:
         notes=Path(temp)/"notes.md"
@@ -98,7 +127,7 @@ def publish(args):
             command=["gh","release","create",args.tag,"--repo",repo,"--verify-tag","--target",metadata["sourceCommit"],"--draft","--title","映汐播放器 "+metadata["versionName"],"--notes-file",str(notes)]
             if metadata["prerelease"]: command.append("--prerelease")
             subprocess.run(command,check=True)
-        subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",*[str(p) for p in sorted(directory.iterdir())]],check=True)
+        subprocess.run(["gh","release","upload",args.tag,"--repo",repo,"--clobber",str(directory/metadata['fileName'])],check=True)
         command=["gh","release","edit",args.tag,"--repo",repo,"--draft=false","--prerelease="+str(metadata["prerelease"]).lower(),"--notes-file",str(notes)]
         command.append("--latest=false" if metadata["prerelease"] else "--latest")
         subprocess.run(command,check=True)

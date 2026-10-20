@@ -18,10 +18,13 @@ internal fun installedVersion(context:Context):AppVersion = context.packageManag
 
 internal data class AppRelease(val version:AppVersion,val notes:String,val url:String,val size:Long,val sha256:String,val signer:String)
 
-/** Uses the existing immutable GitHub release manifest, including prereleases on an alpha build. */
+/** Uses GitHub's APK digest and the installed signing identity. */
 internal class AppUpdates(private val context:Context,private val transport:(String)->HttpURLConnection=Companion::connect) {
     suspend fun check():AppRelease? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val current=installedVersion(context)
+        val installed=context.packageManager.getPackageInfo(context.packageName,PackageManager.GET_SIGNING_CERTIFICATES)
+        val signer=installed.signingInfo?.apkContentsSigners?.singleOrNull()?.toByteArray()?.let{MessageDigest.getInstance("SHA-256").digest(it).hex()}
+            ?: throw IOException("无法读取当前应用签名")
         var best:AppRelease?=null
         for(page in 1..10) {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -30,11 +33,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 val release=releases.getJSONObject(index)
                 if(release.optBoolean("draft") || (release.optBoolean("prerelease") && !current.isPrerelease))continue
-                val assets=release.getJSONArray("assets")
-                val manifest=(0 until assets.length()).map{assets.getJSONObject(it)}.firstOrNull{it.optString("name")=="yingxi-release.json"} ?: continue
-                val manifestUrl=manifest.getString("browser_download_url")
-                requireReleaseUrl(manifestUrl)
-                val parsed=parseManifest(JSONObject(fetch(manifestUrl,64*1024).toString(Charsets.UTF_8)),release)
+                val parsed=parseAssetRelease(release,signer,current.code) ?: continue
                 if(parsed.version.code>current.code && parsed.version.code>(best?.version?.code ?: 0))best=parsed
             }
             if(releases.length()<100)return@withContext best
@@ -87,6 +86,28 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
         }
 
     companion object {
+        fun parseAssetRelease(release:JSONObject,signer:String,minimumCode:Long=0):AppRelease? {
+            val tag=release.optString("tag_name")
+            if(!Regex("v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?").matches(tag))return null
+            require(signer.matches(Regex("[a-f0-9]{64}"))){"当前签名信息无效"}
+            val name=tag.removePrefix("v")
+            val assets=release.getJSONArray("assets")
+            val pattern=Regex("yingxi-${Regex.escape(name)}-([1-9][0-9]*)\\.apk")
+            val matches=(0 until assets.length()).map{assets.getJSONObject(it)}.filter{pattern.matches(it.optString("name"))}
+            if(matches.isEmpty())return null
+            val codes=matches.map{pattern.matchEntire(it.getString("name"))!!.groupValues[1].toLongOrNull() ?: throw IOException("安装序号无效")}
+            if(codes.all{it<=minimumCode})return null
+            val asset=matches.singleOrNull() ?: throw IOException("未找到唯一的正式安装包，请前往发布页查看")
+            val code=pattern.matchEntire(asset.getString("name"))!!.groupValues[1].toLongOrNull() ?: throw IOException("安装序号无效")
+            require(code in 1..2_100_000_000){"安装序号无效"}
+            val digest=asset.optString("digest")
+            require(Regex("sha256:[a-fA-F0-9]{64}").matches(digest)){"安装包缺少 SHA-256，请前往发布页手动更新"}
+            val size=asset.getLong("size");require(size in 1..MAX_APK){"无效的安装包大小"}
+            require(asset.optString("state")=="uploaded"){"安装包尚未上传完成"}
+            val url=asset.getString("browser_download_url");requireReleaseUrl(url)
+            require(URI(url).path.substringBeforeLast('/').substringAfterLast('/')==tag && URI(url).path.substringAfterLast('/')==asset.getString("name")){"安装包与版本不一致"}
+            return AppRelease(AppVersion(name,code),release.optString("body").take(32000),url,size,digest.substringAfter(':').lowercase(),signer)
+        }
         const val REPOSITORY="RoyalLiang/Yingxi-Studio"
         const val RELEASES_PAGE="https://github.com/$REPOSITORY/releases"
         fun parseManifest(manifest:JSONObject,release:JSONObject):AppRelease {
