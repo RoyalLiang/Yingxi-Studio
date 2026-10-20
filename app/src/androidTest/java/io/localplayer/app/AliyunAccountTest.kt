@@ -36,6 +36,21 @@ class AliyunAccountTest {
         assertFalse(AliyunCloud.callback(Intent().putExtra("code","untrusted-code")))
         assertEquals(before,store.load().map { it.id })
     }
+    @Test fun concurrentCredentialCommitAndDeleteAcrossStoresCannotResurrectSource() {
+        val writer=SourceStore(context);val remover=SourceStore(context)
+        val source=Source(id="test-race-"+UUID.randomUUID(),label="并发账户验证",protocol=Protocol.ALIYUN,host="openapi.alipan.com",root="/",domain="test-drive")
+        val ready=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
+        val deleting=java.util.concurrent.CountDownLatch(1);val deleted=java.util.concurrent.CountDownLatch(1)
+        val failure=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val save=Thread{try{writer.save(source,"test-token",true){ready.countDown();check(release.await(5,java.util.concurrent.TimeUnit.SECONDS));true}}catch(t:Throwable){failure.set(t)}}
+        val remove=Thread{deleting.countDown();remover.delete(source.id);deleted.countDown()}
+        try{
+            save.start();assertTrue(ready.await(5,java.util.concurrent.TimeUnit.SECONDS));remove.start();assertTrue(deleting.await(5,java.util.concurrent.TimeUnit.SECONDS))
+            assertFalse("Delete must serialize with an in-flight credential commit",deleted.await(150,java.util.concurrent.TimeUnit.MILLISECONDS))
+            release.countDown();save.join(5000);remove.join(5000)
+            assertFalse(save.isAlive);assertFalse(remove.isAlive);assertNull(failure.get());assertNull(writer.password(source.id));assertFalse(writer.load().any{it.id==source.id})
+        }finally{release.countDown();save.join(5000);if(remove.state!=Thread.State.NEW)remove.join(5000);remover.delete(source.id)}
+    }
     @Test fun missingAppDoesNotStartAuthorizationOrCreateSource() = runBlocking {
         assertEquals(CloudAppStatus.NOT_INSTALLED,AndroidCloudApps(context).status(CloudProvider.ALIYUNPAN))
         val before=SourceStore(context).load().map { it.id }

@@ -141,19 +141,20 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
                 api.list(token, source.domain, id(path), cancellation).map { item ->
                     rememberName(item.id, item.name)
                     Entry(item.name, Paths.join(path, item.id), item.directory, item.size, item.createdAt)
-                }
+                }.sortedWith(MediaOrdering.entries)
             }
             override fun open(path: String): RemoteFile {
                 val file = access.authorized(cancellation) { api.file(it, source.domain, id(path), cancellation) }
                 if (file.directory || file.size <= 0) throw IOException("该文件无法播放")
-                return AliyunRangeFile(file.size, cancellation) { access.authorized(cancellation) { api.download(it, source.domain, file.id, cancellation) } }
+                return AliyunRangeFile(file.size, cancellation) { handle -> access.authorized(handle) { api.download(it, source.domain, file.id, handle) } }
             }
             override fun close() { cancellation.close() }
         }
     }
 }
 
-internal class AliyunRangeFile(override val size: Long, private val cancellation: Cancellation, private val resolve: () -> String) : RemoteFile {
+internal class AliyunRangeFile(override val size: Long, private val parent: Cancellation, private val resolve: (Cancellation) -> String) : RemoteFile {
+    private val cancellation = Cancellation().also(parent::own)
     private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).readTimeout(30, TimeUnit.SECONDS).build()
     private var url: String? = null
     private var response: okhttp3.Response? = null
@@ -173,9 +174,11 @@ internal class AliyunRangeFile(override val size: Long, private val cancellation
             val end = minOf(size - 1, position + minOf(8L * 1024 * 1024 - 1, size - 1 - position))
             for (attempt in 0..1) {
                 cancellation.check()
-                if (url == null) url = resolve()
+                if (url == null) url = resolve(cancellation)
+                cancellation.check()
                 val request = Request.Builder().url(url!!).header("Range", "bytes=$position-$end").header("Accept-Encoding", "identity").build()
                 val call = client.newCall(request); active = call
+                cancellation.check()
                 val result = call.execute()
                 if (result.code == 403 && attempt == 0) { result.close(); url = null; continue }
                 val expected = "bytes $position-$end/$size"
@@ -191,5 +194,5 @@ internal class AliyunRangeFile(override val size: Long, private val cancellation
         if (remaining == 0L) { response?.close(); stream = null; response = null }
         return count
     }
-    override fun close() { active?.cancel(); synchronized(this) { closed = true; response?.close(); stream = null; cancellation.release(transport) } }
+    override fun close() { cancellation.close(); synchronized(this) { closed = true; response?.close(); stream = null; parent.release(cancellation) } }
 }

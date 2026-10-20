@@ -37,10 +37,10 @@ class SourceStore(context: Context) {
         presentation.edit().putStringSet("pinned",pins).apply()
         true
     }
-    @Synchronized fun save(source: Source, password: String, remember: Boolean, stillCurrent: () -> Boolean = { true }) {
+    fun save(source: Source, password: String, remember: Boolean, stillCurrent: () -> Boolean = { true }) = synchronized(orderLock) {
         // Encrypt before updating the profile. Never fall back to plaintext on Keystore failure.
         val ciphertext = if (remember) encrypt(password) else null
-        if (!stillCurrent()) return
+        if (!stillCurrent()) return@synchronized
         secrets.edit().apply { if (ciphertext == null) remove(source.id) else putString(source.id, ciphertext) }.apply()
         val sources = load().filterNot { it.id == source.id } + source
         val a=JSONArray()
@@ -49,7 +49,7 @@ class SourceStore(context: Context) {
             .put("trustedKey",s.trustedKey ?: "").put("trustedAuthority",s.trustedAuthority ?: "").put("initialPath",s.initialPath).put("secure",s.secure).put("userAgent",s.userAgent).put("referer",s.referer)) }
         prefs.edit().putString("sources",a.toString()).apply()
     }
-    @Synchronized fun delete(id: String) {
+    fun delete(id: String) = synchronized(orderLock) {
         val a=JSONArray(prefs.getString("sources","[]"));val next=JSONArray()
         for(i in 0 until a.length()) if(a.getJSONObject(i).getString("id")!=id) next.put(a.getJSONObject(i))
         prefs.edit().putString("sources",next.toString()).apply();secrets.edit().remove(id).apply()

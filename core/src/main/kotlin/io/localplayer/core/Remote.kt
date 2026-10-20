@@ -71,6 +71,14 @@ class Cancellation : Closeable {
     private val cancelled = AtomicBoolean(false)
     private val resources = mutableListOf<Closeable>()
     fun release(resource: Closeable) { synchronized(resources) { resources.remove(resource) } }
+    fun <T> withLock(lock: java.util.concurrent.locks.ReentrantLock, action: () -> T): T {
+        while (true) {
+            check()
+            try { if (lock.tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) break }
+            catch (_: InterruptedException) { Thread.currentThread().interrupt(); throw InterruptedIOException("操作已取消") }
+        }
+        try { check(); return action() } finally { lock.unlock() }
+    }
     fun check() { if (cancelled.get() || Thread.currentThread().isInterrupted) throw InterruptedIOException("操作已取消") }
     fun own(resource: Closeable) {
         synchronized(resources) {
