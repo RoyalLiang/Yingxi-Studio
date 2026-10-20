@@ -19,6 +19,7 @@ struct RootView:View {
             switch result {case .success(let urls):if let url=urls.first{Task{await store.importFile(url)}};case .failure(let error):store.message=error.localizedDescription}
         }.fullScreenCover(item:$store.playing){target in PlaybackView(target:target,store:store)}
         .alert("提示",isPresented:Binding(get:{store.message != nil},set:{if !$0{store.message=nil}})){Button("知道了"){store.message=nil}}message:{Text(store.message ?? "")}
+        .onOpenURL{url in if !store.cloudAuthorization.callback(url){store.message="授权会话不存在或已过期，请重新授权。"}}
         .onAppear{
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-play-first"),let first=store.localFiles.first {DispatchQueue.main.asyncAfter(deadline:.now()+0.7){store.playLocal(first)}}
@@ -49,7 +50,11 @@ struct SourcesView:View {
     var body:some View {
         List {
             Section("已保存来源") {
-                if store.sources.isEmpty{ContentUnavailableView("连接你的片库",systemImage:"externaldrive",description:Text("支持 HTTPS WebDAV；SMB、SFTP 和网盘官方授权尚未接入 iOS 初版。"))}
+                Section("网盘"){
+                ForEach(store.cloudSources){source in NavigationLink{CloudBrowser(source:source)}label:{Label(source.name,systemImage:"cloud.fill")}.swipeActions{Button("移除",role:.destructive){store.removeCloud(source)}}}
+                CloudConnectButton()
+            }
+            if store.sources.isEmpty && store.cloudSources.isEmpty{ContentUnavailableView("连接你的片库",systemImage:"externaldrive",description:Text("支持 HTTPS WebDAV；SMB、SFTP 和网盘官方授权尚未接入 iOS 初版。"))}
                 ForEach(store.sources){source in NavigationLink{DAVBrowser(source:source,url:source.baseURL)}label:{Label(source.name,systemImage:"externaldrive.connected.to.line.below")}.swipeActions{Button("删除",role:.destructive){deleting=source}}}
             }
         }.navigationTitle("来源").toolbar{Button{adding=true}label:{Image(systemName:"plus")}}
@@ -108,6 +113,6 @@ struct DAVBrowser:View {
     }
 }
 struct AboutView:View {
-    var body:some View {List{Section("映汐播放器"){Text("iOS 0.1.0-alpha.1");Text("面向 iOS 27 的首个原生验证版本").foregroundStyle(.secondary)};Section("当前能力"){Text("本地视频 · HTTPS WebDAV · 系统播放控件 · 播放记录");Text("网盘 OAuth、SMB、SFTP、Android 自定义手势和解码能力尚未迁移。").foregroundStyle(.secondary)}}.navigationTitle("关于")}
+    var body:some View {List{Section("映汐播放器"){Text("iOS 0.1.0-alpha.2");Text("面向 iOS 27 的首个原生验证版本").foregroundStyle(.secondary)};Section("当前能力"){Text("本地视频 · HTTPS WebDAV · 系统播放控件 · 播放记录");Text("SMB、SFTP、Android 自定义手势和解码能力尚未迁移。").foregroundStyle(.secondary)}}.navigationTitle("关于")}
 }
 private func time(_ value:Double)->String{let total=max(0,Int(value.isFinite ? value : 0));return total>=3600 ? String(format:"%d:%02d:%02d",total/3600,total/60%60,total%60) : String(format:"%02d:%02d",total/60,total%60)}

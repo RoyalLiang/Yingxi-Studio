@@ -27,6 +27,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.localplayer.core.Protocol
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun WebDavConnectionDialog(vm:LibraryViewModel,d:Draft) {
@@ -43,19 +45,22 @@ import io.localplayer.core.Protocol
                 Spacer(Modifier.height(6.dp));Text("让你的私人片库，近在眼前。",fontSize=14.sp,color=Muted)
             } }
             item { Row(Modifier.fillMaxWidth().background(GroupedSurface,RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup()) {
-                Protocol.entries.forEach { p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)) {
+                Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { p->ChoicePill(if(p==Protocol.WEBDAV)"WebDAV" else p.name,d.source.protocol==p,Modifier.weight(1f)) {
                     if(d.source.protocol!=p)vm.draft=d.copy(source=d.source.copy(protocol=p,initialPath="",root=if(p==Protocol.SMB)""else"/",trustedKey=null,trustedAuthority=null),port=if(p==Protocol.SMB)"445"else"22",browsePath=null)
                 } }
             } }
-            item { CloudProviderPicker() }
+            item { CloudProviderPicker(onConnected=vm::cloudConnected) }
             item { OutlinedButton(onClick={manual=true},modifier=Modifier.fillMaxWidth().heightIn(min=54.dp).testTag("manual-webdav"),shape=RoundedCornerShape(18.dp)) {Text("使用 WebDAV 地址")} }
             item { Text("已有 OpenList、NAS 或自建服务地址，可直接连接。",Modifier.padding(horizontal=4.dp),fontSize=13.sp,lineHeight=19.sp,color=Muted) }
         }
     }
 }
 
-@Composable internal fun CloudProviderPicker(gateway:CloudAppGateway?=null) {
+@Composable internal fun CloudProviderPicker(gateway:CloudAppGateway?=null,onConnected:((io.localplayer.core.Source)->Unit)?=null) {
     val context=LocalContext.current
+    val scope=rememberCoroutineScope()
+    var authorizing by remember{mutableStateOf(false)}
+    var authError by remember{mutableStateOf<String?>(null)}
     val apps=remember(context,gateway){gateway ?: AndroidCloudApps(context)}
     val owner=LocalLifecycleOwner.current
     var statuses by remember(apps){mutableStateOf(CloudProvider.entries.associateWith(apps::status))}
@@ -66,23 +71,29 @@ import io.localplayer.core.Protocol
         onDispose{owner.lifecycle.removeObserver(observer)}
     }
     Column(Modifier.testTag("cloud-provider-picker"),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        Column {Text("选择网盘",fontSize=20.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(5.dp));Text("打开官方 App 登录；官方授权接入准备中。",fontSize=14.sp,lineHeight=20.sp,color=Muted)}
+        Column {Text("选择网盘",fontSize=20.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(5.dp));Text("授权后直接浏览和播放阿里云盘。",fontSize=14.sp,lineHeight=20.sp,color=Muted)}
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             CloudProvider.entries.forEach { p->Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
                 GlassSurface(Modifier.fillMaxWidth().testTag("cloud-open-${p.name}").clickable(role=Role.Button) {
+                    if(p==CloudProvider.ALIYUNPAN && gateway==null && onConnected!=null && statuses[p]==CloudAppStatus.AVAILABLE){
+                        if(!authorizing)scope.launch{authorizing=true;try{onConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){authError=e.message ?: "授权失败，请重试"}finally{authorizing=false}}
+                        return@clickable
+                    }
                     val result=apps.open(p);statuses=CloudProvider.entries.associateWith(apps::status)
                     if(result!=CloudLaunchResult.OPENED)feedback=p to result
                 },radius=22) {
                     Column(Modifier.fillMaxWidth().padding(vertical=22.dp,horizontal=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Image(painterResource(p.icon),contentDescription=null,modifier=Modifier.size(48.dp))
                         Text(p.title,fontSize=17.sp,fontWeight=FontWeight.SemiBold)
-                        Text(when(statuses[p]){CloudAppStatus.AVAILABLE->"打开官方 App";CloudAppStatus.NOT_INSTALLED->"未安装";else->"App 暂不可用"},fontSize=13.sp,color=Muted)
+                        Text(when(statuses[p]){CloudAppStatus.AVAILABLE->if(p==CloudProvider.ALIYUNPAN)"登录并授权"else"接入准备中";CloudAppStatus.NOT_INSTALLED->"未安装";else->"App 暂不可用"},fontSize=13.sp,color=Muted)
                     }
                 }
             } }
         }
         Text("网盘直连授权尚未启用；打开 App 不会自动添加播放来源。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
     }
+    if(authorizing) Text("正在等待阿里云盘授权，可返回重试。",color=Muted)
+    authError?.let{message->AlertDialog(onDismissRequest={authError=null},title={Text("授权未完成")},text={Text(message)},confirmButton={TextButton(onClick={authError=null}){Text("知道了")}})}
     feedback?.let { (p,result)->AlertDialog(onDismissRequest={feedback=null},
         title={Text(if(result==CloudLaunchResult.NOT_INSTALLED)"未安装${p.title}"else"${p.title}暂不可用")},
         text={Text(if(result==CloudLaunchResult.NOT_INSTALLED)"请先安装官方 App，再回到映汐打开。"else"无法打开官方 App，请检查它是否已被停用或受系统限制。")},
