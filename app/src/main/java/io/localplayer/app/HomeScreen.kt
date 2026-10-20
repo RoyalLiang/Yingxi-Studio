@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
 @Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit) {
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val continuing = vm.history.firstOrNull { !it.completed && it.positionMs > 0 && it.durationMs > 0 }
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
     BoxWithConstraints(Modifier.fillMaxSize()) {

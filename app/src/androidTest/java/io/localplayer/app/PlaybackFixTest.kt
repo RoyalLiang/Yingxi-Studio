@@ -94,14 +94,11 @@ class PlaybackFixTest {
                 }
             }}}
             ui.onNodeWithText("WEBDAV · 文件浏览").assertDoesNotExist()
-            ui.onNodeWithText("收藏文件夹").assertIsDisplayed()
-            val favorite=ui.onNodeWithText("收藏文件夹").fetchSemanticsNode().boundsInRoot
-            ui.onNodeWithTag("directory-actions").performScrollToNode(hasText("分组"))
-            val group=ui.onNodeWithText("分组").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-            assertEquals("Actions share one row",favorite.center.y,group.center.y,1f)
-            val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
-            ui.onNodeWithText("收藏文件夹",useUnmergedTree=true).performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
-            assertEquals("Favorite label remains one line",1,layouts.single().lineCount)
+            ui.onNodeWithTag("directory-actions").assertDoesNotExist()
+            ui.onNodeWithTag("source-menu:"+source.id).assertIsDisplayed().performClick()
+            ui.onNodeWithText("收藏").assertIsDisplayed()
+            ui.onNodeWithText("分组与快捷入口").assertIsDisplayed()
+
         }finally{instrumentation.runOnMainSync{owner.clear()}}
     }
 

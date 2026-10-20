@@ -247,7 +247,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(old!=null)CoroutineScope(Dispatchers.IO).launch{old.close()}
     }
     fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;rootSelectionId=null;error=null}
-    fun up(){if(path.isEmpty())closeSource()else browse(path.substringBeforeLast('/',""))}
+    fun currentDirectoryBookmark():SourceBookmark?=source?.let{SourceBookmark(it.id,path,if(path.isEmpty())it.label else currentFolderName)}
+    fun up(){if(path.isEmpty()||rootSelectionId==null&&path==source?.initialPath)closeSource()else browse(path.substringBeforeLast('/',""))}
     private fun remoteTarget(s:Source,c:Credentials,entry:Entry,listing:List<Entry>,fromStart:Boolean,requestedToken:HistoryToken?=null):PlayTarget? {
         val ref=MediaRef("${s.id}:${entry.path}",entry.name,s.label,s.id,entry.path,sizeBytes=entry.size,location=mediaLocation(s))
         val token=requestedToken ?: historyStore.token(ref.key)
