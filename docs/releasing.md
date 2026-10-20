@@ -5,8 +5,8 @@
 ## 提交一个新版本
 
 1. 在 `version.json` 设置新的 `versionName` 和 `versionCode`。
-2. 创建 `releases/v<versionName>.md`，参考已有版本说明。文件标题必须为 `# 映汐 <versionName> / Yingxi <versionName>`，随后依次包含 `## 中文` 和 `## English`。
-3. 中文部分包含 `### 更新内容`、`### 验证与限制`；英文部分包含 `### Changes`、`### Validation and limitations`。每节用实际内容描述改动和验证边界，不能留空或使用待填写标记。
+2. 创建 `releases/v<versionName>.md`，参考已有版本说明。文件标题使用 `# 映汐播放器 <versionName> / Yingxi <versionName>`，随后依次包含 `## 中文` 和 `## English`。
+3. 两种语言都只写本版实际改动的项目列表，采用已确认的“拾荒者短笺”语气。验证范围与限制单独保存在 CI 和交付记录，不放进 Release 正文。历史版本的说明格式仍可读取，不改写已发布内容。
 4. 验证并 commit、push 到 `main`。不要将其他任务未完成的改动混入提交。
 
 名称遵循 [SemVer](https://semver.org/)，支持 alpha、beta、rc、自定义预发布标识和正式版本。安装序号为 1–2100000000 的整数，每次发布必须高于所有已发布版本；名称和安装序号彼此独立。参见 [Android 版本规则](https://developer.android.com/studio/publish/versioning)。
@@ -21,7 +21,7 @@
 
 检查通过后，在 `release` environment 构建签名 APK，创建缺失的匹配版本标签，并验证 APK 身份、版本、非 debuggable、证书、mac 元数据和资产校验和。标签已存在时必须指向同一提交。自动标签由当前 workflow 直接继续发布，无需依赖标签触发第二条 workflow；这是因为 [GITHUB_TOKEN 创建的事件通常不触发其他 workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
-发布脚本读取全部已发布版本的元数据，拒绝安装序号倒退和签名身份改变。它先创建 draft，完整上传资产，再发布。页面正文来自本版本双语说明文件，并追加版本、安装序号和源码 SHA；恢复同一提交的 draft 时也会同步正文。失败可在 Actions 中重跑原任务；已发布版本、标签和资产不覆盖。
+发布脚本读取全部已发布版本的元数据，拒绝安装序号倒退和签名身份改变。它先创建 draft，完整上传资产，再发布。页面正文来自本版本双语改动说明。标题与不可变标签标识版本；安装序号、源码 SHA、证书与资产摘要保留在 CI 审计清单中。恢复同一提交的 draft 时也会同步正文。应用内“本版说明”在构建时从同一文件的中文改动列表生成。失败可在 Actions 中重跑原任务；已发布版本、标签和资产不覆盖。
 
 所有版本共用一个发布并发锁；Actions 固定完整提交 SHA。普通 CI 不取得签名密钥，发布 job 使用最小写权限。源码检查、构建或发布失败均不能记为已发版。
 
@@ -44,13 +44,13 @@
 
 ## 发布资产与验证边界
 
-Release 只附加版本化签名 APK；源码 ZIP/TAR 由 GitHub 自动提供。校验清单、元数据、第三方声明、依赖和验证截图保留在 CI artifacts 与本地交付记录，不作为 Release 附件。APK 内保留第三方许可声明。
+Release 附加版本化签名 APK 和 `source-code-<versionName>.zip`。源码包直接从本次不可变提交执行 `git archive` 生成，检查提交标记、版本、路径、可发布文件与摘要；本机未提交内容不会进入压缩包。GitHub 自动提供的 ZIP/TAR 下载入口继续保留。校验清单、元数据、第三方声明、依赖和验证截图保留在 CI artifacts 与本地交付记录，不作为 Release 附件。APK 内保留第三方许可声明。
 
 更新器从 GitHub APK asset 的文件名、大小和 `sha256:` digest 读取候选信息，下载后核对摘要，并用当前安装应用的签名证书授权覆盖安装。缺 digest 时不降级为仅核对大小。旧版依赖 JSON 附件，精简后可能需要手动安装新版本一次。
 
 发布历史从不可变标签下的 `version.json` 及历史正式 APK 实际验签读取，继续校验全部 Android 渠道的版本码递增和签名连续性；证据不足时拒绝发布。清理既有附件前，先将原文件与摘要保存到 CI artifact，备份成功后再按 asset ID 和未变的摘要删除；安装包与源码保留。
 
-本地构建、CI 成功、GitHub Release 发布和实际手机运行是不同证据。双语说明应明确目标真机、现场 NAS、无线网络和高码率媒体是否实际验证。发布成功不能代替这些验收。
+本地构建、CI 成功、GitHub Release 发布和实际手机运行是不同证据。交付与审计记录应明确目标真机、现场 NAS、无线网络和高码率媒体是否实际验证。发布成功不能代替这些验收。
 
 发布检查：
 

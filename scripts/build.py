@@ -10,7 +10,7 @@ work.mkdir(parents=True,exist_ok=True)
 workspace=work/'workspace';workspace.mkdir(exist_ok=True)
 if workspace.resolve()==project or project in workspace.resolve().parents:
     raise SystemExit('Use a build staging directory outside the source project')
-for name in ['settings.gradle.kts','build.gradle.kts','gradle.properties','version.json','gradlew','gradlew.bat','gradle','core','app','third_party']:
+for name in ['settings.gradle.kts','build.gradle.kts','gradle.properties','version.json','releases','gradlew','gradlew.bat','gradle','core','app','third_party']:
     source=project/name
     target=workspace/name
     if target.is_symlink():raise SystemExit('Unexpected symlink in managed build staging: '+str(target))

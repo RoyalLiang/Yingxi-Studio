@@ -20,6 +20,18 @@ def notes(version="1.2.3-alpha.1"):
 
 
 class ReleaseNotesTest(unittest.TestCase):
+    def test_change_only_notes_do_not_publish_audit_or_commit_footers(self):
+        version=validate({"versionName":"1.2.3-alpha.1","versionCode":9})
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);(root/'releases').mkdir()
+            text="# 映汐播放器 1.2.3-alpha.1 / Yingxi 1.2.3-alpha.1\n\n## 中文\n\n- 拆掉首页重复路牌。\n\n## English\n\n- Clear the duplicate signposts from Home.\n"
+            (root/'releases/v1.2.3-alpha.1.md').write_text(text)
+            body=render_notes(root,version,'a'*40)
+            self.assertTrue(body.startswith('## 中文'))
+            self.assertNotIn('Source commit',body)
+            self.assertNotIn('Validation',body)
+            self.assertIn('duplicate signposts',body)
+
     def test_bilingual_content_and_exact_version_are_required(self):
         version = validate({"versionName": "1.2.3-alpha.1", "versionCode": 9})
         with tempfile.TemporaryDirectory() as folder:
@@ -118,6 +130,17 @@ class ReleasePlanTest(unittest.TestCase):
 
 
 class ReleasePublicationTest(unittest.TestCase):
+    def test_source_archive_is_uploaded_alongside_the_installer(self):
+        metadata = {**validate({"versionName": "1.2.3-alpha.1", "versionCode": 9}),
+                    "sourceCommit": "a" * 40, "fileName": "yingxi-1.2.3-alpha.1-9.apk",
+                    "sourceFileName": "source-code-1.2.3-alpha.1.zip"}
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}), \
+             patch("release_tools.verify_assets", return_value=metadata), patch("release_tools.run", return_value='[[]]'), \
+             patch("release_tools.render_notes", return_value=notes()), patch("release_tools.subprocess.run") as command:
+            publish(SimpleNamespace(output=Path(folder), tag=metadata["tag"]))
+            uploaded = [str(a) for c in command.call_args_list if c.args[0][1:3] == ['release', 'upload'] for a in c.args[0]]
+            self.assertIn(str(Path(folder)/metadata['sourceFileName']), uploaded)
+
     def test_new_and_resumed_drafts_publish_the_same_bilingual_details(self):
         metadata = {**validate({"versionName": "1.2.3-alpha.1", "versionCode": 9}),
                     "sourceCommit": "a" * 40,"fileName":"yingxi-1.2.3-alpha.1-9.apk"}
@@ -163,7 +186,7 @@ class ReleasePublicationTest(unittest.TestCase):
             command.assert_not_called()
 
     def test_android_history_still_requires_verified_apk_evidence(self):
-        metadata={"tag":"v1.2.3","sourceCommit":"a"*40}
+        metadata={"tag":"v1.2.3","sourceCommit":"a"*40,"fileName":"fixture.apk"}
         previous={"id":1,"tag_name":"v1.2.2","draft":False,"assets":[]}
         with patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), patch("release_tools.verify_assets",return_value=metadata), \
              patch("release_tools.run",return_value=json.dumps([[previous]])), \

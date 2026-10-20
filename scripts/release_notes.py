@@ -16,13 +16,19 @@ def load_notes(root, version):
         raise ValueError("Release notes require exactly ## 中文 and ## English, in that order")
     chinese = text[headings[0].end():headings[1].start()]
     english = text[headings[1].end():]
+    formats = []
     for body, required in ((chinese, ("更新内容", "验证与限制")),
                            (english, ("Changes", "Validation and limitations"))):
         sections = re.split(r"^### (.+)$", body, flags=re.MULTILINE)
-        if sections[1::2] != list(required):
-            raise ValueError("Each language must describe changes and validation/limitations")
-        if any(not re.search(r"^- \S.+", section, re.MULTILINE) for section in sections[2::2]):
+        headings = sections[1::2]
+        # New notes are change-only. Keep the historical format readable without rewriting releases.
+        if headings not in ([], [required[0]], list(required)):
+            raise ValueError("Each language must contain changes, with optional historical validation")
+        formats.append(len(headings) == 2)
+        bodies = sections[2::2] if headings else [body]
+        if any(not re.search(r"^- \S.+", section, re.MULTILINE) for section in bodies):
             raise ValueError("Every release note section requires substantive bullet points")
+    if formats[0] != formats[1]: raise ValueError("Bilingual notes must use the same structure")
     if not re.search(r"[\u4e00-\u9fff]", re.sub(r"^#+.*$", "", chinese, flags=re.MULTILINE)):
         raise ValueError("Chinese notes must contain Chinese text")
     if not re.search(r"[A-Za-z]{3,}", re.sub(r"^#+.*$", "", english, flags=re.MULTILINE)):
@@ -33,7 +39,11 @@ def load_notes(root, version):
 
 
 def render_notes(root, version, source_commit):
-    return (load_notes(root, version)
+    text = load_notes(root, version)
+    if "### 验证与限制" not in text:
+        # GitHub's title/tag and the audit artifact bind version and commit; prose stays change-only.
+        return text.split("\n", 1)[1].lstrip()
+    return (text
             + f'\n---\n\n版本 / Version: `{version["versionName"]}` · '
               f'Android versionCode: `{version["versionCode"]}`\n\n'
             + f'源码提交 / Source commit: `{source_commit}`\n')

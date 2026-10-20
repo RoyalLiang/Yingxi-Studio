@@ -113,15 +113,15 @@ class PlayerStyleTest {
         ui.onNodeWithText("来源").performClick()
         ui.onNodeWithContentDescription("添加来源").performClick()
         ui.onNodeWithText("SMB").assertIsSelected()
-        val host = (hasText("主机 / IP") or hasText("服务器地址 / SMB 链接")) and hasSetTextAction()
+        val host = (hasText("主机 IP") or hasText("服务器地址")) and hasSetTextAction()
         ui.onNode(host).performTextInput("nas.local")
         ui.onNodeWithText("SMB").performClick()
         ui.onNode(host).assertTextContains("nas.local")
         ui.onNodeWithText("SFTP").performClick()
         ui.onNodeWithText("SFTP").assertIsSelected()
         ui.onNode(host).assertTextContains("nas.local")
-        ui.onNodeWithTag("connection-form").performScrollToNode(hasText("高级选项：端口、域、共享名"))
-        ui.onNodeWithText("高级选项：端口、域、共享名").performClick()
+        ui.onNodeWithTag("connection-form").performScrollToNode(hasText("高级选项"))
+        ui.onNodeWithText("高级选项").performClick()
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("端口") and hasSetTextAction())
         ui.onNode(hasText("端口") and hasSetTextAction()).assertTextContains("22")
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("连接并浏览"))
@@ -138,7 +138,7 @@ class PlayerStyleTest {
         ui.onAllNodesWithText("播放记录").filter(hasClickAction()).onFirst().performClick()
         capture("history")
         ui.onNodeWithText("首页").performClick()
-        ui.onNodeWithText("映汐播放器").assertIsDisplayed()
+        ui.onNodeWithText("映汐").assertIsDisplayed()
         ui.runOnUiThread {
             ui.activity.setContent {
                 PlayerTheme {

@@ -111,6 +111,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
     DisposableEffect(previews) { onDispose { previews.close(); activity.window.attributes = activity.window.attributes.apply { screenBrightness = originalBrightness } } }
+    DisposableEffect(lifecycle,previews) {
+        val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
+            if(event==Lifecycle.Event.ON_STOP){dragging=false;previews.releaseReader()}
+        }
+        lifecycle.addObserver(observer)
+        onDispose{lifecycle.removeObserver(observer)}
+    }
     DisposableEffect(controller) {
         fun refresh() {
             controller ?: return
@@ -149,20 +156,33 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
         }
     }
-    LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; dragging = false } else visible = true }
+    LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; dragging = false; previews.releaseReader() } else visible = true }
     LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, interaction) {
         if (visible && playing && !dragging && !locked && !settings && !queue && !speedOpen && !touchExploration) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
-    LaunchedEffect(currentUri) { frame = null; frameAt = 0 }
+    LaunchedEffect(currentUri) { frame = null; frameAt = 0;previews.releaseReader() }
+    LaunchedEffect(currentUri, videoAvailable, buffering, compact) {
+        val uri=currentUri ?: return@LaunchedEffect
+        if(!videoAvailable||buffering||compact)return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            delay(500)
+            try { withTimeoutOrNull(1500) { previews.get(uri,position) } }
+            catch(e:CancellationException){throw e}
+            catch(_:Exception){ /* A missing preview must never interrupt playback. */ }
+        }
+    }
     LaunchedEffect(dragging, currentUri, buffering) {
         if (!dragging || currentUri == null || buffering) { frameLoading = false; return@LaunchedEffect }
         val uri = currentUri!!
+        previews.latest(uri)?.let { frame=it.bitmap;frameAt=it.timeMs }
         snapshotFlow { target.coerceAtLeast(0) / 5000 * 5000 }
             .distinctUntilChanged().conflate().collect { requested ->
-                frameLoading = true
+                val cached=previews.cached(uri,requested)
+                if(cached!=null){frame=cached.bitmap;frameAt=cached.timeMs}
+                frameLoading = cached==null
                 try {
-                    val next = withTimeoutOrNull(4000) { previews.get(uri, requested) }
+                    val next = withTimeoutOrNull(1500) { previews.get(uri, requested) }
                     if (next != null) { frame = next; frameAt = requested }
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { /* Retain a valid frame and its original timestamp. */ }
@@ -294,8 +314,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
             Text(time(target), color = PlayerInk, fontSize = 18.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 8.dp))
             Text((if (target >= position) "+" else "−") + time(abs(target - position)), color = PlayerAccent, fontSize = 12.sp)
-            Text(if(frame!=null)"预览约 ${time(frameAt)}${if(frameLoading)" · 更新中"else""}"else if(frameLoading)"正在生成预览…"else"拖动以调整进度",
-                color=Color(0xFFC8CDD1),fontSize=10.sp,modifier=Modifier.padding(top=4.dp,bottom=9.dp))
+            Text(if(frame!=null)"约 ${time(frameAt)}${if(frameLoading)" · 更新中"else""}"else if(frameLoading)"正在生成预览…"else"拖动以调整进度",
+                color=Color(0xFFC8CDD1),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=4.dp,bottom=9.dp))
         }
         if (!compact && !dragging) hud?.let { (name, value) -> Surface(Modifier.align(Alignment.Center).width(180.dp), shape = RoundedCornerShape(16.dp), color = PlayerPanel) {
             Column(Modifier.padding(18.dp)) { Text("$name  $value%", color = PlayerInk, fontSize = 16.sp); Spacer(Modifier.height(12.dp)); LinearProgressIndicator(progress = { value / 100f }, color = PlayerInk, trackColor = Color(0x55FFFFFF), modifier = Modifier.fillMaxWidth()) }

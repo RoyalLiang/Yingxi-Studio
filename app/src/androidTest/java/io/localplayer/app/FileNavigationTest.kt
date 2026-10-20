@@ -30,9 +30,9 @@ class FileNavigationTest {
         lateinit var files:LocalFilesViewModel
         ui.runOnIdle{files=ViewModelProvider(ui.activity)[LocalFilesViewModel::class.java]}
         try{
-            ui.onNodeWithText("打开本机视频").performClick()
-            ui.onNodeWithText("返回").assertIsDisplayed()
-            ui.onNodeWithTag("breadcrumb:local").assertIsDisplayed()
+            ui.onNodeWithContentDescription("打开视频").performClick()
+            ui.onNodeWithContentDescription("返回").assertIsDisplayed()
+            ui.onNodeWithTag("breadcrumb:local").assertDoesNotExist()
             ui.runOnIdle{files.add(tree)}
             ui.waitUntil(10000){(files.active!=null&&!files.busy)||files.error!=null}
             ui.runOnIdle{assertNull(files.error);assertNotNull(files.active)}
@@ -44,7 +44,7 @@ class FileNavigationTest {
             ui.onNodeWithTag("breadcrumb:local:1").performClick()
             ui.waitUntil(10000){files.trail.size==2&&!files.busy}
             ui.onNodeWithText("示例.mp4").assertIsDisplayed()
-            ui.onNodeWithText("上一级").performClick()
+            ui.onNodeWithContentDescription("上一级").performClick()
             ui.waitUntil(10000){files.trail.size==1&&!files.busy}
             ui.onNodeWithTag("breadcrumb:local").performClick()
             ui.waitUntil{files.active==null}
@@ -55,8 +55,8 @@ class FileNavigationTest {
             }
             Thread.sleep(300)
             ui.runOnIdle{assertNull(files.active);assertTrue(files.folders.none{it.tree==tree})}
-            ui.onNodeWithText("返回").performClick()
-            ui.onNodeWithText("映汐播放器").assertIsDisplayed()
+            ui.onNodeWithContentDescription("返回").performClick()
+            ui.onNodeWithText("映汐").assertIsDisplayed()
         }finally{ui.runOnIdle{files.folders.firstOrNull{it.tree==tree}?.let{files.remove(it)};files.root()}}
     }
 
@@ -81,7 +81,7 @@ class FileNavigationTest {
             snapshot("remote-navigation")
             ui.onNodeWithTag("breadcrumb:remote:").performClick()
             ui.waitUntil(20000){vm.path==""&&!vm.busy}
-            ui.onNodeWithText("返回来源").assertIsDisplayed()
+            ui.onNodeWithContentDescription("返回来源").assertIsDisplayed()
             ui.onNodeWithTag("breadcrumb:sources").performClick()
             ui.waitUntil{vm.source==null}
             ui.onNodeWithContentDescription("添加来源").assertIsDisplayed()
