@@ -10,6 +10,11 @@ on:
         description: Existing version tag, matching version.json
         required: true
         type: string
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -107,10 +112,16 @@ jobs:
         env:
           YINGXI_SIGNER_SHA256: ${{ vars.YINGXI_SIGNER_SHA256 }}
         run: python3 scripts/release_tools.py prepare --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
+      # Recovery can rebuild an immutable tag with repaired publication tooling.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.sha }}
+          path: release-publisher
+          persist-credentials: false
       - name: Publish all verified assets from a draft
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/release_tools.py publish --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
+        run: python3 release-publisher/scripts/release_tools.py publish --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
       - name: Remove signing file
         if: always()
         run: rm -f "$RUNNER_TEMP/yingxi-release.keystore"

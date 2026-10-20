@@ -143,6 +143,28 @@ class ReleasePublicationTest(unittest.TestCase):
                     publish(SimpleNamespace(output=Path(folder), tag=metadata["tag"]))
                 self.assertEqual(seen, ["edit"] if existing else ["create", "edit"])
 
+    def test_ios_release_does_not_enter_android_upgrade_history(self):
+        metadata={**validate({"versionName":"1.2.3-alpha.1","versionCode":9}),"sourceCommit":"a"*40}
+        ios={"tag_name":"ios-v0.1.0-alpha.1","draft":False,"assets":[{"name":"yingxi-ios-release.json"}]}
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), \
+             patch("release_tools.verify_assets",return_value=metadata), \
+             patch("release_tools.run",return_value=json.dumps([[ios]])), \
+             patch("release_tools.render_notes",return_value=notes()), \
+             patch("release_tools.subprocess.run") as command:
+            publish(SimpleNamespace(output=Path(folder),tag=metadata["tag"]))
+            self.assertFalse(any(c.args[0][1:3]==["release","download"] for c in command.call_args_list))
+
+    def test_android_history_still_requires_upgrade_metadata(self):
+        metadata={"tag":"v1.2.3","sourceCommit":"a"*40}
+        previous={"tag_name":"v1.2.2","draft":False,"assets":[]}
+        with patch.dict(os.environ,{"GITHUB_REPOSITORY":"owner/repo"}), \
+             patch("release_tools.verify_assets",return_value=metadata), \
+             patch("release_tools.run",return_value=json.dumps([[previous]])), \
+             patch("release_tools.subprocess.run") as command:
+            with self.assertRaisesRegex(ValueError,"lacks metadata"):
+                publish(SimpleNamespace(output=Path("unused"),tag=metadata["tag"]))
+            command.assert_not_called()
+
     def test_published_version_is_never_replaced(self):
         metadata = {"tag": "v1.2.3", "sourceCommit": "a" * 40}
         with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}), \

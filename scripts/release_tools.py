@@ -83,6 +83,8 @@ def publish(args):
                 if release["target_commitish"]!=metadata["sourceCommit"]: raise ValueError("Existing draft belongs to a different commit")
                 draft=release;continue
             if release["draft"]: continue
+            # iOS has an independent version/signing history and a separate manifest.
+            if re.fullmatch(r"ios-v\d+\.\d+\.\d+-alpha\.\d+", release["tag_name"]): continue
             if not any(a["name"]=="yingxi-release.json" for a in release["assets"]): raise ValueError("Published version history lacks metadata; migrate it before publishing")
             destination=Path(temp)/str(release["id"]);destination.mkdir()
             subprocess.run(["gh","release","download",release["tag_name"],"--repo",repo,"--pattern","yingxi-release.json","--dir",str(destination)],check=True)
