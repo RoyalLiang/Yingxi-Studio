@@ -69,8 +69,6 @@ fun PlaybackQueueSheet(items: List<MediaItem>, current: Int, truncated: Boolean,
                             }
                         }
                     }
-                    HorizontalDivider(color = Color(0x22FFFFFF))
-                    Text("名称升序 · 同名按可用创建时间排序", Modifier.padding(vertical = 12.dp), fontSize = 11.sp, color = Color(0xFFC5CBD0))
                 }
             }
         }

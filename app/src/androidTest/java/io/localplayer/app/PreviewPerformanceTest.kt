@@ -11,6 +11,40 @@ import java.io.File
 
 class PreviewPerformanceTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test fun latestCachedTargetBypassesSlowDecodeAndStaleCompletion(): Unit = runBlocking {
+        val started=java.util.concurrent.CountDownLatch(1)
+        val release=java.util.concurrent.CountDownLatch(1)
+        val image=android.graphics.Bitmap.createBitmap(32,18,android.graphics.Bitmap.Config.ARGB_8888)
+        val calls=java.util.Collections.synchronizedList(mutableListOf<Long>())
+        val loader=PreviewFrames { object:PreviewDecoder {
+            override fun frame(timeMs:Long):android.graphics.Bitmap {
+                calls.add(timeMs)
+                if(timeMs==5000L){started.countDown();release.await()}
+                return image
+            }
+            override fun close(){release.countDown()}
+        } }
+        val uri=Uri.parse("content://fixture/latest")
+        val positions=kotlinx.coroutines.flow.MutableStateFlow(5000L)
+        val received=java.util.Collections.synchronizedList(mutableListOf<Long>())
+        var collecting:Job?=null
+        try {
+            loader.get(uri,0)
+            collecting=launch(Dispatchers.Default){loader.frames(uri,positions).collect{received.add(it.timeMs)}}
+            assertTrue(withContext(Dispatchers.IO){started.await(2,java.util.concurrent.TimeUnit.SECONDS)})
+            positions.value=0
+            withTimeout(300){while(received.isEmpty())delay(5)}
+            assertEquals(listOf(0L),received.toList())
+            positions.value=6000;delay(30)
+            positions.value=7000;delay(30)
+            positions.value=8250;delay(30)
+            release.countDown()
+            withTimeout(2000){while(received.last()!=8000L)delay(5)}
+            assertEquals("An obsolete decode must not replace the current preview",listOf(0L,8000L),received.toList())
+            assertEquals("Intermediate misses should not be decoded",listOf(0L,5000L,8000L),calls.toList())
+        } finally { release.countDown();collecting?.cancelAndJoin();loader.close() }
+    }
     @Test fun uncachedFramesReuseOneIndependentReadSession(): Unit = runBlocking {
         val opens = java.util.concurrent.atomic.AtomicInteger()
         val closes = java.util.concurrent.atomic.AtomicInteger()

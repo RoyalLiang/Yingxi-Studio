@@ -7,8 +7,6 @@ import android.media.AudioManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,6 +25,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,8 +57,6 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -102,8 +102,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var hud by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var hudRevision by remember { mutableIntStateOf(0) }
     var frame by remember { mutableStateOf<Bitmap?>(null) }
-    var frameLoading by remember { mutableStateOf(false) }
-    var frameAt by remember { mutableLongStateOf(0) }
+    var playerBounds by remember { mutableStateOf(Rect.Zero) }
+    var thumbBounds by remember { mutableStateOf(Rect.Zero) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
     var fill by rememberSaveable { mutableStateOf(false) }
@@ -158,15 +158,15 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     }
     LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; dragging = false; previews.releaseReader() } else visible = true }
     LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, interaction) {
-        if (visible && playing && !dragging && !locked && !settings && !queue && !speedOpen && !touchExploration) { delay(3000); visible = false }
+        if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !speedOpen))) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
-    LaunchedEffect(currentUri) { frame = null; frameAt = 0;previews.releaseReader() }
-    LaunchedEffect(currentUri, videoAvailable, buffering, compact) {
+    LaunchedEffect(currentUri) { frame = null;previews.releaseReader() }
+    LaunchedEffect(currentUri, videoAvailable, buffering, compact, dragging) {
         val uri=currentUri ?: return@LaunchedEffect
-        if(!videoAvailable||buffering||compact)return@LaunchedEffect
+        if(!videoAvailable||buffering||compact||dragging)return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            delay(3000)
+            delay(350)
             if(PlaybackMetrics.snapshot().firstFrameMs==null)return@repeatOnLifecycle
             if(controller!=null&&controller.isPlaying&&controller.bufferedPosition-controller.currentPosition<5000)return@repeatOnLifecycle
             try { withTimeoutOrNull(12000) { previews.get(uri,position) } }
@@ -175,24 +175,15 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         }
     }
     LaunchedEffect(dragging, currentUri, buffering) {
-        if (!dragging || currentUri == null || buffering) { frameLoading = false; return@LaunchedEffect }
+        if (!dragging || currentUri == null || buffering) return@LaunchedEffect
         val uri = currentUri!!
-        previews.latest(uri)?.let { frame=it.bitmap;frameAt=it.timeMs }
-        snapshotFlow { target.coerceAtLeast(0) / 5000 * 5000 }
-            .distinctUntilChanged().conflate().collect { requested ->
-                val cached=previews.cached(uri,requested)
-                if(cached!=null){frame=cached.bitmap;frameAt=cached.timeMs}
-                frameLoading = cached==null
-                try {
-                    val next = withTimeoutOrNull(12000) { previews.get(uri, requested) }
-                    if (next != null) { frame = next; frameAt = requested }
-                } catch (e: CancellationException) { throw e }
-                catch (_: Exception) { /* Retain a valid frame and its original timestamp. */ }
-                finally { frameLoading = false }
-            }
+        previews.latest(uri)?.let { frame=it.bitmap }
+        previews.frames(uri,snapshotFlow { target }).collect { next ->
+            if(next.timeMs==target.coerceAtLeast(0)/1000*1000)frame=next.bitmap
+        }
     }
     BackHandler(enabled = queue || speedOpen || settings) { queue = false; speedOpen = false; settings = false }
-    Box(Modifier.fillMaxSize().background(Color(0xFF101113)).pointerInput(Unit) {
+    Box(Modifier.fillMaxSize().onGloballyPositioned { playerBounds=it.boundsInRoot() }.background(Color(0xFF101113)).pointerInput(Unit) {
         awaitPointerEventScope { while(true) { val event=awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial);if(event.changes.any{it.pressed&&!it.previousPressed})interaction++ } }
     }) {
         AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true) }.also(videoView) },
@@ -255,7 +246,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
                     PlayerIcon(Icons.Rounded.Headphones, "后台播放", background)
                     if (smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
-                    PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; lock(true) })
+                    PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
                 }
                 if (!speedOpen) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
@@ -272,7 +263,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = 24.dp, vertical = 8.dp)) {
                 val shown = if (dragging) target else position
                 PlayerTimeline(shown,duration,buffered,dragging,seekable,
-                    change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false})
+                    change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
                 Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
                     Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -300,18 +291,19 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 }
             }
         }
-        if (!compact && dragging) Column(Modifier.align(Alignment.Center).width(208.dp).clip(RoundedCornerShape(16.dp)).background(PlayerPanel), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(117.dp).background(Color.Black),contentAlignment=Alignment.Center) {
-                Crossfade(frame,animationSpec=tween(100),label="seek-preview-frame") { bitmap ->
-                    if(bitmap!=null)Image(bitmap.asImageBitmap(),"进度预览",Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Fit)
-                }
-                if(frameLoading)CircularProgressIndicator(Modifier.align(Alignment.TopEnd).padding(10.dp).size(15.dp),color=PlayerInk,strokeWidth=1.5.dp)
-                if(frame==null&&!frameLoading)Text("暂无预览",color=Color(0xFFC8CDD1),fontSize=12.sp)
-            }
-            Text(time(target), color = PlayerInk, fontSize = 18.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 8.dp))
-            Text((if (target >= position) "+" else "−") + time(abs(target - position)), color = PlayerAccent, fontSize = 12.sp)
-            Text(if(frame!=null)"约 ${time(frameAt)}${if(frameLoading)" · 更新中"else""}"else if(frameLoading)"正在生成预览…"else"拖动以调整进度",
-                color=Color(0xFFC8CDD1),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=4.dp,bottom=9.dp))
+        if (!compact && dragging && thumbBounds!=Rect.Zero) frame?.let { bitmap ->
+            val width=176.dp
+            val height=99.dp
+            val safeLeft=WindowInsets.safeDrawing.getLeft(density,androidx.compose.ui.unit.LayoutDirection.Ltr)
+            val safeRight=WindowInsets.safeDrawing.getRight(density,androidx.compose.ui.unit.LayoutDirection.Ltr)
+            val safeTop=WindowInsets.safeDrawing.getTop(density)
+            Image(bitmap.asImageBitmap(),"进度预览",Modifier.offset {
+                val gap=12.dp.toPx();val w=width.toPx();val h=height.toPx()
+                val left=(thumbBounds.center.x-playerBounds.left-w/2).coerceIn(safeLeft+gap,(playerBounds.width-safeRight-gap-w).coerceAtLeast(safeLeft+gap))
+                val top=(thumbBounds.top-playerBounds.top-gap-h).coerceAtLeast(safeTop+gap)
+                IntOffset(left.roundToInt(),top.roundToInt())
+            }.size(width,height).clip(RoundedCornerShape(12.dp)).background(Color.Black).testTag("seek-preview"),
+                contentScale=androidx.compose.ui.layout.ContentScale.Fit)
         }
         if (!compact && !dragging) hud?.let { (name, value) ->
             PlayerAdjustmentHud(name, value, Modifier
@@ -319,7 +311,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                 .padding(horizontal = 24.dp))
         }
-        if (!compact && locked) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp).background(PlayerPanel, CircleShape)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
+        if (!compact && locked && (visible || touchExploration)) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
         if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption)
         (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
@@ -337,11 +329,11 @@ internal fun playbackTime(ms: Long): String {
 /** The track and the painted thumb share one measured center line and a 48 dp touch target. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun PlayerTimeline(position:Long,duration:Long,buffered:Long,dragging:Boolean,enabled:Boolean,
-    change:(Long)->Unit,finish:()->Unit) {
+    change:(Long)->Unit,finish:()->Unit,thumbPosition:(Rect)->Unit={}) {
                 Slider(value = position.toFloat().coerceIn(0f, duration.coerceAtLeast(1).toFloat()), onValueChange = { change(it.toLong()) },
                     onValueChangeFinished = finish, valueRange = 0f..duration.coerceAtLeast(1).toFloat(), enabled = enabled && duration > 0,
                     modifier = Modifier.fillMaxWidth().height(48.dp).testTag("playback-progress"),
-                    thumb = { Canvas(Modifier.size(24.dp).testTag("progress-thumb")) {
+                    thumb = { Canvas(Modifier.size(24.dp).onGloballyPositioned { thumbPosition(it.boundsInRoot()) }.testTag("progress-thumb")) {
                         drawCircle(PlayerInk,radius=(if(dragging)6.5.dp else 4.5.dp).toPx(),center=center)
                     } },
                     track = { state -> Canvas(Modifier.fillMaxWidth().height(24.dp).testTag("progress-track")) {
