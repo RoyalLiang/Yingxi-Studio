@@ -274,7 +274,7 @@ class LibraryViewModel(app:Application):AndroidViewModel(app) {
             if(pass!=null||saved.username.isBlank())prepareReplay(saved,Credentials(pass ?: ""))
             else {preparingKey=null;access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}
         }catch(e:CancellationException){throw e}
-        catch(e:Exception){if(request==generation){preparingKey=null;error="无法读取保存的凭据，请重新输入";access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
+        catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在来源配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
     }
     fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList()){
         cancelOperation();pendingReplay=null;val request=generation;preparingKey=uri.toString()

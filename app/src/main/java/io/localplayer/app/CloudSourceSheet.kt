@@ -60,6 +60,7 @@ import kotlinx.coroutines.CancellationException
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
     var authorizing by remember{mutableStateOf(false)}
+    var authorizationJob by remember{mutableStateOf<kotlinx.coroutines.Job?>(null)}
     var authError by remember{mutableStateOf<String?>(null)}
     val apps=remember(context,gateway){gateway ?: AndroidCloudApps(context)}
     val owner=LocalLifecycleOwner.current
@@ -76,7 +77,7 @@ import kotlinx.coroutines.CancellationException
             CloudProvider.entries.forEach { p->Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
                 GlassSurface(Modifier.fillMaxWidth().testTag("cloud-open-${p.name}").clickable(role=Role.Button) {
                     if(p==CloudProvider.ALIYUNPAN && gateway==null && onConnected!=null && statuses[p]==CloudAppStatus.AVAILABLE){
-                        if(!authorizing)scope.launch{authorizing=true;try{onConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){authError=e.message ?: "授权失败，请重试"}finally{authorizing=false}}
+                        if(!authorizing)authorizationJob=scope.launch{authorizing=true;try{onConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){authError=e.message ?: "授权失败，请重试"}finally{authorizing=false}}
                         return@clickable
                     }
                     val result=apps.open(p);statuses=CloudProvider.entries.associateWith(apps::status)
@@ -92,7 +93,7 @@ import kotlinx.coroutines.CancellationException
         }
         Text("阿里云盘仅申请读取权限，你可以随时移除账户。",fontSize=13.sp,lineHeight=20.sp,color=Muted)
     }
-    if(authorizing) Text("正在等待阿里云盘授权，可返回重试。",color=Muted)
+    if(authorizing) Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("正在等待阿里云盘授权…",Modifier.weight(1f),color=Muted);TextButton(onClick={authorizationJob?.cancel()}){Text("取消授权")}}
     authError?.let{message->AlertDialog(onDismissRequest={authError=null},title={Text("授权未完成")},text={Text(message)},confirmButton={TextButton(onClick={authError=null}){Text("知道了")}})}
     feedback?.let { (p,result)->AlertDialog(onDismissRequest={feedback=null},
         title={Text(if(result==CloudLaunchResult.NOT_INSTALLED)"未安装${p.title}"else"${p.title}暂不可用")},
