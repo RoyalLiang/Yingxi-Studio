@@ -38,7 +38,7 @@ data class FileCrumb(val label:String,val key:String)
                 Text(crumb.label,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.widthIn(max=200.dp),fontSize=14.sp,
                     fontWeight=if(index==crumbs.lastIndex)FontWeight.SemiBold else FontWeight.Normal,color=if(index==crumbs.lastIndex)Ink else if(onSelect!=null)Berry else Muted)
             }
-            if(onSelect!=null)TextButton(onClick={onSelect(index)},enabled=index!=crumbs.lastIndex,
+            if(onSelect!=null)TextButton(onClick={onSelect(index)},
                 modifier=Modifier.heightIn(min=48.dp).testTag("breadcrumb:${crumb.key}")){text()}
             else Box(Modifier.heightIn(min=48.dp).padding(horizontal=12.dp).testTag("breadcrumb:${crumb.key}"),contentAlignment=Alignment.Center){text()}
 

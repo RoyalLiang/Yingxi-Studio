@@ -30,12 +30,6 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
 @Composable internal fun ArchiveDirectory(files:LocalFilesViewModel,player:LibraryViewModel) {
     var filter by rememberSaveable{mutableStateOf("全部")}
     var selected by rememberSaveable{mutableStateOf<String?>(null)}
-    var registered by remember{mutableStateOf(false)}
-    val context=LocalContext.current
-    LaunchedEffect(files.registration,files.active) {
-        registered=files.registration>0&&StationPreferences(context).greetings
-        if(registered){delay(4500);registered=false}
-    }
     val videos=files.entries.filter{it.video&&!it.directory}.map{it to localArchiveIdentity(it,files)}
     val shown=videos.filter{filter=="全部"||it.second.category==filter}
     val groups=shown.filter{it.second.category!="电影"}.groupBy{it.second.title to it.second.category}
@@ -84,8 +78,5 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
                 MediaRow(entry.name,formatSize(entry.size),Icons.Rounded.PlayCircle,selected=selected==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()) {selected=entry.uri.toString();player.playLocal(entry.uri,siblings=files.entries)}
             }
         }
-        AnimatedVisibility(registered) { Surface(color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.padding(horizontal=20.dp,vertical=8.dp).testTag("station-registered")) {
-            StationCharacterRow("scavenger","阿汐","这批影像登记好了，片架给你留了位置。")
-        } }
     }
 }

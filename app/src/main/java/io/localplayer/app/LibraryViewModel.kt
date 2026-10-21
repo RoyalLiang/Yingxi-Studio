@@ -68,6 +68,9 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             else if (notice?.isError == true) notice = null
         }
     internal fun notifySuccess(text: String) { errorValue = null; notice = SourceNotice(++noticeSerial, text, false) }
+    internal fun notifyRegistration(){
+        if(StationPreferences(getApplication()).greetings){errorValue=null;notice=SourceNotice(++noticeSerial,"这批影像登记好了，片架给你留了位置。",false,true)}
+    }
     internal fun dismissNotice(id: Long) {
         if (notice?.id != id) return
         if (notice?.isError == true) errorValue = null
@@ -164,7 +167,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             else{openingSource=null;access=SourceAccess(saved,path=location)}
         }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=location);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
     }
-    fun cloudConnected(saved:Source){sources=store.load();val current=sources.firstOrNull{it.id==saved.id} ?: return;selectedGroup="all";error=null;draft=null;open(current)}
+    fun cloudConnected(saved:Source){val registering=sources.none{it.id==saved.id};sources=store.load();val current=sources.firstOrNull{it.id==saved.id} ?: return;selectedGroup="all";error=null;draft=null;open(current);if(registering)notifyRegistration()}
     fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
     fun updateAccess(password:String?=null,remember:Boolean?=null){access=access?.let{it.copy(password=password ?: it.password,remember=remember ?: it.remember)}}
     fun connectAccess(){val current=access ?: return;openingSource=current.source;load(current.source,Credentials(current.password),current.path,current.remember,true)}
@@ -220,6 +223,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     fun rejectKey(){trust=null;error="已拒绝该服务器，未发送密码认证"}
     fun browse(newPath:String){val s=source ?: return;val c=credentials ?: return;load(s,c,newPath,false,false)}
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
+        val registering=save&&sources.none{it.id==s.id}
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
         val folderName=if(newPath.isEmpty())"避难所根目录"else
             entries.firstOrNull{source?.id==s.id&&it.directory&&it.path==newPath}?.name
@@ -236,8 +240,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 if(id!=generation)return@launch
                 source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load()
                 StationInventory(getApplication()).reconcileSource(s)
-                val registered=StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s)) })
-                if(save)notifySuccess("避难所已保存") else if(registered>0&&StationPreferences(getApplication()).greetings)notifySuccess("阿汐：这批影像登记好了，片架给你留了位置。")
+                StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s)) })
+                if(registering)notifyRegistration() else if(save)notifySuccess("避难所已保存")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {

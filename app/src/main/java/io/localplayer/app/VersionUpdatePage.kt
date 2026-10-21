@@ -2,6 +2,13 @@ package io.localplayer.app
 
 import androidx.activity.compose.BackHandler
 import androidx.core.net.toUri
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable internal fun VersionSettingsPage(vm:SettingsViewModel,about:Boolean,back:()->Unit,openAbout:()->Unit,install:()->Unit) {
+    val notificationPermission=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()){vm.download()}
+    val contextForDownload=LocalContext.current
+    val download={if(androidx.core.content.ContextCompat.checkSelfPermission(contextForDownload,android.Manifest.permission.POST_NOTIFICATIONS)==android.content.pm.PackageManager.PERMISSION_GRANTED)vm.download()else notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)}
     var letter by rememberSaveable { mutableStateOf<String?>(null) }
     var world by rememberSaveable { mutableStateOf(false) }
     var more by remember { mutableStateOf(false) }
@@ -46,10 +56,18 @@ import androidx.compose.ui.unit.sp
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
             Text(if(about)"版本" else "放映设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             if(about)Box {
-                IconButton(onClick={more=true},modifier=Modifier.testTag("version-more")){Icon(Icons.Rounded.MoreVert,"版本更多操作")}
+                Box {
+                val interaction=remember{MutableInteractionSource()}
+                val hovered by interaction.collectIsHoveredAsState()
+                val pressed by interaction.collectIsPressedAsState()
+                val tint by animateColorAsState(if(more||hovered||pressed)Berry.copy(alpha=.14f)else GroupedSurface,label="version-more-color")
+                FilledTonalIconButton(onClick={more=!more},interactionSource=interaction,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=tint,contentColor=Berry),
+                    modifier=Modifier.testTag("version-more").hoverable(interaction).graphicsLayer{scaleX=if(pressed).94f else 1f;scaleY=scaleX}){Icon(Icons.Rounded.MoreVert,"版本更多操作")}
                 DropdownMenu(more,{more=false}) {
-                    DropdownMenuItem(text={Text("前往发布页")},onClick={more=false;runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,AppUpdates.RELEASES_PAGE.toUri()))}})
+                    DropdownMenuItem(text={Text("阅读本版信笺")},onClick={more=false;letter="installed"})
+                DropdownMenuItem(text={Text("前往发布页")},onClick={more=false;runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,AppUpdates.RELEASES_PAGE.toUri()))}})
                 }
+            }
             }
         }
         if(!about)LazyColumn(Modifier.weight(1f).testTag("settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -66,13 +84,14 @@ import androidx.compose.ui.unit.sp
             item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { StationAtmosphereSettings() } }
         } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             if(maxHeight<420.dp)Row(Modifier.fillMaxSize().padding(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
-                Column(Modifier.widthIn(max=290.dp).fillMaxWidth(.38f)) { VersionCounter(vm,install,{world=true},{letter="available"},compact=true) }
+                Column(Modifier.widthIn(max=290.dp).fillMaxWidth(.38f).fillMaxHeight().verticalScroll(rememberScrollState())) { VersionCounter(vm,install,{world=true},{letter="available"},compact=true) }
                 CurrentLetter(language,{letter="installed"},Modifier.weight(1f).fillMaxHeight())
             } else Column(Modifier.fillMaxSize().padding(horizontal=24.dp)) {
                 VersionCounter(vm,install,{world=true},{letter="available"})
                 CurrentLetter(language,{letter="installed"},Modifier.weight(1f).fillMaxWidth())
             }
         }
+        UpdateFooter(vm,install,download){letter="available"}
     }
     if(letter!=null) {
         val available=vm.release
@@ -80,43 +99,48 @@ import androidx.compose.ui.unit.sp
         val shown=if(remote)available!!.version else vm.version
         val body=if(remote)available!!.notes else BuildConfig.VERSION_NOTES
         AlertDialog(onDismissRequest={letter=null},shape=RoundedCornerShape(26.dp),containerColor=Paper,modifier=Modifier.testTag("release-letter"),
-            title={Column { Text(if(remote)"可用更新" else "本版说明",fontSize=17.sp,color=Muted);Text(shown.name,fontSize=23.sp,lineHeight=31.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.testTag("letter-version")) }},
+            title={Column { Text(if(remote)"可用更新" else "放映站来信",fontSize=17.sp,color=Muted);Text(shown.name,fontSize=23.sp,lineHeight=31.sp,fontWeight=FontWeight.Bold,color=Ink,modifier=Modifier.testTag("letter-version")) }},
             text={Column(Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState()).testTag("release-letter-body")) { ReleaseLetterContent(body,language) }},
-            confirmButton={if(remote&&!vm.busy)TextButton(onClick={letter=null;if(vm.ready!=null)install() else vm.download()},modifier=Modifier.testTag("confirm-update")){Text(if(vm.ready!=null)"安装更新" else "下载更新")} else TextButton(onClick={letter=null}){Text("收好信笺")}},
+            confirmButton={if(remote&&!vm.busy)TextButton(onClick={letter=null;if(vm.ready!=null)install() else download()},modifier=Modifier.testTag("confirm-update")){Text(if(vm.ready!=null)"安装更新" else "下载更新")} else TextButton(onClick={letter=null}){Text("收好信笺")}},
             dismissButton={if(remote)TextButton(onClick={letter=null}){Text("稍后")}})
     }
 }
 
 @Composable private fun VersionCounter(vm:SettingsViewModel,install:()->Unit,world:()->Unit,available:()->Unit,compact:Boolean=false) {
-    Column(Modifier.fillMaxWidth().testTag("version-counter"),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text("映汐放映室 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
-        if(!compact)Text("安装序号 "+vm.version.code,fontSize=12.sp,color=Muted)
-        Column(Modifier.fillMaxWidth().testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            vm.release?.let { release ->
-                TextButton(onClick=available,contentPadding=PaddingValues(0.dp),) { Text("新信笺 · ",color=Berry,fontSize=14.sp);Text(release.version.name,color=Berry,fontSize=14.sp,modifier=Modifier.testTag("available-version")) }
-            }
-            vm.message?.let { Text(it,fontSize=12.sp,lineHeight=18.sp,color=if(vm.error)MaterialTheme.colorScheme.error else Muted,modifier=Modifier.testTag("update-status")) }
+    Column(Modifier.fillMaxWidth().testTag("version-counter").padding(top=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Text("当前版本 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
+        Text("安装序号 "+vm.version.code,fontSize=12.sp,color=Muted)
+        TextButton(onClick=world,modifier=Modifier.testTag("open-world"),contentPadding=PaddingValues(vertical=4.dp)){
+            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室"else"档案室 · 人物与世界图谱",fontSize=13.sp)
+        }
+    }
+}
+
+@Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit,available:()->Unit) {
+    var details by remember{mutableStateOf(false)}
+    if(details)AlertDialog(onDismissRequest={details=false},title={Text("更新提示")},text={Text(vm.message.orEmpty(),Modifier.heightIn(max=300.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick={details=false}){Text("关闭")}})
+    Surface(color=Paper,shadowElevation=4.dp,modifier=Modifier.fillMaxWidth().testTag("update-footer")) {
+        Column(Modifier.padding(horizontal=24.dp,vertical=12.dp).testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            vm.release?.let{release->TextButton(onClick=available,contentPadding=PaddingValues(0.dp)){
+                Text("可用更新 ",color=Berry,fontSize=14.sp);Text(release.version.name,color=Berry,fontSize=14.sp,modifier=Modifier.testTag("available-version"))}}
+            vm.message?.let{Text(it,fontSize=12.sp,lineHeight=18.sp,color=if(vm.error)MaterialTheme.colorScheme.error else Muted,modifier=Modifier.testTag("update-status").clickable(enabled=vm.error){details=true},maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}
             if(vm.busy) {
-                vm.progress?.let{LinearProgressIndicator(progress={it},modifier=Modifier.fillMaxWidth())} ?:LinearProgressIndicator(Modifier.fillMaxWidth())
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text(if(vm.progress==null)"正在检查更新" else "正在下载 ${(vm.progress!!*100).toInt()}%",Modifier.weight(1f),fontSize=13.sp,color=Muted)
-                    TextButton(onClick=vm::cancel){Text("取消")}
+                vm.progress?.let{LinearProgressIndicator(progress={it},modifier=Modifier.fillMaxWidth())}?:LinearProgressIndicator(Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    Text(if(vm.progress==null)"正在检查更新"else"正在下载 ${(vm.progress!!*100).toInt()}%",Modifier.weight(1f),fontSize=13.sp,color=Muted)
+                    TextButton(onClick=vm::cancel){Text(if(vm.progress==null)"取消"else"暂停")}
                 }
             } else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                if(vm.release!=null)OutlinedButton(onClick=vm::check,contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates")){Text("检查更新",maxLines=1)}
-                else Button(onClick=vm::check,modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)){Text("检查更新")}
-                if(vm.release!=null)Button(onClick={if(vm.ready!=null)install() else vm.download()},contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("download-update"),shape=RoundedCornerShape(16.dp)){Text(if(vm.ready!=null)"安装更新" else "下载更新",maxLines=1)}
+                OutlinedButton(onClick=vm::check,modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)){Text("检查更新",maxLines=1)}
+                if(vm.release!=null)Button(onClick={if(vm.ready!=null)install()else download()},contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("download-update"),shape=RoundedCornerShape(16.dp)){
+                    Text(if(vm.ready!=null)"安装更新"else if((vm.progress?:0f)>0f)"继续下载"else"下载更新",maxLines=1)}
             }
-        }
-        TextButton(onClick=world,modifier=Modifier.testTag("open-world"),contentPadding=PaddingValues(vertical=4.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室" else "档案室 · 人物与世界图谱",fontSize=13.sp)
         }
     }
 }
 
 @Composable private fun CurrentLetter(language:String,expand:()->Unit,modifier:Modifier) {
     Column(modifier) {
-        TextButton(onClick=expand,modifier=Modifier.testTag("installed-notes"),contentPadding=PaddingValues(vertical=8.dp)) {Text("本版说明",color=Muted,fontSize=13.sp)}
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).testTag("current-letter-scroll").padding(bottom=24.dp)) {
             ReleaseLetterContent(BuildConfig.VERSION_NOTES,language)
         }

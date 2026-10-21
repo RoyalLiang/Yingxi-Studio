@@ -37,6 +37,6 @@ class UpdateArtifactRegressionTest {
             var cancelled=false
             try{client().download(release){throw kotlinx.coroutines.CancellationException("fixture cancellation")} }catch(_:kotlinx.coroutines.CancellationException){cancelled=true}
             assertTrue(cancelled);assertTrue(first.isFile)
-        }finally{first.delete()}
+        }finally{first.delete();AppUpdates.partialFile(app,release).delete()}
     }
 }

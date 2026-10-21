@@ -142,8 +142,8 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     var sound by remember{mutableStateOf(prefs.gearSound)}
     Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { Column(Modifier.padding(14.dp)) {
         Text("据点氛围",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
-        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("角色问候");Text("当天首次进入时出现",fontSize=12.sp,color=Muted)};Switch(greetings,{greetings=it;prefs.greetings=it},modifier=Modifier.testTag("station-greetings")) }
-        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("齿轮音效");Text("快进、快退时播放轻提示音",fontSize=12.sp,color=Muted)};Switch(sound,{sound=it;prefs.gearSound=it},modifier=Modifier.testTag("station-gear-sound")) }
+        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("角色问候");Text("当天首次进入时出现",fontSize=12.sp,color=Muted)};SettingsSwitch(greetings,{greetings=it;prefs.greetings=it},modifier=Modifier.testTag("station-greetings")) }
+        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("齿轮音效");Text("快进、快退时播放轻提示音",fontSize=12.sp,color=Muted)};SettingsSwitch(sound,{sound=it;prefs.gearSound=it},modifier=Modifier.testTag("station-gear-sound")) }
     } }
     Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text("播放手势",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
@@ -165,7 +165,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
             Text(when(language){"zh"->"中文优先";"en"->"英文优先";else->"跟随影片"},color=Muted)
             Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
         }
-        Row(verticalAlignment=Alignment.CenterVertically){Text("记住手动选择",Modifier.weight(1f));Switch(rememberManual,{rememberManual=it;prefs.rememberManual=it})}
+        Row(verticalAlignment=Alignment.CenterVertically){Text("记住手动选择",Modifier.weight(1f));SettingsSwitch(rememberManual,{rememberManual=it;prefs.rememberManual=it})}
     } }
     if(selecting)AlertDialog(onDismissRequest={selecting=false},title={Text("音轨偏好")},text={Column{
         listOf(null to "跟随影片","zh" to "中文优先","en" to "英文优先").forEach{(value,label)->
