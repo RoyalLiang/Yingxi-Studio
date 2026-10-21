@@ -17,6 +17,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService:MediaSessionService(){
     private var session:MediaSession?=null
+ private var videoRecovery:VideoDecoderRecovery?=null
     private lateinit var store:SourceStore
     private lateinit var history:HistoryStore
     private var requestIds=setOf<String>()
@@ -30,12 +31,14 @@ class PlaybackService:MediaSessionService(){
     override fun onCreate(){
         super.onCreate();store=SourceStore(this);history=HistoryStore(this)
         val prefs=PlaybackPreferences(this)
-        val player=ExoPlayer.Builder(this,playbackRenderers(this))
+        val renderers=playbackRenderers(this)
+ val player=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
             .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,RemoteDataSource.Factory()),PlaybackExtractors(this)))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
-        player.addAnalyticsListener(PlaybackMetrics.listener())
+        videoRecovery=VideoDecoderRecovery(player,renderers)
+ player.addAnalyticsListener(PlaybackMetrics.listener())
         player.setPlaybackSpeed(prefs.speed)
         player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
             .setPreferredAudioLanguage(prefs.effectiveAudioLanguage).setPreferredTextLanguage(prefs.textLanguage)
@@ -145,7 +148,7 @@ class PlaybackService:MediaSessionService(){
     override fun onGetSession(controllerInfo:MediaSession.ControllerInfo)=session
     override fun onDestroy(){
         val owned=requestIds
-        OnlineSubtitles.cancel();persist();handler.removeCallbacksAndMessages(null);session?.player?.release();session?.release();session=null
+        OnlineSubtitles.cancel();persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.
         // This service only releases requests actually adopted by its timeline.
         PlaybackRequests.retainActive(emptySet());owned.forEach(PlaybackRequests::remove)

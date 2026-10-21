@@ -1,0 +1,98 @@
+{
+  "coordinate": "io.github.anilbeesetti:nextlib-media3ext:1.11.1-0.16.0",
+  "aarSha256": "998b4ff249fd3be3dfe2bf0757d47cb7cd903c4bf02a702efc4789574c679839",
+  "upstreamSource": "https://github.com/anilbeesetti/nextlib/archive/refs/tags/v1.11.1-0.16.0.tar.gz",
+  "upstreamSourceSha256": "e90d4f8bc5a11357d8a2bc53b6d36dd45b4f5420f05b600d1f221cf63eb65e4a",
+  "nativeRecipe": "https://github.com/anilbeesetti/nextlib/blob/v1.11.1-0.16.0/ffmpeg/setup.sh",
+  "applicationLicense": "GPL-3.0",
+  "upstreamLicense": "GPL-3.0",
+  "ffmpeg": {
+    "version": "9.0.1",
+    "license": "LGPL-3.0-or-later",
+    "source": "https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.gz",
+    "gplEnabled": false,
+    "nonfreeEnabled": false
+  },
+  "libraries": [
+    {
+      "file": "jni/arm64-v8a/libavcodec.so",
+      "sha256": "8a67e7f01dc7f8cc8d30d345eb04b53d8214f38ff6d7dc62335d288a2747f87b"
+    },
+    {
+      "file": "jni/arm64-v8a/libavutil.so",
+      "sha256": "df180e9bdb81299b97c34cbf0cab4fe24219ab3308dace7522ed6b5c719e788a"
+    },
+    {
+      "file": "jni/arm64-v8a/libmedia3ext.so",
+      "sha256": "06fefea4e4f8a75d6a8dee5506a7b2255a128a1512859149c01021a5d8f259ba"
+    },
+    {
+      "file": "jni/arm64-v8a/libswresample.so",
+      "sha256": "d6f8c55c34d3aed7c5e4c6ef2e423e43f949c1ae493c7c72b49c79b18e640e06"
+    },
+    {
+      "file": "jni/arm64-v8a/libswscale.so",
+      "sha256": "83c2008dd48093c596232d5effe0fee4907066d424b315136ada3a7ba2171fe6"
+    },
+    {
+      "file": "jni/armeabi-v7a/libavcodec.so",
+      "sha256": "2a2338d6380ec2cc4d2e0dc15a25002d5f2844f35585f180b35adc09c8fd39a9"
+    },
+    {
+      "file": "jni/armeabi-v7a/libavutil.so",
+      "sha256": "2035d7682565684e84eb6849f672c95d1419d33870dacae38312b5991e19ab15"
+    },
+    {
+      "file": "jni/armeabi-v7a/libmedia3ext.so",
+      "sha256": "6b9b27b8cdd70a6fed0e1c50fc3bf7f603dabe2f083e86ba641f8b4fa510736a"
+    },
+    {
+      "file": "jni/armeabi-v7a/libswresample.so",
+      "sha256": "bbcca1565ef8a87e24f80f744f14b2294477ad2aa53d95d1afdd6bd94ed1fa11"
+    },
+    {
+      "file": "jni/armeabi-v7a/libswscale.so",
+      "sha256": "e4ff8c2900a634babcc8a4fe2d7205fb71028d24813b6362b859fb3dfce2156a"
+    },
+    {
+      "file": "jni/x86/libavcodec.so",
+      "sha256": "e6a3fe16e9c1bbed958744a6081c132009ddce88d65cf7c69bf00e1bb77392e8"
+    },
+    {
+      "file": "jni/x86/libavutil.so",
+      "sha256": "53aa4c632a18e1c3fc7be58086251bdf65aee404bdd34e12a887761b76f3bb10"
+    },
+    {
+      "file": "jni/x86/libmedia3ext.so",
+      "sha256": "f1373a968a2edc2c3a39ce634b021f9736cc970d977ad803b767fc10f18638ad"
+    },
+    {
+      "file": "jni/x86/libswresample.so",
+      "sha256": "ca4afb108256d196c23688987a04a1182fdbaf23f404d88978d368cbfa13170f"
+    },
+    {
+      "file": "jni/x86/libswscale.so",
+      "sha256": "1faa3e1efcc8a84145df157b749f0b2998216f02fcf8e1cb268c8ffcafdd6c99"
+    },
+    {
+      "file": "jni/x86_64/libavcodec.so",
+      "sha256": "37aa0b129c9427d6e89547b5f57f0bc6680db3b766ac4dd4a47956d348561750"
+    },
+    {
+      "file": "jni/x86_64/libavutil.so",
+      "sha256": "a3ae2260740a014533bbead12af2ee63b79bfd70045cc14ab392e1d9a5e681c8"
+    },
+    {
+      "file": "jni/x86_64/libmedia3ext.so",
+      "sha256": "68dbdcb241587f6d176c371bcd766fef9d9a2d20e8ab49677493307b00b19fb0"
+    },
+    {
+      "file": "jni/x86_64/libswresample.so",
+      "sha256": "8b33adf73fa760be0ca96370c370f536e6e0dac8e50c3b5c4f452979361e8942"
+    },
+    {
+      "file": "jni/x86_64/libswscale.so",
+      "sha256": "1dd0ea7e2dfd9653981f238359ca79b5d27aaca08e900d0fc8674c2ad0c4999d"
+    }
+  ]
+}

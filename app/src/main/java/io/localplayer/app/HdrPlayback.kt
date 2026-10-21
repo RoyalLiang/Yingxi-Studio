@@ -27,18 +27,38 @@ internal fun supportsNativeDolbyVision(context:Context,format:Format):Boolean=ru
     val display=context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
     nativeDolbyVisionAvailable(display?.hdrCapabilities?.supportedHdrTypes?:intArrayOf()) {
         MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_DOLBY_VISION,format.drmInitData!=null,false)
-            .any{it.hardwareAccelerated&&it.isFormatSupported(format)}
+            .any{it.hardwareAccelerated&&it.isFormatSupported(context,format)}
     }
 }.getOrDefault(false)
 
 /** MediaCodec must receive HEVC color/profile data when trying a DV stream's HDR10 base layer. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun decoderOutputFormat(format:Format,codecMimeType:String):Format =
-    if(codecMimeType==MimeTypes.VIDEO_H265)dolbyVisionBaseFormat(format,false) else format
+    if(codecMimeType==MimeTypes.VIDEO_H265)hevcDecoderFormat(dolbyVisionBaseFormat(format,false)) else format
+
+/** Repair an unreadable advertised HEVC profile only from the actual initialization bitstream. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun hevcDecoderFormat(format:Format):Format {
+    if(format.sampleMimeType!=MimeTypes.VIDEO_H265||format.drmInitData!=null||
+        androidx.media3.exoplayer.mediacodec.MediaCodecUtil.getCodecProfileAndLevel(format)!=null)return format
+    val codecs=runCatching{androidx.media3.container.NalUnitUtil.getH265BaseLayerCodecsString(format.initializationData)}.getOrNull()?:return format
+    return format.buildUpon().setCodecs(codecs).build()
+}
 
 @Suppress("DEPRECATION")
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+internal open class HdrRenderersFactory(context:Context,private val preferPlatform:((Format)->Boolean)?=null):androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+    @Volatile internal var forceSoftware=false
+    internal var nativeVideoIndex=-1;private set
+    internal var softwareVideoIndex=-1;private set
+    internal fun nativeGate(renderer:Renderer):Renderer {
+        val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by renderer.capabilities {
+            override fun supportsFormat(format:Format):Int =
+                if(forceSoftware&&format.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null)androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+                else renderer.capabilities.supportsFormat(format)
+        }
+        return object:Renderer by renderer {override fun getCapabilities()=capabilities}
+    }
     override fun buildVideoRenderers(context:Context,extensionRendererMode:Int,selector:MediaCodecSelector,
         enableDecoderFallback:Boolean,eventHandler:Handler,eventListener:VideoRendererEventListener,
         allowedVideoJoiningTimeMs:Long,out:ArrayList<Renderer>) {
@@ -46,7 +66,23 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
         super.buildVideoRenderers(context,extensionRendererMode,selector,enableDecoderFallback,eventHandler,
             eventListener,allowedVideoJoiningTimeMs,out)
         val index=(start until out.size).firstOrNull{out[it] is MediaCodecVideoRenderer}?:return
-        out[index]=object:MediaCodecVideoRenderer(context,codecAdapterFactory,selector,allowedVideoJoiningTimeMs,
+        nativeVideoIndex=index
+        val software=io.github.anilbeesetti.nextlib.media3ext.ffdecoder.FfmpegVideoRenderer(allowedVideoJoiningTimeMs,eventHandler,eventListener,MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
+        softwareVideoIndex=out.size
+        val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by software.capabilities {
+            override fun supportsFormat(format:Format):Int {
+                if(format.sampleMimeType!=MimeTypes.VIDEO_H265||format.drmInitData!=null)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+                val nativePreferred=preferPlatform?.invoke(format)?:runCatching {
+                    selector.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any {
+                        it.hardwareAccelerated&&it.isFormatFunctionallySupported(context,hevcDecoderFormat(format))
+                    }
+                }.getOrDefault(false)
+                if(!forceSoftware&&nativePreferred)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+                return software.capabilities.supportsFormat(format)
+            }
+        }
+        out.add(object:Renderer by software {override fun getCapabilities()=capabilities})
+        out[index]=nativeGate(object:MediaCodecVideoRenderer(context,codecAdapterFactory,selector,allowedVideoJoiningTimeMs,
             enableDecoderFallback,eventHandler,eventListener,MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY) {
             override fun getDecoderInfos(selector:MediaCodecSelector,format:Format,requiresSecureDecoder:Boolean):List<MediaCodecInfo> {
                 val native=super.getDecoderInfos(selector,format,requiresSecureDecoder)
@@ -60,7 +96,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
                 codecOperatingRate:Float,deviceNeedsNoPostProcessWorkaround:Boolean,tunnelingAudioSessionId:Int):MediaFormat =
                 super.getMediaFormat(decoderOutputFormat(format,codecMimeType),codecMimeType,codecMaxValues,
                     codecOperatingRate,deviceNeedsNoPostProcessWorkaround,tunnelingAudioSessionId)
-        }
+        })
     }
 }
 
