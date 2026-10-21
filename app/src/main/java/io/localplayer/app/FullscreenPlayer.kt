@@ -138,7 +138,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             error = controller.playerError?.let(::playbackFailure)
             if(error==null&&controller.playbackState==Player.STATE_READY){
                 val video=controller.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
-                if(video.isNotEmpty()&&video.none{it.isSupported}){
+                if(unsupportedVideo(controller.currentTracks)){
                     val format=video.first().getTrackFormat(0)
                     val codec=format.codecs?:format.sampleMimeType?:"未知编码"
                     error="此设备无法解码该视频（$codec），请更换兼容片源"
