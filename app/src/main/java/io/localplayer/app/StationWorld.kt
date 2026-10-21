@@ -131,8 +131,8 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             Surface(onClick={select(place.id)},color=if(place.id==selectedId)Berry else Paper,contentColor=if(place.id==selectedId)Color.White else Ink,
                 shape=RoundedCornerShape(14.dp),modifier=Modifier.offset(x=(width*place.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)),y=height*place.y-25.dp).width(112.dp).heightIn(min=50.dp)
                     .testTag("world-node:${place.id}").semantics{selected=place.id==selectedId}) {
-                Column(Modifier.padding(horizontal=5.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text(place.name.inLanguage(language),fontSize=12.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium)
+                Box(Modifier.fillMaxWidth().heightIn(min=50.dp).padding(horizontal=5.dp,vertical=8.dp),contentAlignment=Alignment.Center) {
+                    Text(place.name.inLanguage(language),textAlign=androidx.compose.ui.text.style.TextAlign.Center,fontSize=12.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium,modifier=Modifier.fillMaxWidth().testTag("world-node-label:${place.id}"))
                 }
             }
         }

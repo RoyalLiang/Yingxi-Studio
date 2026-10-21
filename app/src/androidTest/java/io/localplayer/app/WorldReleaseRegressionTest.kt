@@ -65,6 +65,30 @@ class WorldReleaseRegressionTest {
             assertTrue(node.left>=screen.left&&node.right<=screen.right)
         }
     }
+    @Test fun worldNodeLabelsAreCenteredWithinTheirCardsInBothLanguages() {
+        for(language in listOf("zh","en")) {
+            ui.runOnUiThread {ui.activity.setContent {PlayerTheme {
+                val d=LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(d.density,1.8f),
+                    androidx.compose.ui.platform.LocalConfiguration provides android.content.res.Configuration(ui.activity.resources.configuration).apply{setLocale(java.util.Locale.forLanguageTag(language))}) {
+                    Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage{}}
+                }
+            }}}
+            for(id in listOf("station","salt","archive","sea","beacon")) {
+                ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:$id"))
+                val card=ui.onNodeWithTag("world-node:$id").fetchSemanticsNode().boundsInRoot
+                val label=ui.onNodeWithTag("world-node-label:$id",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+                assertTrue(kotlin.math.abs(card.center.x-label.center.x)<2f)
+                assertTrue(kotlin.math.abs(card.center.y-label.center.y)<2f)
+                ui.onNodeWithTag("world-node-label:$id",useUnmergedTree=true)
+                    .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { action ->
+                        val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();action(layouts)
+                        assertEquals(androidx.compose.ui.text.style.TextAlign.Center,layouts.single().layoutInput.style.textAlign)
+                    }
+            }
+            capture("graph-centered-$language")
+        }
+    }
     @Test fun letterParserKeepsAttributedQuotesAndSeparateRepairs() {
         val raw="## 中文\n\n【修缮记录】\n1. 修好柜台。\n\n> 灯还亮着。——迟灯\n\n## English\n\n[Repairs]\n1. Repair the counter.\n\n> Keep the light on. — Chideng"
         val zh=releaseLetterBlocks(raw,"zh");val en=releaseLetterBlocks(raw,"en")
