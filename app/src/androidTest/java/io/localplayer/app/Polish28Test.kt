@@ -49,6 +49,17 @@ class Polish28Test {
             ui.onNodeWithText("关闭").performClick()
         }finally{ui.runOnUiThread{owner.clear();ui.activity.requestedOrientation=android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}}
     }
+    @Test fun registrationBubbleIsCompactAndAboveBottomNavigation(){
+        ui.onNodeWithText("避难所").performClick()
+        ui.runOnIdle{androidx.lifecycle.ViewModelProvider(ui.activity)[LibraryViewModel::class.java].notifyRegistration()}
+        val toast=ui.onNodeWithTag("source-toast").getUnclippedBoundsInRoot()
+        val root=ui.onRoot().getUnclippedBoundsInRoot()
+        assertTrue("Bubble stays near the lower controls",toast.top.value>(root.bottom-root.top).value*.6f)
+        assertTrue("Bubble stays above navigation",toast.bottom.value<root.bottom.value-85f)
+        assertTrue("Registration height remains compact",(toast.bottom-toast.top).value in 48f..80f)
+        capture("registration")
+        ui.onNodeWithTag("source-toast").performClick().assertDoesNotExist()
+    }
     @Test fun exploreRemainsWithinBottomNavigationAndKeepsItsReadingPosition(){
         ui.onNodeWithText("探索").performClick()
         ui.onNodeWithTag("station-world").assertIsDisplayed()
