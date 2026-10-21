@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.media3.common.*
 import io.localplayer.core.*
 import kotlinx.coroutines.*
@@ -21,68 +22,121 @@ internal class EnrichmentPreferences(context:Context){
 }
 internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest(listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
 
+private fun posterPath(media:MediaRef,source:Source?)=media.path?.let{listOfNotNull(source?.root?.takeIf{it.isNotBlank()},it).joinToString("/")}
+    ?:media.localUri?.let{raw->runCatching{val uri=raw.toUri();if("document" in uri.pathSegments)android.provider.DocumentsContract.getDocumentId(uri).substringAfter(':') else uri.path}.getOrNull()}
+internal fun posterIdentity(media:MediaRef,source:Source?=null)=MediaIdentity.forPoster(media.title,posterPath(media,source))
+
 internal object MediaPosters {
     private val io=Dispatchers.IO.limitedParallelism(2)
+    private val disk=Dispatchers.IO.limitedParallelism(2)
+    private val background=CoroutineScope(SupervisorJob()+io)
+    private val jobs=java.util.concurrent.ConcurrentHashMap<String,Job>()
     private val http=EnrichmentHttp()
     private val lookup=PosterLookup(http)
     private val failed=java.util.concurrent.ConcurrentHashMap<String,Long>()
     val changes=MutableStateFlow(0L)
-    fun retryMissing(){revision.incrementAndGet();failed.clear();changes.update{it+1}}
     private val revision=java.util.concurrent.atomic.AtomicLong()
+    private val writes=Any()
+    fun retryMissing(){revision.incrementAndGet();failed.clear();changes.update{it+1}}
     internal var connector:Connector=AppConnectors()
     private val locks=Array(16){kotlinx.coroutines.sync.Mutex()}
     internal var onlineLookup:(MediaIdentity,Cancellation)->PosterMatch?={id,c->lookup.find(id,c)}
-    private fun dir(c:Context)=File(c.cacheDir,"media-posters-v1").apply{mkdirs()}
-    private const val posterPolicy = 2
-    private const val posterLifetimeMs = 7L * 24 * 60 * 60 * 1000
-    private fun cachedMetadata(c:Context,m:MediaRef):org.json.JSONObject? = runCatching {
-        val data=org.json.JSONObject(File(dir(c),enrichmentKey(m)+".json").readText())
-        val age=System.currentTimeMillis()-data.getLong("fetchedAt")
-        data.takeIf{it.optInt("policy")==posterPolicy&&it.optString("title")==m.title&&age in 0 until posterLifetimeMs}
+    internal var imageDownload:(String,Cancellation)->ByteArray={url,c->http.get(url,c,5*1024*1024)}
+    private const val policy=3
+    private const val recheckMs=7L*24*60*60*1000
+    private fun identity(media:MediaRef,source:Source?)=posterIdentity(media,source).let{listOf(it.title,it.year,it.season,it.series).joinToString("|")}
+    private fun source(context:Context,media:MediaRef)=media.sourceId?.let{id->SourceStore(context).load().firstOrNull{it.id==id}}
+    private fun allowed(context:Context,media:MediaRef,source:Source?)=EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)))
+    private fun record(context:Context,media:MediaRef,source:Source?)=PosterStore(context).metadata(enrichmentKey(media))?.takeIf{it.optString("identity")==identity(media,source)}
+    fun credit(context:Context,media:MediaRef):Pair<String,String>?=runCatching {
+        val source=source(context,media)
+        if(!allowed(context,media,source))null else record(context,media,source)?.let{it.getString("credit") to it.getString("url")}
     }.getOrNull()
-    fun credit(c:Context,m:MediaRef):Pair<String,String>?=runCatching{cachedMetadata(c,m)?.let{it.getString("credit") to it.getString("url")}}.getOrNull()
     internal fun decode(data:ByteArray):Bitmap?{
         val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeByteArray(data,0,data.size,bounds)
         if(bounds.outWidth !in 1..20000||bounds.outHeight !in 1..20000)return null
         val options=BitmapFactory.Options().apply{inSampleSize=1;while(bounds.outWidth/inSampleSize>800||bounds.outHeight/inSampleSize>1000)inSampleSize*=2}
         return BitmapFactory.decodeByteArray(data,0,data.size,options)
     }
-    suspend fun load(context:Context,media:MediaRef):Bitmap?=coroutineScope {
+    suspend fun load(context:Context,media:MediaRef,localOnly:Boolean=false):Bitmap?=withContext(disk) {
+        val app=context.applicationContext;val source=source(app,media)
+        if(!allowed(app,media,source))return@withContext null
+        val id=enrichmentKey(media);val store=PosterStore(app)
+        val cached=record(app,media,source)
+        val bitmap=cached?.let(store::image)?:migrate(app,media,source,store)
+        if(bitmap!=null){
+            val data=record(app,media,source)
+            val age=System.currentTimeMillis()-(data?.optLong("checkedAt")?:0)
+            if(data?.optInt("policy")!=policy||age !in 0 until recheckMs)schedule(app,media)
+            return@withContext bitmap
+        }
+        if(localOnly)null else fetch(app,media)
+    }
+    private fun migrate(context:Context,media:MediaRef,source:Source?,store:PosterStore):Bitmap?=runCatching {
+        val generation=revision.get();val token=HistoryStore(context).token(media.key)
+        // Movie covers from the previous identity policy remain useful, including expired ones.
+        if(posterIdentity(media,source)!=MediaIdentity.parse(media.title))return@runCatching null
+        val id=enrichmentKey(media);val dir=File(context.cacheDir,"media-posters-v1")
+        val data=org.json.JSONObject(File(dir,"$id.json").readText())
+        if(data.optInt("policy")!=2||data.optString("title")!=media.title)return@runCatching null
+        val bitmap=decode(File(dir,"$id.jpg").readBytes())?:return@runCatching null
+        synchronized(writes){
+            if(revision.get()!=generation||HistoryStore(context).token(media.key)!=token||!allowed(context,media,source(context,media)))return@runCatching null
+            store.save(id,bitmap,data.put("identity",identity(media,source)).put("policy",2).put("checkedAt",0).put("confidence",.96))
+        }
+        bitmap
+    }.getOrNull()
+    private fun schedule(context:Context,media:MediaRef) {
+        val id=enrichmentKey(media)
+        synchronized(jobs){
+            if(jobs[id]?.isActive==true)return
+            val job=background.launch(start=CoroutineStart.LAZY){fetch(context,media,refresh=true)}
+            jobs[id]=job
+            job.invokeOnCompletion{synchronized(jobs){if(jobs[id]===job)jobs.remove(id)}}
+            job.start()
+        }
+    }
+    internal suspend fun awaitRefresh(){jobs.values.toList().joinAll()}
+    private suspend fun fetch(context:Context,media:MediaRef,refresh:Boolean=false):Bitmap?=coroutineScope {
         val cancellation=Cancellation()
-        val worker=async(io){loadRequest(context,media,cancellation)}
+        val worker=async(io){fetchRequest(context,media,cancellation,refresh)}
         try{worker.await()}finally{withContext(NonCancellable+Dispatchers.IO){cancellation.close()}}
     }
-
-    private suspend fun loadRequest(context:Context,media:MediaRef,c:Cancellation):Bitmap?=withContext(io){
-        if(!EnrichmentPreferences(context).posters)return@withContext null
-        val store=SourceStore(context)
-        val source=media.sourceId?.let{id->store.load().firstOrNull{it.id==id}}
-        if(media.sourceId!=null&&(source==null||media.location!=mediaLocation(source)))return@withContext null
+    private suspend fun fetchRequest(context:Context,media:MediaRef,c:Cancellation,refresh:Boolean):Bitmap?=withContext(io){
+        val source=source(context,media)
+        if(!allowed(context,media,source))return@withContext null
         val id=enrichmentKey(media);val lock=locks[(id.hashCode()and Int.MAX_VALUE)%locks.size]
         lock.lock()
         try{
-            val target=File(dir(context),"$id.jpg")
-            if(target.isFile&&cachedMetadata(context,media)!=null)decode(target.readBytes())?.let{return@withContext it}
-            target.delete();File(dir(context),"$id.json").delete()
-            if(System.currentTimeMillis()-(failed[id]?:0)<6*60*60*1000)return@withContext null
-            val token=HistoryStore(context).token(media.key)
-        val generation=revision.get()
+            val store=PosterStore(context);val old=record(context,media,source)
+            val previous=old?.let(store::image)
+            val age=System.currentTimeMillis()-(old?.optLong("checkedAt")?:0)
+            if(previous!=null&&old?.optInt("policy")==policy&&age in 0 until recheckMs)return@withContext previous
+            if(System.currentTimeMillis()-(failed[id]?:0)<6*60*60*1000)return@withContext previous
+            val token=HistoryStore(context).token(media.key);val generation=revision.get()
             val watcher=EnrichmentDeadlines.timer.schedule({c.close()},20,java.util.concurrent.TimeUnit.SECONDS)
             val owner=coroutineContext.job.invokeOnCompletion{if(it!=null)c.close()}
+            fun valid()=revision.get()==generation&&HistoryStore(context).token(media.key)==token&&allowed(context,media,source(context,media))
             try{
-                var credit="目录海报";var url=""
-                val local=runCatching{sidecar(context,media,source,c)}.getOrNull()
-                val bitmap=local?.let(::decode)?:onlineLookup(MediaIdentity.parse(media.title),c)?.let{match->
-                    credit=match.credit;url=match.sourceUrl
-                    decode(http.get(match.imageUrl,c,5*1024*1024))
-                }?:run{c.check();if(revision.get()==generation)failed[id]=System.currentTimeMillis();return@withContext null}
+                var credit="目录海报";var url="";var imageUrl="";var confidence=1.0
+                val local=runCatching{sidecar(context,media,source,c)}.getOrNull()?.let(::decode)
+                val bitmap=local?:onlineLookup(posterIdentity(media,source),c)?.takeIf{it.confidence>=.96&&it.confidence>=(old?.optDouble("confidence",0.0)?:0.0)}?.let{match->
+                    credit=match.credit;url=match.sourceUrl;imageUrl=match.imageUrl;confidence=match.confidence
+                    if(previous!=null&&old?.optString("imageUrl")==match.imageUrl)previous else decode(imageDownload(match.imageUrl,c))
+                }
                 ensureActive();c.check()
-                if(revision.get()!=generation||HistoryStore(context).token(media.key)!=token||!EnrichmentPreferences(context).posters)return@withContext null
-                val temp=File(dir(context),"$id.tmp")
-                try{temp.outputStream().use{check(bitmap.compress(Bitmap.CompressFormat.JPEG,88,it))};check(temp.renameTo(target))}finally{temp.delete()}
-                File(dir(context),"$id.json").writeText(org.json.JSONObject().put("credit",credit).put("url",url).put("policy",posterPolicy).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).toString())
-                trim(context);bitmap
-            }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&revision.get()==generation)failed[id]=System.currentTimeMillis();null}
+                if(!valid())return@withContext previous
+                if(bitmap==null){failed[id]=System.currentTimeMillis();return@withContext previous}
+                val data=org.json.JSONObject().put("credit",credit).put("url",url).put("imageUrl",imageUrl).put("confidence",confidence)
+                    .put("policy",policy).put("identity",identity(media,source)).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).put("checkedAt",System.currentTimeMillis())
+                synchronized(writes){
+                    if(!valid())return@withContext previous
+                    if(bitmap===previous&&old!=null)store.update(id,data.put("image",old.getString("image"))) else store.save(id,bitmap,data)
+                }
+                failed.remove(id)
+                if(refresh)changes.update{it+1}
+                bitmap
+            }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&valid())failed[id]=System.currentTimeMillis();previous}
             finally{watcher.cancel(false);owner.dispose();c.close()}
         }finally{lock.unlock()}
     }
@@ -92,7 +146,7 @@ internal object MediaPosters {
             if(pass==null&&source.username.isNotBlank())return null
             return connector.connect(source,Credentials(pass?:""),c).use{session->
                 val entries=session.list(media.path?.substringBeforeLast('/',"")?:"")
-                val names=posterSidecarNames(media.title,entries.filter{!it.directory}.map{it.name})
+                val names=posterSidecarNames(media.title,entries.filter{!it.directory}.map{it.name},posterPath(media,source))
             val image=names.firstNotNullOfOrNull{n->entries.firstOrNull{!it.directory&&it.name.equals(n,true)&&it.size in 1..5L*1024*1024}}?:return@use null
                 session.open(image.path).use image@{file->if(file.size !in 1..5L*1024*1024)return@image null;val data=ByteArray(file.size.toInt());var n=0
                     while(n<data.size){c.check();val k=file.readAt(n.toLong(),data,n,data.size-n);if(k<=0)return@image null;n+=k};data}
@@ -106,13 +160,13 @@ internal object MediaPosters {
         val fields=arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME)
         val found=mutableMapOf<String,Uri>()
         context.contentResolver.query(children,fields,null,null,null)?.use{cursor->var count=0;while(cursor.moveToNext()&&count++<2000){c.check();found[cursor.getString(1).lowercase()]=android.provider.DocumentsContract.buildDocumentUriUsingTree(uri,cursor.getString(0))}}
-        val names=posterSidecarNames(media.title,found.keys.toList())
+        val names=posterSidecarNames(media.title,found.keys.toList(),posterPath(media,source))
         val image=names.firstNotNullOfOrNull{found[it.lowercase()]}?:return null
         return context.contentResolver.openInputStream(image)?.use{it.readNBytes(5*1024*1024+1)}?.takeIf{it.size<=5*1024*1024}
     }
-    private fun trim(c:Context){var bytes=0L;dir(c).listFiles()?.filter{it.extension=="jpg"}?.sortedByDescending{it.lastModified()}?.forEachIndexed{i,f->bytes+=f.length();if(i>=128||bytes>48L*1024*1024){f.delete();File(f.parentFile,f.nameWithoutExtension+".json").delete()}}}
-    fun remove(c:Context,m:MediaRef){revision.incrementAndGet();val id=enrichmentKey(m);File(dir(c),"$id.jpg").delete();File(dir(c),"$id.json").delete();failed.remove(id)}
-    fun clear(c:Context){revision.incrementAndGet();dir(c).listFiles()?.forEach{it.delete()};failed.clear()}
+
+    fun remove(c:Context,m:MediaRef)=synchronized(writes){revision.incrementAndGet();val id=enrichmentKey(m);jobs.remove(id)?.cancel();PosterStore(c).remove(id);File(c.cacheDir,"media-posters-v1/$id.jpg").delete();File(c.cacheDir,"media-posters-v1/$id.json").delete();failed.remove(id);Unit}
+    fun clear(c:Context)=synchronized(writes){revision.incrementAndGet();jobs.values.forEach{it.cancel()};jobs.clear();PosterStore(c).clear();File(c.cacheDir,"media-posters-v1").listFiles()?.forEach{it.delete()};failed.clear();changes.update{it+1}}
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

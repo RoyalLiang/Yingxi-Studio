@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
-@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit) {
+@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val continuing = vm.history.firstOrNull { !it.completed && it.positionMs > 0 && it.durationMs > 0 }
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
@@ -42,9 +42,24 @@ import androidx.compose.ui.unit.sp
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("映汐", Modifier.weight(1f), fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, maxLines = 1)
+                    Column(Modifier.weight(1f)) {
+                        Text("映汐", fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp)
+                        Text("放映室", fontSize = 13.sp, color = Muted, letterSpacing = 3.sp)
+                    }
                     if (vm.history.isNotEmpty()) IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
                     IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "设置", tint = Muted) }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Surface(onClick = onArchives, color = GroupedSurface, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().testTag("home-archives")) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        StationPortrait("scavenger", "阿汐", Modifier.size(60.dp), false)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("档案室", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                            Text("阿汐的来信 · 人物与世界图谱", fontSize = 12.sp, lineHeight = 18.sp, color = Muted)
+                        }
+                        Icon(Icons.Rounded.ChevronRight, null, tint = Muted, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             continuing?.let { entry ->
@@ -123,9 +138,9 @@ import androidx.compose.ui.unit.sp
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
                 Box(Modifier.fillMaxWidth().height(64.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
                     androidx.compose.ui.graphics.Color.Black.copy(alpha=.65f),androidx.compose.ui.graphics.Color.Black.copy(alpha=.5f),androidx.compose.ui.graphics.Color.Transparent))))
-                Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+                Box(Modifier.align(Alignment.TopEnd)) {
                     IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp))
+                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).offset(x=6.dp,y=(-6).dp))
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })

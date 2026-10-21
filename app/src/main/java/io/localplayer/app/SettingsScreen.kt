@@ -113,7 +113,7 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     val offerInstall={
         if(context.packageManager.canRequestPackageInstalls())install()
         else runCatching{permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+context.packageName)))}
-            .onFailure{vm.fail("请在系统设置中允许映汐播放器安装应用")}
+            .onFailure{vm.fail("请在系统设置中允许映汐放映室安装应用")}
         Unit
     }
     LaunchedEffect(vm.ready){if(vm.ready!=null&&!vm.installationOffered){vm.installationOffered=true;offerInstall()}}
