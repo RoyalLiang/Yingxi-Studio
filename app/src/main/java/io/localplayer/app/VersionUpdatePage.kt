@@ -51,7 +51,12 @@ import androidx.compose.ui.unit.sp
         StationWorldPage { world=false }
         return
     }
-    Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("settings-page")) {
+    Scaffold(
+        modifier=Modifier.fillMaxSize().testTag("settings-page"),containerColor=Paper,
+        contentWindowInsets=WindowInsets.safeDrawing,
+        bottomBar={UpdateFooter(vm,install,download){letter="available"}}
+    ) { contentPadding ->
+    Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
             Text(if(about)"版本" else "放映设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
@@ -91,7 +96,7 @@ import androidx.compose.ui.unit.sp
                 CurrentLetter(language,{letter="installed"},Modifier.weight(1f).fillMaxWidth())
             }
         }
-        UpdateFooter(vm,install,download){letter="available"}
+    }
     }
     if(letter!=null) {
         val available=vm.release
@@ -111,7 +116,7 @@ import androidx.compose.ui.unit.sp
         Text("当前版本 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
         Text("安装序号 "+vm.version.code,fontSize=12.sp,color=Muted)
         TextButton(onClick=world,modifier=Modifier.testTag("open-world"),contentPadding=PaddingValues(vertical=4.dp)){
-            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室"else"档案室 · 人物与世界图谱",fontSize=13.sp)
+            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室"else"档案室 · 人物与来信",fontSize=13.sp)
         }
     }
 }
@@ -119,7 +124,9 @@ import androidx.compose.ui.unit.sp
 @Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit,available:()->Unit) {
     var details by remember{mutableStateOf(false)}
     if(details)AlertDialog(onDismissRequest={details=false},title={Text("更新提示")},text={Text(vm.message.orEmpty(),Modifier.heightIn(max=300.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick={details=false}){Text("关闭")}})
-    Surface(color=Paper,shadowElevation=4.dp,modifier=Modifier.fillMaxWidth().testTag("update-footer")) {
+    Surface(color=GroupedSurface,shadowElevation=0.dp,tonalElevation=0.dp,modifier=Modifier.fillMaxWidth().testTag("update-footer")) {
+        Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom))) {
+        HorizontalDivider(color=Hairline)
         Column(Modifier.padding(horizontal=24.dp,vertical=12.dp).testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             vm.release?.let{release->TextButton(onClick=available,contentPadding=PaddingValues(0.dp)){
                 Text("可用更新 ",color=Berry,fontSize=14.sp);Text(release.version.name,color=Berry,fontSize=14.sp,modifier=Modifier.testTag("available-version"))}}
@@ -136,6 +143,7 @@ import androidx.compose.ui.unit.sp
                     Text(if(vm.ready!=null)"安装更新"else if((vm.progress?:0f)>0f)"继续下载"else"下载更新",maxLines=1)}
             }
         }
+    }
     }
 }
 

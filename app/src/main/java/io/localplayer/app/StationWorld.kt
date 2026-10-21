@@ -68,6 +68,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             Text(if(embedded){if(lang=="zh")"探索"else"Explore"}else if(lang=="zh")"档案室"else"Station archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            if(!embedded) {
             Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
@@ -108,6 +109,11 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                     }
                 }
             }
+            }
+            if(embedded) {
+            Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
+            Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
+            Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             WorldMap(world,placeId,lang){placeId=it}
             Text(if(lang=="zh")"点选地点阅读档案 · 实线是往返信路，虚线是传闻" else "Tap a place to read · Solid routes are known; dotted routes are rumors",fontSize=11.sp,lineHeight=18.sp,color=Muted)
             Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
@@ -120,6 +126,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                 Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
                 Text(entry.text.say(),fontSize=14.sp,lineHeight=24.sp,color=Ink)
             } }
+            }
             Text(world.boundary.say(),fontSize=11.sp,lineHeight=18.sp,color=Muted,modifier=Modifier.padding(bottom=28.dp))
         }
     }

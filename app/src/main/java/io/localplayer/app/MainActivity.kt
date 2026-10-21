@@ -91,8 +91,8 @@ class MainActivity:ComponentActivity(){
         Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty()||!selecting&&vm.path==current.initialPath)"返回避难所"else"上一级",tint=Berry)}
             Column(Modifier.weight(1f).padding(horizontal=8.dp)){
-                Text(if(selecting)"选择默认目录"else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                if(selecting)Text(current.label,Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(if(selecting)"选择默认目录"else if(vm.path.isNotEmpty())(vm.currentDirectoryBookmark()?.label?:current.label) else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(selecting||vm.path.isNotEmpty())Text(current.label,Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
             if(selecting)TextButton(onClick={vm.closeSource()}){Text("取消")}
             else SourceActions(vm,current,vm.currentDirectoryBookmark()?:SourceBookmark(current.id,current.initialPath,current.label))
@@ -125,7 +125,9 @@ class MainActivity:ComponentActivity(){
                 Text(if(vm.busy||vm.openingSource!=null)"取消"else"刷新")
             }
         }
-        LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
+        if(!selecting && vm.openingSource==null && shown.isNotEmpty()) {
+            ShelterDirectory(vm,current,selectedEntry){entry->selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}
+        } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
             if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
             if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(if(entry.directory)entry.name else if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
                 if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path,busy=vm.busy&&selectedEntry==entry.path){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}

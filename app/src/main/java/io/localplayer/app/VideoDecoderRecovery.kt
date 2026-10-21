@@ -8,7 +8,7 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 
-/** One independent HEVC retry per episode; errors from audio/network never trigger video recovery. */
+/** One output reset and one HEVC fallback per episode; audio/network errors never trigger either. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class VideoDecoderRecovery(
     private val player:ExoPlayer,
@@ -23,6 +23,7 @@ internal class VideoDecoderRecovery(
     private var readyPosition=0L
     private var closed=false
     internal var attempted=false;private set
+    internal var outputRecoveryAttempted=false;private set
     internal var reason:String?=null;private set
     private val watchdog=object:Runnable {
         override fun run(){
@@ -50,7 +51,7 @@ internal class VideoDecoderRecovery(
     private fun videoFormat():Format?=player.videoFormat?:player.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO}?.getTrackFormat(0)
     override fun onMediaItemTransition(item:MediaItem?,reason:Int) {
         if(item?.mediaId==mediaId)return
-        mediaId=item?.mediaId;attempted=false;this.reason=null;firstFrame=false;readySince=0
+        mediaId=item?.mediaId;attempted=false;outputRecoveryAttempted=false;this.reason=null;firstFrame=false;readySince=0
         factory.forceSoftware=false
         handler.removeCallbacks(watchdog)
         if(factory.nativeVideoIndex>=0&&selector?.parameters?.getRendererDisabled(factory.nativeVideoIndex)==true)
@@ -62,15 +63,26 @@ internal class VideoDecoderRecovery(
     override fun onPlayerError(error:PlaybackException) {
         val rendererError=error as? ExoPlaybackException?:return
         if(rendererError.rendererIndex!=factory.nativeVideoIndex)return
+        android.util.Log.d("YingxiDecoder","native error=${error.errorCodeName} software=$attempted outputReset=$outputRecoveryAttempted")
+        if(generateSequence(error.cause){it.cause}.any{it is VideoOutputStateException}&&retryOutput())return
         if(error.errorCode !in setOf(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,PlaybackException.ERROR_CODE_DECODING_FAILED,
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED))return
         useSoftware(error.errorCodeName,rendererError.rendererFormat)
+    }
+    private fun retryOutput():Boolean {
+        if(closed||outputRecoveryAttempted||player.currentMediaItem==null)return false
+        outputRecoveryAttempted=true;firstFrame=false;readySince=0
+        android.util.Log.d("YingxiDecoder","reload current output")
+        val index=player.currentMediaItemIndex;val position=player.currentPosition.coerceAtLeast(0);val playing=player.playWhenReady
+        player.stop();player.seekTo(index,position);player.prepare();player.playWhenReady=playing
+        return true
     }
     internal fun useSoftware(reason:String="manual",format:Format?=videoFormat()):Boolean {
         if(closed||attempted||selector==null||factory.nativeVideoIndex<0||factory.softwareVideoIndex<0||!compatible(format))return false
         if(player.currentMediaItem==null)return false
         val index=player.currentMediaItemIndex;val position=player.currentPosition.coerceAtLeast(0);val playing=player.playWhenReady
         attempted=true;this.reason=reason;factory.forceSoftware=true;firstFrame=false;readySince=0
+        android.util.Log.d("YingxiDecoder","HEVC software fallback: $reason")
         // Release the failed Surface producer before FFmpeg acquires the same output Surface.
         player.stop()
         selector.parameters=selector.parameters.buildUpon().setRendererDisabled(factory.nativeVideoIndex,true).build()

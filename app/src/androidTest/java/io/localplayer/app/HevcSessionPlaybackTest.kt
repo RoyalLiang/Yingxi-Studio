@@ -52,7 +52,8 @@ class HevcSessionPlaybackTest {
         val future=main{MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync()}
         val c=future.get(10,TimeUnit.SECONDS)
         try {
-            ui.waitUntil(15000){main{c.playerError!=null||(c.playbackState==Player.STATE_READY&&c.videoSize.width==1920&&PlaybackMetrics.snapshot().firstFrameMs!=null)}}
+            try { ui.waitUntil(15000){main{c.playerError!=null||(c.playbackState==Player.STATE_READY&&c.videoSize.width==1920&&PlaybackMetrics.snapshot().firstFrameMs!=null)}} }
+            catch(e:Throwable){println(main{"HEVC_SESSION_TIMEOUT state=${c.playbackState} size=${c.videoSize} pos=${c.currentPosition} error=${c.playerError} metrics=${PlaybackMetrics.snapshot()}"});throw e}
             main{assertNull(c.playerError);c.pause();c.seekTo(1000)}
             ui.waitUntil(5000){main{c.currentPosition==1000L}}
             val surface=main{playerView(activity!!.window.decorView)!!.videoSurfaceView as SurfaceView}

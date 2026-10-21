@@ -133,9 +133,10 @@ class WebDavPlaybackTest {
 }
 
 /** A local authenticated DAV fixture; no real accounts or network services are used. */
-private class DavFixture(private val media:File):java.io.Closeable {
+internal class DavFixture(private val media:File,private val chunkDelayMs:Long=40):java.io.Closeable {
     val username="reader";val password=UUID.randomUUID().toString()
     val names=listOf("01-海边.mp4","02-落日.mp4")
+    val mediaProbes=java.util.concurrent.atomic.AtomicInteger()
     val previewProbes=java.util.concurrent.atomic.AtomicInteger()
     val positions=java.util.Collections.synchronizedList(mutableListOf<Long>())
     private val server=ServerSocket(0,16,java.net.InetAddress.getByName("127.0.0.1"))
@@ -161,9 +162,10 @@ private class DavFixture(private val media:File):java.io.Closeable {
         val range=headers["range"]?.removePrefix("bytes=") ?: "0-"
         val start=range.substringBefore('-').toLong();val end=range.substringAfter('-').toLongOrNull() ?: media.length()-1
         positions.add(start)
+        if(range=="0-0")mediaProbes.incrementAndGet()
         if(range=="0-0"&&URI(first[1]).path.endsWith(names.last()))previewProbes.incrementAndGet()
         header("206 Partial Content",end-start+1,"Content-Type: video/mp4\r\nContent-Range: bytes $start-$end/${media.length()}\r\n")
-        RandomAccessFile(media,"r").use { input->input.seek(start);var remaining=end-start+1;val buffer=ByteArray(8192);while(remaining>0){val n=input.read(buffer,0,minOf(buffer.size.toLong(),remaining).toInt());if(n<0)break;output.write(buffer,0,n);output.flush();remaining-=n;if(remaining>0&&end>0)Thread.sleep(40)} }
+        RandomAccessFile(media,"r").use { input->input.seek(start);var remaining=end-start+1;val buffer=ByteArray(8192);while(remaining>0){val n=input.read(buffer,0,minOf(buffer.size.toLong(),remaining).toInt());if(n<0)break;output.write(buffer,0,n);output.flush();remaining-=n;if(remaining>0&&end>0)Thread.sleep(chunkDelayMs)} }
     }
     override fun close(){server.close();pool.shutdownNow()}
 }

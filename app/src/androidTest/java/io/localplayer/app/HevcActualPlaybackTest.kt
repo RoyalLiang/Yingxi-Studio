@@ -55,7 +55,7 @@ class HevcActualPlaybackTest {
         lateinit var view:SurfaceView
         ui.runOnUiThread {
             ui.activity.setContent { AndroidView(factory={SurfaceView(it).also{surface->view=surface}}) }
-            val factory=if(mode==2)object:HdrRenderersFactory(context,{true}) {
+            val factory=if(mode==2)object:HdrRenderersFactory(context) {
                 override fun buildVideoRenderers(context:Context,extensionRendererMode:Int,selector:androidx.media3.exoplayer.mediacodec.MediaCodecSelector,
                     enableDecoderFallback:Boolean,eventHandler:android.os.Handler,eventListener:androidx.media3.exoplayer.video.VideoRendererEventListener,
                     allowedVideoJoiningTimeMs:Long,out:ArrayList<androidx.media3.exoplayer.Renderer>) {
@@ -68,7 +68,7 @@ class HevcActualPlaybackTest {
                         override fun render(positionUs:Long,elapsedRealtimeUs:Long){}
                     })
                 }
-            } else playbackRenderers(context,preferPlatform=if(mode==1)({true})else null)
+            } else playbackRenderers(context)
             val builder=ExoPlayer.Builder(context,factory)
             if(mode==3)builder.setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(androidx.media3.datasource.DefaultDataSource.Factory(context),advertisedCodecs()))
             player=builder.build()

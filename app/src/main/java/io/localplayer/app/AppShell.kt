@@ -59,6 +59,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
+    val states=rememberSaveableStateHolder()
     if(archivesOpen){BackHandler{archivesOpen=false};StationWorldPage{archivesOpen=false};return}
     if(settingsOpen){SettingsRoute{settingsOpen=false};return}
     if(localOpen){Box(Modifier.fillMaxSize()){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))};return}
@@ -70,7 +71,6 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     }
     DisposableEffect(vm){onDispose{vm.setDiscoveryEnabled(false)}}
     BackHandler(tab!=AppTab.Home&&(tab!=AppTab.Sources||vm.source==null)&&vm.draft==null&&vm.access==null&&vm.privateRequest==null){tab=AppTab.Home}
-    val states=rememberSaveableStateHolder()
     val scene=rememberGraphicsLayer()
     Box(Modifier.fillMaxSize()){
         // Keep the chrome out of the captured scene. List content can move beneath it.

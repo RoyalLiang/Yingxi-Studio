@@ -62,7 +62,7 @@ class DirectoryPosterRegressionTest {
         row.assertIsSelected()
         assertEquals("Loading must not move the pressed folder",before,row.fetchSemanticsNode().boundsInRoot);capture("folder-loading")
         gate.countDown();ui.waitUntil(5000){vm.path=="child"&&!vm.busy}
-        ui.onNodeWithText("子文件夹").assertIsNotSelected()
+        ui.onNodeWithTag("shelter-entry:child/child").assertIsNotSelected()
     }
     @Test fun directoryToolsLiveInTheToolbarAndTargetCurrentFolder(){
         val source=browser();ui.runOnIdle{vm.browse("child")};ui.waitUntil(5000){vm.path=="child"&&!vm.busy}

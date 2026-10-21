@@ -22,9 +22,13 @@ internal class EnrichmentPreferences(context:Context){
 }
 internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest(listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
 
-private fun posterPath(media:MediaRef,source:Source?)=media.path?.let{listOfNotNull(source?.root?.takeIf{it.isNotBlank()},it).joinToString("/")}
+private fun posterPath(media:MediaRef,source:Source?)=media.posterPathHint?:media.path?.let{listOfNotNull(source?.root?.takeIf{it.isNotBlank()},it).joinToString("/")}
     ?:media.localUri?.let{raw->runCatching{val uri=raw.toUri();if("document" in uri.pathSegments)android.provider.DocumentsContract.getDocumentId(uri).substringAfter(':') else uri.path}.getOrNull()}
-internal fun posterIdentity(media:MediaRef,source:Source?=null)=MediaIdentity.forPoster(media.title,posterPath(media,source))
+internal fun posterIdentity(media:MediaRef,source:Source?=null):MediaIdentity {
+    if(!media.key.startsWith("directory:"))return MediaIdentity.forPoster(media.title,posterPath(media,source))
+    val folder=MediaIdentity.forPoster("1.mkv",posterPath(media,source))
+    return if(folder.title=="1")MediaIdentity.parse(media.title) else folder.copy(episode=null)
+}
 
 internal object MediaPosters {
     private val io=Dispatchers.IO.limitedParallelism(2)
@@ -126,7 +130,7 @@ internal object MediaPosters {
                 }
                 ensureActive();c.check()
                 if(!valid())return@withContext previous
-                if(bitmap==null){failed[id]=System.currentTimeMillis();return@withContext previous}
+                if(bitmap==null){if(valid())failed[id]=System.currentTimeMillis();return@withContext previous}
                 val data=org.json.JSONObject().put("credit",credit).put("url",url).put("imageUrl",imageUrl).put("confidence",confidence)
                     .put("policy",policy).put("identity",identity(media,source)).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).put("checkedAt",System.currentTimeMillis())
                 synchronized(writes){

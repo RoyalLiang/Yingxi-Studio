@@ -172,18 +172,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
     LaunchedEffect(currentUri) { frame = null;previews.releaseReader() }
-    LaunchedEffect(currentUri, videoAvailable, buffering, compact, dragging) {
-        val uri=currentUri ?: return@LaunchedEffect
-        if(!videoAvailable||buffering||compact||dragging)return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            delay(350)
-            if(PlaybackMetrics.snapshot().firstFrameMs==null)return@repeatOnLifecycle
-            if(controller!=null&&controller.isPlaying&&controller.bufferedPosition-controller.currentPosition<5000)return@repeatOnLifecycle
-            try { withTimeoutOrNull(12000) { previews.get(uri,position) } }
-            catch(e:CancellationException){throw e}
-            catch(_:Exception){ /* A missing preview must never interrupt playback. */ }
-        }
-    }
+    // Open the independent preview decoder only for an explicit seek gesture.
     LaunchedEffect(dragging, currentUri, buffering) {
         if (!dragging || currentUri == null || buffering) return@LaunchedEffect
         val uri = currentUri!!
