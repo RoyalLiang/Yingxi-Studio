@@ -18,6 +18,7 @@ internal class VideoDecoderRecovery(
     private val handler=Handler(Looper.getMainLooper())
     private val selector=player.trackSelector as? DefaultTrackSelector
     private var mediaId=player.currentMediaItem?.mediaId
+    private var requestedPosition=player.currentPosition.coerceAtLeast(0)
     private var firstFrame=false
     private var readySince=0L
     private var readyPosition=0L
@@ -52,6 +53,7 @@ internal class VideoDecoderRecovery(
     override fun onMediaItemTransition(item:MediaItem?,reason:Int) {
         if(item?.mediaId==mediaId)return
         mediaId=item?.mediaId;attempted=false;outputRecoveryAttempted=false;this.reason=null;firstFrame=false;readySince=0
+        requestedPosition=player.currentPosition.coerceAtLeast(0)
         factory.forceSoftware=false
         handler.removeCallbacks(watchdog)
         if(factory.nativeVideoIndex>=0&&selector?.parameters?.getRendererDisabled(factory.nativeVideoIndex)==true)
@@ -59,7 +61,12 @@ internal class VideoDecoderRecovery(
         arm()
     }
     override fun onRenderedFirstFrame(){firstFrame=true;readySince=0;handler.removeCallbacks(watchdog)}
-    override fun onPositionDiscontinuity(oldPosition:Player.PositionInfo,newPosition:Player.PositionInfo,reason:Int){readySince=0}
+    override fun onPositionDiscontinuity(oldPosition:Player.PositionInfo,newPosition:Player.PositionInfo,reason:Int){
+        readySince=0
+        if(reason==Player.DISCONTINUITY_REASON_SEEK||reason==Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT)
+            requestedPosition=newPosition.positionMs.coerceAtLeast(0)
+    }
+    private fun recoveryPosition()=if(firstFrame)player.currentPosition.coerceAtLeast(0)else requestedPosition
     override fun onPlayerError(error:PlaybackException) {
         val rendererError=error as? ExoPlaybackException?:return
         if(rendererError.rendererIndex!=factory.nativeVideoIndex)return
@@ -71,22 +78,25 @@ internal class VideoDecoderRecovery(
     }
     private fun retryOutput():Boolean {
         if(closed||outputRecoveryAttempted||player.currentMediaItem==null)return false
+        val index=player.currentMediaItemIndex;val position=recoveryPosition();val playing=player.playWhenReady
         outputRecoveryAttempted=true;firstFrame=false;readySince=0
         android.util.Log.d("YingxiDecoder","reload current output")
-        val index=player.currentMediaItemIndex;val position=player.currentPosition.coerceAtLeast(0);val playing=player.playWhenReady
         player.stop();player.seekTo(index,position);player.prepare();player.playWhenReady=playing
         return true
     }
     internal fun useSoftware(reason:String="manual",format:Format?=videoFormat()):Boolean {
         if(closed||attempted||selector==null||factory.nativeVideoIndex<0||factory.softwareVideoIndex<0||!compatible(format))return false
         if(player.currentMediaItem==null)return false
-        val index=player.currentMediaItemIndex;val position=player.currentPosition.coerceAtLeast(0);val playing=player.playWhenReady
+        val index=player.currentMediaItemIndex;val position=recoveryPosition();val playing=player.playWhenReady
         attempted=true;this.reason=reason;factory.forceSoftware=true;firstFrame=false;readySince=0
         android.util.Log.d("YingxiDecoder","HEVC software fallback: $reason")
         // Release the failed Surface producer before FFmpeg acquires the same output Surface.
         player.stop()
         selector.parameters=selector.parameters.buildUpon().setRendererDisabled(factory.nativeVideoIndex,true).build()
         player.seekTo(index,position);player.prepare();player.playWhenReady=playing
+        // Track reselection can reset the previously inactive renderer after its surface message.
+        // Rebind the current output when handing the same session to the software renderer.
+        factory.reapplySoftwareOutput(player)
         return true
     }
     override fun close(){closed=true;handler.removeCallbacksAndMessages(null);player.removeListener(this)}

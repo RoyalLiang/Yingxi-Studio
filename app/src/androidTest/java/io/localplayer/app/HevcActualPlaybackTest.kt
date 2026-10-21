@@ -98,7 +98,10 @@ class HevcActualPlaybackTest {
             assertNull("Actual decoder failure: ${error?.cause}",error)
             if(mode in 1..2)assertTrue("The same player must recover after native failure or no first frame",recovery.attempted)
             if(mode==1)assertTrue("Exercise a real native decoder error, not only track selection",failures.isNotEmpty())
-            if(mode==2)assertEquals("missing-first-frame",recovery.reason)
+            if(mode==2){
+                assertEquals("missing-first-frame",recovery.reason)
+                assertTrue("An audio clock must not skip video that never appeared",frames.minOrNull()!!<=50000)
+            }
             assertTrue("Actual video timestamps must advance; audio-only readiness is not playback",frames.size>=12)
             if(expectAudio)assertTrue("Audio decoder must run with video",audios.isNotEmpty())
             val image=android.graphics.Bitmap.createBitmap(320,180,android.graphics.Bitmap.Config.ARGB_8888)
