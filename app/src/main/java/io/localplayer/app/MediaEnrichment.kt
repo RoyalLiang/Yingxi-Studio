@@ -35,6 +35,8 @@ internal object MediaPosters {
     private val disk=Dispatchers.IO.limitedParallelism(2)
     private val background=CoroutineScope(SupervisorJob()+io)
     private val jobs=java.util.concurrent.ConcurrentHashMap<String,Job>()
+    private val protectedRequests=java.util.concurrent.ConcurrentHashMap<Cancellation,MediaRef>()
+    fun cancelProtected(){protectedRequests.entries.filter{SealedMedia.protects(it.value)}.forEach{entry->background.launch(Dispatchers.IO){entry.key.close()}}}
     private val http=EnrichmentHttp()
     private val lookup=PosterLookup(http)
     private val failed=java.util.concurrent.ConcurrentHashMap<String,Long>()
@@ -50,7 +52,7 @@ internal object MediaPosters {
     private const val recheckMs=7L*24*60*60*1000
     private fun identity(media:MediaRef,source:Source?)=posterIdentity(media,source).let{listOf(it.title,it.year,it.season,it.series).joinToString("|")}
     private fun source(context:Context,media:MediaRef)=media.sourceId?.let{id->SourceStore(context).load().firstOrNull{it.id==id}}
-    private fun allowed(context:Context,media:MediaRef,source:Source?)=EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)))
+    private fun allowed(context:Context,media:MediaRef,source:Source?)=!SealedMedia.protects(media)&&EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)))
     private fun record(context:Context,media:MediaRef,source:Source?)=PosterStore(context).metadata(enrichmentKey(media))?.takeIf{it.optString("identity")==identity(media,source)}
     fun credit(context:Context,media:MediaRef):Pair<String,String>?=runCatching {
         val source=source(context,media)
@@ -118,13 +120,15 @@ internal object MediaPosters {
             if(previous!=null&&old?.optInt("policy")==policy&&age in 0 until recheckMs)return@withContext previous
             if(System.currentTimeMillis()-(failed[id]?:0)<6*60*60*1000)return@withContext previous
             val token=HistoryStore(context).token(media.key);val generation=revision.get()
-            val watcher=EnrichmentDeadlines.timer.schedule({c.close()},20,java.util.concurrent.TimeUnit.SECONDS)
+            protectedRequests[c]=media
+        val watcher=EnrichmentDeadlines.timer.schedule({c.close()},20,java.util.concurrent.TimeUnit.SECONDS)
             val owner=coroutineContext.job.invokeOnCompletion{if(it!=null)c.close()}
             fun valid()=revision.get()==generation&&HistoryStore(context).token(media.key)==token&&allowed(context,media,source(context,media))
             try{
                 var credit="目录海报";var url="";var imageUrl="";var confidence=1.0
                 val local=runCatching{sidecar(context,media,source,c)}.getOrNull()?.let(::decode)
-                val bitmap=local?:onlineLookup(posterIdentity(media,source),c)?.takeIf{it.confidence>=.96&&it.confidence>=(old?.optDouble("confidence",0.0)?:0.0)}?.let{match->
+                if(!valid())return@withContext null
+            val bitmap=local?:onlineLookup(posterIdentity(media,source),c)?.takeIf{it.confidence>=.96&&it.confidence>=(old?.optDouble("confidence",0.0)?:0.0)}?.let{match->
                     credit=match.credit;url=match.sourceUrl;imageUrl=match.imageUrl;confidence=match.confidence
                     if(previous!=null&&old?.optString("imageUrl")==match.imageUrl)previous else decode(imageDownload(match.imageUrl,c))
                 }
@@ -141,7 +145,7 @@ internal object MediaPosters {
                 if(refresh)changes.update{it+1}
                 bitmap
             }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&valid())failed[id]=System.currentTimeMillis();previous}
-            finally{watcher.cancel(false);owner.dispose();c.close()}
+            finally{watcher.cancel(false);owner.dispose();protectedRequests.remove(c);c.close()}
         }finally{lock.unlock()}
     }
     private fun sidecar(context:Context,media:MediaRef,source:Source?,c:Cancellation):ByteArray?{
@@ -180,12 +184,16 @@ internal object OnlineSubtitles {
     private var job:Job?=null
     private var attempted:String?=null
     private var active:Cancellation?=null
+    private var activeMedia:MediaRef?=null
+    fun cancelProtected(){if(activeMedia?.let{SealedMedia.protects(it)}==true)cancel()}
     private var generation=0L
-    private fun stopRequest(){generation++;job?.cancel();job=null;val old=active;active=null;scope.launch(Dispatchers.IO){old?.close()}}
+    private fun stopRequest(){activeMedia=null;generation++;job?.cancel();job=null;val old=active;active=null;scope.launch(Dispatchers.IO){old?.close()}}
     internal var provider=ShooterSubtitles()
     fun cancel(){stopRequest();attempted=null;status.value=null}
     fun schedule(c:Context,player:Player){
         val item=player.currentMediaItem?:return
+        val ref=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+        if(ref!=null&&SealedMedia.protects(ref))return
         if(attempted==item.mediaId||job?.isActive==true)return
         if(!EnrichmentPreferences(c).subtitles||player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))return
         if(player.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT&&it.isSupported}||item.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true)return
@@ -209,6 +217,8 @@ internal object OnlineSubtitles {
         val preferBilingual=EnrichmentPreferences(context).bilingual
         val uri=item.localConfiguration?.uri?:return
         val media=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}?:return
+        activeMedia=media
+        if(SealedMedia.protects(media)){status.value=id to "封存档案仅使用内嵌或手动导入字幕";return}
         if(!force&&player.isPlaying&&player.bufferedPosition-player.currentPosition<5000)return
         status.value=id to "正在匹配字幕…"
         val cancellation=Cancellation()

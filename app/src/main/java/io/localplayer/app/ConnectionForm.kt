@@ -39,6 +39,7 @@ import io.localplayer.core.Protocol
 /** All protocols share one Android window. Only the configuration body crossfades. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable internal fun ConnectionDialog(vm: LibraryViewModel, d: Draft, requestNearby: () -> Unit = {}) {
+    val external=remember(d.source.id){d.source.protocol==Protocol.WEBDAV||d.source.protocol==Protocol.ALIYUN}
     var manualWebDav by remember(d.source.id) { mutableStateOf(d.webDavUrl.trim() !in listOf("", "https://")) }
     val focus = LocalFocusManager.current
     val scene = rememberGraphicsLayer()
@@ -46,7 +47,7 @@ import io.localplayer.core.Protocol
     val drafts = remember(d.source.id) { mutableMapOf<Protocol, Draft>() }
     drafts[d.source.protocol] = d
     val panel = if (vm.discoveryPanelOpen) "discovery" else if (d.source.protocol == Protocol.WEBDAV && !manualWebDav) "cloud" else d.source.protocol.name
-    val nested by rememberUpdatedState(vm.discoveryPanelOpen || d.source.protocol == Protocol.WEBDAV && manualWebDav)
+    val nested by rememberUpdatedState(vm.discoveryPanelOpen)
     val back: () -> Unit = {
         focus.clearFocus()
         if (vm.discoveryPanelOpen) { vm.discoveryPanelOpen = false; vm.stopDiscovery() }
@@ -86,24 +87,14 @@ import io.localplayer.core.Protocol
         Box(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-sheet")) {
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
-                    Text(if(d.source.protocol==Protocol.WEBDAV) "外部避难所" else "连接避难所", modifier=Modifier.testTag("connection-title"), fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(6.dp))
-                    Text("连接 NAS、服务器或网盘，把影像接回片架。", fontSize = 14.sp, color = Muted)
-                    StationCharacterRow("wayfinder","弥途 · 避难所路标","地址写清，回来的路就不会断。")
+                    Text(if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.testTag("connection-title"), fontSize = 26.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(20.dp))
-                    FlowRow(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(), maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 3) {
-                        Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol ->
-                            ChoicePill(if (protocol == Protocol.WEBDAV) "WebDAV" else protocol.name,
-                                d.source.protocol == protocol && !vm.discoveryPanelOpen, Modifier.weight(1f)) {
-                                focus.clearFocus()
-                                vm.discoveryPanelOpen = false
-                                vm.stopDiscovery()
-                                vm.switchDraftProtocol(protocol)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                Surface(onClick={
+                ConnectionProtocolSelector(external,if(external){if(manualWebDav)"WebDAV"else"阿里云盘"}else d.source.protocol.name){choice->
+                    focus.clearFocus();vm.discoveryPanelOpen=false;vm.stopDiscovery()
+                    if(external)manualWebDav=choice=="WebDAV" else vm.switchDraftProtocol(Protocol.valueOf(choice))
+                }
+                Spacer(Modifier.height(12.dp))
+                if(!external)Surface(onClick={
                     focus.clearFocus();vm.discoveryPanelOpen=true
                     if(vm.nearbyPermissionGranted)vm.discover()else requestNearby()
                 },shape=RoundedCornerShape(17.dp),color=if(vm.discoveryPanelOpen)Berry.copy(alpha=.07f)else GroupedSurface,
@@ -113,7 +104,7 @@ import io.localplayer.core.Protocol
                         Icon(Icons.Rounded.WifiFind,null,tint=Berry,modifier=Modifier.size(22.dp))
                         Column(Modifier.weight(1f).padding(start=12.dp)){
                             Text("自动扫描",fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                            Text("SMB · SFTP / SSH · WebDAV",fontSize=12.sp,color=Muted)
+                            Text("SMB · SFTP / SSH",fontSize=12.sp,color=Muted)
                         }
                         Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
                     }
@@ -212,7 +203,7 @@ import io.localplayer.core.Protocol
                 TextButton(onClick = { if (vm.scanning) vm.stopDiscovery() else if (vm.nearbyPermissionGranted) vm.discover() else requestNearby() }) { Text(if (vm.scanning) "停止" else "扫描") }
             }
         }
-        items(vm.candidates, key = { it.id }) { candidate ->
+        items(vm.candidates.filter{it.protocol==Protocol.SMB||it.protocol==Protocol.SFTP}, key = { it.id }) { candidate ->
             Surface(onClick = { vm.add(candidate) }, color = GroupedSurface, shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(candidate.name, fontWeight = FontWeight.Medium)

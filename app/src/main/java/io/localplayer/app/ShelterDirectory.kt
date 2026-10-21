@@ -1,6 +1,8 @@
 package io.localplayer.app
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -14,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -52,14 +55,15 @@ internal fun shelterPosterRef(source: Source, entry: Entry, parentName: String? 
                     MediaRow(entry.name,"非视频文件",Icons.Rounded.Description){open(entry)}
                 } else {
                 val selected = selectedPath == entry.path
-                Surface(onClick = { open(entry) }, enabled = !vm.busy || !selected, color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth().testTag("shelter-entry:${entry.path}")
+                Surface(color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth().clickable(interactionSource=remember{MutableInteractionSource()},indication=null,enabled=!vm.busy||!selected){open(entry)}.testTag("shelter-entry:${entry.path}")
                         .semantics { this.selected = selected }) {
                     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Box(Modifier.fillMaxWidth().aspectRatio(2f/3f).clip(RoundedCornerShape(14.dp))
-                            .background(GroupedSurface)) {
+                            .background(GroupedSurface).border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(14.dp))) {
                             ShelterPoster(shelterPosterRef(source, entry, vm.currentDirectoryBookmark()?.label), entry.directory)
-                            if(entry.directory)Surface(color=Paper.copy(alpha=.94f),shape=RoundedCornerShape(8.dp),
+                            SealItemMenu(entry.directory,{vm.sealRemote(source,entry)},Modifier.align(Alignment.TopEnd))
+                        if(entry.directory)Surface(color=Paper.copy(alpha=.94f),shape=RoundedCornerShape(8.dp),
                                 modifier=Modifier.align(Alignment.BottomStart).padding(8.dp)) {
                                 Icon(Icons.Rounded.FolderOpen,"打开目录",Modifier.padding(6.dp).size(16.dp),tint=Berry)
                             }

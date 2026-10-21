@@ -29,7 +29,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SourcesCatalog(vm: LibraryViewModel) {
+fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
     val revision = vm.organizationRevision
     val groups = remember(revision) { vm.organization.groups() }
     val bookmarks = remember(vm.sources, revision) {
@@ -40,7 +40,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
         }
         roots + saved.filter { item -> roots.none { it.key == item.key } && vm.sources.any { it.id == item.sourceId } }
     }
-    val shown = bookmarks.filter { vm.selectedGroup == "all" || vm.selectedGroup == "favorites" && it.favorite || it.groupId == vm.selectedGroup }
+    val shown = bookmarks.filter{item->vm.sources.firstOrNull{it.id==item.sourceId}?.let{io.localplayer.core.SourceRoot(it.initialPath).contains(item.path)&&SealedMedia.visible(it,item.path)}==true}.filter { vm.selectedGroup == "all" || vm.selectedGroup == "favorites" && it.favorite || it.groupId == vm.selectedGroup }
     var revealedId by remember { mutableStateOf<String?>(null) }
     var deleting by remember { mutableStateOf<io.localplayer.core.Source?>(null) }
     var organize by remember { mutableStateOf<SourceBookmark?>(null) }
@@ -52,9 +52,8 @@ fun SourcesCatalog(vm: LibraryViewModel) {
                 Spacer(Modifier.height(6.dp))
                 Text(if (vm.sources.isEmpty()) "把远处的影像接回片架。" else "已登记 ${vm.sources.size} 处 · 随时回来", fontSize = 14.sp, color = Muted)
             }
-            FilledTonalButton(onClick = { vm.add() }, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "添加避难所" }, shape = RoundedCornerShape(16.dp)) {
-                Icon(Icons.Rounded.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)); Text("连接", maxLines = 1)
-            }
+            IconButton(onClick=onSealed,modifier=Modifier.testTag("open-sealed-cabinet")){Icon(Icons.Rounded.Lock,"封存柜",tint=Berry)}
+
         }
         if (vm.sources.isNotEmpty() || groups.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -67,10 +66,23 @@ fun SourcesCatalog(vm: LibraryViewModel) {
             }
         }
         LazyColumn(Modifier.weight(1f).testTag("source-bookmarks"), contentPadding = PaddingValues(top = 8.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            item(key="station-wayfinding") {
-                StationNotice("外部避难所 · 路标登记", "远程片库，从这里连接。", "这里的避难所是远程片库入口。连接 NAS、服务器或网盘，使用 SMB、SFTP 或 WebDAV。",
-                    modifier=Modifier.padding(horizontal=20.dp,vertical=8.dp).testTag("station-wayfinding"))
+            item(key="source-kind-entries"){
+                Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                    Surface(onClick={vm.add()},color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("add-outpost")){
+                        Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
+                            Column(Modifier.weight(1f)){Text("幸存者据点",fontSize=19.sp,fontWeight=FontWeight.SemiBold);Text("SMB / SFTP",fontSize=13.sp,color=Muted)}
+                            Icon(Icons.Rounded.Add,"连接幸存者据点",tint=Berry)
+                        }
+                    }
+                    Surface(onClick=vm::addExternal,color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("add-tower")){
+                        Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
+                            Column(Modifier.weight(1f)){Text("外部信号塔",fontSize=19.sp,fontWeight=FontWeight.SemiBold);Text("网盘 / WebDAV",fontSize=13.sp,color=Muted)}
+                            Icon(Icons.Rounded.Add,"接入外部信号塔",tint=Berry)
+                        }
+                    }
+                }
             }
+
             if (shown.isEmpty()) item {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(76.dp).background(Berry.copy(alpha = .07f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
@@ -79,7 +91,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
                     Spacer(Modifier.height(24.dp))
                     Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有收藏" else "这个分组还没有避难所", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
-                    Text(if (vm.sources.isEmpty()) "点击「连接」，登记你的 NAS、服务器或网盘。\n支持 SMB、SFTP 和 WebDAV。" else "收藏避难所或把文件夹添加到分组，便能快速找到它。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(if (vm.sources.isEmpty()) "选择「幸存者据点」连接 SMB / SFTP，\n或从「外部信号塔」接入网盘 / WebDAV。" else "收藏避难所或把文件夹添加到分组，便能快速找到它。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             items(shown, key = { it.key }) { item ->

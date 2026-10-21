@@ -36,9 +36,9 @@ import androidx.compose.ui.unit.sp
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val context = androidx.compose.ui.platform.LocalContext.current
     val station = remember(context) { StationPreferences(context) }
-    val greeted = remember { station.claimGreeting() }
+    remember { station.claimGreeting() }
     val inventoryRevision = StationInventory.revision.intValue
-    val found = remember(inventoryRevision) { StationInventory(context).today().take(8) }
+    val found = remember(inventoryRevision) { StationInventory(context).today().filter{SealedMedia.visible(it.media)}.take(8) }
     val continuing = vm.history.firstOrNull { !it.completed && it.positionMs > 0 && it.durationMs > 0 }
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -61,10 +61,7 @@ import androidx.compose.ui.unit.sp
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", station.dailyLine,
-                    modifier=Modifier.testTag("station-diary"))
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                AdministratorArchiveEntry(if(greeted)"哟，回来了。今天淘着啥好货了？"else"阿汐的来信 · 人物与世界图谱",onArchives)
+                    modifier=Modifier.testTag("station-diary"),onArchives=onArchives)
             }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -109,7 +106,7 @@ import androidx.compose.ui.unit.sp
                     }
                 }
                 items(recent, key = { it.media.key }) { entry ->
-                    RecentFilm(entry, vm.preparingKey == entry.media.key, vm.selectedHistoryKey==entry.media.key, columns > 1, { vm.resume(entry) }, { vm.resume(entry, true) }, { vm.removeHistory(entry) })
+                    RecentFilm(entry, vm.preparingKey == entry.media.key, vm.selectedHistoryKey==entry.media.key, columns > 1, { vm.resume(entry) }, { vm.resume(entry, true) }, { vm.removeHistory(entry) },{vm.sealMedia(entry.media)})
                 }
             }
         }
@@ -138,7 +135,7 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable internal fun RecentFilm(entry: HistoryEntry, preparing: Boolean, selected: Boolean, alignTitleRows: Boolean, play: () -> Unit, restart: () -> Unit, remove: () -> Unit) {
+@Composable internal fun RecentFilm(entry: HistoryEntry, preparing: Boolean, selected: Boolean, alignTitleRows: Boolean, play: () -> Unit, restart: () -> Unit, remove: () -> Unit, seal: (() -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     Surface(
@@ -161,6 +158,7 @@ import androidx.compose.ui.unit.sp
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
+                        if(seal!=null)DropdownMenuItem(text={Text("封存剧集（私密）")},onClick={menu=false;seal()})
                         MediaPosters.credit(context, entry.media)?.takeIf { it.second.startsWith("https://") }?.let { credit ->
                             DropdownMenuItem(text = { Text("海报来源 · "+credit.first) }, onClick = {
                                 menu = false

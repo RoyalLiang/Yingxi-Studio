@@ -46,9 +46,9 @@ fun PlaybackQueueSheet(items: List<MediaItem>, current: Int, truncated: Boolean,
         BoxWithConstraints(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().testTag("queue-dismiss-backdrop").clickable(
                 interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = dismiss))
-            val drawerWidth = if (maxWidth > maxHeight) (maxWidth * .37f).coerceIn(280.dp, 420.dp) else minOf(maxWidth * .88f, 420.dp)
-            Surface(Modifier.align(Alignment.CenterEnd).width(drawerWidth).fillMaxHeight().testTag("playback-queue-drawer").pointerInput(Unit) { detectTapGestures(onTap = {}) },
-                color = Color(0xED171C20), contentColor = Color(0xFFF7F7F6), shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)) {
+            val drawerWidth = minOf(maxWidth-24.dp,if(maxWidth>maxHeight)380.dp else 336.dp).coerceAtLeast(1.dp)
+            Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(drawerWidth).height(maxHeight*.9f).testTag("playback-queue-drawer").pointerInput(Unit) { detectTapGestures(onTap = {}) },
+                color = Color(0xED171C20), contentColor = Color(0xFFF7F7F6), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)).padding(horizontal = 20.dp)) {
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("播放队列", Modifier.weight(1f), fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
@@ -64,7 +64,7 @@ fun PlaybackQueueSheet(items: List<MediaItem>, current: Int, truncated: Boolean,
                                 .selectable(selected = selected, role = Role.RadioButton, onClick = { select(index) }).heightIn(min = 64.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 if (selected) Icon(Icons.Rounded.GraphicEq, "正在播放", Modifier.width(24.dp), tint = Color(0xFFFF9AB6))
                                 else Text("${index + 1}", Modifier.width(24.dp), color = Color(0xFFBCC4CB), fontSize = 13.sp)
-                                Text(item.mediaMetadata.title?.toString() ?: "视频", Modifier.weight(1f).padding(start = 10.dp), fontSize = 15.sp,
+                                Text(playbackItemTitle(item,"第 ${index+1} 集"), Modifier.weight(1f).padding(start = 10.dp), fontSize = 15.sp,
                                     color = if (selected) Color(0xFFFFB5C8) else Color(0xFFF7F7F6), fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                         }

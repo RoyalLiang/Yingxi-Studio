@@ -12,7 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
 data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""),val port:String=source.port.toString(),val password:String="",val remember:Boolean=true,
-    val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV)source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
+    val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV&&source.host.isNotBlank())source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
 data class SourceAccess(val source:Source,val password:String="",val remember:Boolean=false,val path:String="")
 private data class ReplayRequest(val entry:HistoryEntry,val fromStart:Boolean,val token:HistoryToken)
 private class ReplaySourceChanged:java.io.IOException("避难所身份已变更，请从避难所重新选择影片")
@@ -44,14 +44,17 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     var privateRequest by mutableStateOf<PrivateSourceRequest?>(null);private set
     private var discoveryAllowed=false
     private var discoveryEpoch=0L
-    var history by mutableStateOf(emptyList<HistoryEntry>());private set
+    private var historyRows by mutableStateOf(emptyList<HistoryEntry>())
+    val history:List<HistoryEntry> get()=historyRows.filter{SealedMedia.visible(it.media)}
     var candidates by mutableStateOf(emptyList<Candidate>());private set
     var discoveryMessage by mutableStateOf("发现当前局域网中的 SMB、SFTP / SSH 和 WebDAV 服务");private set
     var scanning by mutableStateOf(false);private set
     var source by mutableStateOf<Source?>(null);private set
     var path by mutableStateOf("");private set
     private var currentFolderName="避难所根目录"
-    var entries by mutableStateOf(emptyList<Entry>());private set
+    private var directoryEntries by mutableStateOf<List<Entry>>(emptyList())
+    internal var privateBrowse by mutableStateOf(false);private set
+    val entries:List<Entry> get(){val current=source?:return emptyList();val root=SourceRoot(if(rootSelectionId!=null)""else current.initialPath);return if(!root.contains(path))emptyList()else directoryEntries.filter{root.contains(it.path)&&SealedMedia.visible(current,it.path,privateBrowse)}}
     var busy by mutableStateOf(false);private set
     var preparingKey by mutableStateOf<String?>(null);private set
     var discoveryPanelOpen by mutableStateOf(false)
@@ -91,6 +94,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     private var discovery:Discovery?=null
     private var discoveryJob:Job?=null
     private var probe:LocalProbe?=null
+    private var privateLocalSignal:android.os.CancellationSignal?=null
     private var job:Job?=null
     private var cancellation:Cancellation?=null
     @Volatile private var generation=0L
@@ -103,7 +107,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }.asReversed().forEach{inventory.observe(listOf(it.media),it.updatedAt)}
     }
 
-    fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{history=it}.onFailure{error=it.message}}
+    fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{historyRows=it}.onFailure{error=it.message}}
     fun removeHistory(entry:HistoryEntry){if(selectedHistoryKey==entry.media.key)selectedHistoryKey=null;if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);MediaThumbnails.remove(getApplication(),entry.media);MediaPosters.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
     fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();selectedHistoryKey=null;MediaThumbnails.clear(getApplication());MediaPosters.clear(getApplication());OnlineSubtitles.clear(getApplication());store.clearPositions();refreshHistory()}
     fun setDiscoveryEnabled(enabled:Boolean){discoveryEligible=enabled;refreshDiscoveryPermission()}
@@ -147,25 +151,71 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(privateRequest?.source?.id==saved.id)privateRequest=null
         StationInventory(getApplication()).removeSource(saved.id);organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除避难所")
     }
-    fun privateAccess(saved:Source){
-        stopDiscovery();cancelOperation();draft=null;access=null;openingSource=null;privateRequest=PrivateSourceRequest(saved)
+    fun privateAccess(saved:Source){sealRemote(saved,Entry(startingFolderName(saved),saved.initialPath,true,0))}
+    internal fun requestPrivate(label:String="封存柜",saved:Source?=null,verified:()->Unit={}){
+        stopDiscovery();cancelOperation();draft=null;access=null;openingSource=null
+        privateRequest=PrivateSourceRequest(saved,label=label,verified=verified)
     }
-    fun completePrivateAccess(id:String){val request=privateRequest?.takeIf{it.id==id} ?: return;privateRequest=null;open(request.source)}
+    fun completePrivateAccess(id:String){
+        val request=privateRequest?.takeIf{it.id==id}?:return
+        privateRequest=null
+        runCatching{SealedMedia.unlock();request.verified()}.onFailure{error=it.message}
+    }
     fun cancelPrivateAccess(id:String,message:String?=null){if(privateRequest?.id!=id)return;privateRequest=null;if(message!=null)error=message}
-    fun open(saved:Source,location:String=saved.initialPath,selectRoot:Boolean=false){
+    internal fun sealMedia(ref:MediaRef){
+        requestPrivate("封存剧集",sources.firstOrNull{it.id==ref.sourceId}){
+            SealedMedia.seal(SealedItem(ref,false,ignoreCase=sources.firstOrNull{it.id==ref.sourceId}?.protocol==Protocol.SMB));notifySuccess("剧集已封存")
+        }
+    }
+    internal fun sealRemote(saved:Source,entry:Entry){
+        requestPrivate((if(entry.directory)"封存目录："else"封存剧集：")+entry.name,saved){
+            val ref=MediaRef("${saved.id}:${entry.path}",entry.name,saved.label,saved.id,entry.path,location=mediaLocation(saved))
+            SealedMedia.seal(SealedItem(ref,entry.directory,ignoreCase=saved.protocol==Protocol.SMB));notifySuccess(if(entry.directory)"目录已封存"else"剧集已封存")
+            if(source?.id==saved.id&&SealedMedia.protects(saved,path))closeSource()
+        }
+    }
+    internal fun sealLocal(entry:LocalEntry,files:LocalFilesViewModel){
+        val folder=files.active?:return
+        val trail=files.trail+if(entry.directory)listOf(LocalDirectory(entry.uri,entry.name))else emptyList()
+        requestPrivate((if(entry.directory)"封存目录："else"封存剧集：")+entry.name){
+            val sealGeneration=generation;val signal=android.os.CancellationSignal();privateLocalSignal=signal;busy=true
+            job=viewModelScope.launch{
+                try{
+                val aliases=withContext(Dispatchers.IO){if(entry.directory){SealedMedia.checkDirectorySupport(entry.uri,signal);SealedMedia.localAliases(entry.uri,historyRows.map{it.media}+StationInventory(getApplication()).today().map{it.media})}else emptySet()}
+                if(!SealedMedia.unlocked||signal.isCanceled||sealGeneration!=generation)return@launch
+                val ref=MediaRef(entry.uri.toString(),entry.name,folder.name,localUri=entry.uri.toString(),localParentUri=entry.parentUri?.toString(),localAncestors=entry.ancestorUris)
+                runCatching{SealedMedia.seal(SealedItem(ref,entry.directory,folder.tree.toString(),trail,aliases));notifySuccess(if(entry.directory)"目录已封存"else"剧集已封存")}.onFailure{error=it.message}
+                }catch(e:CancellationException){throw e}catch(e:Exception){if(sealGeneration==generation)error=e.message?:"封存未完成，请重试"}finally{if(privateLocalSignal===signal)privateLocalSignal=null;if(sealGeneration==generation)busy=false}
+            }
+        }
+    }
+    internal fun openSealed(item:SealedItem){
+        if(!SealedMedia.unlocked)return
+        if(item.media.sourceId!=null){
+            val saved=sources.firstOrNull{it.id==item.media.sourceId}?:run{error="原来源已移除";return}
+            if(!SourceRoot(saved.initialPath).contains(item.media.path.orEmpty())){error="此封存记录在当前来源根目录之外，请先调整来源根目录";return}
+            if(item.directory){open(saved,item.media.path.orEmpty(),allowPrivate=true)}
+            else resume(HistoryEntry(item.media,0,0,0,false),allowPrivate=true)
+        }else item.media.localUri?.let{playLocal(Uri.parse(it),privatePlayback=true)}
+    }
+    internal fun closeSealed(){if(privateBrowse&&!SealedMedia.unlocked)closeSource()}
+    fun open(saved:Source,location:String=saved.initialPath,selectRoot:Boolean=false,allowPrivate:Boolean=false){
+        privateBrowse=allowPrivate&&SealedMedia.unlocked
+        val safeLocation=if(selectRoot)Paths.clean(location)else SourceRoot(saved.initialPath).clamp(location)
+        if(!SealedMedia.visible(saved,safeLocation,privateBrowse)){error="请从封存柜验证身份后查看";return}
         selectedSourceId=saved.id
         rootSelectionId=if(selectRoot)saved.id else null
         stopDiscovery();cancelOperation();privateRequest=null;pendingReplay=null;draft=null;access=null;openingSource=saved
         val request=generation
         val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
-        source=null;credentials=null;path="";entries=emptyList()
+        source=null;credentials=null;path="";directoryEntries=emptyList()
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
                 if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在避难所的配置按钮重新授权";return@launch}
             if(request!=generation)return@launch
-            if(pass!=null||saved.username.isBlank())load(saved,Credentials(pass ?: ""),location,false,false)
-            else{openingSource=null;access=SourceAccess(saved,path=location)}
-        }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=location);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
+            if(pass!=null||saved.username.isBlank())load(saved,Credentials(pass ?: ""),safeLocation,false,false)
+            else{openingSource=null;access=SourceAccess(saved,path=safeLocation)}
+        }catch(e:Exception){if(request==generation){openingSource=null;if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=safeLocation);error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请重新授权"else"无法读取保存的密码，请重新认证"}}}
     }
     fun cloudConnected(saved:Source){val registering=sources.none{it.id==saved.id};sources=store.load();val current=sources.firstOrNull{it.id==saved.id} ?: return;selectedGroup="all";error=null;draft=null;open(current);if(registering)notifyRegistration()}
     fun cloudReauthorize(){viewModelScope.launch{try{cloudConnected(AliyunCloud.authorize())}catch(e:CancellationException){throw e}catch(e:Exception){error=e.message ?: "网盘授权失败"}}}
@@ -179,6 +229,10 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             val pass=withContext(Dispatchers.IO){store.password(saved.id)}
             if(draft?.source?.id==saved.id&&draft?.password.isNullOrEmpty())draft=draft?.copy(password=pass ?: "")
         }catch(e:Exception){error=e.message}}
+    }
+    internal fun addExternal(){
+        add(Candidate("","",443,Protocol.WEBDAV,"",true,"/"))
+        draft=draft?.copy(webDavUrl="https://")
     }
     fun add(candidate:Candidate?=null){
         discoveryPanelOpen=false
@@ -221,7 +275,12 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }
     }
     fun rejectKey(){trust=null;error="已拒绝该服务器，未发送密码认证"}
-    fun browse(newPath:String){val s=source ?: return;val c=credentials ?: return;load(s,c,newPath,false,false)}
+    fun browse(newPath:String){
+        val s=source ?: return;val c=credentials ?: return
+        if(rootSelectionId==null&&!SourceRoot(s.initialPath).contains(newPath)){error="已到达设置的根目录";return}
+        if(!SealedMedia.visible(s,newPath,privateBrowse)){error="请从封存柜验证身份后查看";return}
+        load(s,c,Paths.clean(newPath),false,false)
+    }
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
         val registering=save&&sources.none{it.id==s.id}
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
@@ -238,7 +297,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                     list
                 }}
                 if(id!=generation)return@launch
-                source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load()
+                source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;directoryEntries=result;draft=null;access=null;sources=store.load()
                 StationInventory(getApplication()).reconcileSource(s)
                 StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),posterPathHint=posterHint(s,e)) })
                 if(registering)notifyRegistration() else if(save)notifySuccess("避难所已保存")
@@ -253,24 +312,27 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }
     }
     fun cancelOperation(keepReplay:Boolean=false){
+        privateLocalSignal?.cancel();privateLocalSignal=null
         generation++;job?.cancel();job=null
         val old=cancellation;cancellation=null;busy=false;preparingKey=null
         if(!keepReplay)pendingReplay=null
         if(old!=null)CoroutineScope(Dispatchers.IO).launch{old.close()}
     }
-    fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;rootSelectionId=null;error=null}
+    fun closeSource(){privateBrowse=false;cancelOperation();access=null;openingSource=null;source=null;path="";directoryEntries=emptyList();credentials=null;pendingReplay=null;rootSelectionId=null;error=null}
     fun currentDirectoryBookmark():SourceBookmark?=source?.let{SourceBookmark(it.id,path,if(path.isEmpty())it.label else currentFolderName)}
-    fun up(){if(path.isEmpty()||rootSelectionId==null&&path==source?.initialPath)closeSource()else browse(path.substringBeforeLast('/',""))}
+    fun up(){val s=source?:return;val parent=SourceRoot(if(rootSelectionId!=null)""else s.initialPath).parent(path);if(parent==null)closeSource()else browse(parent)}
     private fun posterHint(s:Source,e:Entry):String? {
         if(source?.id!=s.id||e.path.substringBeforeLast('/',"")!=path)return null
         return listOf(currentFolderName,e.name).joinToString("/")
     }
     private fun remoteTarget(s:Source,c:Credentials,entry:Entry,listing:List<Entry>,fromStart:Boolean,requestedToken:HistoryToken?=null):PlayTarget? {
+        require(SourceRoot(s.initialPath).contains(entry.path)){"这部影片在设置的根目录之外，请重新选择"}
         val ref=MediaRef("${s.id}:${entry.path}",entry.name,s.label,s.id,entry.path,sizeBytes=entry.size,location=mediaLocation(s),posterPathHint=posterHint(s,entry))
         val token=requestedToken ?: historyStore.token(ref.key)
         if(token!=historyStore.token(ref.key))return null
         val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
-        val videos=listing.filter{!it.directory&&it.isVideo}
+        if(!SealedMedia.visible(ref,privateBrowse)){error="请从封存柜验证身份后观看";return null}
+        val videos=listing.filter{!it.directory&&it.isVideo&&SourceRoot(s.initialPath).contains(it.path)&&SealedMedia.visible(s,it.path,privateBrowse)}
         val siblings=PlaybackRequests.window(videos,entry)
         val queue=mutableListOf<QueuedMedia>()
         try {
@@ -299,6 +361,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 withContext(Dispatchers.IO){
                     if(replay.entry.media.location!=null&&replay.entry.media.location!=mediaLocation(s))throw ReplaySourceChanged()
                     val parent=replay.entry.media.path?.substringBeforeLast('/',"") ?: ""
+                    require(SourceRoot(s.initialPath).contains(parent)){"这部影片已在设置的根目录之外，请从来源重新选择"}
                     val listing=sourceConnector.connect(s,c,token).use{it.list(parent)}
                     token.check()
                     val file=listing.firstOrNull{!it.directory&&it.isVideo&&it.path==replay.entry.media.path}
@@ -321,12 +384,14 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }
     }
     var selectedHistoryKey by mutableStateOf<String?>(null);private set
-    fun resume(entry:HistoryEntry,fromStart:Boolean=false){
+    fun resume(entry:HistoryEntry,fromStart:Boolean=false,allowPrivate:Boolean=false){
+        if(SealedMedia.protects(entry.media)&&!(allowPrivate&&SealedMedia.unlocked)){error="请从封存柜验证身份后观看";return}
+        privateBrowse=allowPrivate&&SealedMedia.unlocked
         selectedHistoryKey=entry.media.key
         if(preparingKey==entry.media.key)return
         error=null
         val ref=entry.media
-        if(ref.localUri!=null){playLocal(Uri.parse(ref.localUri),fromStart,parentUri=ref.localParentUri?.let(Uri::parse));return}
+        if(ref.localUri!=null){playLocal(Uri.parse(ref.localUri),fromStart,parentUri=ref.localParentUri?.let(Uri::parse),privatePlayback=allowPrivate);return}
         val saved=sources.firstOrNull{it.id==ref.sourceId}
         if(saved==null){error="这个避难所已移除，请重新添加后选择影片";return}
         if(ref.location!=null&&ref.location!=mediaLocation(saved)){error="避难所身份已变更，请从避难所重新选择影片";return}
@@ -342,12 +407,13 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:CancellationException){throw e}
         catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在避难所配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
     }
-    fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList(),parentUri:Uri?=null){
+    fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList(),parentUri:Uri?=null,privatePlayback:Boolean=false){
         cancelOperation();pendingReplay=null;val request=generation;preparingKey=uri.toString()
         val requestedToken=historyStore.token(uri.toString())
         job=viewModelScope.launch{try{
             val ref=withContext(Dispatchers.IO){
-                require(uri.scheme=="content"){"请通过系统文件选择器打开视频"}
+                require(!SealedMedia.protectsLocalUri(uri)||(privatePlayback&&SealedMedia.unlocked)){"请从封存柜验证身份后观看"}
+                    require(uri.scheme=="content"){"请通过系统文件选择器打开视频"}
                 val resolver=getApplication<Application>().contentResolver
                 resolver.openAssetFileDescriptor(uri,"r")?.use{} ?: throw java.io.IOException("文件无法读取")
                 var title="本机视频";var size:Long?=null
@@ -357,15 +423,15 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                         val z=cursor.getColumnIndex(OpenableColumns.SIZE);if(z>=0&&!cursor.isNull(z))size=cursor.getLong(z)
                     }
                 }
-                MediaRef(uri.toString(),title,"本机文件",localUri=uri.toString(),sizeBytes=size,localParentUri=(parentUri?:siblings.firstOrNull{it.uri==uri}?.parentUri)?.toString())
+                MediaRef(uri.toString(),title,"本机文件",localUri=uri.toString(),sizeBytes=size,localParentUri=(parentUri?:siblings.firstOrNull{it.uri==uri}?.parentUri)?.toString(),localAncestors=siblings.firstOrNull{it.uri==uri}?.ancestorUris?:emptyList())
             }
             val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
             if(request==generation&&requestedToken==historyStore.token(ref.key)){
-                val videos=siblings.filter{!it.directory&&it.video}
+                val videos=siblings.filter{!it.directory&&it.video&&SealedMedia.visible(it,privatePlayback)}
                 val selected=videos.firstOrNull{it.uri==uri}
                 val window=if(selected!=null)PlaybackRequests.window(videos,selected)else emptyList()
                 val queue=window.map{e->
-                    val item=if(e.uri==uri)ref else MediaRef(e.uri.toString(),e.name,"本机文件",localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString())
+                    val item=if(e.uri==uri)ref else MediaRef(e.uri.toString(),e.name,"本机文件",localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris)
                     QueuedMedia(e.uri,item,if(e.uri==uri)requestedToken else historyStore.token(item.key))
                 }
                 playChannel.send(PlayTarget(uri,ref.title,resume,ref,requestedToken,queue=queue,truncated=videos.size>window.size&&window.isNotEmpty()))
@@ -395,7 +461,10 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             store.updatePresentation(current.id,label,clean,folderName)
             organization.moveSourceEntry(current.id,current.initialPath,clean,label.trim());organizationRevision++
             sources=store.load()
-            if(source?.id==current.id)source=sources.first{it.id==current.id}
+            if(source?.id==current.id){
+                val updated=sources.first{it.id==current.id};source=updated
+                if(rootSelectionId==null&&!SourceRoot(updated.initialPath).contains(path))open(updated)
+            }
             if(announce)notifySuccess("避难所设置已保存")
         }.onFailure{error=it.message ?: "避难所设置未保存，请重试"}.isSuccess
     }
@@ -404,7 +473,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         val current=source?.takeIf{it.id==rootSelectionId} ?: return
         if(busy||openingSource!=null)return
         val name=currentFolderName
-        if(updateSourcePresentation(current,current.label,path,name,announce=false)){closeSource();notifySuccess("默认目录已设置")}
+        if(updateSourcePresentation(current,current.label,path,name,announce=false)){closeSource();notifySuccess("根目录已设置")}
     }
     fun removeBookmark(key:String){organization.remove(key);organizationRevision++;notifySuccess("已移除快捷入口")}
     fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}

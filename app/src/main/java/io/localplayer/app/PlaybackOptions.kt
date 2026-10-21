@@ -60,7 +60,7 @@ import java.util.Locale
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Box(Modifier.fillMaxSize().testTag("settings-dismiss-backdrop").clickable(
                     interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss))
-                val panelWidth=if(maxWidth>maxHeight)(maxWidth*.42f).coerceIn(300.dp,380.dp)else minOf(maxWidth*.92f,380.dp)
+                val panelWidth=minOf(maxWidth-24.dp,if(maxWidth>maxHeight)380.dp else 336.dp).coerceAtLeast(1.dp)
                 Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel").pointerInput(Unit) { detectTapGestures(onTap = {}) },
                     shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=Paper) {
             LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){

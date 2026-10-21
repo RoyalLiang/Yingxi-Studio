@@ -106,10 +106,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
         Column(Modifier.align(Alignment.Center).testTag("station-decoding").clearAndSetSemantics {
             contentDescription="信号破译中，正在缓冲";progressBarRangeInfo=ProgressBarRangeInfo.Indeterminate
         },horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(54.dp)) {
-                Icon(Icons.Rounded.LocalMovies,null,Modifier.size(40.dp).align(Alignment.BottomStart),tint=Color.White)
-                Icon(Icons.Rounded.Wifi,null,Modifier.size(26.dp).align(Alignment.TopEnd),tint=Color.White)
-            }
+            StationDecodingMark()
             Text("信号破译中",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Medium)
         }
         // Reserve the center status region; adapt bubble width before hiding it on compact screens.

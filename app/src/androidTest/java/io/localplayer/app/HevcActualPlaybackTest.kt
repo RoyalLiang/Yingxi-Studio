@@ -22,6 +22,7 @@ class HevcActualPlaybackTest {
     @Test fun main10ActuallyPresentsFramesAndAdvancesAudio()=render("hevc-main10-audio.mp4",true)
     @Test fun failedNativeMain10DecoderRecoversToRealFrames()=render("hevc-main10-audio.mp4",true,1)
     @Test fun audioWithoutFirstVideoFrameRecoversToRealFrames()=render("hevc-main10-audio.mp4",true,2)
+    @Test fun nativeDecoderStuckBufferingRecoversToRealFrames()=render("hevc-main10-audio.mp4",true,4)
     @Test fun reportedH1153CodecStringStillRunsRealMain10Decoding()=render("hevc-main10-audio.mp4",true,3)
     @Test fun main10FullHdPresentsRealFrames()=render("hevc-main10-1080p.mp4",true)
     private fun factoryFor(player:ExoPlayer)=(player.trackSelector as androidx.media3.exoplayer.trackselection.DefaultTrackSelector).parameters
@@ -55,7 +56,7 @@ class HevcActualPlaybackTest {
         lateinit var view:SurfaceView
         ui.runOnUiThread {
             ui.activity.setContent { AndroidView(factory={SurfaceView(it).also{surface->view=surface}}) }
-            val factory=if(mode==2)object:HdrRenderersFactory(context) {
+            val factory=if(mode==2||mode==4)object:HdrRenderersFactory(context) {
                 override fun buildVideoRenderers(context:Context,extensionRendererMode:Int,selector:androidx.media3.exoplayer.mediacodec.MediaCodecSelector,
                     enableDecoderFallback:Boolean,eventHandler:android.os.Handler,eventListener:androidx.media3.exoplayer.video.VideoRendererEventListener,
                     allowedVideoJoiningTimeMs:Long,out:ArrayList<androidx.media3.exoplayer.Renderer>) {
@@ -63,7 +64,7 @@ class HevcActualPlaybackTest {
                     out[nativeVideoIndex]=nativeGate(object:androidx.media3.exoplayer.BaseRenderer(C.TRACK_TYPE_VIDEO) {
                         override fun getName()="NoFirstFrameTestRenderer"
                         override fun supportsFormat(format:Format)=if(format.sampleMimeType==MimeTypes.VIDEO_H265)C.FORMAT_HANDLED else C.FORMAT_UNSUPPORTED_TYPE
-                        override fun isReady()=true
+                        override fun isReady()=mode!=4
                         override fun isEnded()=false
                         override fun render(positionUs:Long,elapsedRealtimeUs:Long){}
                     })
@@ -72,7 +73,7 @@ class HevcActualPlaybackTest {
             val builder=ExoPlayer.Builder(context,factory)
             if(mode==3)builder.setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(androidx.media3.datasource.DefaultDataSource.Factory(context),advertisedCodecs()))
             player=builder.build()
-            recovery=VideoDecoderRecovery(player,factory,if(mode==2)1000 else 6000)
+            recovery=VideoDecoderRecovery(player,factory,if(mode==2||mode==4)1000 else 6000)
             player.volume=0f
             player.addAnalyticsListener(object:AnalyticsListener {
                 override fun onVideoDecoderInitialized(eventTime:AnalyticsListener.EventTime,name:String,initializedTimestampMs:Long,initializationDurationMs:Long){videos.add(name)}

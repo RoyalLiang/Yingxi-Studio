@@ -21,33 +21,36 @@ internal class VideoDecoderRecovery(
     private var requestedPosition=player.currentPosition.coerceAtLeast(0)
     private var firstFrame=false
     private var readySince=0L
-    private var readyPosition=0L
     private var closed=false
     internal var attempted=false;private set
     internal var outputRecoveryAttempted=false;private set
     internal var reason:String?=null;private set
+    private fun awaitingFirstFrame() = !closed && !attempted && !firstFrame && player.playWhenReady &&
+        player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE &&
+        player.playbackState in setOf(Player.STATE_BUFFERING, Player.STATE_READY)
     private val watchdog=object:Runnable {
         override fun run(){
-            if(closed||attempted||firstFrame||!player.isPlaying||player.playbackState!=Player.STATE_READY){readySince=0;return}
+            if(!awaitingFirstFrame()){readySince=0;return}
             val format=videoFormat()
-            if(!compatible(format)){readySince=0;return}
-            if(!attempted&&!firstFrame&&player.isPlaying&&player.playbackState==Player.STATE_READY&&compatible(format)) {
-                if(readySince==0L){readySince=SystemClock.elapsedRealtime();readyPosition=player.currentPosition}
-                if(SystemClock.elapsedRealtime()-readySince>=firstFrameTimeoutMs&&player.currentPosition-readyPosition>=250)
+            // Do not mistake a slow source for a hung decoder. Require queued media
+            // (or a fully loaded short clip) before timing a buffering renderer.
+            val mediaQueued = player.playbackState == Player.STATE_READY || player.totalBufferedDuration >= 1000 ||
+                (player.duration > 0 && player.bufferedPosition >= player.duration && player.totalBufferedDuration > 0)
+            if(compatible(format) && mediaQueued){
+                if(readySince==0L)readySince=SystemClock.elapsedRealtime()
+                if(SystemClock.elapsedRealtime()-readySince>=firstFrameTimeoutMs){
                     useSoftware("missing-first-frame",format)
-            } else readySince=0
+                    return
+                }
+            }else readySince=0
             handler.postDelayed(this,250)
         }
     }
     init {player.addListener(this)}
-    private fun arm() {
-        if(!closed&&!attempted&&!firstFrame&&player.isPlaying&&!handler.hasCallbacks(watchdog))handler.post(watchdog)
+    private fun arm(){if(awaitingFirstFrame()&&!handler.hasCallbacks(watchdog))handler.post(watchdog)}
+    override fun onEvents(player:Player,events:Player.Events){
+        if(awaitingFirstFrame())arm()else{readySince=0;handler.removeCallbacks(watchdog)}
     }
-    override fun onIsPlayingChanged(isPlaying:Boolean) {
-        readySince=0
-        if(isPlaying)arm()else handler.removeCallbacks(watchdog)
-    }
-    override fun onTracksChanged(tracks:Tracks){arm()}
     private fun compatible(format:Format?)=format?.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null
     private fun videoFormat():Format?=player.videoFormat?:player.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO}?.getTrackFormat(0)
     override fun onMediaItemTransition(item:MediaItem?,reason:Int) {
