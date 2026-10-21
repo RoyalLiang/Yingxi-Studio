@@ -31,7 +31,8 @@ class DecoderFallbackTest {
             val selector=MediaCodecSelector{mime,secure,tunnel->
                 val real=MediaCodecSelector.DEFAULT.getDecoderInfos(mime,secure,tunnel)
                 if(mime.startsWith("video/")&&real.isNotEmpty())
-                    listOf(MediaCodecInfo.newInstance("c2.yingxi.unavailable.decoder",mime,real.first().codecMimeType,real.first().capabilities,false,true,false,false,false))+real
+                    // Keep the injected failure ahead of real hardware under the hardware-first policy.
+                    listOf(MediaCodecInfo.newInstance("c2.yingxi.unavailable.decoder",mime,real.first().codecMimeType,real.first().capabilities,true,false,true,false,false))+real
                 else real
             }
             instrumentation.runOnMainSync{
