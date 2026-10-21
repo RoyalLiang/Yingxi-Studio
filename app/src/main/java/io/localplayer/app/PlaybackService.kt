@@ -38,7 +38,7 @@ class PlaybackService:MediaSessionService(){
         player.addAnalyticsListener(PlaybackMetrics.listener())
         player.setPlaybackSpeed(prefs.speed)
         player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
-            .setPreferredAudioLanguage(prefs.audioLanguage).setPreferredTextLanguage(prefs.textLanguage)
+            .setPreferredAudioLanguage(prefs.effectiveAudioLanguage).setPreferredTextLanguage(prefs.textLanguage)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,prefs.subtitlesDisabled).build()
         player.addListener(object:Player.Listener{
             override fun onTimelineChanged(timeline:Timeline,reason:Int){
@@ -59,7 +59,7 @@ class PlaybackService:MediaSessionService(){
                 if(current!=next){
                     OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next
                     player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverrides()
-                        .setPreferredAudioLanguage(prefs.audioLanguage).setPreferredTextLanguage(prefs.textLanguage)
+                        .setPreferredAudioLanguage(prefs.effectiveAudioLanguage).setPreferredTextLanguage(prefs.textLanguage)
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,prefs.subtitlesDisabled).build()
                 }
                 persist()
