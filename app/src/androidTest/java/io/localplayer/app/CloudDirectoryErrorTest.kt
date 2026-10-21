@@ -78,7 +78,7 @@ class CloudDirectoryErrorTest {
     @Test fun newlyAuthorizedAccountRemainsVisibleWhenInitialDirectoryFails() {
         failDirectory(AliyunApiFailure(AliyunOperation.DIRECTORY,403,"PermissionDenied"),newlyAuthorized=true)
         assertEquals("all",vm.selectedGroup)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithText("目录错误验证").assertIsDisplayed()
     }
     @After fun cleanup() {

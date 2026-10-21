@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
+@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -42,35 +43,35 @@ import androidx.compose.ui.unit.sp
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns = when { maxWidth >= 700.dp && LocalDensity.current.fontScale < 1.5f -> 3; maxWidth >= 360.dp && LocalDensity.current.fontScale <= 1.4f -> 2; else -> 1 }
+        val brandSize = if(maxWidth < 360.dp || LocalDensity.current.fontScale > 1.3f) 28.sp else 32.sp
         LazyVerticalGrid(columns = GridCells.Fixed(columns), modifier = Modifier.fillMaxSize().testTag("home-list"),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 116.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("映汐", fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp)
-                        Text("放映室", fontSize = 13.sp, color = Muted, letterSpacing = 3.sp)
+                FlowRow(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(Modifier.padding(top=4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("映汐", modifier = Modifier.alignByBaseline(), fontSize = brandSize, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, maxLines = 1)
+                        Text("放映室", modifier = Modifier.alignByBaseline(), fontSize = 13.sp, color = Muted, letterSpacing = 3.sp, maxLines = 1)
                     }
-                    IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
-                    IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "设置", tint = Muted) }
+                    Row {
+                        IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
+                        IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "设置", tint = Muted) }
+                    }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(verticalArrangement=Arrangement.spacedBy(7.dp),modifier=Modifier.testTag("station-diary")) {
-                    Text("拾荒者日记 · 第 ${station.day} 天",color=Berry,fontSize=15.sp,fontWeight=FontWeight.Medium)
-                    Text(station.dailyLine,color=Muted,fontSize=14.sp,lineHeight=21.sp)
-                }
+                StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 第 ${station.day} 天", station.dailyLine,
+                    modifier=Modifier.testTag("station-diary"))
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Surface(onClick = onArchives, color = GroupedSurface, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().testTag("home-archives")) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         StationPortrait("scavenger", "阿汐", Modifier.size(60.dp), false)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("阿汐 · 据点管理员", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                            Text("档案室 · 阿汐", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink)
                             Text(if(greeted) "哟，回来了。今天淘着啥好货了？" else "阿汐的来信 · 人物与世界图谱", fontSize = 13.sp, lineHeight = 18.sp, color = Muted)
                         }
-                        Text("档案室",color=Muted,fontSize=12.sp)
-                        Icon(Icons.Rounded.ChevronRight, null, tint = Muted, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Rounded.ChevronRight, null, tint = Muted, modifier = Modifier.size(20.dp))
                     }
                 }
             }

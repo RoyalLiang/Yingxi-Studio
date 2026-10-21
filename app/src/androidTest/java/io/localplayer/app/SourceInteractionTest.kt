@@ -61,11 +61,11 @@ class SourceInteractionTest {
         val source=unknown.copy(trustedKey=key,trustedAuthority=unknown.authority)
         mount(source)
         // Keep the saved row above the floating navigation touch area.
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasText(source.label))
         ui.onNodeWithText(source.label).performClick()
         ui.runOnIdle{assertTrue("Saved source click must start opening its directory",vm.openingSource?.id==source.id||vm.source?.id==source.id)}
-        ui.onNodeWithText("连接来源").assertDoesNotExist()
+        ui.onNodeWithText("连接避难所").assertDoesNotExist()
         ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
         ui.runOnIdle {assertNull(vm.error);assertEquals(source.id,vm.source?.id);assertNull(vm.draft)}
         ui.onNodeWithText("附近服务").assertDoesNotExist()
@@ -74,24 +74,24 @@ class SourceInteractionTest {
     @Test fun discoveryRejectsCellularAndStopsOutsideHome(){
         mount()
         ui.runOnIdle{vm.discover();if(!vm.scanning)assertTrue(vm.discoveryMessage.contains("Wi-Fi"))}
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.runOnIdle{assertFalse("discovery must stop outside Home",vm.scanning)}
         ui.onNodeWithText("附近服务").assertDoesNotExist()
         capture("sources-empty")
     }
     @Test fun expandedConnectionSheetKeepsTopWhenProtocolChanges(){
         mount()
-        ui.onNodeWithText("来源").performClick()
-        ui.onNodeWithContentDescription("添加来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithContentDescription("添加避难所").performClick()
         ui.onNodeWithTag("connection-form").performTouchInput{swipeUp()}
         ui.onNodeWithTag("connection-form").performScrollToIndex(0)
-        val top=ui.onNodeWithText("连接来源").getUnclippedBoundsInRoot().top
+        val top=ui.onNodeWithTag("connection-title").getUnclippedBoundsInRoot().top
         for(protocol in listOf("SFTP","WebDAV","SMB")){
             ui.runOnIdle{vm.draft=vm.draft?.let{it.copy(source=it.source.copy(initialPath="legacy"),browsePath="legacy-folder")}}
             ui.onNodeWithText(protocol).performClick()
             ui.runOnIdle{assertEquals("",vm.draft?.source?.initialPath);assertNull(vm.draft?.browsePath)}
             ui.onNodeWithTag("connection-form").performScrollToIndex(0)
-            assertEquals(top.value,ui.onNodeWithText("连接来源").getUnclippedBoundsInRoot().top.value,4f)
+            assertEquals(top.value,ui.onNodeWithTag("connection-title").getUnclippedBoundsInRoot().top.value,4f)
             capture("sheet-${protocol.lowercase()}")
         }
     }
@@ -99,21 +99,21 @@ class SourceInteractionTest {
     @Test fun savedSourceOnlyEditsFromItsSettingsMenu(){
         val source=Source(label="配置入口验证",protocol=Protocol.SFTP,host="10.0.2.2",port=TestFixtures.sftpPort,root="/",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("添加第一个来源").assertDoesNotExist()
-        ui.onNodeWithText("来源").performClick()
-        ui.onNodeWithContentDescription("来源操作 ${source.label}").performClick()
-        ui.onNodeWithText("来源设置").performClick()
+        ui.onNodeWithText("添加第一个避难所").assertDoesNotExist()
+        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
+        ui.onNodeWithText("避难所设置").performClick()
         ui.onNodeWithText("连接与账户配置").performClick()
-        ui.onNodeWithText("连接来源").assertIsDisplayed()
+        ui.onNodeWithText("连接避难所").assertIsDisplayed()
         ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
     }
 
     @Test fun swipingOnlyRevealsActionsAndPinLimitIsPersisted(){
-        val sources=(1..4).map{index->Source(label="滑动来源 $index",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)}
+        val sources=(1..4).map{index->Source(label="滑动避难所 $index",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)}
         val store=SourceStore(context)
         sources.forEach{store.save(it,TestFixtures.password,true);saved+=it.id}
         mount()
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         for(source in sources.take(3)){
             ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
             ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
@@ -137,7 +137,7 @@ class SourceInteractionTest {
     @Test fun swipeDeleteRequiresConfirmationAndKeepsServerFiles(){
         val source=Source(label="删除确认验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
         assertTrue(SourceStore(context).hasPassword(source.id))
@@ -147,7 +147,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
         ui.onNodeWithText("删除").performClick()
-        ui.onNodeWithText("删除来源").performClick()
+        ui.onNodeWithText("删除避难所").performClick()
         assertFalse(SourceStore(context).load().any{it.id==source.id})
         assertFalse(SourceStore(context).hasPassword(source.id))
         Protocols().connect(source,Credentials(TestFixtures.password)).use{session->assertTrue(session.list("").isNotEmpty())}
@@ -156,7 +156,7 @@ class SourceInteractionTest {
     @Test fun privateAccessCancellationNeverOpensSource(){
         val source=Source(label="一次性系统验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         capture("swipe-right")
@@ -175,11 +175,11 @@ class SourceInteractionTest {
         val source=Source(label="临时认证验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         SourceStore(context).save(source,"",false);saved+=source.id
         mount()
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithText(source.label).performClick()
         ui.waitUntil(5_000){vm.access!=null}
-        ui.onNodeWithText("验证来源").assertIsDisplayed()
-        ui.onNodeWithText("连接来源").assertDoesNotExist()
+        ui.onNodeWithText("验证避难所").assertIsDisplayed()
+        ui.onNodeWithText("连接避难所").assertDoesNotExist()
         ui.runOnIdle{assertNull(vm.draft);vm.updateAccess(password=TestFixtures.password);vm.connectAccess()}
         ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
         ui.runOnIdle{assertNull(vm.error);assertEquals(source.id,vm.source?.id);assertNull(vm.access)}
@@ -210,7 +210,7 @@ class SourceInteractionTest {
         require(pin.matches(Regex("[0-9]{4,8}")))
         val source=Source(label="系统锁屏验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         ui.onNodeWithText("私密访问").performClick()

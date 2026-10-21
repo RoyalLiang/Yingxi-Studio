@@ -108,7 +108,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var thumbBounds by remember { mutableStateOf(Rect.Zero) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
-    var fill by rememberSaveable { mutableStateOf(false) }
+    var fill by rememberSaveable { mutableStateOf(true) }
     val previews = remember(controller) { PreviewFrames(context.applicationContext) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
@@ -296,7 +296,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                             }
                         }
                         TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("音字幕", color = PlayerInk) }
-                        PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill })
+                        PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() })
                         TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
                         PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
                     }
