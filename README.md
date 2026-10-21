@@ -82,4 +82,4 @@
 - [云盘接入](docs/cloud-integrations.md) · [版本与发布](docs/releasing.md)
 - [第三方许可资料](third_party)
 
-项目许可证尚待维护者决定；第三方依赖保留各自许可与 NOTICE。IINA 用作产品参考，未复用其图标。
+本项目按 [GNU GPLv3](LICENSE) 发布，完整对应源码随每个版本提供；第三方依赖保留各自许可与 NOTICE。IINA 用作产品参考，未复用其图标。
