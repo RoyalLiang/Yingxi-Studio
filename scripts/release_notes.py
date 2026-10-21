@@ -50,7 +50,23 @@ def load_notes(root, version):
                 speaker=re.search(r"(?:——| — )([^\n]+)$",line)
                 if speaker is None or speaker[1].strip() not in names:
                     raise ValueError("Character quotations must be attributed to a known atlas character")
+    match=re.fullmatch(r"0\.2\.0-alpha\.(\d+)",version["versionName"])
+    if not match or int(match[1])>=25:
+        validate_character_epilogue(chinese)
+        validate_character_epilogue(english)
     return text + "\n"
+
+def validate_character_epilogue(body):
+    """Keep character updates out of the change list; preserve published historical letters."""
+    lines=[line.strip() for line in body.splitlines() if line.strip()]
+    for line in lines:
+        if re.match(r"^(?:[-*] |\d+[.、] )",line) and re.search(
+            r"人物|角色|肖像|阿汐|迟灯|弥途|\b(?:characters?|Axi|Chideng|Mitu)\b",line,re.IGNORECASE):
+            raise ValueError("Character updates belong only in the final attributed epilogue")
+    quotes=[i for i,line in enumerate(lines) if line.startswith("> ")]
+    if quotes and any(not line.startswith("> ") for line in lines[min(quotes):]):
+        raise ValueError("Character dialogue belongs at the end of each language's field letter")
+
 
 def render_notes(root, version, source_commit):
     text = load_notes(root, version)
