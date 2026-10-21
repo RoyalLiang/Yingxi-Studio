@@ -153,8 +153,8 @@
       "home": "station",
       "portrait": "scavenger",
       "description": {
-        "zh": "旧风镜挂在帽檐上，口袋里总有一颗不配套的螺丝。嘴上嫌修理麻烦，却从不肯把还能放映的影像留在雨里。",
-        "en": "Old goggles on a cap, one mismatched screw in every pocket. Complains about repairs; never leaves a playable image out in the rain."
+        "zh": "旧风镜与拼装头灯压在帽檐上，灰绿工装补着回收布料，口袋里总有一颗不配套的螺丝。撬拆工具、呼吸防护与胶片罐挂在胸前；嘴上嫌修理麻烦，却从不肯把还能放映的影像留在雨里。",
+        "en": "Old goggles and a jury-rigged headlamp on her cap; salvaged cloth patches across grey-green workwear, one mismatched screw in every pocket. Pry tools, breathing protection and film canisters hang from her harness. Complains about repairs; never leaves a playable image out in the rain."
       },
       "quotes": [
         {
@@ -184,8 +184,8 @@
       "home": "station",
       "portrait": "keeper",
       "description": {
-        "zh": "信笺里的守夜人有了名字。灰白的鬓角，补过三次的耳机；记得每台放映机的脾气，却总忘记自己的茶已经凉了。",
-        "en": "The night keeper from earlier letters now has a name. Grey at the temples, headphones patched three times. Remembers every projector’s temperament; forgets the tea."
+        "zh": "灰白的鬓角，补过三次的耳机；旧工装外罩着磨损的维修围裙，表笔、电线和钳子各有落脚处。提灯用回收金属拼了护网。他记得每台放映机的脾气，却总忘记自己的茶已经凉了。",
+        "en": "Grey at the temples, headphones patched three times. A worn repair apron over old coveralls, with a place for meter probes, wire and pliers. Scrap metal guards his work light. Remembers every projector’s temperament; forgets the tea."
       },
       "quotes": [
         {
@@ -215,8 +215,8 @@
       "home": "salt",
       "portrait": "wayfinder",
       "description": {
-        "zh": "短发间别着一支褪色的红铅笔，披风的内衬画满岔路。习惯把未知标出来，因为她不愿把猜测当成路。",
-        "en": "A faded red pencil tucked into short hair, routes drawn inside a travel cape. Marks the unknown plainly: a guess is no road to send someone down."
+        "zh": "短发间别着一支褪色的红铅笔，短雨披和背架上尽是修补痕迹，绳索、片罐与水壶沿着橙色肩带固定。地图贴身收着，罗盘从不离手。她把没走过的路线画成虚线，不愿把猜测当成路。",
+        "en": "A faded red pencil tucked into short hair, repairs across her short rain poncho and pack frame. Rope, film canisters and a flask are secured beside an orange strap. Keeps the map close and the compass at hand. Unwalked routes stay dotted: a guess is no road to send someone down."
       },
       "quotes": [
         {
@@ -254,6 +254,13 @@
       "text": {
         "zh": "阿汐把「映汐放映室」的新名牌钉上门楣，又把档案室的指示牌挪到门外。迟灯擦亮了耳机上的铜线，弥途终于让画师留下了那支红铅笔。",
         "en": "Axi fixed the new Yingxi Screening Room sign above the door and moved the archives sign outside. Chideng polished the copper on his headphones; Mitu finally persuaded the portrait artist to keep her red pencil."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.23",
+      "text": {
+        "zh": "三人的肖像重新挂回档案室。阿汐带着拆解工具，迟灯提起拼装工作灯，弥途没有卸下背架；门后的冷光照见每一道补丁。",
+        "en": "Three repainted portraits return to the archives: Axi with her salvage tools, Chideng with a rebuilt work light, Mitu still carrying her pack frame. The cool light beyond the door reveals every patch."
       }
     }
   ],
