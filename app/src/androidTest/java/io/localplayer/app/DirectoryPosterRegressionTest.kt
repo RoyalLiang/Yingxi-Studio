@@ -53,7 +53,7 @@ class DirectoryPosterRegressionTest {
         }
         ui.runOnUiThread{vm=LibraryViewModel(app,connector);owner.put("browser",vm)
             val files=LocalFilesViewModel(app);owner.put("files",files);ui.activity.setContent{PlayerTheme{AppShell(vm,files,{},{},{})}}}
-        ui.onNodeWithText("来源").performClick();ui.runOnIdle{vm.open(source)};ui.waitUntil(5000){vm.source!=null&&!vm.busy};ui.waitForIdle();return source
+        ui.onNodeWithText("避难所").performClick();ui.runOnIdle{vm.open(source)};ui.waitUntil(5000){vm.source!=null&&!vm.busy};ui.waitForIdle();return source
     }
     @Test fun folderLoadingKeepsPressedRowAtItsOriginalPosition(){
         browser(blockChild=true)

@@ -31,7 +31,7 @@ class Discovery(context:Context,private val found:(Candidate)->Unit,private val 
             val type=kind.type
             val listener=object:NsdManager.DiscoveryListener {
                 override fun onDiscoveryStarted(serviceType:String){}
-                override fun onStartDiscoveryFailed(serviceType:String,errorCode:Int){ main.post{if(active)message("部分服务发现不可用，可手动添加来源（$errorCode）")} }
+                override fun onStartDiscoveryFailed(serviceType:String,errorCode:Int){ main.post{if(active)message("部分服务发现不可用，可手动添加避难所（$errorCode）")} }
                 override fun onStopDiscoveryFailed(serviceType:String,errorCode:Int){}
                 override fun onDiscoveryStopped(serviceType:String){}
                 override fun onServiceLost(serviceInfo:NsdServiceInfo){}

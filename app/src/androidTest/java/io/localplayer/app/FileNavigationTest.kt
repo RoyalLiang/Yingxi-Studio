@@ -72,7 +72,7 @@ class FileNavigationTest {
         }
         try{
             ui.waitUntil(20000){vm.source!=null&&!vm.busy}
-            ui.onNodeWithText("来源").performClick()
+            ui.onNodeWithText("避难所").performClick()
             ui.onNodeWithTag("source-list").assertIsDisplayed()
             ui.onNode(hasText("Navigation fixture") and hasAnyAncestor(hasTestTag("source-list")),useUnmergedTree=true).performClick()
             ui.waitUntil(20000){vm.source!=null&&!vm.busy}
@@ -82,10 +82,10 @@ class FileNavigationTest {
             snapshot("remote-navigation")
             ui.onNodeWithTag("breadcrumb:remote:").performClick()
             ui.waitUntil(20000){vm.path==""&&!vm.busy}
-            ui.onNodeWithContentDescription("返回来源").assertIsDisplayed()
+            ui.onNodeWithContentDescription("返回避难所").assertIsDisplayed()
             ui.onNodeWithTag("breadcrumb:sources").performClick()
             ui.waitUntil{vm.source==null}
-            ui.onNodeWithContentDescription("添加来源").assertIsDisplayed()
+            ui.onNodeWithContentDescription("添加避难所").assertIsDisplayed()
         }finally{ui.runOnIdle{SourceStore(ui.activity).delete(source.id);vm.closeSource()}}
     }
 }

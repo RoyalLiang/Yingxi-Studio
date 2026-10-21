@@ -26,7 +26,7 @@ internal fun PrivateSourceAccessPrompt(vm:LibraryViewModel){
             vm.cancelPrivateAccess(request.id,"请先在系统设置中配置指纹或锁屏密码，再使用私密访问")
         }else{
             val prompt=BiometricPrompt.Builder(activity).setTitle("私密访问").setSubtitle(request.source.label)
-                .setDescription("验证本次访问，然后打开来源。播放记录按正常规则保存。")
+                .setDescription("验证本次访问，然后打开避难所。播放记录按正常规则保存。")
                 .setAllowedAuthenticators(authenticators).build()
             prompt.authenticate(cancellation,activity.mainExecutor,object:BiometricPrompt.AuthenticationCallback(){
                 override fun onAuthenticationSucceeded(result:BiometricPrompt.AuthenticationResult){vm.completePrivateAccess(request.id)}
