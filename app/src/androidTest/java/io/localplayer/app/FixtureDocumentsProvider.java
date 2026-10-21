@@ -20,6 +20,9 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             case "movies": return "影片";
             case "shorts": return "短片";
             case "clip": return "示例.mp4";
+            case "sidecars": return "字幕目录";
+            case "video42": return "Film.mkv";
+            case "subtitle42": return "Film.chs.srt";
             case "series": return "漫长的季节";
             case "episode5": return "漫长的季节.S01E05.mkv";
             case "episode6": return "漫长的季节.S01E06.mkv";
@@ -35,7 +38,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             switch (columns[i]) {
                 case Document.COLUMN_DOCUMENT_ID: values[i] = id; break;
                 case Document.COLUMN_DISPLAY_NAME: values[i] = name; break;
-                case Document.COLUMN_MIME_TYPE: values[i] = id.equals("clip") || id.startsWith("episode") ? "video/mp4" : Document.MIME_TYPE_DIR; break;
+                case Document.COLUMN_MIME_TYPE: values[i] = id.equals("subtitle42") ? "application/x-subrip" : id.equals("clip") || id.equals("video42") || id.startsWith("episode") ? "video/mp4" : Document.MIME_TYPE_DIR; break;
                 case Document.COLUMN_SIZE: values[i] = id.equals("clip") ? 1024L : 0L; break;
                 case Document.COLUMN_FLAGS: values[i] = 0; break;
             }
@@ -67,15 +70,22 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             case "root": row(cursor, "movies"); break;
             case "movies": row(cursor, "shorts"); row(cursor, "clip"); break;
             case "shorts": break;
+            case "sidecars": row(cursor, "video42"); row(cursor, "subtitle42"); break;
             case "series": row(cursor, "episode5"); row(cursor, "episode6"); row(cursor, "episode7"); break;
             default: throw new FileNotFoundException(parent);
         }
         return cursor;
     }
     @Override public ParcelFileDescriptor openDocument(String id, String mode, CancellationSignal signal) throws FileNotFoundException {
-        throw new FileNotFoundException("No media content in navigation fixture");
+        if (!id.equals("subtitle42") || !mode.equals("r")) throw new FileNotFoundException("No media content in navigation fixture");
+        java.io.File file = new java.io.File(getContext().getCacheDir(), "opaque-id-subtitle.srt");
+        try (java.io.FileOutputStream output = new java.io.FileOutputStream(file)) {
+            output.write("1\n00:00:01,000 --> 00:00:02,000\nOpaque document subtitle\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException error) { throw new FileNotFoundException(error.toString()); }
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
     }
     @Override public boolean isChildDocument(String parent, String child) {
+        if (parent.equals("sidecars")) return child.equals("video42") || child.equals("subtitle42");
         if (parent.equals("series")) return child.startsWith("episode");
         if (parent.equals("root")) return child.equals("movies") || child.equals("shorts") || child.equals("clip");
         return parent.equals("movies") && (child.equals("shorts") || child.equals("clip"));

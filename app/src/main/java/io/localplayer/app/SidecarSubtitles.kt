@@ -25,10 +25,11 @@ internal object SidecarSubtitles {
                 }
             }
         } else if(uri.scheme=="content"&&DocumentsContract.isTreeUri(uri)) {
-            val id=DocumentsContract.getDocumentId(uri)
-            val separator=id.lastIndexOf('/')
-            if(separator<0)return null
-            val children=DocumentsContract.buildChildDocumentsUriUsingTree(uri,id.take(separator))
+            // SAF document IDs are opaque. Use the directory recorded when browsing.
+            val parent=media.localParentUri?.let(Uri::parse)?:return null
+            if(parent.authority!=uri.authority||!DocumentsContract.isTreeUri(parent)||
+                DocumentsContract.getTreeDocumentId(parent)!=DocumentsContract.getTreeDocumentId(uri))return null
+            val children=DocumentsContract.buildChildDocumentsUriUsingTree(parent,DocumentsContract.getDocumentId(parent))
             val signal=CancellationSignal();val owner=java.io.Closeable{signal.cancel()};c.own(owner)
             val found=linkedMapOf<String,Uri>()
             try { context.contentResolver.query(children,arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_DISPLAY_NAME),null,null,null,signal)?.use { cursor->

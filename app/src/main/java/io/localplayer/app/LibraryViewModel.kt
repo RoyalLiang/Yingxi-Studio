@@ -318,7 +318,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(preparingKey==entry.media.key)return
         error=null
         val ref=entry.media
-        if(ref.localUri!=null){playLocal(Uri.parse(ref.localUri),fromStart);return}
+        if(ref.localUri!=null){playLocal(Uri.parse(ref.localUri),fromStart,parentUri=ref.localParentUri?.let(Uri::parse));return}
         val saved=sources.firstOrNull{it.id==ref.sourceId}
         if(saved==null){error="这个来源已移除，请重新添加后选择影片";return}
         if(ref.location!=null&&ref.location!=mediaLocation(saved)){error="来源身份已变更，请从来源重新选择影片";return}
@@ -334,7 +334,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:CancellationException){throw e}
         catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在来源配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
     }
-    fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList()){
+    fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList(),parentUri:Uri?=null){
         cancelOperation();pendingReplay=null;val request=generation;preparingKey=uri.toString()
         val requestedToken=historyStore.token(uri.toString())
         job=viewModelScope.launch{try{
@@ -349,7 +349,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                         val z=cursor.getColumnIndex(OpenableColumns.SIZE);if(z>=0&&!cursor.isNull(z))size=cursor.getLong(z)
                     }
                 }
-                MediaRef(uri.toString(),title,"本机文件",localUri=uri.toString(),sizeBytes=size)
+                MediaRef(uri.toString(),title,"本机文件",localUri=uri.toString(),sizeBytes=size,localParentUri=(parentUri?:siblings.firstOrNull{it.uri==uri}?.parentUri)?.toString())
             }
             val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
             if(request==generation&&requestedToken==historyStore.token(ref.key)){
@@ -357,7 +357,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 val selected=videos.firstOrNull{it.uri==uri}
                 val window=if(selected!=null)PlaybackRequests.window(videos,selected)else emptyList()
                 val queue=window.map{e->
-                    val item=if(e.uri==uri)ref else MediaRef(e.uri.toString(),e.name,"本机文件",localUri=e.uri.toString(),sizeBytes=e.size)
+                    val item=if(e.uri==uri)ref else MediaRef(e.uri.toString(),e.name,"本机文件",localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString())
                     QueuedMedia(e.uri,item,if(e.uri==uri)requestedToken else historyStore.token(item.key))
                 }
                 playChannel.send(PlayTarget(uri,ref.title,resume,ref,requestedToken,queue=queue,truncated=videos.size>window.size&&window.isNotEmpty()))

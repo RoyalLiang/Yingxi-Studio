@@ -26,6 +26,21 @@ class StationExperienceTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private val context get()=InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test fun audioPreferenceIsSeparateFromRememberedManualLanguage(){
+        val name="audio-test-${UUID.randomUUID()}"
+        try {
+            val prefs=PlaybackPreferences(context,name)
+            prefs.audioLanguage="zh";prefs.rememberedAudioLanguage="en"
+            assertEquals("en",PlaybackPreferences(context,name).effectiveAudioLanguage)
+            prefs.rememberManual=false
+            assertEquals("zh",PlaybackPreferences(context,name).effectiveAudioLanguage)
+            assertNull(PlaybackPreferences(context,name).rememberedAudioLanguage)
+            prefs.rememberManual=true
+            prefs.audioLanguage="ja"
+            assertEquals("ja",PlaybackPreferences(context,name).effectiveAudioLanguage)
+            assertNull(prefs.rememberedAudioLanguage)
+        } finally {context.deleteSharedPreferences(name)}
+    }
     @Test fun greetingIsOncePerDayAndSoundRequiresOptIn() {
         val name="station-test-${UUID.randomUUID()}"
         val raw=context.getSharedPreferences(name,0)

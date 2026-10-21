@@ -15,15 +15,15 @@ fun mediaLocation(source:Source):String {
 
 /** Stable media identity only; no credentials or temporary playback tokens. */
 data class MediaRef(val key:String,val title:String,val sourceLabel:String,val sourceId:String?=null,
-    val path:String?=null,val localUri:String?=null,val sizeBytes:Long?=null,val location:String?=null) {
+    val path:String?=null,val localUri:String?=null,val sizeBytes:Long?=null,val location:String?=null,val localParentUri:String?=null) {
     fun json()=JSONObject().put("key",key).put("title",title).put("sourceLabel",sourceLabel)
-        .put("sourceId",sourceId).put("path",path).put("localUri",localUri).put("sizeBytes",sizeBytes).put("location",location).toString()
+        .put("sourceId",sourceId).put("path",path).put("localUri",localUri).put("sizeBytes",sizeBytes).put("location",location).put("localParentUri",localParentUri).toString()
     companion object {
         fun parse(text:String):MediaRef { val o=JSONObject(text)
             fun optional(name:String)=o.optString(name).takeIf { it.isNotBlank()&&it!="null" }
             return MediaRef(o.getString("key"),o.getString("title"),o.getString("sourceLabel"),
                 optional("sourceId"),optional("path"),optional("localUri"),
-                if(o.has("sizeBytes")&&!o.isNull("sizeBytes"))o.getLong("sizeBytes")else null,optional("location"))
+                if(o.has("sizeBytes")&&!o.isNull("sizeBytes"))o.getLong("sizeBytes")else null,optional("location"),optional("localParentUri"))
         }
     }
 }

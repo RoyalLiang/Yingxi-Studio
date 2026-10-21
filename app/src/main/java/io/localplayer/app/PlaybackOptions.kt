@@ -73,10 +73,10 @@ import java.util.Locale
                 val audioAutomatic=parameters.overrides.keys.none{it.type==C.TRACK_TYPE_AUDIO}
                 if(audio.isEmpty())item{Text("影片没有可用音轨",fontSize=14.sp,color=Color(0xFFB9B9BF))}
                 else{
-                    item{TrackChoice("自动选择",audioAutomatic){prefs.audioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(null).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
+                    item{TrackChoice("自动选择",audioAutomatic){prefs.rememberedAudioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(prefs.audioLanguage).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
                     audio.forEachIndexed{g,group->for(i in 0 until group.length){
                         item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"音轨 ${g+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
-                            if(prefs.rememberManual)prefs.audioLanguage=group.getTrackFormat(i).language
+                            if(prefs.rememberManual)prefs.rememberedAudioLanguage=group.getTrackFormat(i).language
                             controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                         }}
                     }}
