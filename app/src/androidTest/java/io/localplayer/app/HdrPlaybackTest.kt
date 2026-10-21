@@ -61,6 +61,19 @@ class HdrPlaybackTest {
         val five=vision("05",pq());assertSame(five,decoderOutputFormat(five,MimeTypes.VIDEO_H265))
     }
 
+    @Test fun unreadableHevcCodecMetadataUsesTheActualSpsForDecoderConfiguration() {
+        val original=dolbyVisionBaseFormat(vision("08",pq()),false)
+        val broken=original.buildUpon().setCodecs("hvc1.2.4.H1153.B0").build()
+        val fixed=hevcDecoderFormat(broken)
+        assertEquals(original.codecs,fixed.codecs)
+        assertEquals(broken.colorInfo,fixed.colorInfo)
+        assertEquals(broken.width,fixed.width);assertEquals(broken.height,fixed.height)
+        assertArrayEquals(csd,fixed.initializationData.single())
+        assertSame(original,hevcDecoderFormat(original))
+        val unreadable=broken.buildUpon().setInitializationData(emptyList()).build()
+        assertSame(unreadable,hevcDecoderFormat(unreadable))
+    }
+
     @Test fun nativeVisionRequiresBothTheDisplayAndAHardwareDecoder() {
         var queried=false
         assertFalse(nativeDolbyVisionAvailable(intArrayOf(Display.HdrCapabilities.HDR_TYPE_HDR10)){queried=true;true})

@@ -1,0 +1,19 @@
+Yingxi software video decoder sources and build directions
+
+Yingxi is distributed under GNU GPLv3 with full application source in each release's source-code archive.
+
+NextLib 1.11.1-0.16.0 (GPLv3):
+Source: https://github.com/anilbeesetti/nextlib/tree/v1.11.1-0.16.0
+Archive: https://github.com/anilbeesetti/nextlib/archive/refs/tags/v1.11.1-0.16.0.tar.gz
+Native build recipe: ffmpeg/setup.sh and media3ext/src/main/cpp/CMakeLists.txt in that source.
+The published Maven coordinate is io.github.anilbeesetti:nextlib-media3ext:1.11.1-0.16.0.
+
+Its pinned shared FFmpeg components use FFmpeg 9.0.1, LGPLv3 (--enable-version3, no --enable-gpl):
+https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.gz
+https://github.com/FFmpeg/FFmpeg/tree/n9.0.1
+
+Its build recipe also pins dav1d 1.5.4 (BSD-2-Clause) and Mbed TLS 3.6.7 (Apache-2.0):
+https://github.com/videolan/dav1d/tree/1.5.4
+https://github.com/Mbed-TLS/mbedtls/tree/mbedtls-3.6.7
+
+To rebuild/modify the native decoder, obtain the exact NextLib tag above, follow its README build prerequisites, run the supplied module build, and substitute the resulting AAR for the pinned dependency. To rebuild the application, use its source-code release archive and CONTRIBUTING.md. The native libraries remain separate shared objects in the APK; the complete application source is provided and rebuilding/replacing the decoder is permitted. Third-party rights, license texts and dependency hashes are retained in the APK notices.
