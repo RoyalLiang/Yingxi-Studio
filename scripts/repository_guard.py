@@ -8,12 +8,13 @@ from pathlib import Path
 EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.md", "version.json",
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
-         "app/build.gradle.kts", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
-         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.png", "assets/readme/updates.png", "assets/readme/letter.png", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.png", "app/src/main/res/drawable-nodpi/cloud_baidu.png"}
+         "app/build.gradle.kts", "app/proguard-rules.pro", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
+         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
 
 EXACT.add("app/src/main/res/raw/world_atlas.json")
+EXACT.add("assets/artwork.json")
 EXACT.add("docs/wasteland-copy-audit-2026-10-22.md")
-EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".png" for name in ("axi","chideng","mitu"))
+EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name in ("axi","chideng","mitu"))
 
 def allowed(name):
     p = Path(name)
@@ -27,7 +28,7 @@ def allowed(name):
             or (name.startswith(".github/workflows/") and p.suffix == ".yml")
             or (name == ".github/dependabot.yml")
             or (name.startswith("third_party/") and p.suffix in {".txt", ".json"})
-            or name in {"assets/brand/yingxi-icon.svg", "assets/brand/yingxi-icon.png", "assets/brand/yingxi-icon-preview.png"})
+            or name in {"assets/brand/yingxi-icon.svg", "assets/brand/yingxi-icon.webp", "assets/brand/yingxi-icon-preview.webp"})
 
 PATTERNS = {
     "private key": re.compile(rb"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----"),
@@ -41,7 +42,7 @@ def inspect(name, data):
     errors = []
     if not allowed(name): errors.append("not in source publication allowlist")
     if data.startswith(bytes.fromhex("00051607")): errors.append("AppleDouble metadata")
-    if Path(name).suffix not in {".png", ".jar"}:
+    if Path(name).suffix not in {".png", ".webp", ".jar"}:
         for label, pattern in PATTERNS.items():
             if pattern.search(data): errors.append(label)
         for ip in re.findall(rb"(?<![0-9])(?:10\.[0-9]+\.[0-9]+\.[0-9]+|192\.168\.[0-9]+\.[0-9]+|172\.(?:1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+)(?![0-9])", data):

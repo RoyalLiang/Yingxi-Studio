@@ -21,6 +21,7 @@ val versionChanges = if (notesFile.isFile) notesFile.readText().substringAfter("
 val signingNames = listOf("YINGXI_KEYSTORE_PATH", "YINGXI_KEYSTORE_PASSWORD", "YINGXI_KEY_ALIAS", "YINGXI_KEY_PASSWORD")
 val signing = signingNames.associateWith { providers.environmentVariable(it).orNull }
 require(signing.values.all { it.isNullOrBlank() } || signing.values.all { !it.isNullOrBlank() }) { "Release signing configuration is incomplete" }
+val localOptimizedTest = providers.gradleProperty("yingxiLocalOptimizedTest").orNull == "true"
 val hasReleaseSigning = signing.values.all { !it.isNullOrBlank() }
 val generatedNotices = layout.buildDirectory.dir("generated/notices")
 val generateNotices by tasks.registering {
@@ -59,7 +60,7 @@ val generateNotices by tasks.registering {
 android {
     namespace = "io.localplayer.app"
     compileSdk = 36
-    defaultConfig { applicationId = "io.localplayer.app"; minSdk = 35; targetSdk = 36; versionCode = appVersionCode.toInt(); versionName = appVersionName; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
+    defaultConfig { applicationId = "io.localplayer.app"; minSdk = 35; targetSdk = 36; versionCode = appVersionCode.toInt(); versionName = appVersionName; testInstrumentationRunner = providers.gradleProperty("yingxiRunner").getOrElse("androidx.test.runner.AndroidJUnitRunner") }
     defaultConfig {
         buildConfigField("String", "VERSION_CHANGES", groovy.json.JsonOutput.toJson(versionChanges))
         buildConfigField("String", "VERSION_NOTES", groovy.json.JsonOutput.toJson(if(notesFile.isFile)notesFile.readText()else ""))
@@ -76,9 +77,14 @@ android {
         }
     }
     buildTypes.getByName("release") {
-        isMinifyEnabled = false
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         if(hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
+        else if(localOptimizedTest) signingConfig = signingConfigs.getByName("debug")
     }
+    splits { abi { isEnable = true; reset(); include("arm64-v8a", "armeabi-v7a", "x86_64", "x86"); isUniversalApk = false } }
+    testBuildType = providers.gradleProperty("yingxiTestBuildType").getOrElse("debug")
     buildFeatures { compose = true; buildConfig = true }
     sourceSets.getByName("main").assets.srcDir(generatedNotices)
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
@@ -86,7 +92,7 @@ android {
 }
 tasks.named("preBuild").configure { dependsOn(generateNotices) }
 val verifyReleaseSigning by tasks.registering {
-    doLast { check(hasReleaseSigning) { "Signed alpha release requires YINGXI_KEYSTORE_PATH, YINGXI_KEYSTORE_PASSWORD, YINGXI_KEY_ALIAS and YINGXI_KEY_PASSWORD" } }
+    doLast { check(hasReleaseSigning || localOptimizedTest) { "Signed alpha release requires YINGXI_KEYSTORE_PATH, YINGXI_KEYSTORE_PASSWORD, YINGXI_KEY_ALIAS and YINGXI_KEY_PASSWORD" } }
 }
 tasks.matching { it.name in setOf("assembleRelease", "packageRelease", "bundleRelease") }.configureEach { dependsOn(verifyReleaseSigning) }
 dependencies {

@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from versioning import load, validate
+from apk_variants import ABIS, apk_name, verify_abi
 from release_notes import load_notes, render_notes
 from repository_guard import allowed, inspect
 
@@ -52,24 +53,37 @@ def check_previous(current, previous):
 
 def verify_assets(directory):
     manifest=json.loads((directory/"yingxi-release.json").read_text())
-    expected={manifest["fileName"],"yingxi-release.json","third-party-notices.txt","dependencies.json","SHA256SUMS"}
+    split=manifest.get("formatVersion",1)>=3
+    apks=manifest.get("apks",[]) if split else [{"fileName":manifest["fileName"],"sha256":manifest["sha256"]}]
+    if split:
+        if len(apks)!=len(ABIS) or {a["abi"] for a in apks}!=set(ABIS):raise ValueError("Missing or duplicate architecture")
+        if any(a["fileName"]!=apk_name(manifest,a["abi"]) for a in apks):raise ValueError("Architecture APK name mismatch")
+    names={a["fileName"] for a in apks}
+    if len(names)!=len(apks) or any(Path(name).name!=name for name in names):raise ValueError("Unsafe or duplicate APK name")
+    expected=names|{"yingxi-release.json","third-party-notices.txt","dependencies.json","SHA256SUMS"}
+    if split:expected.add("mapping.txt")
     if manifest.get('formatVersion',1)>=2:
-        if manifest.get('sourceFileName')!=f'source-code-{manifest["versionName"]}.zip': raise ValueError('Missing or invalid source archive')
+        if manifest.get('sourceFileName')!=f'source-code-{manifest["versionName"]}.zip':raise ValueError('Missing or invalid source archive')
         expected.add(manifest['sourceFileName'])
-    if {p.name for p in directory.iterdir()} != expected: raise ValueError("Unexpected or missing release assets")
+    if {p.name for p in directory.iterdir()}!=expected:raise ValueError("Unexpected release assets")
     seen=set()
     for line in (directory/"SHA256SUMS").read_text().splitlines():
         digest,name=line.split("  ",1)
-        if name in seen or name not in expected-{"SHA256SUMS"} or sha(directory/name)!=digest: raise ValueError("Release asset checksum mismatch")
+        if name in seen or name not in expected-{"SHA256SUMS"} or sha(directory/name)!=digest:raise ValueError("Release asset checksum mismatch")
         seen.add(name)
-    if seen!=expected-{"SHA256SUMS"}: raise ValueError("Release checksum coverage is incomplete")
-    if sha(directory/manifest["fileName"])!=manifest["sha256"]: raise ValueError("APK checksum mismatch")
+    if seen!=expected-{"SHA256SUMS"}:raise ValueError("Release checksum coverage incomplete")
+    for apk in apks:
+        path=directory/apk["fileName"]
+        if sha(path)!=apk["sha256"]:raise ValueError("APK checksum mismatch")
+        if split:
+            if path.stat().st_size!=apk["sizeBytes"]:raise ValueError("APK size mismatch")
+            verify_abi(path,apk["abi"])
+    if split and sha(directory/"mapping.txt")!=manifest["mappingSha256"]:raise ValueError("Mapping checksum mismatch")
     if manifest.get('formatVersion',1)>=2:
         source=directory/manifest['sourceFileName']
-        if sha(source)!=manifest['sourceSha256'] or source.stat().st_size!=manifest['sourceSizeBytes']: raise ValueError('Source archive checksum mismatch')
+        if sha(source)!=manifest['sourceSha256'] or source.stat().st_size!=manifest['sourceSizeBytes']:raise ValueError('Source archive checksum mismatch')
         verify_source_archive(source,manifest,manifest['sourceCommit'])
     return manifest
-
 
 def historical_apk(version, release):
     if release['tag_name'] != version['tag']:
@@ -101,37 +115,45 @@ def previous_from_apk(root, repo, release, destination):
 
 def prepare(args):
     root=Path(__file__).resolve().parents[1];version=load(root)
-    load_notes(root,version)
-    if args.apk is None:args.apk=root/f'dist/yingxi-{version["versionName"]}-{version["versionCode"]}-release.apk'
-    if args.tag!=version["tag"]: raise ValueError("Tag/config mismatch")
+    if args.tag!=version["tag"]:raise ValueError("Tag/config mismatch")
     commit=run("git","rev-parse","HEAD")
-    if run("git","rev-parse",f"refs/tags/{args.tag}^{{commit}}")!=commit: raise ValueError("Tag/checkout mismatch")
+    if run("git","rev-parse",f"refs/tags/{args.tag}^{{commit}}")!=commit:raise ValueError("Tag/checkout mismatch")
     subprocess.run(["git","merge-base","--is-ancestor",commit,"origin/main"],check=True)
     sdk=Path(os.environ.get("ANDROID_HOME") or os.environ["ANDROID_SDK_ROOT"])/"build-tools/36.0.0"
-    badging=run(str(sdk/"aapt"),"dump","badging",str(args.apk))
-    package=re.search(r"package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'",badging)
-    if not package or package.groups()!=("io.localplayer.app",str(version["versionCode"]),version["versionName"]): raise ValueError("Compiled APK/config mismatch")
-    if "application-debuggable" in badging: raise ValueError("Debug APKs cannot be published")
-    signature=run(str(sdk/"apksigner"),"verify","--verbose","--print-certs",str(args.apk))
-    signer=re.search(r"Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]{64})",signature)
-    if not signer: raise ValueError("APK signer missing")
-    fingerprint=signer.group(1).lower()
     expected=os.environ.get("YINGXI_SIGNER_SHA256","").replace(":","").lower()
-    if expected and fingerprint!=expected: raise ValueError("APK signer does not match configured identity")
+    if not re.fullmatch(r"[a-f0-9]{64}",expected):raise ValueError("Configure stable release signer")
     output=args.output;output.mkdir(parents=True,exist_ok=True)
-    if any(output.iterdir()): raise ValueError("Release output must be empty")
-    name=f'yingxi-{version["versionName"]}-{version["versionCode"]}.apk'
-    shutil.copyfile(args.apk,output/name)
-    with zipfile.ZipFile(args.apk) as apk:
-        if any(any(p.startswith("._") or p in {".DS_Store","__MACOSX"} for p in Path(n).parts) for n in apk.namelist()): raise ValueError("APK contains mac metadata")
-        for asset in ("third-party-notices.txt","dependencies.json"):
-            (output/asset).write_bytes(apk.read("assets/"+asset))
+    if any(output.iterdir()):raise ValueError("Release asset output must be empty")
+    directory=args.apk.parent if args.apk else root/"dist"
+    apks=[]
+    notices={}
+    for abi in ABIS:
+        path=args.apk if args.apk and abi=="arm64-v8a" else directory/apk_name(version,abi,"release")
+        verify_abi(path,abi)
+        badging=run(str(sdk/"aapt"),"dump","badging",str(path))
+        package=re.search(r"package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'",badging)
+        if not package or package.groups()!=("io.localplayer.app",str(version["versionCode"]),version["versionName"]):raise ValueError("Compiled APK/config mismatch")
+        if "application-debuggable" in badging:raise ValueError("Debug APKs cannot be released")
+        signature=run(str(sdk/"apksigner"),"verify","--verbose","--print-certs",str(path))
+        signer=re.search(r"Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]{64})",signature)
+        if not signer or signer.group(1).lower()!=expected:raise ValueError("APK does not use stable release signer")
+        name=apk_name(version,abi);shutil.copyfile(path,output/name)
+        with zipfile.ZipFile(path) as apk:
+            if any(any(p.startswith("._") or p in {".DS_Store","__MACOSX"} for p in n.split("/")) for n in apk.namelist()):raise ValueError("APK includes platform metadata")
+            current={asset:apk.read("assets/"+asset) for asset in ("third-party-notices.txt","dependencies.json")}
+            if notices and current!=notices:raise ValueError("Architecture notices differ")
+            notices=current
+        apks.append({"abi":abi,"fileName":name,"sizeBytes":path.stat().st_size,"sha256":sha(path)})
+    for name,data in notices.items():(output/name).write_bytes(data)
+    mapping=root/"dist/reports/r8/mapping.txt"
+    if not mapping.is_file() or mapping.stat().st_size==0:raise ValueError("R8 mapping is missing")
+    shutil.copyfile(mapping,output/"mapping.txt")
     source=prepare_source_archive(root,version,commit,output)
-    metadata={"formatVersion":2,**version,"sourceCommit":commit,"fileName":name,"sizeBytes":args.apk.stat().st_size,"sha256":sha(args.apk),"signerSha256":fingerprint,**source}
+    primary=next(apk for apk in apks if apk["abi"]=="arm64-v8a")
+    metadata={"formatVersion":3,**version,"sourceCommit":commit,**{k:v for k,v in primary.items() if k!="abi"},"apks":apks,"signerSha256":expected,"mappingSha256":sha(output/"mapping.txt"),**source}
     (output/"yingxi-release.json").write_text(json.dumps(metadata,indent=2)+"\n")
     (output/"SHA256SUMS").write_text("".join(sha(p)+"  "+p.name+"\n" for p in sorted(output.iterdir())))
     verify_assets(output)
-    print("Verified signed release assets:",version["tag"])
 
 def publish(args):
     directory=args.output;metadata=verify_assets(directory)
@@ -140,7 +162,7 @@ def publish(args):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+",repo): raise ValueError("Invalid repository identity")
     releases=json.loads(run("gh","api",f"repos/{repo}/releases","--paginate","--slurp"))
     previous=[];draft=None
-    published_names={metadata['fileName']}
+    published_names={a['fileName'] for a in metadata['apks']} if metadata.get('formatVersion',1)>=3 else {metadata['fileName']}
     if metadata.get('sourceFileName'): published_names.add(metadata['sourceFileName'])
     with tempfile.TemporaryDirectory() as temp:
         for release in (r for page in releases for r in page):

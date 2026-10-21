@@ -36,6 +36,10 @@ jobs:
           python3 scripts/release_notes.py
           python3 scripts/cloud_config.py --config deploy/cloud-integrations.example.json
           python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Lossless artwork pixels
+        run: |
+          python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/artwork-python" Pillow==12.3.0 > "$RUNNER_TEMP/artwork-install.log"
+          PYTHONPATH="$RUNNER_TEMP/artwork-python" python3 scripts/verify_artwork.py
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin

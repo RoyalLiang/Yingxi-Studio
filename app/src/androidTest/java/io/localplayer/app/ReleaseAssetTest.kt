@@ -37,4 +37,30 @@ class ReleaseAssetTest {
         assertNull(AppUpdates.parseAssetRelease(wrong,signer))
         assertNull(AppUpdates.parseAssetRelease(JSONObject().put("tag_name","ios-v0.1.0-alpha.2"),signer))
     }
+    private fun splitRelease():JSONObject {
+        val result=release();val assets=result.getJSONArray("assets")
+        listOf("armeabi-v7a","x86_64","x86").forEach{abi->
+            val name="yingxi-1.2.3-alpha.1-123-$abi.apk"
+            assets.put(JSONObject(assets.getJSONObject(0).toString()).put("name",name)
+                .put("browser_download_url","https://github.com/${AppUpdates.REPOSITORY}/releases/download/v1.2.3-alpha.1/$name"))
+        }
+        return result
+    }
+    @Test fun splitApksFollowDeviceAbiOrderAndKeepArm64LegacyName(){
+        for((abis,suffix) in listOf(listOf("arm64-v8a","armeabi-v7a") to "123.apk",listOf("x86_64","x86") to "123-x86_64.apk",listOf("armeabi-v7a") to "123-armeabi-v7a.apk",listOf("x86") to "123-x86.apk")){
+            assertTrue(AppUpdates.parseAssetRelease(splitRelease(),signer,0,abis)!!.url.endsWith(suffix))
+        }
+        assertTrue(AppUpdates.parseAssetRelease(release(),signer,0,listOf("x86"))!!.url.endsWith("123.apk"))
+    }
+    @Test fun splitApksRejectUnsupportedAbiDuplicateAliasAndMixedCodes(){
+        reject{AppUpdates.parseAssetRelease(splitRelease(),signer,0,listOf("riscv64"))}
+        val mixed=splitRelease();val a=mixed.getJSONArray("assets").getJSONObject(1)
+        a.put("name","yingxi-1.2.3-alpha.1-124-armeabi-v7a.apk")
+        reject{AppUpdates.parseAssetRelease(mixed,signer)}
+        val duplicate=splitRelease();val alias=JSONObject(duplicate.getJSONArray("assets").getJSONObject(0).toString()).put("name","yingxi-1.2.3-alpha.1-123-arm64-v8a.apk")
+        duplicate.getJSONArray("assets").put(alias)
+        reject{AppUpdates.parseAssetRelease(duplicate,signer)}
+        assertNull(AppUpdates.parseAssetRelease(splitRelease(),signer,123,listOf("arm64-v8a")))
+    }
+
 }

@@ -3,6 +3,7 @@
 import hashlib,json,os,shutil,subprocess,sys,tempfile
 from pathlib import Path
 from versioning import validate
+from apk_variants import apk_name, outputs
 
 project=Path(__file__).resolve().parents[1]
 work=Path(os.environ.get('PLAYER_BUILD_DIR',str(Path(tempfile.gettempdir())/'new-player-build')))
@@ -45,24 +46,24 @@ command=[gradle] if gradle else ([str(workspace/'gradlew.bat')] if os.name=='nt'
 tasks=sys.argv[1:] or [':core:test',':app:assembleDebug',':app:lintDebug']
 result=subprocess.run(command+['--no-daemon','--console=plain']+tasks,cwd=workspace,env=env)
 if result.returncode==0 and not any(flag in tasks for flag in ('--dry-run','-m')):
+    version=validate(json.loads((project/'version.json').read_text()))
     (project/'dist').mkdir(exist_ok=True)
+    requested={t.rsplit(':',1)[-1] for t in tasks}
     for variant in ('debug','release'):
-        requested={t.rsplit(':',1)[-1] for t in tasks}
         if not requested.intersection({'assemble'+variant.title(),'package'+variant.title(),'assemble','build'}):continue
         directory=workspace/f'app/build/outputs/apk/{variant}'
         metadata=json.loads((directory/'output-metadata.json').read_text())
-        if len(metadata['elements'])!=1:raise SystemExit('Expected one universal APK')
-        element=metadata['elements'][0]
-        version=validate({key:element[key] for key in ('versionName','versionCode')})
-        apk=(directory/element['outputFile']).resolve()
-        if apk.parent!=directory.resolve() or apk.suffix!='.apk':raise SystemExit('Invalid APK output path')
-        target=project/f'dist/yingxi-{version["versionName"]}-{version["versionCode"]}-{variant}.apk'
-        shutil.copyfile(apk,target)
-        target.with_suffix('.apk.sha256').write_text(hashlib.sha256(target.read_bytes()).hexdigest()+'  '+target.name+'\n')
-        print('Artifact:',target.name)
-        for name in ['third-party-notices.txt','dependencies.json']:
-            source=workspace/'app/build/generated/notices'/name
-            if source.exists():shutil.copyfile(source,project/'dist'/name)
+        for abi,apk in outputs(metadata,directory,version).items():
+            target=project/'dist'/apk_name(version,abi,variant)
+            shutil.copyfile(apk,target)
+            target.with_suffix('.apk.sha256').write_text(hashlib.sha256(target.read_bytes()).hexdigest()+'  '+target.name+'\n')
+            print('Artifact:',target.name)
+    if 'assembleRelease' in requested or 'build' in requested:
+        mapping=workspace/'app/build/outputs/mapping/release'
+        if mapping.is_dir():shutil.copytree(mapping,project/'dist/reports/r8',dirs_exist_ok=True,copy_function=shutil.copyfile)
+    for name in ['third-party-notices.txt','dependencies.json']:
+        source=workspace/'app/build/generated/notices'/name
+        if source.exists():shutil.copyfile(source,project/'dist'/name)
     reports=project/'dist/reports';reports.mkdir(parents=True,exist_ok=True)
     for name,path in [('core-tests',workspace/'core/build/reports/tests/test'),('android-lint',workspace/'app/build/reports')]:
         if path.exists():shutil.copytree(path,reports/name,dirs_exist_ok=True,copy_function=shutil.copyfile,ignore=shutil.ignore_patterns('._*','.DS_Store'))

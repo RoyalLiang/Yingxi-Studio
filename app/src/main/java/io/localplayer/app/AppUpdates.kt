@@ -122,19 +122,23 @@ internal class AppUpdates(private val context:Context,private val transport:((St
         private val downloadLock=kotlinx.coroutines.sync.Mutex()
         fun partialFile(context:Context,release:AppRelease)=File(context.filesDir,"updates/${release.version.code}-${release.sha256}.apk.part")
 
-        fun parseAssetRelease(release:JSONObject,signer:String,minimumCode:Long=0):AppRelease? {
+        fun parseAssetRelease(release:JSONObject,signer:String,minimumCode:Long=0,supportedAbis:List<String> = android.os.Build.SUPPORTED_ABIS.toList()):AppRelease? {
             val tag=release.optString("tag_name")
             if(!Regex("v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?").matches(tag))return null
             require(signer.matches(Regex("[a-f0-9]{64}"))){"当前签名信息无效"}
             val name=tag.removePrefix("v")
             val assets=release.getJSONArray("assets")
-            val pattern=Regex("yingxi-${Regex.escape(name)}-([1-9][0-9]*)\\.apk")
+            val pattern=Regex("yingxi-${Regex.escape(name)}-([1-9][0-9]*)(?:-(arm64-v8a|armeabi-v7a|x86_64|x86))?\\.apk")
             val matches=(0 until assets.length()).map{assets.getJSONObject(it)}.filter{pattern.matches(it.optString("name"))}
             if(matches.isEmpty())return null
-            val codes=matches.map{pattern.matchEntire(it.getString("name"))!!.groupValues[1].toLongOrNull() ?: throw IOException("安装序号无效")}
+            val codes=matches.map{pattern.matchEntire(it.getString("name"))!!.groupValues[1].toLongOrNull()?:throw IOException("安装序号无效")}
             if(codes.all{it<=minimumCode})return null
-            val asset=matches.singleOrNull() ?: throw IOException("未找到唯一的正式安装包，请前往发布页查看")
-            val code=pattern.matchEntire(asset.getString("name"))!!.groupValues[1].toLongOrNull() ?: throw IOException("安装序号无效")
+            if(codes.toSet().size!=1)throw IOException("安装序号不一致，请前往发布页查看")
+            val split=matches.any{pattern.matchEntire(it.getString("name"))!!.groupValues[2].isNotEmpty()}
+            val byAbi=matches.groupBy{pattern.matchEntire(it.getString("name"))!!.groupValues[2].ifEmpty{if(split)"arm64-v8a"else"universal"}}
+            if(byAbi.values.any{it.size!=1})throw IOException("未找到唯一的正式安装包，请前往发布页查看")
+            val asset=if(split)supportedAbis.firstNotNullOfOrNull{byAbi[it]?.single()}?:throw IOException("此版本暂无适合当前设备架构的安装包") else byAbi.getValue("universal").single()
+            val code=codes.first()
             require(code in 1..2_100_000_000){"安装序号无效"}
             val digest=asset.optString("digest")
             require(Regex("sha256:[a-fA-F0-9]{64}").matches(digest)){"安装包缺少 SHA-256，请前往发布页手动更新"}
@@ -161,6 +165,10 @@ internal class AppUpdates(private val context:Context,private val transport:((St
             return AppRelease(AppVersion(name,code),release.optString("body").take(32000),url,size,hash,signer)
         }
         fun verifyArchive(context:Context,file:File,release:AppRelease) {
+            java.util.zip.ZipFile(file).use{zip->
+                val abis=zip.entries().asSequence().map{it.name}.filter{it.startsWith("lib/")&&it.endsWith(".so")}.map{it.substringAfter("lib/").substringBefore('/')}.toSet()
+                require(abis.isEmpty()||android.os.Build.SUPPORTED_ABIS.any{it in abis}){"安装包架构与当前设备不兼容"}
+            }
             val flags=PackageManager.GET_SIGNING_CERTIFICATES
             val archive=context.packageManager.getPackageArchiveInfo(file.absolutePath,flags) ?: throw IOException("安装包无法读取")
             val installed=context.packageManager.getPackageInfo(context.packageName,flags)
