@@ -5,7 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 
-EXACT = {".gitignore", ".gitattributes", "README.md", "CONTRIBUTING.md", "version.json",
+EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.md", "version.json",
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
          "app/build.gradle.kts", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",

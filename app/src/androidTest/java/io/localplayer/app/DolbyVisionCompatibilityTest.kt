@@ -53,7 +53,7 @@ class DolbyVisionCompatibilityTest {
     @Test fun nativeDecoderInitializationFailureFallsBackToHdr10BaseLayer() {
         val base=dolbyVisionBaseFormat(format(),false)
         val real=androidx.media3.exoplayer.mediacodec.MediaCodecSelector.DEFAULT
-        org.junit.Assume.assumeTrue("Device HEVC Main10 support",real.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any{it.isFormatSupported(base)})
+        org.junit.Assume.assumeTrue("Device HEVC Main10 support",real.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any{it.isFormatSupported(context,base)})
         val selector=androidx.media3.exoplayer.mediacodec.MediaCodecSelector { mime,secure,tunnel ->
             if(mime==MimeTypes.VIDEO_DOLBY_VISION)listOf(androidx.media3.exoplayer.mediacodec.MediaCodecInfo.newInstance(
                 "c2.yingxi.unavailable.dolby.decoder",mime,mime,null,true,false,true,false,false))
@@ -127,7 +127,7 @@ class DolbyVisionCompatibilityTest {
     }
     @Test fun capableDeviceRendersTheMain10Base() {
         val base=dolbyVisionBaseFormat(format(),false)
-        val capable=androidx.media3.exoplayer.mediacodec.MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any{it.isFormatSupported(base)}
+        val capable=androidx.media3.exoplayer.mediacodec.MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any{it.isFormatSupported(context,base)}
         org.junit.Assume.assumeTrue("Device does not advertise HEVC Main10; format routing is covered separately",capable)
         val file=File(context.getExternalFilesDir(null),"dv-profile7.mp4")
         val done=CountDownLatch(1);var error:PlaybackException?=null;var rendered=false
