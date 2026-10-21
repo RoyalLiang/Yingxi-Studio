@@ -125,9 +125,8 @@ import androidx.compose.ui.unit.sp
 @Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit,available:()->Unit) {
     var details by remember{mutableStateOf(false)}
     if(details)AlertDialog(onDismissRequest={details=false},title={Text("更新提示")},text={Text(vm.message.orEmpty(),Modifier.heightIn(max=300.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick={details=false}){Text("关闭")}})
-    Surface(color=GroupedSurface,shadowElevation=0.dp,tonalElevation=0.dp,modifier=Modifier.fillMaxWidth().testTag("update-footer")) {
+    Column(Modifier.fillMaxWidth().background(Paper).testTag("update-footer")) {
         Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom))) {
-        HorizontalDivider(color=Hairline)
         Column(Modifier.padding(horizontal=24.dp,vertical=12.dp).testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             vm.release?.let{release->TextButton(onClick=available,contentPadding=PaddingValues(0.dp)){
                 Text("可用更新 ",color=Berry,fontSize=14.sp);Text(release.version.name,color=Berry,fontSize=14.sp,modifier=Modifier.testTag("available-version"))}}
@@ -139,7 +138,7 @@ import androidx.compose.ui.unit.sp
                     TextButton(onClick=vm::cancel){Text(if(vm.progress==null)"取消"else"暂停")}
                 }
             } else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick=vm::check,modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)){Text("检查更新",maxLines=1)}
+                Button(onClick=vm::check,colors=ButtonDefaults.buttonColors(containerColor=Berry,contentColor=GroupedSurface),border=androidx.compose.foundation.BorderStroke(1.dp,GroupedSurface.copy(alpha=.2f)),elevation=ButtonDefaults.buttonElevation(defaultElevation=2.dp,pressedElevation=4.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)){Text("检查更新",maxLines=1)}
                 if(vm.release!=null)Button(onClick={if(vm.ready!=null)install()else download()},contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("download-update"),shape=RoundedCornerShape(16.dp)){
                     Text(if(vm.ready!=null)"安装更新"else if((vm.progress?:0f)>0f)"继续下载"else"下载更新",maxLines=1)}
             }

@@ -85,3 +85,17 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 从 alpha.28 起，项目维护者已确认按 GPLv3 发行应用。根目录 LICENSE、README 和 third_party/decoder-sources.txt 随源码归档；APK 内保留 NextLib、FFmpeg 和其依赖的许可与精确版本。解码器 Maven 构件固定版本，随包依赖清单保留构件哈希。对应原生源码及构建配方指向固定上游标签，构建或替换解码器不受额外限制。发布前核验这些源码和许可地址可读取。
 
 实际播放恢复必须验证连续视频帧、可读且非黑的画面像素、seek 后恢复和 MediaSession 中的全屏输出。能力声明、STATE_READY、音频时钟、报错消失或 APK 成功生成均不能代替真实视频出帧证据。
+
+## 按架构发布与裁剪（alpha.34）
+
+采用 Android [ABI APK 分包](https://developer.android.com/build/configure-apk-splits)，分别生成 arm64-v8a、armeabi-v7a、x86_64、x86 四个单架构 APK，不生成 universal APK。同一版本的四个包共用 versionName/versionCode；通过 GitHub 直接分发，不套用 Play 多 APK 安装序号分段规则。每版序号仍严格递增。
+
+arm64 包沿用 `yingxi-<version>-<code>.apk`，用于 alpha.33 及更早客户端的固定文件名匹配。其他包带 ABI 后缀，新版客户端按 SUPPORTED_ABIS 顺序选择，并在安装前再次核验原生库架构。旧版 32 位 ARM/x86 客户端需要手动选择一次适配包，不能用 arm64 文件覆盖安装。
+
+Release 资产准备会逐个检查四个包的版本、签名、ABI、摘要及第三方声明一致性；缺包、混入通用包或映射表缺失均失败。格式 3 的内部审计清单包含所有架构，R8 mapping.txt 留在 CI 审计附件；公开页只保留四个 APK 和对应不可变源码包。检查历史版本继续使用唯一的原文件名，兼容以往通用包和新的 arm64 包，不改写历史资产。
+
+正式包启用 [R8 与资源裁剪](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization)。JNI 回调、解码库、Bouncy Castle 的动态注册与 SMB 事件处理器设保留规则。MBassador 从注解读取回调类，再反射调用 `SubscriptionContext` 构造器；仅保留注解方法仍会在连接时抛出 `NoSuchMethodException`，因此同时保留该构造器和回调类身份，类名仍可混淆。可选 JVM EL/Kerberos API 不在 Android 接入能力中；NTLM、访客与 SFTP 仍须实测。代码裁剪不更改影片码率、分辨率或色彩链路。
+
+本地 `yingxiLocalOptimizedTest=true` 只允许用已有调试证书运行优化候选；发布器仍强制已配置的稳定签名。标准回归在调试构建运行；正式裁剪规则的候选使用纯 Android 平台 `ReleaseLaunchSmoke` 入口，直接驱动真实界面、读取已加密保存的合成 SMB/SFTP 凭据，核对启动、版本页、实际 AVC/HEVC 画面推进和拖动。它不依赖会被裁剪或改名的 Kotlin/Jetpack 测试共享类，也不为测试放宽应用保留规则。
+
+资源像素基线见 `assets/artwork.json`。使用 Pillow 12.3.0 运行 `python3 -B scripts/verify_artwork.py`，同时检查 VP8L 无损编码、原尺寸、RGBA 摘要和 ICC；CI 逐图执行相同检查。

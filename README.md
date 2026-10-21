@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/brand/yingxi-icon.png" width="104" alt="映汐应用图标">
+  <img src="assets/brand/yingxi-icon.webp" width="104" alt="映汐应用图标">
 </p>
 
 <h1 align="center">映汐放映室 · Yingxi Screening Room</h1>
@@ -9,8 +9,8 @@
 <p align="center"><strong>一款简洁的 Android 本地与局域网视频播放器。</strong><br>打开文件、连上自己的媒体库，然后安心看完一部片子。</p>
 
 <p align="center">
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.33/yingxi-0.2.0-alpha.33-35.apk">下载 Android 安装包</a> ·
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.33">阅读版本信笺</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36.apk">下载 arm64 安装包</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.34">阅读版本信笺</a> ·
   <a href="docs/player-controls.md">播放与操作</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
@@ -28,9 +28,9 @@
 - **给片架补上封面**：优先读取目录海报，再查询公开海报；没有内嵌字幕时可按影片指纹匹配中文字幕。
 
 <p align="center">
-  <img src="assets/readme/sources.png" width="31%" alt="来源页：独立自动扫描入口">
-  <img src="assets/readme/updates.png" width="31%" alt="版本页：当前版本与固定更新操作">
-  <img src="assets/readme/letter.png" width="31%" alt="放映站档案：人物肖像与语录">
+  <img src="assets/readme/sources.webp" width="31%" alt="来源页：独立自动扫描入口">
+  <img src="assets/readme/updates.webp" width="31%" alt="版本页：当前版本与固定更新操作">
+  <img src="assets/readme/letter.webp" width="31%" alt="放映站档案：人物肖像与语录">
 </p>
 
 截图来自应用实际运行界面，展示来源入口、固定更新操作与放映站人物档案。
@@ -46,6 +46,19 @@
 新版本可以在**设置 → 映汐放映室 · 版本**检查。顶部可随时检查更新，当前信笺在下方独立滚动；核对安装包后交给 Android 系统安装会话，由你确认覆盖安装。
 
 目录与剧集可以登记进**封存柜**，从公共列表收起；设备身份验证后从柜中查看，退到后台重新锁定。它不移动或加密原文件。设置页分别记录安装包和缓存占用。
+
+## 按设备架构安装
+
+每个 APK 只含一种 CPU 架构。新版应用按 Android 提供的兼容 ABI 顺序选择更新，影片分辨率、码率和色彩处理保持原样。
+
+| 架构 | 安装包 |
+| --- | --- |
+| arm64-v8a | [arm64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36.apk) |
+| armeabi-v7a | [armv7](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-armeabi-v7a.apk) |
+| x86_64 | [x86_64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-x86_64.apk) |
+| x86 | [x86](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-x86.apk) |
+
+原有文件名用于 arm64 接续更新。alpha.33 及更早的 32 位 ARM 或 x86 客户端需要从上表手动选择一次，此后可自动选择适配包。没有通用架构包。
 
 ## 媒体库接入能力
 

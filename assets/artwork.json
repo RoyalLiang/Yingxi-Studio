@@ -1,0 +1,116 @@
+{
+  "format": "lossless-webp",
+  "baseline": "v0.2.0-alpha.33",
+  "images": [
+    {
+      "path": "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp",
+      "sourceSha256": "186e7554043990870ad2d729c8554477aea1dd8744cceca6a84aeea21f0b4637",
+      "encodedSha256": "69ec9c98b4263e565c5919616e7cbc4a2ce24041bda0d8bc1a9101051fe51587",
+      "rgbaSha256": "c5146bd571f8e4202a12105403f92fa65a7e1a23552e2481d268cfca2a23723b",
+      "width": 512,
+      "height": 512,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 98385,
+      "afterBytes": 59052
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/cloud_baidu.webp",
+      "sourceSha256": "ae5789b2b32174d6f6da9639c25217e785b60788d9ade3e59f0915219d31422c",
+      "encodedSha256": "28a0db5be1cf60b977bcba8f128642f5013d1d37ad43b19e03de8375846ca66b",
+      "rgbaSha256": "99bd83bc9f08f9fbcb7792ac9df1ff4a2550d3f2ebafc856e42a58d5d86092ad",
+      "width": 88,
+      "height": 88,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 5427,
+      "afterBytes": 3894
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/portrait_axi.webp",
+      "sourceSha256": "5176408345acc60ecd614de404a7d2994ee383efe0cdf097f2173949213f60e5",
+      "encodedSha256": "0001130b121e0c495e35e4f61650eaebc6e0f9d09e7dd9fe5af0a10f32c70956",
+      "rgbaSha256": "be905779e725a2878d4a001766035825ad0bbda9dcde7a7fab0ef3304efa0fbf",
+      "width": 1254,
+      "height": 1254,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 3360630,
+      "afterBytes": 2218034
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/portrait_chideng.webp",
+      "sourceSha256": "36653777615ace05051b499140be01b2e3d9554efb4138488cc8e2058ec52473",
+      "encodedSha256": "0b8248f8e9b64994b905102f8eff11eb530cbad9d7db8634328c7863c2fa9b25",
+      "rgbaSha256": "e9315054e54f11413e4e24305a2ded4f3ad7449bc3fd9fa9f7a809a57c709a64",
+      "width": 1254,
+      "height": 1254,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 3181755,
+      "afterBytes": 2188336
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/portrait_mitu.webp",
+      "sourceSha256": "91debecbcb51f84616feaaeacef819a360d6e1a7eea48cf8b060ff1f2981cd5f",
+      "encodedSha256": "c3b463830e1a2061402633487c1e6e805780f79a6cdbabecef6edf1672f63d88",
+      "rgbaSha256": "4472279d918ad4c6bd55c5ae2873368438030172f106daa465727161ddb0f890",
+      "width": 1254,
+      "height": 1254,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 3390772,
+      "afterBytes": 2268930
+    },
+    {
+      "path": "assets/brand/yingxi-icon-preview.webp",
+      "sourceSha256": "209f98ba65a4f4193344007246ce9a98e5874c0a72a0466697644383d006bee8",
+      "encodedSha256": "b1324a818773685ecf6faf611c7a756b7199d1fe86ccdbeead983cfbcd18adf9",
+      "rgbaSha256": "1677f73a304b4b79abb3676680f720203d46f15332b896c7101d7b14142b1b1f",
+      "width": 192,
+      "height": 192,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 12430,
+      "afterBytes": 6602
+    },
+    {
+      "path": "assets/brand/yingxi-icon.webp",
+      "sourceSha256": "7a3af66b8f15e468338d84601daf0e64bacbeabd738df566923bc0cbfea120b3",
+      "encodedSha256": "7a2ab6399d931606a257eb4b179d91c0ea21c5fe8973fe2bcb18b4aa26923ea7",
+      "rgbaSha256": "2af550e54e81f091e78adf323914b38ac60b8796aa1b61c93b6dd423e17be528",
+      "width": 1024,
+      "height": 1024,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 69154,
+      "afterBytes": 26492
+    },
+    {
+      "path": "assets/readme/letter.webp",
+      "sourceSha256": "2a3ca92dd6c904e6165699f4712998ff051bbfe65e7e851dad64bb9a16df9b8c",
+      "encodedSha256": "9789494c645e67c8d3822d7bbbe29aa2d5fd51e6d81a18cbd5b0f5ae1afab1b9",
+      "rgbaSha256": "4ed7f2b7b00d717e7cd93270fb4ee0b4dbb98e08580af75c84ebd69ace4f36bf",
+      "width": 1080,
+      "height": 2400,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 2795310,
+      "afterBytes": 1765988
+    },
+    {
+      "path": "assets/readme/sources.webp",
+      "sourceSha256": "7525fc88d9b25d96435da67a563607a449d1cc91c8f09d63102c2fadb9150268",
+      "encodedSha256": "a61cfac9fc9d756b90541d40a43f338f9a00a8bf3a5dee276a56ea49b8f36b9f",
+      "rgbaSha256": "afe3c276b41541e2612751ea659d6a45fecf3b23bf0b748a7d207210cfb65a0f",
+      "width": 1080,
+      "height": 2400,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 147286,
+      "afterBytes": 50758
+    },
+    {
+      "path": "assets/readme/updates.webp",
+      "sourceSha256": "465de8a98831e557a6750fb66ba82234c5acdc950a73c3172a22e6c66668289d",
+      "encodedSha256": "2a4cb41e37b5ff8cdf0dac0373ba325bd9036ad70a901dbaf2db254302d40102",
+      "rgbaSha256": "988c2139d437e3909c41183c978a5918e3e15ce105a6b1b9e97137002f04a732",
+      "width": 1080,
+      "height": 2400,
+      "iccSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "beforeBytes": 361664,
+      "afterBytes": 98040
+    }
+  ]
+}
