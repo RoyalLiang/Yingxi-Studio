@@ -68,7 +68,7 @@ fun SourcesCatalog(vm: LibraryViewModel) {
         }
         LazyColumn(Modifier.weight(1f).testTag("source-bookmarks"), contentPadding = PaddingValues(top = 8.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             item(key="station-wayfinding") {
-                StationNotice("外部避难所 · 路标登记", "沿着路标，找到你的片库。", "连接 NAS、服务器或网盘。SMB、SFTP 与 WebDAV，走各自熟悉的路。",
+                StationNotice("外部避难所 · 路标登记", "远程片库，从这里连接。", "这里的避难所是远程片库入口。连接 NAS、服务器或网盘，使用 SMB、SFTP 或 WebDAV。",
                     modifier=Modifier.padding(horizontal=20.dp,vertical=8.dp).testTag("station-wayfinding"))
             }
             if (shown.isEmpty()) item {

@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from worldbook import validate
+from worldbook import validate, render_glossary
 
 class WorldbookTests(unittest.TestCase):
     def setUp(self):
@@ -21,6 +21,28 @@ class WorldbookTests(unittest.TestCase):
     def test_rejects_incomplete_quote_translation(self):
         del self.atlas['characters'][0]['quotes'][0]['en']
         with self.assertRaisesRegex(ValueError,'Chinese and English'):self.check(self.atlas)
+
+    def test_rejects_proposal_disguised_as_established_status(self):
+        self.atlas['lexicon'][0]['status']='proposed'
+        with self.assertRaisesRegex(ValueError,'status'):self.check(self.atlas)
+
+    def test_rejects_missing_proposal_translation(self):
+        entry=next(t for t in self.atlas['lexicon'] if 'proposal' in t)
+        del entry['proposal']['en']
+        with self.assertRaisesRegex(ValueError,'Chinese and English'):self.check(self.atlas)
+
+    def test_rejects_rumor_promoted_without_map_change(self):
+        entry=next(t for t in self.atlas['lexicon'] if t['status']=='rumor')
+        entry['status']='confirmed'
+        with self.assertRaisesRegex(ValueError,'map knowledge'):self.check(self.atlas)
+
+    def test_rejects_duplicate_term_identity(self):
+        self.atlas['lexicon'].append(copy.deepcopy(self.atlas['lexicon'][0]))
+        with self.assertRaisesRegex(ValueError,'identity'):self.check(self.atlas)
+
+    def test_published_glossary_matches_the_app_data(self):
+        source=Path(__file__).resolve().parents[1]
+        self.assertEqual(render_glossary(self.atlas),(source/'docs/world-glossary.md').read_text())
 
     def test_release_rejects_an_unknown_speaker(self):
         from release_notes import load_notes
