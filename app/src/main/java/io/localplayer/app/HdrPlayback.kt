@@ -51,6 +51,8 @@ internal fun hevcDecoderFormat(format:Format):Format {
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplayer.DefaultRenderersFactory(context) {
     @Volatile internal var forceSoftware=false
+    @Volatile private var videoOutput:Any?=null
+    private var softwareRenderer:Renderer?=null
     internal var nativeVideoIndex=-1;private set
     internal var softwareVideoIndex=-1;private set
     internal fun nativeGate(renderer:Renderer):Renderer {
@@ -59,7 +61,16 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
                 if(forceSoftware&&format.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null)androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
                 else renderer.capabilities.supportsFormat(format)
         }
-        return object:Renderer by renderer {override fun getCapabilities()=capabilities}
+        return object:Renderer by renderer {
+            override fun getCapabilities()=capabilities
+            override fun handleMessage(messageType:Int,message:Any?) {
+                if(messageType==Renderer.MSG_SET_VIDEO_OUTPUT)videoOutput=message
+                renderer.handleMessage(messageType,message)
+            }
+        }
+    }
+    internal fun reapplySoftwareOutput(player:androidx.media3.exoplayer.ExoPlayer) {
+        softwareRenderer?.let{player.createMessage(it).setType(Renderer.MSG_SET_VIDEO_OUTPUT).setPayload(videoOutput).send()}
     }
     override fun buildVideoRenderers(context:Context,extensionRendererMode:Int,selector:MediaCodecSelector,
         enableDecoderFallback:Boolean,eventHandler:Handler,eventListener:VideoRendererEventListener,
@@ -70,6 +81,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
         val index=(start until out.size).firstOrNull{out[it] is MediaCodecVideoRenderer}?:return
         nativeVideoIndex=index
         val software=io.github.anilbeesetti.nextlib.media3ext.ffdecoder.FfmpegVideoRenderer(allowedVideoJoiningTimeMs,eventHandler,eventListener,MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY)
+        softwareRenderer=software
         softwareVideoIndex=out.size
         val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by software.capabilities {
             override fun supportsFormat(format:Format):Int {
@@ -80,7 +92,13 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
                 return software.capabilities.supportsFormat(format)
             }
         }
-        out.add(object:Renderer by software {override fun getCapabilities()=capabilities})
+        out.add(object:Renderer by software {
+            override fun getCapabilities()=capabilities
+            override fun handleMessage(messageType:Int,message:Any?) {
+                if(messageType==Renderer.MSG_SET_VIDEO_OUTPUT)videoOutput=message
+                software.handleMessage(messageType,message)
+            }
+        })
         out[index]=nativeGate(object:MediaCodecVideoRenderer(context,codecAdapterFactory,selector,allowedVideoJoiningTimeMs,
             enableDecoderFallback,eventHandler,eventListener,MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY) {
             private var codecFailed=false

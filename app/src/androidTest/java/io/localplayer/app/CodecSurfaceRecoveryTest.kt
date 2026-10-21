@@ -60,7 +60,7 @@ class CodecSurfaceRecoveryTest {
             frames.set(0);failNext.set(true)
             ui.runOnUiThread{player.setVideoSurfaceView(second)}
             ui.waitUntil(10000){error!=null||(!failNext.get()&&frames.get()>=12)}
-            assertNull(error);assertFalse("Exercise the captured surface-state failure",failNext.get())
+            assertNull("Output recovery error: ${error?.cause}",error);assertFalse("Exercise the captured surface-state failure",failNext.get())
             assertTrue("Reload samples from a keyframe at the current position",recovery.outputRecoveryAttempted)
             assertTrue("Replace the failed codec",created.get()>=2)
             assertTrue("Present real frames after the output switch",frames.get()>=12)
