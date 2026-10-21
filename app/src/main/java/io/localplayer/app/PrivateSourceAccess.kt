@@ -11,9 +11,9 @@ import androidx.compose.ui.platform.LocalContext
 import io.localplayer.core.Source
 import java.util.UUID
 
-data class PrivateSourceRequest(val source:Source,val id:String=UUID.randomUUID().toString())
+data class PrivateSourceRequest(val source:Source?=null,val label:String=source?.label?:"封存柜",val id:String=UUID.randomUUID().toString(),val verified:()->Unit={})
 
-/** This is a one-time authenticated open action, not a persistent source lock or incognito mode. */
+/** System authentication gates policy changes and opening the sealed-media cabinet. */
 @Composable
 internal fun PrivateSourceAccessPrompt(vm:LibraryViewModel){
     val request=vm.privateRequest ?: return
@@ -23,9 +23,9 @@ internal fun PrivateSourceAccessPrompt(vm:LibraryViewModel){
         val cancellation=CancellationSignal()
         val authenticators=BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         if(activity==null||activity.getSystemService(BiometricManager::class.java).canAuthenticate(authenticators)!=BiometricManager.BIOMETRIC_SUCCESS){
-            vm.cancelPrivateAccess(request.id,"请先在系统设置中配置指纹或锁屏密码，再使用私密访问")
+            vm.cancelPrivateAccess(request.id,"请先在系统设置中配置指纹或锁屏密码，再使用封存柜")
         }else{
-            val prompt=BiometricPrompt.Builder(activity).setTitle("私密访问").setSubtitle(request.source.label)
+            val prompt=BiometricPrompt.Builder(activity).setTitle("封存柜（私密）").setSubtitle(request.label)
                 .setDescription("验证本次访问，然后打开避难所。播放记录按正常规则保存。")
                 .setAllowedAuthenticators(authenticators).build()
             prompt.authenticate(cancellation,activity.mainExecutor,object:BiometricPrompt.AuthenticationCallback(){

@@ -61,6 +61,8 @@ import kotlinx.coroutines.delay
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackActivity:ComponentActivity(){
+    private var privateWindowObserver:(()->Unit)?=null
+    private var presentedMedia:MediaRef?=null
     private var playerController:MediaController?=null
     private var directionMediaId:String?=null
     private var manualDirection:Int?=null
@@ -76,7 +78,7 @@ class PlaybackActivity:ComponentActivity(){
         override fun onReceive(context:Context,intent:Intent){if(intent.action==ACTION_CLOSE_PIP)leave()}
     }
     private val presentationListener=object:Player.Listener{
-        override fun onEvents(player:Player,events:Player.Events){updateVideoOrientation();updatePictureInPicture()}
+        override fun onEvents(player:Player,events:Player.Events){player.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{raw->runCatching{MediaRef.parse(raw)}.getOrNull()?.let{presentedMedia=it}};updateVideoOrientation();updatePictureInPicture()}
     }
     private data class Caption(val uri:android.net.Uri,val mime:String,val label:String)
     private var pendingCaption:Caption?=null
@@ -98,6 +100,12 @@ class PlaybackActivity:ComponentActivity(){
     override fun onCreate(savedInstanceState:Bundle?){
         ContextCompat.registerReceiver(this,pipCloseReceiver,android.content.IntentFilter(ACTION_CLOSE_PIP),ContextCompat.RECEIVER_NOT_EXPORTED)
         super.onCreate(savedInstanceState)
+        presentedMedia=PlaybackRequests.get(intent.getStringExtra("play-intent"))?.media
+        if(presentedMedia?.let{SealedMedia.protects(it)}==true)window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        privateWindowObserver=SealedMedia.observe{
+            val ref=playerController?.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}?:presentedMedia
+            if(ref!=null&&SealedMedia.protects(ref)){window.addFlags(WindowManager.LayoutParams.FLAG_SECURE);finish()}
+        }
         directionMediaId=savedInstanceState?.getString("direction-media")
         manualDirection=savedInstanceState?.getInt("direction-manual",-1)?.takeIf{it>=0}
         directionLocked=savedInstanceState?.getBoolean("direction-locked")?:false
@@ -209,6 +217,10 @@ class PlaybackActivity:ComponentActivity(){
             android.widget.Toast.makeText(this,"播放队列已失效，请从避难所重新打开",android.widget.Toast.LENGTH_LONG).show()
             finish();return
         }
+        if(SealedMedia.protects(target.media)){
+            if(!SealedMedia.unlocked){c.pause();finish();return}
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         val items=PlaybackRequests.items(this,target)
         val start=items.indexOfFirst{it.mediaId==target.uri.toString()}.coerceAtLeast(0)
         c.setMediaItems(items,start,target.resume)
@@ -307,6 +319,7 @@ class PlaybackActivity:ComponentActivity(){
         super.onStop()
     }
     override fun onDestroy(){
+        privateWindowObserver?.invoke();privateWindowObserver=null
         unregisterReceiver(pipCloseReceiver)
         if(isFinishing){
             runCatching{playerController?.takeIf(::owns)?.let{it.stop();it.clearMediaItems()}}

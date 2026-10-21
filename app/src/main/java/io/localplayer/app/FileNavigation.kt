@@ -48,6 +48,7 @@ data class FileCrumb(val label:String,val key:String)
 
 @Composable fun LocalFilesScreen(files:LocalFilesViewModel,player:LibraryViewModel,onClose:()->Unit,onAddFolder:()->Unit,onPickFile:()->Unit){
     var selectedUri by rememberSaveable{mutableStateOf<String?>(null)}
+    PrivateScreenProtection(files.privateBrowse)
     val back={if(!files.up()){files.cancel();onClose()}}
     BackHandler{back()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){files.cancel()}

@@ -14,7 +14,7 @@ import java.util.Locale
 
 data class LocalFolder(val tree:Uri,val name:String)
 data class LocalDirectory(val uri:Uri,val name:String)
-data class LocalEntry(val uri:Uri,val name:String,val directory:Boolean,val video:Boolean,val size:Long,val parentUri:Uri?=null)
+data class LocalEntry(val uri:Uri,val name:String,val directory:Boolean,val video:Boolean,val size:Long,val parentUri:Uri?=null,val ancestorUris:List<String> = emptyList())
 
 /** Reads only document trees the user explicitly grants through Android SAF. */
 class LocalFilesViewModel(app:Application):AndroidViewModel(app){
@@ -22,7 +22,9 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     private val prefs=app.getSharedPreferences("local-folders",0)
     var folders by mutableStateOf<List<LocalFolder>>(emptyList());private set
     var trail by mutableStateOf<List<LocalDirectory>>(emptyList());private set
-    var entries by mutableStateOf<List<LocalEntry>>(emptyList());private set
+    private var directoryEntries by mutableStateOf<List<LocalEntry>>(emptyList())
+    var privateBrowse by mutableStateOf(false);private set
+    val entries:List<LocalEntry> get()=directoryEntries.filter{SealedMedia.visible(it,privateBrowse)}
     var active by mutableStateOf<LocalFolder?>(null);private set
     var registration by mutableIntStateOf(0);private set
     var busy by mutableStateOf(false);private set
@@ -74,6 +76,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
         folders=folders.filterNot{it.tree==folder.tree};save()
     }
     fun open(folder:LocalFolder){
+        privateBrowse=false
         if(folder !in folders)return
         val uri=DocumentsContract.buildDocumentUriUsingTree(folder.tree,DocumentsContract.getTreeDocumentId(folder.tree))
         load(folder,listOf(LocalDirectory(uri,folder.name)))
@@ -82,13 +85,20 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
         val folder=active?:return
         if(entry.directory&&entry in entries)load(folder,trail+LocalDirectory(entry.uri,entry.name))
     }
+    internal fun openSealed(item:SealedItem){
+        if(!SealedMedia.unlocked)return
+        val folder=folders.firstOrNull{it.tree.toString()==item.tree}?:run{error="原文件夹授权已失效，请重新授权";return}
+        privateBrowse=true
+        load(folder,item.trail)
+    }
+    internal fun closeSealed(){if(privateBrowse&&!SealedMedia.unlocked)root()}
     fun navigate(index:Int){val folder=active?:return;if(index in trail.indices)load(folder,trail.take(index+1))}
     fun up():Boolean{
         if(active==null)return false
         if(trail.size>1)navigate(trail.lastIndex-1)else root()
         return true
     }
-    fun root(){cancel();active=null;trail=emptyList();entries=emptyList();error=null;refreshFolders()}
+    fun root(){privateBrowse=false;cancel();active=null;trail=emptyList();directoryEntries=emptyList();error=null;refreshFolders()}
     fun refresh(){val folder=active;if(folder==null)refreshFolders()else load(folder,trail)}
     fun cancel(){generation++;signal?.cancel();signal=null;job?.cancel();job=null;busy=false}
     private fun load(folder:LocalFolder,target:List<LocalDirectory>){
@@ -106,13 +116,13 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                             val name=cursor.getString(1)?:"未命名文件"
                             val mime=cursor.getString(2).orEmpty();val directory=mime==DocumentsContract.Document.MIME_TYPE_DIR
                             val video=mime.startsWith("video/")||io.localplayer.core.Entry(name,name,false,0).isVideo
-                            rows+=LocalEntry(DocumentsContract.buildDocumentUriUsingTree(folder.tree,cursor.getString(0)),name,directory,video,if(cursor.isNull(3))0L else cursor.getLong(3),parent)
+                            rows+=LocalEntry(DocumentsContract.buildDocumentUriUsingTree(folder.tree,cursor.getString(0)),name,directory,video,if(cursor.isNull(3))0L else cursor.getLong(3),parent,target.map{it.uri.toString()})
                         }
                     }?:throw java.io.IOException("文件夹无法读取")
                     rows.sortedWith(Comparator { a,b -> b.directory.compareTo(a.directory).takeIf { it != 0 } ?: io.localplayer.core.MediaOrdering.compare(a.name,null,a.uri.toString(),b.name,null,b.uri.toString()) })
                 }
-                if(id==generation&&folder in folders){active=folder;trail=target;entries=result
-                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString())})
+                if(id==generation&&folder in folders){active=folder;trail=target;directoryEntries=result
+                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris)})
                 }
             }catch(e:CancellationException){throw e}
             catch(e:Exception){if(id==generation)error="无法打开文件夹，请检查授权或文件是否仍存在（${e.javaClass.simpleName}）"}

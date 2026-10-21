@@ -59,10 +59,20 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
+    var cabinetOpen by rememberSaveable{mutableStateOf(false)}
+    LaunchedEffect(SealedMedia.unlocked){vm.closeSealed();localFiles.closeSealed()}
     val states=rememberSaveableStateHolder()
+    if(cabinetOpen){
+        SealedCabinet(vm,{cabinetOpen=false}){item->
+            if(item.directory&&item.tree!=null){localFiles.openSealed(item);localOpen=true;cabinetOpen=false}
+            else{vm.openSealed(item);if(item.directory&&vm.error==null){tab=AppTab.Sources;cabinetOpen=false}}
+        }
+        SourceDialogs(vm,requestNearby)
+        return
+    }
     if(archivesOpen){BackHandler{archivesOpen=false};StationWorldPage{archivesOpen=false};return}
     if(settingsOpen){SettingsRoute{settingsOpen=false};return}
-    if(localOpen){Box(Modifier.fillMaxSize()){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))};return}
+    if(localOpen){Box(Modifier.fillMaxSize()){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);SourceDialogs(vm,requestNearby);SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))};return}
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LifecycleEventEffect(Lifecycle.Event.ON_START){vm.refreshHistory()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){vm.stopDiscovery();vm.cancelOperation()}
@@ -81,7 +91,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
-                    AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
+                    AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby){cabinetOpen=true}
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                     AppTab.Explore->StationWorldPage(embedded=true){tab=AppTab.Home}
                 }}
@@ -149,7 +159,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
         }else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
             vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
                 item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
-                items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)})}
+                items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)},{vm.sealMedia(e.media)})}
             }
         }
     }
@@ -163,7 +173,7 @@ internal fun historyDay(timestamp:Long):String{
     return when(value){today->"今天";format.format(yesterday)->"昨天";else->value}
 }
 
-@Composable private fun HistoryRow(entry:HistoryEntry,onPlay:()->Unit,onRestart:()->Unit,onRemove:()->Unit){
+@Composable private fun HistoryRow(entry:HistoryEntry,onPlay:()->Unit,onRestart:()->Unit,onRemove:()->Unit,onSeal:(()->Unit)?=null){
     var menu by remember{mutableStateOf(false)}
     Surface(onClick=onPlay,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=4.dp).testTag("history-row:${entry.media.key}"),
         color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
@@ -178,7 +188,8 @@ internal fun historyDay(timestamp:Long):String{
                 Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${mediaDisplayTitle(entry.media.title)}",tint=Muted,modifier=Modifier.size(20.dp))}
                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                         DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()})
-                        DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
+                        if(onSeal!=null)DropdownMenuItem(text={Text("封存剧集（私密）")},onClick={menu=false;onSeal()})
+                DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
                     }
                 }
             }

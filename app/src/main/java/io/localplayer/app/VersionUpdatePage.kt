@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
                 }
             } }
             item { Surface(color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { StationCharacterRow("keeper","迟灯 · 设备修理师","先把设备调顺，今晚安心看。") } }
+            item { StorageUsageSettings() }
             item { StationAudioSettings() }
             item { EnrichmentSettings() }
             item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { StationAtmosphereSettings() } }

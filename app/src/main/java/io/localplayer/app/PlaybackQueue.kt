@@ -17,6 +17,11 @@ data class PlayTarget(val uri:Uri,val title:String,val resume:Long,val media:Med
     fun release(){(queue.map{it.uri}+uri).distinct().forEach{PlaybackRegistry.remove(it)}}
 }
 
+internal fun playbackItemTitle(item:MediaItem?,fallback:String):String{
+    val ref=item?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+    return mediaDisplayTitle(if(ref!=null&&SealedMedia.unlocked&&SealedMedia.protects(ref))ref.title else item?.mediaMetadata?.title?.toString()?:fallback)
+}
+
 /** Retains only an in-process request; process death requires reopening the source. */
 object PlaybackRequests {
     const val MAX_ITEMS=200
@@ -44,7 +49,7 @@ object PlaybackRequests {
                 putBoolean("queue-truncated",target.truncated)
             }
             MediaItem.Builder().setUri(entry.uri).setMediaId(entry.uri.toString())
-                .setMediaMetadata(MediaMetadata.Builder().setTitle(mediaDisplayTitle(entry.media.title)).setExtras(extras).build()).build()
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(if(SealedMedia.protects(entry.media))"封存影像"else mediaDisplayTitle(entry.media.title)).setExtras(extras).build()).build()
         }
     }
 }

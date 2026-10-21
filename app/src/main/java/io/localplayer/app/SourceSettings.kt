@@ -38,7 +38,7 @@ import io.localplayer.core.Source
             DropdownMenuItem(text = { Text(if (current.favorite) "取消收藏" else "收藏") }, leadingIcon = { Icon(if (current.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null) }, onClick = { expanded = false; vm.toggleFavorite(current) })
             DropdownMenuItem(text = { Text("分组与快捷入口") }, leadingIcon = { Icon(Icons.Rounded.FolderCopy, null) }, onClick = { expanded = false; organize = true })
             DropdownMenuItem(text = { Text(if (source.id in vm.pinnedIds) "取消置顶" else "置顶") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { expanded = false; vm.togglePin(source) })
-            DropdownMenuItem(text = { Text("私密访问") }, leadingIcon = { Icon(Icons.Rounded.Fingerprint, null) }, onClick = { expanded = false; vm.privateAccess(source) })
+            DropdownMenuItem(text = { Text("封存目录") }, leadingIcon = { Icon(Icons.Rounded.Fingerprint, null) }, onClick = { expanded = false; vm.sealRemote(source,io.localplayer.core.Entry(current.label,current.path,true,0)) })
             HorizontalDivider(color = Hairline, modifier = Modifier.padding(vertical = 4.dp))
             DropdownMenuItem(text = { Text("删除避难所", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) }, onClick = { expanded = false; deleting = true })
         }
@@ -71,7 +71,7 @@ import io.localplayer.core.Source
                 }
                 PlayerField("避难所名称", name) { name = it }
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("默认进入目录", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("来源根目录", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Surface(onClick = {
                         if (vm.updateSourcePresentation(source, name, announce = false)) vm.sources.firstOrNull { it.id == source.id }?.let(vm::beginRootSelection)
                     }, shape = RoundedCornerShape(20.dp), color = GroupedSurface) {
@@ -84,8 +84,8 @@ import io.localplayer.core.Source
                             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Muted)
                         }
                     }
-                    Text("打开这个避难所时直接进入所选文件夹。", fontSize = 13.sp, lineHeight = 20.sp, color = Muted)
-                    if (source.initialPath.isNotEmpty()) TextButton(onClick = { vm.updateSourcePresentation(source, name, "", "避难所根目录") }) { Text("恢复避难所根目录") }
+                    Text("目录导航以此处为起点，返回不会越过这里。", fontSize = 13.sp, lineHeight = 20.sp, color = Muted)
+                    if (source.initialPath.isNotEmpty()) TextButton(onClick = { vm.updateSourcePresentation(source, name, "", "连接根目录") }) { Text("恢复连接根目录") }
                 }
                 HorizontalDivider(color = Hairline)
                 TextButton(onClick = { vm.dismissSourceSettings(); vm.edit(source) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(16.dp)) {

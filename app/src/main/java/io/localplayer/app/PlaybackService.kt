@@ -17,6 +17,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService:MediaSessionService(){
     private var session:MediaSession?=null
+ private var privateObserver:(()->Unit)?=null
  private var videoRecovery:VideoDecoderRecovery?=null
     private lateinit var store:SourceStore
     private lateinit var history:HistoryStore
@@ -38,6 +39,10 @@ class PlaybackService:MediaSessionService(){
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(player,renderers)
+        privateObserver=SealedMedia.observe{
+            val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
+            if(protected){player.pause();player.stop();player.clearMediaItems()}
+        }
  player.addAnalyticsListener(PlaybackMetrics.listener())
         player.setPlaybackSpeed(prefs.speed)
         player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
@@ -135,6 +140,7 @@ class PlaybackService:MediaSessionService(){
     }
     override fun onGetSession(controllerInfo:MediaSession.ControllerInfo)=session
     override fun onDestroy(){
+        privateObserver?.invoke();privateObserver=null
         val owned=requestIds
         OnlineSubtitles.cancel();persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.

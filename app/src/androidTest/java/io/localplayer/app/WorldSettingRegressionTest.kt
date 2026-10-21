@@ -62,7 +62,10 @@ class WorldSettingRegressionTest {
 
     @Test fun themedEntryNamesKeepTheirFunctionalMeaning() {
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithText("这里的避难所是远程片库入口。连接 NAS、服务器或网盘，使用 SMB、SFTP 或 WebDAV。").assertExists()
+        ui.onNodeWithTag("add-outpost").assertExists()
+        ui.onNodeWithTag("add-tower").assertExists()
+        ui.onNodeWithText("幸存者据点").assertExists()
+        ui.onNodeWithText("外部信号塔").assertExists()
         ui.onNodeWithText("首页").performClick()
         ui.onNodeWithTag("home-archives").performClick()
         ui.onNodeWithTag("world-person:axi").assertIsDisplayed()

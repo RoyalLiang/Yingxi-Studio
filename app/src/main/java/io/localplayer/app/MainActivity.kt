@@ -1,4 +1,5 @@
 package io.localplayer.app
+import io.localplayer.core.SourceRoot
 
 import io.localplayer.core.mediaDisplayTitle
 
@@ -80,9 +81,10 @@ class MainActivity:ComponentActivity(){
     }}
 }
 
-@Composable fun LibraryScreen(vm:LibraryViewModel,openLocal:()->Unit,requestNearby:()->Unit){
-    if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm);return}
+@Composable fun LibraryScreen(vm:LibraryViewModel,openLocal:()->Unit,requestNearby:()->Unit,onSealed:()->Unit={}){
+    if(vm.source==null&&vm.openingSource==null){SourcesCatalog(vm,onSealed);return}
     val current=vm.openingSource ?: vm.source ?: return
+    PrivateScreenProtection(vm.privateBrowse)
     val selecting=vm.rootSelectionId==current.id
     var selectedEntry by remember(current.id,vm.path){mutableStateOf<String?>(null)}
     val back={if(vm.openingSource!=null)vm.closeSource()else vm.up()}
@@ -98,15 +100,13 @@ class MainActivity:ComponentActivity(){
             else SourceActions(vm,current,vm.currentDirectoryBookmark()?:SourceBookmark(current.id,current.initialPath,current.label))
         }
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
-            val root=""
-            val relative=vm.path.removePrefix(root).trimStart('/')
-            val parts=relative.split('/').filter{it.isNotEmpty()}
-            val rootName=if(root.isNotEmpty())vm.startingFolderName(source)else source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"}
-            val crumbs=listOf(FileCrumb(rootName,"remote:$root"))+parts.mapIndexed{i,name->
-                FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,name)else name,
-                    "remote:"+listOf(root,parts.take(i+1).joinToString("/")).filter{it.isNotEmpty()}.joinToString("/"))
+            val boundary=SourceRoot(if(selecting)""else source.initialPath)
+            val paths=boundary.trail(vm.path)
+            val rootName=if(boundary.path.isNotEmpty())vm.startingFolderName(source)else source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"}
+            val crumbs=paths.mapIndexed{index,path->
+                FileCrumb(if(index==0)rootName else if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,path.substringAfterLast('/'))else path.substringAfterLast('/'),"remote:$path")
             }
-            FileBreadcrumbs(crumbs){index->vm.browse(parts.take(index).joinToString("/"))}
+            FileBreadcrumbs(crumbs){index->vm.browse(paths[index])}
             HorizontalDivider(color=Hairline)
         }
         if(selecting){
@@ -130,7 +130,7 @@ class MainActivity:ComponentActivity(){
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
             if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录没有项目",Modifier.padding(32.dp),color=Muted)}
             if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(if(entry.directory)entry.name else if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",
-                if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path,busy=vm.busy&&selectedEntry==entry.path){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
+                if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle, selected=selectedEntry==entry.path,busy=vm.busy&&selectedEntry==entry.path,seal=if(entry.directory||entry.isVideo)({vm.sealRemote(current,entry)})else null){selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}}
         }
     }
 }
@@ -138,7 +138,7 @@ class MainActivity:ComponentActivity(){
 @Composable internal fun MediaRow(title:String,subtitle:String,icon:ImageVector,click:()->Unit){
     MediaRow(title,subtitle,icon,selected=false,click=click)
 }
-@Composable internal fun MediaRow(title:String,subtitle:String,icon:ImageVector,selected:Boolean,busy:Boolean=false,click:()->Unit){
+@Composable internal fun MediaRow(title:String,subtitle:String,icon:ImageVector,selected:Boolean,busy:Boolean=false,seal:(()->Unit)?=null,click:()->Unit){
     Surface(onClick=click,enabled=!busy,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=5.dp).semantics{this.selected=selected},color=if(selected)Berry.copy(alpha=.055f)else GroupedSurface,shape=RoundedCornerShape(18.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(selected)Berry.copy(alpha=.25f)else androidx.compose.ui.graphics.Color.Transparent)){
         Row(Modifier.heightIn(min=76.dp).padding(start=14.dp,end=12.dp,top=12.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
             Box(Modifier.size(40.dp).background(Berry.copy(alpha=.07f),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center){Icon(icon,null,tint=Berry,modifier=Modifier.size(22.dp))}
@@ -146,7 +146,7 @@ class MainActivity:ComponentActivity(){
                 Text(title,fontSize=16.sp,lineHeight=22.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp));Text(subtitle,fontSize=12.sp,lineHeight=18.sp,color=Muted,maxLines=2,overflow=TextOverflow.Ellipsis)
             }
-            if(busy)CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp)else Icon(if(selected)Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,if(selected)"已选择文件"else null,tint=if(selected)Berry else Muted.copy(alpha=.6f),modifier=Modifier.size(20.dp))
+            if(seal!=null)SealItemMenu(icon==Icons.Rounded.Folder,seal)else if(busy)CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp)else Icon(if(selected)Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.KeyboardArrowRight,if(selected)"已选择文件"else null,tint=if(selected)Berry else Muted.copy(alpha=.6f),modifier=Modifier.size(20.dp))
         }
     }
 }

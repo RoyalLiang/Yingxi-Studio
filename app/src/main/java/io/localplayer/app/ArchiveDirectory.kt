@@ -40,7 +40,7 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
         Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("${files.entries.size} 个项目",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={files.refresh()}){Text("刷新")}}
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             if(filter=="全部")items(files.entries.filter{it.directory||!it.video},key={it.uri.toString()}){entry->
-                MediaRow(entry.name,if(entry.directory)"文件夹"else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.Description){if(entry.directory)files.enter(entry)else files.error="请选择视频文件"}
+                MediaRow(entry.name,if(entry.directory)"文件夹"else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.Description,selected=false,seal=if(entry.directory)({player.sealLocal(entry,files)})else null){if(entry.directory)files.enter(entry)else files.error="请选择视频文件"}
             }
             if(shown.isEmpty()&&files.entries.none{it.directory}&&!files.busy)item{Text("这个分类还没有影片",Modifier.padding(24.dp),color=Muted)}
             groups.forEach { (group,pairs)->
@@ -56,7 +56,7 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
                             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                                 Text(group.first,fontSize=19.sp,fontWeight=FontWeight.SemiBold)
                                 Text("${members.size} ${if(group.second=="综艺")"期" else "集"}",fontSize=13.sp,color=Muted)
-                                Button(onClick={player.playLocal(chosen.uri,siblings=members)},modifier=Modifier.heightIn(min=48.dp).testTag("series-resume"),contentPadding=PaddingValues(horizontal=12.dp),shape=RoundedCornerShape(14.dp)) {
+                                Button(onClick={player.playLocal(chosen.uri,siblings=members,privatePlayback=files.privateBrowse)},modifier=Modifier.heightIn(min=48.dp).testTag("series-resume"),contentPadding=PaddingValues(horizontal=12.dp),shape=RoundedCornerShape(14.dp)) {
                                     Icon(Icons.Rounded.PlayArrow,null,Modifier.size(20.dp));Spacer(Modifier.width(4.dp))
                                     Text((if(progress!=null)"继续" else "播放")+(info.episode?.let{"第 $it ${if(group.second=="综艺")"期"else"集"}"}?:"观看")+(progress?.let{" · ${playbackTime(it.resumeMs)}"}?:""),fontSize=13.sp)
                                 }
@@ -69,13 +69,13 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
                     items(episodes,key={it.first.uri.toString()}){(entry,id)->
                         val h=player.history.firstOrNull{it.media.key==entry.uri.toString()}
                         Column(Modifier.background(if(h!=null&&!h.completed)Berry.copy(alpha=.06f)else androidx.compose.ui.graphics.Color.Transparent)) {
-                            MediaRow(id.episode?.let{"第 $it ${if(id.category=="综艺")"期"else"集"}"}?:mediaDisplayTitle(entry.name),entry.name+(h?.let{if(it.completed)" · 已看完"else" · 上次看到 ${playbackTime(it.positionMs)}"}?:""),Icons.Rounded.PlayCircle,selected=selected==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()) { selected=entry.uri.toString();player.playLocal(entry.uri,siblings=members) }
+                            MediaRow(id.episode?.let{"第 $it ${if(id.category=="综艺")"期"else"集"}"}?:mediaDisplayTitle(entry.name),entry.name+(h?.let{if(it.completed)" · 已看完"else" · 上次看到 ${playbackTime(it.positionMs)}"}?:""),Icons.Rounded.PlayCircle,selected=selected==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString(),seal={player.sealLocal(entry,files)}) { selected=entry.uri.toString();player.playLocal(entry.uri,siblings=members,privatePlayback=files.privateBrowse) }
                         }
                     }
                 }
             }
             items(shown.filter{it.second.category=="电影"},key={it.first.uri.toString()}){(entry,_)->
-                MediaRow(entry.name,formatSize(entry.size),Icons.Rounded.PlayCircle,selected=selected==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()) {selected=entry.uri.toString();player.playLocal(entry.uri,siblings=files.entries)}
+                MediaRow(entry.name,formatSize(entry.size),Icons.Rounded.PlayCircle,selected=selected==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()) {selected=entry.uri.toString();player.playLocal(entry.uri,siblings=files.entries,privatePlayback=files.privateBrowse)}
             }
         }
     }

@@ -53,7 +53,7 @@ class SourceInteractionTest {
         }
         ui.waitForIdle()
     }
-    @After fun cleanup(){ui.runOnUiThread{scope.clear()};saved.forEach{SourceStore(context).delete(it)}}
+    @After fun cleanup(){ui.runOnUiThread{scope.clear();SealedMedia.unlock();SealedMedia.items().filter{it.media.sourceId in saved}.forEach{SealedMedia.unseal(it.id)};SealedMedia.lock()};saved.forEach{SourceStore(context).delete(it)}}
     @Test fun clickingSavedSftpBrowsesWithoutOpeningConfiguration(){
         val unknown=Source(label="已保存SFTP验证",protocol=Protocol.SFTP,host="10.0.2.2",port=TestFixtures.sftpPort,root="/",username=TestFixtures.username)
         val key=try{SftpConnector().connect(unknown,Credentials(TestFixtures.password)).close();error("Expected trust verification")}
@@ -65,7 +65,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasText(source.label))
         ui.onNodeWithText(source.label).performClick()
         ui.runOnIdle{assertTrue("Saved source click must start opening its directory",vm.openingSource?.id==source.id||vm.source?.id==source.id)}
-        ui.onNodeWithText("连接避难所").assertDoesNotExist()
+        ui.onNodeWithText("连接幸存者据点").assertDoesNotExist()
         ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
         ui.runOnIdle {assertNull(vm.error);assertEquals(source.id,vm.source?.id);assertNull(vm.draft)}
         ui.onNodeWithText("附近服务").assertDoesNotExist()
@@ -82,12 +82,13 @@ class SourceInteractionTest {
     @Test fun expandedConnectionSheetKeepsTopWhenProtocolChanges(){
         mount()
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithContentDescription("添加避难所").performClick()
+        ui.onNodeWithTag("add-outpost").performClick()
         ui.onNodeWithTag("connection-form").performTouchInput{swipeUp()}
         ui.onNodeWithTag("connection-form").performScrollToIndex(0)
         val top=ui.onNodeWithTag("connection-title").getUnclippedBoundsInRoot().top
-        for(protocol in listOf("SFTP","WebDAV","SMB")){
+        for(protocol in listOf("SFTP","SMB")){
             ui.runOnIdle{vm.draft=vm.draft?.let{it.copy(source=it.source.copy(initialPath="legacy"),browsePath="legacy-folder")}}
+            ui.onNodeWithTag("connection-protocol-selector").performClick()
             ui.onNodeWithText(protocol).performClick()
             ui.runOnIdle{assertEquals("",vm.draft?.source?.initialPath);assertNull(vm.draft?.browsePath)}
             ui.onNodeWithTag("connection-form").performScrollToIndex(0)
@@ -104,7 +105,7 @@ class SourceInteractionTest {
         ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
         ui.onNodeWithText("避难所设置").performClick()
         ui.onNodeWithText("连接与账户配置").performClick()
-        ui.onNodeWithText("连接避难所").assertIsDisplayed()
+        ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点")
         ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
     }
 
@@ -160,7 +161,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         capture("swipe-right")
-        ui.onNodeWithText("私密访问").performClick()
+        ui.onNodeWithText("封存目录").performClick()
         ui.runOnIdle{assertNull(vm.source);assertNull(vm.openingSource);assertNull(vm.draft)}
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         if(context.getSystemService(android.app.KeyguardManager::class.java).isDeviceSecure){
@@ -202,7 +203,7 @@ class SourceInteractionTest {
         }finally{store.remove(media.key)}
     }
 
-    @Test fun systemCredentialUnlocksOnlyThisPrivateOpen(){
+    @Test fun systemCredentialSealsRootAndRequiresAuthenticationAfterLock(){
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val pin=InstrumentationRegistry.getArguments().getString("device_pin")
         org.junit.Assume.assumeTrue("Dedicated emulator PIN required",pin!=null)
@@ -213,14 +214,14 @@ class SourceInteractionTest {
         ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
-        ui.onNodeWithText("私密访问").performClick()
+        ui.onNodeWithText("封存目录").performClick()
         assertNull(vm.source)
         awaitSystemPrompt()
         shell("input text $pin")
         shell("input keyevent 66")
-        ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
-        ui.runOnIdle{assertEquals(source.id,vm.source?.id);assertNull(vm.privateRequest);assertNull(vm.draft)}
-        ui.runOnIdle{vm.closeSource();vm.privateAccess(source)}
+        ui.waitUntil(15_000){SealedMedia.protects(source,source.initialPath)||vm.error!=null}
+        ui.runOnIdle{assertTrue(SealedMedia.protects(source,source.initialPath));assertNull(vm.source);assertNull(vm.privateRequest);assertNull(vm.draft)}
+        ui.runOnIdle{vm.closeSource();SealedMedia.lock();vm.requestPrivate()}
         ui.runOnIdle{assertNull(vm.source);assertNotNull("second private action must authenticate again",vm.privateRequest)}
         awaitSystemPrompt()
         cancelSystemPrompt()
