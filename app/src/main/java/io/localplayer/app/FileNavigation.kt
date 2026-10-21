@@ -57,6 +57,7 @@ data class FileCrumb(val label:String,val key:String)
             Text("废墟档案库",Modifier.weight(1f).padding(start=8.dp).testTag("local-browser-title"),fontSize=24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
             IconButton(onClick=onAddFolder){Icon(Icons.Rounded.CreateNewFolder,"添加授权文件夹",tint=Berry)}
         }
+        Text("本机影像",Modifier.padding(start=24.dp,bottom=8.dp).testTag("local-library-description"),fontSize=12.sp,color=Muted)
         if(files.active!=null && !(files.entries.none{it.directory} && files.entries.any{it.video&&localArchiveIdentity(it,files).category!="电影"})){
             FileBreadcrumbs(listOf(FileCrumb("本机文件","local"))+files.trail.mapIndexed{i,d->FileCrumb(d.name,"local:$i")}){index->if(index==0)files.root()else files.navigate(index-1)}
             HorizontalDivider(color=Hairline)
