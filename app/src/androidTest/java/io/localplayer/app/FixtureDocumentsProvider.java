@@ -20,6 +20,10 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             case "movies": return "影片";
             case "shorts": return "短片";
             case "clip": return "示例.mp4";
+            case "series": return "漫长的季节";
+            case "episode5": return "漫长的季节.S01E05.mkv";
+            case "episode6": return "漫长的季节.S01E06.mkv";
+            case "episode7": return "漫长的季节.S01E07.mkv";
             default: throw new FileNotFoundException(id);
         }
     }
@@ -31,7 +35,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             switch (columns[i]) {
                 case Document.COLUMN_DOCUMENT_ID: values[i] = id; break;
                 case Document.COLUMN_DISPLAY_NAME: values[i] = name; break;
-                case Document.COLUMN_MIME_TYPE: values[i] = id.equals("clip") ? "video/mp4" : Document.MIME_TYPE_DIR; break;
+                case Document.COLUMN_MIME_TYPE: values[i] = id.equals("clip") || id.startsWith("episode") ? "video/mp4" : Document.MIME_TYPE_DIR; break;
                 case Document.COLUMN_SIZE: values[i] = id.equals("clip") ? 1024L : 0L; break;
                 case Document.COLUMN_FLAGS: values[i] = 0; break;
             }
@@ -63,6 +67,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             case "root": row(cursor, "movies"); break;
             case "movies": row(cursor, "shorts"); row(cursor, "clip"); break;
             case "shorts": break;
+            case "series": row(cursor, "episode5"); row(cursor, "episode6"); row(cursor, "episode7"); break;
             default: throw new FileNotFoundException(parent);
         }
         return cursor;
@@ -71,6 +76,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
         throw new FileNotFoundException("No media content in navigation fixture");
     }
     @Override public boolean isChildDocument(String parent, String child) {
+        if (parent.equals("series")) return child.startsWith("episode");
         if (parent.equals("root")) return child.equals("movies") || child.equals("shorts") || child.equals("clip");
         return parent.equals("movies") && (child.equals("shorts") || child.equals("clip"));
     }

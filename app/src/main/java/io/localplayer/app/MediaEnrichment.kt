@@ -183,7 +183,7 @@ internal object OnlineSubtitles {
     fun schedule(c:Context,player:Player){
         val item=player.currentMediaItem?:return
         if(attempted==item.mediaId||job?.isActive==true)return
-        if(!EnrichmentPreferences(c).subtitles||PlaybackPreferences(c).subtitlesDisabled)return
+        if(!EnrichmentPreferences(c).subtitles||player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))return
         if(player.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT&&it.isSupported}||item.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true)return
         attempted=item.mediaId
         job=scope.launch{
@@ -215,10 +215,13 @@ internal object OnlineSubtitles {
                 val dir=File(context.cacheDir,"online-subtitles-v1").apply{mkdirs()}
                 val key=enrichmentKey(media)+(if(preferBilingual)"-bi"else"-zh")
                 val cached=dir.listFiles()?.firstOrNull{it.nameWithoutExtension==key&&it.extension in setOf("srt","ass","ssa","vtt")}
-                if(cached!=null)return@withContext cached
                 val watcher=EnrichmentDeadlines.timer.schedule({cancellation.close()},22,java.util.concurrent.TimeUnit.SECONDS)
                 val completion=coroutineContext.job.invokeOnCompletion{if(it!=null)cancellation.close()}
                 try{
+                    val sidecar=try { SidecarSubtitles.find(context,media,uri,cancellation,provider,preferBilingual) }
+                        catch(e:CancellationException){throw e}catch(_:Exception){cancellation.check();null}
+                    if(sidecar!=null)return@withContext sidecar
+                    if(cached!=null)return@withContext cached
                     val file=if(uri.scheme=="localplayer"){
                         val lease=PlaybackRegistry.preview(uri).also(cancellation::own);lease.open().also(cancellation::own)
                     }else{
@@ -249,10 +252,10 @@ internal object OnlineSubtitles {
                 target
                 }finally{watcher.cancel(false);completion.dispose();cancellation.close()}
             }
-            if(generation!=requestGeneration||player.currentMediaItem?.mediaId!=id||(!force&&PlaybackPreferences(context).subtitlesDisabled)||player.trackSelectionParameters!=parameters)return
+            if(generation!=requestGeneration||player.currentMediaItem?.mediaId!=id||(!force&&player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))||player.trackSelectionParameters!=parameters)return
             if(caption==null){status.value=id to "未找到匹配字幕";return}
             attach(player,caption)
-            status.value=id to "已载入射手字幕"
+            status.value=id to if(caption.name.startsWith("sidecar-"))"已载入同目录字幕"else"已载入射手字幕"
         }catch(e:CancellationException){throw e}catch(_:Exception){if(generation==requestGeneration&&player.currentMediaItem?.mediaId==id)status.value=id to "字幕服务暂不可用，可重试"}
         finally{if(active===cancellation)active=null;withContext(NonCancellable+Dispatchers.IO){cancellation.close()}}
     }
@@ -260,7 +263,7 @@ internal object OnlineSubtitles {
     internal fun attach(player:Player,file:File){
         val item=player.currentMediaItem?:return
         val mime=when(file.extension){"ass","ssa"->MimeTypes.TEXT_SSA;"vtt"->MimeTypes.TEXT_VTT;else->MimeTypes.APPLICATION_SUBRIP}
-        val caption=MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file)).setMimeType(mime).setLanguage("zh").setLabel("射手字幕 · 自动匹配").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+        val caption=MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file)).setMimeType(mime).setLanguage("zh").setLabel(if(file.name.startsWith("sidecar-"))"同目录字幕 · 自动匹配"else"射手字幕 · 自动匹配").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
         val index=player.currentMediaItemIndex;val position=player.currentPosition;val playing=player.playWhenReady
         val items=(0 until player.mediaItemCount).map{if(it==index)item.buildUpon().setSubtitleConfigurations(listOf(caption)).build()else player.getMediaItemAt(it)}
         player.setMediaItems(items,index,position)

@@ -93,7 +93,12 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     @Volatile private var generation=0L
     private val playChannel=Channel<PlayTarget>(Channel.BUFFERED,onUndeliveredElement={it.release()})
     val plays=playChannel.receiveAsFlow()
-    init { refreshHistory() }
+    init { refreshHistory()
+        val inventory=StationInventory(app)
+        history.filter { h->h.media.sourceId?.let{id->sources.any{it.id==id&& (h.media.location==null||mediaLocation(it)==h.media.location)}}
+            ?: h.media.localUri?.let{runCatching{app.checkUriPermission(Uri.parse(it),android.os.Process.myPid(),android.os.Process.myUid(),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}.getOrDefault(false)} ?: false
+        }.asReversed().forEach{inventory.observe(listOf(it.media),it.updatedAt)}
+    }
 
     fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{history=it}.onFailure{error=it.message}}
     fun removeHistory(entry:HistoryEntry){if(selectedHistoryKey==entry.media.key)selectedHistoryKey=null;if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media.key);MediaThumbnails.remove(getApplication(),entry.media);MediaPosters.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
@@ -137,7 +142,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(draft?.source?.id==saved.id)dismissDraft()
         if(access?.source?.id==saved.id)dismissAccess()
         if(privateRequest?.source?.id==saved.id)privateRequest=null
-        organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除来源")
+        StationInventory(getApplication()).removeSource(saved.id);organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除来源")
     }
     fun privateAccess(saved:Source){
         stopDiscovery();cancelOperation();draft=null;access=null;openingSource=null;privateRequest=PrivateSourceRequest(saved)
@@ -229,7 +234,10 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                     list
                 }}
                 if(id!=generation)return@launch
-                source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load();if(save)notifySuccess("来源已保存")
+                source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load()
+                StationInventory(getApplication()).reconcileSource(s)
+                val registered=StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s)) })
+                if(save)notifySuccess("来源已保存") else if(registered>0&&StationPreferences(getApplication()).greetings)notifySuccess("阿汐：这批影像登记好了，片架给你留了位置。")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {
@@ -357,7 +365,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)error="本机文件无法读取，请通过“打开本机视频”重新选择"}finally{if(request==generation)preparingKey=null}}
     }
     fun dismissDraft(){discoveryPanelOpen=false;stopDiscovery();shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
-    fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除来源")}
+    fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{StationInventory(getApplication()).removeSource(it);store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除来源")}
     fun putBookmark(item:SourceBookmark){
         error=null
         val before=organization.bookmarks().firstOrNull{it.key==item.key}

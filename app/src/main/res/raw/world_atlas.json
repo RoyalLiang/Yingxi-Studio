@@ -147,8 +147,8 @@
         "en": "Axi"
       },
       "role": {
-        "zh": "影像拾荒者 · 信笺记录者",
-        "en": "Image scavenger · Letter keeper"
+        "zh": "影像拾荒者 · 据点管理员",
+        "en": "Image scavenger · Station keeper"
       },
       "home": "station",
       "portrait": "scavenger",
@@ -168,6 +168,14 @@
         {
           "zh": "这一格修好了。今晚应该能早一点开场。",
           "en": "That part is fixed. We might start a little earlier tonight."
+        },
+        {
+          "zh": "哟，回来了。今天淘着啥好货了？",
+          "en": "Back again? What good finds did you bring today?"
+        },
+        {
+          "zh": "这批影像登记好了，片架给你留了位置。",
+          "en": "These images are logged. There is room for them on the shelf."
         }
       ]
     },
@@ -199,6 +207,10 @@
         {
           "zh": "别急，先听它转完这一圈。",
           "en": "No hurry. Listen until it makes one full turn."
+        },
+        {
+          "zh": "先把设备调顺，今晚安心看。",
+          "en": "Get the equipment settled, then enjoy tonight’s screening."
         }
       ]
     },
@@ -261,6 +273,13 @@
       "text": {
         "zh": "三人的肖像重新挂回档案室。阿汐带着拆解工具，迟灯提起拼装工作灯，弥途没有卸下背架；门后的冷光照见每一道补丁。",
         "en": "Three repainted portraits return to the archives: Axi with her salvage tools, Chideng with a rebuilt work light, Mitu still carrying her pack frame. The cool light beyond the door reveals every patch."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.24",
+      "text": {
+        "zh": "阿汐开始登记每天的新拾获；迟灯从幕布右侧递来一句话，弥途把外部避难所的路标擦亮。",
+        "en": "Axi logs each day’s new finds. Chideng offers a few words from the screen’s edge, while Mitu freshens the sign to the outer shelters."
       }
     }
   ],

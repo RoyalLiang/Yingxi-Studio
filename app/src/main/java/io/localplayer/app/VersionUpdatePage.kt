@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
     Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("settings-page")) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
-            Text(if(about)"版本" else "设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            Text(if(about)"版本" else "放映设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             if(about)Box {
                 IconButton(onClick={more=true},modifier=Modifier.testTag("version-more")){Icon(Icons.Rounded.MoreVert,"版本更多操作")}
                 DropdownMenu(more,{more=false}) {
@@ -60,7 +60,10 @@ import androidx.compose.ui.unit.sp
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,tint=Muted)
                 }
             } }
+            item { Surface(color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { StationCharacterRow("keeper","迟灯 · 设备修理师","先把设备调顺，今晚安心看。") } }
+            item { StationAudioSettings() }
             item { EnrichmentSettings() }
+            item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { StationAtmosphereSettings() } }
         } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             if(maxHeight<420.dp)Row(Modifier.fillMaxSize().padding(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                 Column(Modifier.widthIn(max=290.dp).fillMaxWidth(.38f)) { VersionCounter(vm,install,{world=true},{letter="available"},compact=true) }

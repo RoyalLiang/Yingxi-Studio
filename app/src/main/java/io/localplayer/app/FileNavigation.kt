@@ -54,10 +54,10 @@ data class FileCrumb(val label:String,val key:String)
     Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing)){
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=16.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(files.active==null)"返回"else"上一级",tint=Berry)}
-            Text("本机文件",Modifier.weight(1f).padding(start=8.dp).testTag("local-browser-title"),fontSize=24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text("废墟档案库",Modifier.weight(1f).padding(start=8.dp).testTag("local-browser-title"),fontSize=24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
             IconButton(onClick=onAddFolder){Icon(Icons.Rounded.CreateNewFolder,"添加授权文件夹",tint=Berry)}
         }
-        if(files.active!=null){
+        if(files.active!=null && !(files.entries.none{it.directory} && files.entries.any{it.video&&localArchiveIdentity(it,files).category!="电影"})){
             FileBreadcrumbs(listOf(FileCrumb("本机文件","local"))+files.trail.mapIndexed{i,d->FileCrumb(d.name,"local:$i")}){index->if(index==0)files.root()else files.navigate(index-1)}
             HorizontalDivider(color=Hairline)
         }
@@ -80,16 +80,7 @@ data class FileCrumb(val label:String,val key:String)
                 }
             }
         }else{
-            Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("${files.entries.size} 个项目",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={files.refresh()}){Text("刷新")}}
-            LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp)){
-                if(files.entries.isEmpty()&&!files.busy)item{Text("这个目录没有项目",Modifier.padding(24.dp),color=Muted)}
-                items(files.entries,key={it.uri.toString()}){entry->
-                    MediaRow(if(entry.video)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else if(entry.video)formatSize(entry.size)else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.PlayCircle,selected=selectedUri==entry.uri.toString(),busy=player.preparingKey==entry.uri.toString()){
-                        selectedUri=entry.uri.toString()
-                        if(entry.directory)files.enter(entry)else if(entry.video)player.playLocal(entry.uri,siblings=files.entries.toList())else files.error="请选择视频文件"
-                    }
-                }
-            }
+            ArchiveDirectory(files,player)
         }
     }
 }

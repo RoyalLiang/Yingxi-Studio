@@ -91,10 +91,11 @@ class HomePolishTest {
     @Test fun galleryHasOneContinueItemAndRecentTilesWithoutSourceOrLaunchRows() {
         seedHistory();mount(fontScale=1f,width=411)
         ui.onNodeWithTag("continue-player").assertIsDisplayed()
-        ui.onNodeWithText("最近播放").assertIsDisplayed()
+        ui.onAllNodesWithContentDescription("打开视频").assertCountEquals(1)
         ui.onNodeWithText("从这里打开").assertDoesNotExist()
         ui.onNodeWithText("网络来源").assertDoesNotExist()
-        ui.onAllNodesWithContentDescription("打开视频").assertCountEquals(1)
+        ui.onNodeWithTag("home-list").performScrollToNode(hasText("最近播放"))
+        ui.onNodeWithText("最近播放").assertIsDisplayed()
         capture("gallery")
         ui.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-film:${savedMedia[0]}"))
         ui.onNodeWithContentDescription("记录操作 旷野来信").performClick()
