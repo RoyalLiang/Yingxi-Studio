@@ -62,6 +62,9 @@ import kotlinx.coroutines.delay
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackActivity:ComponentActivity(){
     private var playerController:MediaController?=null
+    private var directionMediaId:String?=null
+    private var manualDirection:Int?=null
+    private var directionLocked=false
     private var foreground=false
     private var compact by mutableStateOf(false)
     private var backgroundRequested=false
@@ -73,7 +76,7 @@ class PlaybackActivity:ComponentActivity(){
         override fun onReceive(context:Context,intent:Intent){if(intent.action==ACTION_CLOSE_PIP)leave()}
     }
     private val presentationListener=object:Player.Listener{
-        override fun onEvents(player:Player,events:Player.Events){updatePictureInPicture()}
+        override fun onEvents(player:Player,events:Player.Events){updateVideoOrientation();updatePictureInPicture()}
     }
     private data class Caption(val uri:android.net.Uri,val mime:String,val label:String)
     private var pendingCaption:Caption?=null
@@ -94,7 +97,11 @@ class PlaybackActivity:ComponentActivity(){
     }
     override fun onCreate(savedInstanceState:Bundle?){
         ContextCompat.registerReceiver(this,pipCloseReceiver,android.content.IntentFilter(ACTION_CLOSE_PIP),ContextCompat.RECEIVER_NOT_EXPORTED)
-        super.onCreate(savedInstanceState);if(savedInstanceState==null)requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;resumeAfterPicker=savedInstanceState?.getBoolean("caption-resume") ?: false;enableEdgeToEdge();window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);immersive()
+        super.onCreate(savedInstanceState)
+        directionMediaId=savedInstanceState?.getString("direction-media")
+        manualDirection=savedInstanceState?.getInt("direction-manual",-1)?.takeIf{it>=0}
+        directionLocked=savedInstanceState?.getBoolean("direction-locked")?:false
+        resumeAfterPicker=savedInstanceState?.getBoolean("caption-resume") ?: false;enableEdgeToEdge();window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);immersive()
         val title=PlaybackRequests.get(intent.getStringExtra("play-intent"))?.title ?: "视频"
         captionMediaId=savedInstanceState?.getString("caption-media")
         savedInstanceState?.getString("caption-uri")?.let{readCaption(android.net.Uri.parse(it))}
@@ -188,7 +195,7 @@ class PlaybackActivity:ComponentActivity(){
         if(resumeAfterPicker)c.play()
         resumeAfterPicker=false
     }
-    override fun onSaveInstanceState(outState:Bundle){outState.putBoolean("caption-resume",resumeAfterPicker);outState.putString("caption-uri",captionUri?.toString());outState.putString("caption-media",captionMediaId);super.onSaveInstanceState(outState)}
+    override fun onSaveInstanceState(outState:Bundle){outState.putString("direction-media",directionMediaId);outState.putInt("direction-manual",manualDirection?:-1);outState.putBoolean("direction-locked",directionLocked);outState.putBoolean("caption-resume",resumeAfterPicker);outState.putString("caption-uri",captionUri?.toString());outState.putString("caption-media",captionMediaId);super.onSaveInstanceState(outState)}
     private fun immersive(){WindowCompat.getInsetsController(window,window.decorView).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}}
     private fun loadInitial(c:MediaController){
         if(!foreground || isFinishing || isDestroyed)return
@@ -269,7 +276,7 @@ class PlaybackActivity:ComponentActivity(){
         PlaybackRequests.releaseUnused(supersededRequests);supersededRequests.clear()
     }
     override fun onStart(){super.onStart();pipDismissJob?.cancel();pipDismissJob=null;foreground=true;playerController?.let{loadInitial(it);applyPendingCaption(it)}}
-    override fun onResume(){super.onResume();backgroundRequested=false;compact=isInPictureInPictureMode;immersive();updatePictureInPicture()}
+    override fun onResume(){super.onResume();backgroundRequested=false;compact=isInPictureInPictureMode;immersive();updateVideoOrientation();updatePictureInPicture()}
     override fun onStop(){
         foreground=false
         pipDismissJob?.cancel();pipDismissJob=null
@@ -300,8 +307,22 @@ class PlaybackActivity:ComponentActivity(){
         super.onDestroy()
     }
     private fun leave(){runCatching{playerController?.takeIf(::owns)?.let{it.stop();it.clearMediaItems()}};PlaybackRequests.remove(intent.getStringExtra("play-intent"));finish()}
-    private fun rotate(){requestedOrientation=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE}
-    private fun lock(value:Boolean){requestedOrientation=if(value)ActivityInfo.SCREEN_ORIENTATION_LOCKED else if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT}
+    private fun updateVideoOrientation() {
+        val c=playerController?:return
+        if(!foreground||compact||captionPickerOpen||isFinishing||!owns(c))return
+        val id=c.currentMediaItem?.mediaId?:return
+        if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
+        val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
+            manualDirection?:videoOrientation(c.videoSize)?:return
+        if(requestedOrientation!=desired)requestedOrientation=desired
+    }
+    private fun rotate(){
+        manualDirection=if(resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE)
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        updateVideoOrientation()
+    }
+    private fun lock(value:Boolean){directionLocked=value;updateVideoOrientation()}
+
 }
 
 internal fun pictureInPictureAspectRatio(width:Int,height:Int,pixelRatio:Float=1f):Rational {

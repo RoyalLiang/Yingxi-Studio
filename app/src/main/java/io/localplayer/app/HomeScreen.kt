@@ -140,7 +140,7 @@ import androidx.compose.ui.unit.sp
                     androidx.compose.ui.graphics.Color.Black.copy(alpha=.65f),androidx.compose.ui.graphics.Color.Black.copy(alpha=.5f),androidx.compose.ui.graphics.Color.Transparent))))
                 Box(Modifier.align(Alignment.TopEnd)) {
                     IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).offset(x=6.dp,y=(-6).dp))
+                        Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).offset(x=6.dp,y=(-10).dp))
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
