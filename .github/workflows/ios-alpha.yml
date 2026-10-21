@@ -21,7 +21,7 @@ jobs:
       - name: Build and validate iOS 27 alpha
         run: python3 scripts/build_ios.py --output "$RUNNER_TEMP/ios-alpha"
       - if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: yingxi-ios-${{ github.sha }}
           path: |
