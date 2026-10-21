@@ -15,7 +15,7 @@ class HistoryStoreTest {
     private val name="history-test-"+UUID.randomUUID()
     private val first=HistoryStore(context,name)
     private val second=HistoryStore(context,name)
-    private val media=MediaRef("fixture-id:path","片名.mp4","测试来源",sourceId="fixture-id",path="影片/片名.mp4",sizeBytes=100,location="smb:loopback:media")
+    private val media=MediaRef("fixture-id:path","片名.mp4","测试避难所",sourceId="fixture-id",path="影片/片名.mp4",sizeBytes=100,location="smb:loopback:media")
     @After fun cleanup(){context.deleteSharedPreferences(name)}
     @Test fun sourceIdentityIncludesPrincipalAndTrustedServerKey(){
         val source=io.localplayer.core.Source(label="fixture",protocol=io.localplayer.core.Protocol.SFTP,host="loopback",root="/",username="first")

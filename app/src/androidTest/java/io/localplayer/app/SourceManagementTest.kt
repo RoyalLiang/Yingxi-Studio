@@ -54,10 +54,10 @@ class SourceManagementTest {
     }
     @Test fun homeContainsNoSavedSourceOrNetworkSourceEntry() {
         val source = mount()
-        ui.onNodeWithText(source.label).assertDoesNotExist()
-        ui.onNodeWithText("已保存的来源").assertDoesNotExist()
-        ui.onNodeWithText("网络来源").assertDoesNotExist()
-        ui.onNodeWithText("来源").assertIsDisplayed()
+        ui.onNodeWithTag("source-title:${source.id}",useUnmergedTree=true).assertDoesNotExist()
+        ui.onNodeWithText("已保存的避难所").assertDoesNotExist()
+        ui.onNodeWithText("网络避难所").assertDoesNotExist()
+        ui.onNodeWithText("避难所").assertIsDisplayed()
     }
     @Test fun favoriteAndUnfavoriteHaveDistinctFeedback() {
         val source = mount()
@@ -79,13 +79,13 @@ class SourceManagementTest {
 
     @Test fun longCloudNameAndSettingsRemainReachableWithLargeText() {
         val source = mount(fontScale = 1.5f)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         val layouts = mutableListOf<TextLayoutResult>()
         ui.onNodeWithTag("source-title:${source.id}", useUnmergedTree = true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertFalse("Source name must wrap instead of being clipped", layouts.single().hasVisualOverflow)
         ui.onNodeWithContentDescription("修改配置 ${source.label}").assertDoesNotExist()
-        ui.onNodeWithContentDescription("来源操作 ${source.label}").performClick()
-        ui.onNodeWithText("来源设置").performClick()
+        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
+        ui.onNodeWithText("避难所设置").performClick()
         ui.onNodeWithTag("source-settings").assertIsDisplayed()
         ui.onNodeWithText("默认进入目录").assertIsDisplayed()
         ui.runOnIdle { assertNull(vm.draft); assertNull(vm.openingSource); assertNull(vm.source) }
@@ -97,9 +97,9 @@ class SourceManagementTest {
         val store = SourceStore(ui.activity)
         val secretBefore = ui.activity.getSharedPreferences("secrets-v1", 0).getString(source.id, null)
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = true)) }
-        ui.onNodeWithText("来源").performClick()
-        ui.onNodeWithContentDescription("来源操作 ${source.label}").performClick()
-        ui.onNodeWithText("来源设置").performClick()
+        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
+        ui.onNodeWithText("避难所设置").performClick()
         ui.onNodeWithText("浏览并选择文件夹").performClick()
         ui.waitUntil(10_000) { vm.source != null && !vm.busy }
         ui.onNodeWithText("movie.mp4").assertDoesNotExist()
@@ -121,7 +121,7 @@ class SourceManagementTest {
 
     @Test fun cancellingFolderSelectionPreservesExistingDefault() {
         val source = mount(Protocol.SFTP, initialPath = "previous")
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.runOnIdle { vm.beginRootSelection(source) }
         ui.waitUntil(10_000) { vm.source != null && !vm.busy }
         ui.onNodeWithText("取消").performClick()
@@ -156,7 +156,7 @@ class SourceManagementTest {
 
     @Test fun swipeOnlyRevealsActionsAndTapCollapsesTheRow() {
         val source = mount()
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput { swipeLeft() }
         ui.onNodeWithText("删除").assertIsDisplayed()
         ui.runOnIdle { assertNull(vm.source); assertNull(vm.openingSource); assertNull(vm.draft) }

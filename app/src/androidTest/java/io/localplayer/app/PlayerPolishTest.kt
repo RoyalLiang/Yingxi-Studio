@@ -148,7 +148,7 @@ class PlayerPolishTest {
     @Test fun sourcesTabReturnsToSavedSourcesInsteadOfAnOldDirectory(){
         val vm=main{ViewModelProvider(ui.activity)[LibraryViewModel::class.java]}
         connect(vm)
-        ui.onNodeWithText("来源").performClick()
+        ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithTag("source-list").assertIsDisplayed()
         ui.onNode(hasText("目录与续播验证") and hasAnyAncestor(hasTestTag("source-list")),useUnmergedTree=true).assertIsDisplayed()
         ui.onNodeWithTag("source-browser").assertDoesNotExist()

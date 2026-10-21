@@ -71,7 +71,7 @@ class PlaybackFixTest {
         }finally{prefs.subtitlesDisabled=subtitlesBefore;instrumentation.runOnMainSync{player.release()}}
     }
     @Test fun narrowDirectoryKeepsFavoriteAndGroupLabelsOnOneLine() {
-        val source=io.localplayer.core.Source(label="一个很长的来源目录名称",protocol=io.localplayer.core.Protocol.WEBDAV,host="nas.invalid",root="/dav")
+        val source=io.localplayer.core.Source(label="一个很长的避难所目录名称",protocol=io.localplayer.core.Protocol.WEBDAV,host="nas.invalid",root="/dav")
         val connector=object:io.localplayer.core.Connector {
             override fun connect(source:io.localplayer.core.Source,credentials:io.localplayer.core.Credentials,cancellation:io.localplayer.core.Cancellation)=object:io.localplayer.core.RemoteSession {
                 override fun list(path:String)=emptyList<io.localplayer.core.Entry>()
