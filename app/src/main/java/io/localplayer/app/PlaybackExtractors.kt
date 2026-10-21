@@ -1,23 +1,26 @@
 package io.localplayer.app
 
+import android.content.Context
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.container.NalUnitUtil
-import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.extractor.*
 
-/** Profile 7 UHD-BD carries an HDR10 base layer. Never relabel profile 5's incompatible colors. */
+/** Expose only a readable HDR10-compatible HEVC base layer; profile 5 has incompatible colors. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal fun profile7BaseFormat(format:Format,nativeSupported:Boolean):Format {
+internal fun dolbyVisionBaseFormat(format:Format,nativeSupported:Boolean):Format {
     if(nativeSupported||format.drmInitData!=null||format.sampleMimeType!=MimeTypes.VIDEO_DOLBY_VISION||
-        !Regex("^(?:dvhe|dvh1)\\.07\\.\\d{2}$").matches(format.codecs.orEmpty()))return format
+        !Regex("^(?:dvhe|dvh1)\\.0[78]\\.\\d{2}$").matches(format.codecs.orEmpty()))return format
     val base=runCatching{NalUnitUtil.getH265BaseLayerCodecsString(format.initializationData)}.getOrNull()?:return format
     // Require a readable Main10 base SPS, rather than assuming every deprecated DV profile is compatible.
     if(!Regex("^hvc1\\.[ABC]?2\\..*").matches(base))return format
     val color=format.colorInfo
+    // Profile 8 also includes HLG/SDR variants. A profile number alone does not prove HDR10.
+    if(format.codecs!!.substring(5,7)=="08"&&
+        (color?.colorSpace!=C.COLOR_SPACE_BT2020||color.colorTransfer!=C.COLOR_TRANSFER_ST2084))return format
     if(color!=null&&((color.colorSpace!=Format.NO_VALUE&&color.colorSpace!=C.COLOR_SPACE_BT2020)||
         (color.colorTransfer!=Format.NO_VALUE&&color.colorTransfer!=C.COLOR_TRANSFER_ST2084)))return format
     return format.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).setCodecs(base)
@@ -27,10 +30,9 @@ internal fun profile7BaseFormat(format:Format,nativeSupported:Boolean):Format {
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class PlaybackExtractors(
+    context:Context?=null,
     private val delegate:ExtractorsFactory=DefaultExtractorsFactory(),
-    private val supportsNative:(Format)->Boolean={format->runCatching {
-        MediaCodecSelector.DEFAULT.getDecoderInfos(MimeTypes.VIDEO_DOLBY_VISION,false,false).any{it.isFormatSupported(format)}
-    }.getOrDefault(false)}
+    private val supportsNative:(Format)->Boolean={format->context!=null&&supportsNativeDolbyVision(context,format)}
 ):ExtractorsFactory by delegate {
     override fun createExtractors():Array<Extractor> = delegate.createExtractors().map(::wrap).toTypedArray()
     override fun createExtractors(uri:Uri,responseHeaders:Map<String,List<String>>):Array<Extractor> =
@@ -43,7 +45,7 @@ internal class PlaybackExtractors(
                     return object:TrackOutput by track {
                         override fun format(format:Format) {
                             track.format(if(type==C.TRACK_TYPE_VIDEO&&format.sampleMimeType==MimeTypes.VIDEO_DOLBY_VISION)
-                                profile7BaseFormat(format,supportsNative(format)) else format)
+                            dolbyVisionBaseFormat(format,supportsNative(format)) else format)
                         }
                     }
                 }

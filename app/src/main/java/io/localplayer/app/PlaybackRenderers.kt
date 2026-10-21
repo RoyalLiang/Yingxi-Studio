@@ -1,13 +1,12 @@
 package io.localplayer.app
 
 import android.content.Context
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 
 /** Keep hardware/HDR output; try the next available decoder when initialization fails. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun playbackRenderers(context:Context,selector:MediaCodecSelector=MediaCodecSelector.DEFAULT)=
-    DefaultRenderersFactory(context).setMediaCodecSelector(selector).setEnableDecoderFallback(true)
+    HdrRenderersFactory(context).setMediaCodecSelector(hardwarePreferredSelector(selector)).setEnableDecoderFallback(true)
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun playbackFailure(error:androidx.media3.common.PlaybackException):String {

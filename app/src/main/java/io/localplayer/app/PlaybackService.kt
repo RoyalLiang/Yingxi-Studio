@@ -32,7 +32,7 @@ class PlaybackService:MediaSessionService(){
         val prefs=PlaybackPreferences(this)
         val player=ExoPlayer.Builder(this,playbackRenderers(this))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
-            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,RemoteDataSource.Factory()),PlaybackExtractors()))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,RemoteDataSource.Factory()),PlaybackExtractors(this)))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         player.addAnalyticsListener(PlaybackMetrics.listener())
