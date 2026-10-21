@@ -281,6 +281,13 @@
         "zh": "阿汐开始登记每天的新拾获；迟灯从幕布右侧递来一句话，弥途把外部避难所的路标擦亮。",
         "en": "Axi logs each day’s new finds. Chideng offers a few words from the screen’s edge, while Mitu freshens the sign to the outer shelters."
       }
+    },
+    {
+      "version": "0.2.0-alpha.27",
+      "text": {
+        "zh": "阿汐重新铺平柜台的信纸，档案边的一圈圆线标记着正在读的来信。",
+        "en": "Axi laid the counter's letter flat again. A circular mark beside the records shows which letter is open."
+      }
     }
   ],
   "boundary": {
