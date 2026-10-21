@@ -48,10 +48,12 @@ class ArchiveLayoutRegressionTest {
         }
         capture("quote")
     }
-    @Test fun systemLargeTextRemainsReadableAndMayWrap(){
+    @Test fun systemLargeTextRemainsReadableAndMayWrap()=readableQuotation(1.8f,"large-text")
+    @Test fun intermediateSystemTextUsesWrappingInsteadOfEllipsis()=readableQuotation(1.3f,"intermediate-text")
+    private fun readableQuotation(scale:Float,screenshot:String){
         ui.runOnUiThread {ui.activity.setContent{PlayerTheme{
             val density=LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f)) {
+            CompositionLocalProvider(LocalDensity provides Density(density.density,scale)) {
                 Box(Modifier.fillMaxSize().background(Paper).padding(24.dp)) {
                     Box(Modifier.width(240.dp)){AdministratorArchiveEntry(quote,{})}
                 }
@@ -61,7 +63,7 @@ class ArchiveLayoutRegressionTest {
         assertTrue(result.lineCount>1);assertFalse(result.hasVisualOverflow)
         assertEquals(13f,result.layoutInput.style.fontSize.value,.01f)
         assertFalse(layout("home-admin-title").hasVisualOverflow)
-        capture("large-text")
+        capture(screenshot)
     }
     @Test fun selectionIsSquareAvatarOnlyAndProfileArtIsBounded(){
         ui.onNodeWithTag("home-archives").performClick()
