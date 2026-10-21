@@ -22,9 +22,27 @@ internal object AliyunCloud {
         val flow = synchronized(this) { pending.also { pending = null } }
         flow?.completion?.cancel(); flow?.cancellation?.close()
         names.keys.removeAll { it.startsWith(sourceId+":") }
+        if(::context.isInitialized) {
+            val prefs=context.getSharedPreferences("cloud-folder-names",0)
+            prefs.edit().also{edit->prefs.all.keys.filter{it.startsWith(sourceId+":")}.forEach(edit::remove)}.apply()
+        }
     }
-    fun initialize(app: Context) { context = app.applicationContext; store = SourceStore(context) }
-    fun folderName(sourceId: String,id: String) = names[sourceId+":"+id] ?: "文件夹"
+    fun initialize(app: Context) { context = app.applicationContext; store = SourceStore(context); names.clear() }
+    fun folderName(sourceId: String,id: String):String {
+        val key="$sourceId:$id"
+        return names[key] ?: context.getSharedPreferences("cloud-folder-names",0).getString(key,null)
+            ?: store.load().firstOrNull{it.id==sourceId&&it.initialPath.substringAfterLast('/')==id}
+                ?.let(store::startingFolderName) ?: id
+    }
+    internal fun rememberFolderName(sourceId:String,id:String,name:String) {
+        val key="$sourceId:$id"
+        val prefs=context.getSharedPreferences("cloud-folder-names",0)
+        val old=prefs.all.keys.filter{it.startsWith("$sourceId:")&&it!=key}
+        val evicted=old.take((old.size-510).coerceAtLeast(0))
+        evicted.forEach(names::remove)
+        names[key]=name
+        prefs.edit().also{edit->evicted.forEach(edit::remove)}.putString(key,name).apply()
+    }
 
     suspend fun authorize(): Source {
         if (AndroidCloudApps(context).status(CloudProvider.ALIYUNPAN) != CloudAppStatus.AVAILABLE) throw IOException("未安装或无法打开阿里云盘，请先安装官方 App")
@@ -88,7 +106,7 @@ internal object AliyunCloud {
             val current = token(false)
             return try { action(current.access) } catch (_: AliyunUnauthorized) { action(token(true).access) }
         }
-    }) { id, name -> names[source.id+":"+id] = name }
+    }) { id, name -> rememberFolderName(source.id,id,name) }
 }
 
 internal class AppConnectors : Connector {

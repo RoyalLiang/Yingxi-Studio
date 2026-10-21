@@ -240,7 +240,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 if(id!=generation)return@launch
                 source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;entries=result;draft=null;access=null;sources=store.load()
                 StationInventory(getApplication()).reconcileSource(s)
-                StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s)) })
+                StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),posterPathHint=posterHint(s,e)) })
                 if(registering)notifyRegistration() else if(save)notifySuccess("避难所已保存")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
@@ -261,8 +261,12 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     fun closeSource(){cancelOperation();access=null;openingSource=null;source=null;path="";entries=emptyList();credentials=null;pendingReplay=null;rootSelectionId=null;error=null}
     fun currentDirectoryBookmark():SourceBookmark?=source?.let{SourceBookmark(it.id,path,if(path.isEmpty())it.label else currentFolderName)}
     fun up(){if(path.isEmpty()||rootSelectionId==null&&path==source?.initialPath)closeSource()else browse(path.substringBeforeLast('/',""))}
+    private fun posterHint(s:Source,e:Entry):String? {
+        if(source?.id!=s.id||e.path.substringBeforeLast('/',"")!=path)return null
+        return listOf(currentFolderName,e.name).joinToString("/")
+    }
     private fun remoteTarget(s:Source,c:Credentials,entry:Entry,listing:List<Entry>,fromStart:Boolean,requestedToken:HistoryToken?=null):PlayTarget? {
-        val ref=MediaRef("${s.id}:${entry.path}",entry.name,s.label,s.id,entry.path,sizeBytes=entry.size,location=mediaLocation(s))
+        val ref=MediaRef("${s.id}:${entry.path}",entry.name,s.label,s.id,entry.path,sizeBytes=entry.size,location=mediaLocation(s),posterPathHint=posterHint(s,entry))
         val token=requestedToken ?: historyStore.token(ref.key)
         if(token!=historyStore.token(ref.key))return null
         val resume=if(fromStart)0L else runCatching{historyStore.resumePosition(ref,store.position(ref.key))}.getOrDefault(0L)
@@ -271,7 +275,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         val queue=mutableListOf<QueuedMedia>()
         try {
             for(e in siblings){
-                val item=MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s))
+                val item=MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),posterPathHint=posterHint(s,e))
                 queue+=QueuedMedia(PlaybackRegistry.add(s,c,e.path,e.name),item,if(e.path==entry.path)token else historyStore.token(item.key))
             }
             val selected=queue.first{it.media.path==entry.path}

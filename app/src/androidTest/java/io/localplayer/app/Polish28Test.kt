@@ -63,11 +63,11 @@ class Polish28Test {
     @Test fun exploreRemainsWithinBottomNavigationAndKeepsItsReadingPosition(){
         ui.onNodeWithText("探索").performClick()
         ui.onNodeWithTag("station-world").assertIsDisplayed()
-        ui.onNodeWithTag("world-person:mitu").performClick()
+        ui.onNodeWithTag("world-node:salt").performClick()
         capture("explore")
         ui.onNodeWithText("首页").performClick()
         ui.onNodeWithText("探索").performClick()
-        ui.onNodeWithTag("world-person:mitu").assertIsSelected()
+        ui.onNodeWithTag("world-node:salt").assertIsSelected()
         ui.onNodeWithText("播放记录").assertIsDisplayed()
     }
     @Test fun updateFooterStaysBelowScrollableContentAndMoreHasAnchoredActions(){

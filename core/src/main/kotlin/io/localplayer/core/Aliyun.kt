@@ -184,7 +184,7 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
             private fun id(path: String) = Paths.clean(path).substringAfterLast('/').ifEmpty { "root" }
             override fun list(path: String): List<Entry> = access.authorized(sessionCancellation) { token ->
                 api.list(token, source.domain, id(path), sessionCancellation).map { item ->
-                    rememberName(item.id, item.name)
+                    if(item.directory)rememberName(item.id, item.name)
                     Entry(item.name, Paths.join(path, item.id), item.directory, item.size, item.createdAt)
                 }.sortedWith(MediaOrdering.entries)
             }

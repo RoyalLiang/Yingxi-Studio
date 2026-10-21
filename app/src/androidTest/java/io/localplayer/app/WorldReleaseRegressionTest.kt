@@ -40,10 +40,11 @@ class WorldReleaseRegressionTest {
         ui.onNodeWithText("前往发布页").assertIsDisplayed()
     }
     @Test fun worldGraphAndCharactersAreInteractive() {
-        ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage{} } } }
+        ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage(embedded=true){} } } }
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:archive"))
         ui.onNodeWithTag("world-node:archive").performClick().assertIsSelected()
         ui.onNodeWithTag("world-place-detail").assertExists()
+        ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage{} } } }
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person:mitu"))
         ui.onNodeWithTag("world-person:mitu").performClick().assertIsSelected()
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-quote"))
@@ -56,7 +57,7 @@ class WorldReleaseRegressionTest {
     @Test fun graphNodesRemainInsideNarrowLargeTextViewport() {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
             val d=LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(d.density,1.8f)) {Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage{}}}
+            CompositionLocalProvider(LocalDensity provides Density(d.density,1.8f)) {Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage(embedded=true){}}}
         } } }
         val screen=ui.onNodeWithTag("station-world").fetchSemanticsNode().boundsInRoot
         listOf("station","salt","archive","sea","beacon").forEach { id ->
@@ -71,7 +72,7 @@ class WorldReleaseRegressionTest {
                 val d=LocalDensity.current
                 CompositionLocalProvider(LocalDensity provides Density(d.density,1.8f),
                     androidx.compose.ui.platform.LocalConfiguration provides android.content.res.Configuration(ui.activity.resources.configuration).apply{setLocale(java.util.Locale.forLanguageTag(language))}) {
-                    Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage{}}
+                    Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage(embedded=true){}}
                 }
             }}}
             for(id in listOf("station","salt","archive","sea","beacon")) {

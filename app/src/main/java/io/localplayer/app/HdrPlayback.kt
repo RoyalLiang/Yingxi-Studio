@@ -13,6 +13,8 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 
+internal class VideoOutputStateException(cause:IllegalStateException):IllegalStateException(cause)
+
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun hardwarePreferredSelector(delegate:MediaCodecSelector)=MediaCodecSelector { mime,secure,tunneling ->
     val codecs=delegate.getDecoderInfos(mime,secure,tunneling)
@@ -47,7 +49,7 @@ internal fun hevcDecoderFormat(format:Format):Format {
 
 @Suppress("DEPRECATION")
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal open class HdrRenderersFactory(context:Context,private val preferPlatform:((Format)->Boolean)?=null):androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplayer.DefaultRenderersFactory(context) {
     @Volatile internal var forceSoftware=false
     internal var nativeVideoIndex=-1;private set
     internal var softwareVideoIndex=-1;private set
@@ -72,18 +74,42 @@ internal open class HdrRenderersFactory(context:Context,private val preferPlatfo
         val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by software.capabilities {
             override fun supportsFormat(format:Format):Int {
                 if(format.sampleMimeType!=MimeTypes.VIDEO_H265||format.drmInitData!=null)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
-                val nativePreferred=preferPlatform?.invoke(format)?:runCatching {
-                    selector.getDecoderInfos(MimeTypes.VIDEO_H265,false,false).any {
-                        it.hardwareAccelerated&&it.isFormatFunctionallySupported(context,hevcDecoderFormat(format))
-                    }
-                }.getOrDefault(false)
-                if(!forceSoftware&&nativePreferred)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+                // Capability tables can underreport level/profile support. Try platform decoding first;
+                // only VideoDecoderRecovery may enable the CPU renderer after an actual failure.
+                if(!forceSoftware)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
                 return software.capabilities.supportsFormat(format)
             }
         }
         out.add(object:Renderer by software {override fun getCapabilities()=capabilities})
         out[index]=nativeGate(object:MediaCodecVideoRenderer(context,codecAdapterFactory,selector,allowedVideoJoiningTimeMs,
             enableDecoderFallback,eventHandler,eventListener,MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY) {
+            private var codecFailed=false
+            override fun onCodecError(codecError:Exception) {
+                codecFailed=true
+                super.onCodecError(codecError)
+            }
+            override fun onCodecInitialized(name:String,configuration:androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Configuration,
+                initializedTimestampMs:Long,initializationDurationMs:Long) {
+                codecFailed=false
+                super.onCodecInitialized(name,configuration,initializedTimestampMs,initializationDurationMs)
+            }
+            override fun handleMessage(messageType:Int,message:Any?) {
+                // A surface change can arrive between a codec failure and the main-thread recovery.
+                // Clear the failed adapter before Media3 updates the output, retaining the new surface.
+                if(messageType==Renderer.MSG_SET_VIDEO_OUTPUT&&(codecFailed||forceSoftware))releaseCodec()
+                try { super.handleMessage(messageType,message) }
+                catch(e:IllegalStateException) {
+                    // Asynchronous codec errors may precede their callback. Recover only the
+                    // framework codec's output-state failure, not unrelated renderer invariants.
+                    if(messageType!=Renderer.MSG_SET_VIDEO_OUTPUT||e.stackTrace.none{it.className=="android.media.MediaCodec"})throw e
+                    val format=codecInputFormat
+                    releaseCodec()
+                    // Reopening the codec alone discards queued samples until the next keyframe.
+                    // Let the recovery listener reload from the current position instead.
+                    throw createRendererException(VideoOutputStateException(e),format,
+                        androidx.media3.common.PlaybackException.ERROR_CODE_DECODING_FAILED)
+                }
+            }
             override fun getDecoderInfos(selector:MediaCodecSelector,format:Format,requiresSecureDecoder:Boolean):List<MediaCodecInfo> {
                 val native=super.getDecoderInfos(selector,format,requiresSecureDecoder)
                 val base=dolbyVisionBaseFormat(format,false)
