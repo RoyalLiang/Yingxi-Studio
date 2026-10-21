@@ -38,14 +38,14 @@ class DirectoryPosterRegressionTest {
         val bitmap=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         try{java.io.File(app.getExternalFilesDir(null),"browser17-$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}}finally{bitmap.recycle()}
     }
-    private fun browser(initial:String="",blockChild:Boolean=false):Source {
+    private fun browser(initial:String="",blockChild:Boolean=false,videos:Boolean=false):Source {
         val source=Source(id="directory-"+UUID.randomUUID(),label="测试片库",protocol=Protocol.WEBDAV,host="directory.invalid",initialPath=initial)
         SourceStore(app).save(source,"",true);saved+=source
         val connector=object:Connector{
             override fun connect(source:Source,credentials:Credentials,cancellation:Cancellation)=object:RemoteSession{
                 override fun list(path:String):List<Entry>{
                     if(blockChild&&path.endsWith("child"))while(!gate.await(10,TimeUnit.MILLISECONDS))cancellation.check()
-                    return listOf(Entry("子文件夹",Paths.join(path,"child"),true,0))
+                    return listOf(Entry("子文件夹",Paths.join(path,"child"),true,0)) + if(videos)listOf(Entry("影片.mp4",Paths.join(path,"film.mp4"),false,1234))else emptyList()
                 }
                 override fun open(path:String):RemoteFile=error("Browse only")
                 override fun close(){}
@@ -71,13 +71,25 @@ class DirectoryPosterRegressionTest {
         capture("directory-menu");ui.onNodeWithText("收藏").performClick()
         ui.runOnIdle{assertTrue(vm.organization.bookmarks().any{it.sourceId==source.id&&it.path=="child"&&it.favorite})}
     }
-    @Test fun chosenRootBreadcrumbHasNoParentOrClickActions(){
+    @Test fun browsingDoesNotReplayRegistrationDialogue(){
+        browser(videos=true)
+        ui.runOnIdle{assertNull(vm.notice)}
+        ui.onNodeWithText("子文件夹").performClick()
+        ui.waitUntil(5000){vm.path=="child"&&!vm.busy}
+        ui.runOnIdle{assertNull(vm.notice)}
+        ui.onNodeWithTag("source-toast").assertDoesNotExist()
+    }
+    @Test fun defaultFolderDoesNotDisableRelocationToProtocolRoot(){
         browser("private/films")
-        ui.onAllNodes(hasTestTag("breadcrumb:sources")).assertCountEquals(0)
-        ui.onAllNodes(hasText("private")).assertCountEquals(0)
-        ui.onNodeWithTag("breadcrumb:remote:private/films").assertHasNoClickAction();capture("root")
-        ui.onNodeWithTag("breadcrumb:remote:private/films").performTouchInput{click()}
-        ui.runOnIdle{assertEquals("private/films",vm.path);vm.up();assertNull(vm.source)}
+        ui.onNodeWithTag("breadcrumb:remote:private/films").assertHasClickAction()
+        ui.onNodeWithTag("breadcrumb:remote:private").performClick()
+        ui.waitUntil(5000){vm.path=="private"&&!vm.busy}
+        ui.onNodeWithTag("breadcrumb:remote:").performClick()
+        ui.waitUntil(5000){vm.path==""&&!vm.busy}
+        capture("root")
+        ui.onNodeWithTag("breadcrumb:remote:").assertHasClickAction().performClick()
+        ui.waitUntil(5000){!vm.busy}
+        ui.runOnIdle{assertEquals("",vm.path)}
     }
     @Test fun returningHomeRetriesArtworkAfterTemporaryMiss(){
         val source=Source(id="poster-retry-"+UUID.randomUUID(),label="测试海报",protocol=Protocol.WEBDAV,host="poster.invalid")
@@ -101,6 +113,7 @@ class DirectoryPosterRegressionTest {
         EnrichmentPreferences(app).posters=true
         ui.runOnUiThread{vm=LibraryViewModel(app);owner.put("home",vm);val files=LocalFilesViewModel(app);owner.put("files",files);ui.activity.setContent{PlayerTheme{AppShell(vm,files,{},{},{})}}}
         try{
+            ui.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-film:"+media.key))
             ui.waitUntil(5000){attempts.get()>0}
             ui.activityRule.scenario.moveToState(Lifecycle.State.CREATED);available.set(true)
             ui.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)

@@ -31,7 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.*
 import java.io.File
 
-internal class SettingsViewModel @JvmOverloads constructor(app:Application,private val updates:AppUpdates=AppUpdates(app)):AndroidViewModel(app) {
+internal class SettingsViewModel @JvmOverloads constructor(app:Application,private val injectedUpdates:AppUpdates?=null):AndroidViewModel(app) {
+    private val updates=injectedUpdates?:AppUpdates(app)
     val version=installedVersion(app)
     var busy by mutableStateOf(false);private set
     var progress by mutableStateOf<Float?>(null);private set
@@ -43,6 +44,12 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     var installationOffered=false
     private var job:Job?=null
     private var generation=0L
+    init {
+        if(injectedUpdates==null){
+            UpdateDownloads.restore(app)
+            viewModelScope.launch{UpdateDownloads.state.collect{state->if(state!=null){release=state.release;busy=state.busy;progress=state.progress;ready=state.ready;message=state.message;error=state.error}}}
+        }
+    }
     fun check(){
         if(busy)return
         val id=++generation
@@ -59,6 +66,11 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     fun download(){
         val selected=release?:return
         if(busy)return
+        if(injectedUpdates==null){
+            installationOffered=false
+            runCatching{UpdateDownloads.start(getApplication(),selected)}.onFailure{fail(it.message?:"无法启动后台下载，请重试")}
+            return
+        }
         val id=++generation
         busy=true;progress=0f;error=false;message="正在下载安装包…";installationOffered=false
         job=viewModelScope.launch{
@@ -70,7 +82,9 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
             finally{if(id==generation){busy=false;progress=null}}
         }
     }
-    fun cancel(){generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"}
+    fun cancel(){
+        if(injectedUpdates==null&&UpdateDownloads.state.value?.busy==true){UpdateDownloads.pause(getApplication());return}
+generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"}
     fun fail(text:String){message=text;error=true}
     fun installMessage(text:String){message=text;error=false}
     suspend fun installIntent():Intent? {
@@ -138,12 +152,10 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     }}
 }
 
-@Composable
-private fun SettingsSwitch(checked:Boolean,onCheckedChange:(Boolean)->Unit){
-    Switch(checked,onCheckedChange,colors=SwitchDefaults.colors(
-        checkedThumbColor=androidx.compose.ui.graphics.Color.White,
-        checkedTrackColor=Berry,
-        uncheckedThumbColor=androidx.compose.ui.graphics.Color.White,
-        uncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7),
-        uncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent))
+@Composable internal fun SettingsSwitch(checked:Boolean,onCheckedChange:(Boolean)->Unit,modifier:Modifier=Modifier,enabled:Boolean=true){
+    Switch(checked,onCheckedChange,modifier=modifier,enabled=enabled,colors=SwitchDefaults.colors(
+        checkedThumbColor=androidx.compose.ui.graphics.Color.White,checkedTrackColor=Berry,checkedBorderColor=androidx.compose.ui.graphics.Color.Transparent,
+        uncheckedThumbColor=androidx.compose.ui.graphics.Color.White,uncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7),uncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent,
+        disabledCheckedThumbColor=androidx.compose.ui.graphics.Color.White.copy(alpha=.7f),disabledCheckedTrackColor=Berry.copy(alpha=.35f),disabledCheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent,
+        disabledUncheckedThumbColor=androidx.compose.ui.graphics.Color.White.copy(alpha=.7f),disabledUncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7).copy(alpha=.5f),disabledUncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent))
 }

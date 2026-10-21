@@ -83,7 +83,7 @@ class FileNavigationTest {
             ui.onNodeWithTag("breadcrumb:remote:").performClick()
             ui.waitUntil(20000){vm.path==""&&!vm.busy}
             ui.onNodeWithContentDescription("返回避难所").assertIsDisplayed()
-            ui.onNodeWithTag("breadcrumb:sources").performClick()
+            ui.onNodeWithContentDescription("返回避难所").performClick()
             ui.waitUntil{vm.source==null}
             ui.onNodeWithContentDescription("添加避难所").assertIsDisplayed()
         }finally{ui.runOnIdle{SourceStore(ui.activity).delete(source.id);vm.closeSource()}}

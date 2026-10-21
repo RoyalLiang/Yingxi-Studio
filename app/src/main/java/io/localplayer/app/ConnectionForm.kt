@@ -134,7 +134,7 @@ import io.localplayer.core.Protocol
                 }
             }
             CompositionLocalProvider(LocalGlassBackdrop provides scene) {
-                SourceFeedback(vm, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
+                SourceFeedback(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp))
             }
         }
     }
@@ -185,7 +185,7 @@ import io.localplayer.core.Protocol
         item {
             Row(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(16.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("记住密码", fontSize = 15.sp, fontWeight = FontWeight.Medium); Text("仅在这台设备加密保存", fontSize = 12.sp, color = Muted) }
-                Switch(d.remember, { vm.draft = d.copy(remember = it) }, modifier = Modifier.semantics { contentDescription = "记住密码" })
+                SettingsSwitch(d.remember, { vm.draft = d.copy(remember = it) }, modifier = Modifier.semantics { contentDescription = "记住密码" })
             }
         }
         item {
@@ -225,7 +225,7 @@ import io.localplayer.core.Protocol
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("自动发现", fontSize = 15.sp); Text("仅在打开扫描页时运行", fontSize = 12.sp, color = Muted) }
-                Switch(vm.autoDiscoveryEnabled, { vm.setAutoDiscovery(it) }, modifier = Modifier.testTag("auto-discovery"))
+                SettingsSwitch(vm.autoDiscoveryEnabled, { vm.setAutoDiscovery(it) }, modifier = Modifier.testTag("auto-discovery"))
             }
         }
         item { TextButton(onClick = { probeConfirm = true }) { Text("补充查找未广播的设备") } }

@@ -68,7 +68,8 @@ class UpdateDownloadTest {
             try { client.download(candidate){value->if(value>.01f)throw kotlinx.coroutines.CancellationException("cancel test")} }
             catch(e:kotlinx.coroutines.CancellationException){cancelled=true}
             assertTrue(cancelled)
-            assertTrue(downloaded.isFile);assertFalse(directory.listFiles().orEmpty().any{it.name.endsWith(".part")})
+            assertTrue(downloaded.isFile);assertTrue(AppUpdates.partialFile(context,candidate).length()>0)
+            AppUpdates.partialFile(context,candidate).delete()
             assertEquals(4,requests.size);assertFalse(requests.any{it.endsWith(".json")})
         } finally {published?.delete()}
     }

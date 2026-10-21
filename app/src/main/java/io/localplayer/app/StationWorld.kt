@@ -52,7 +52,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     }
 }
 
-@Composable internal fun StationWorldPage(back:()->Unit) {
+@Composable internal fun StationWorldPage(embedded:Boolean=false,back:()->Unit) {
     val context=LocalContext.current
     val world=remember(context){StationWorld.load(context)}
     val lang=LocalConfiguration.current.locales[0].language
@@ -62,12 +62,12 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     var quote by rememberSaveable{mutableIntStateOf(0)}
     val person=world.people.first{it.id==personId}
     val place=world.places.first{it.id==placeId}
-    Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("station-world")) {
+    Column(Modifier.fillMaxSize().background(Paper).then(if(embedded)Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)).testTag("station-world")) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick=back,modifier=Modifier.testTag("archives-back")){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(lang=="zh")"返回" else "Back")}
-            Text(if(lang=="zh")"档案室" else "The archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            if(!embedded)IconButton(onClick=back,modifier=Modifier.testTag("archives-back")){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(lang=="zh")"返回" else "Back")}
+            Text(if(embedded){if(lang=="zh")"探索"else"Explore"}else if(lang=="zh")"档案室"else"Station archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)

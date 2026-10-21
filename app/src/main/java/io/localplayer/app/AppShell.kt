@@ -50,7 +50,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",Icons.Rounded.Home),Sources("避难所",Icons.Rounded.Dns),History("播放记录",Icons.Rounded.History)}
+private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",Icons.Rounded.Home),Sources("避难所",Icons.Rounded.Dns),History("播放记录",Icons.Rounded.History),Explore("探索",Icons.Rounded.Explore)}
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
     SourceFeedbackLifetime(vm)
@@ -61,7 +61,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
     if(archivesOpen){BackHandler{archivesOpen=false};StationWorldPage{archivesOpen=false};return}
     if(settingsOpen){SettingsRoute{settingsOpen=false};return}
-    if(localOpen){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);return}
+    if(localOpen){Box(Modifier.fillMaxSize()){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))};return}
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     LifecycleEventEffect(Lifecycle.Event.ON_START){vm.refreshHistory()}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){vm.stopDiscovery();vm.cancelOperation()}
@@ -83,12 +83,13 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
+                    AppTab.Explore->StationWorldPage(embedded=true){tab=AppTab.Home}
                 }}
             }
         }
         if(tab!=AppTab.Sources&&vm.busy)Box(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=104.dp)){StatusBanner(vm)}
         CompositionLocalProvider(LocalGlassBackdrop provides scene){
-        if(vm.draft==null&&vm.access==null&&vm.settingsSourceId==null)SourceFeedback(vm,Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top=12.dp))
+        if(vm.draft==null&&vm.access==null&&vm.settingsSourceId==null)SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=94.dp))
             GlassSurface(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth(),radius=30){
                 Box(Modifier.fillMaxWidth().padding(5.dp)){
                     BoxWithConstraints(Modifier.matchParentSize()){

@@ -95,7 +95,7 @@ import io.localplayer.core.Source
                 Button(onClick = { if (vm.updateSourcePresentation(source, name)) vm.dismissSourceSettings() }, enabled = name.isNotBlank() && name.trim().length <= 100,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(18.dp)) { Text("保存设置") }
             }
-            SourceFeedback(vm, Modifier.align(Alignment.TopCenter).padding(top = 6.dp))
+            SourceFeedback(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp))
         }
     }
 }

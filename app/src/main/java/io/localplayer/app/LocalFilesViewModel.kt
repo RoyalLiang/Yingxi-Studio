@@ -47,7 +47,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
         folders.forEach{list.put(JSONObject().put("tree",it.tree.toString()).put("name",it.name))}
         prefs.edit().putString("folders",list.toString()).apply()
     }
-    fun add(tree:Uri){
+    fun add(tree:Uri,onRegistered:()->Unit={}){
         require(tree.scheme=="content"&&DocumentsContract.isTreeUri(tree)){"请选择系统提供的文件夹"}
         cancel()
         val id=++generation;val cancellation=CancellationSignal();signal=cancellation;busy=true;error=null
@@ -60,7 +60,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                     }?:throw java.io.IOException("无法读取所选文件夹")
                     LocalFolder(tree,name)
                 }
-                if(id==generation){folders=folders.filterNot{it.tree==tree}+folder;save();open(folder)}
+                if(id==generation){folders=folders.filterNot{it.tree==tree}+folder;save();open(folder);onRegistered()}
             }catch(e:CancellationException){throw e}
             catch(e:Exception){if(id==generation)error="无法读取文件夹，请确认授权仍然有效（${e.javaClass.simpleName}）"}
             finally{if(id==generation){busy=false;signal=null}}

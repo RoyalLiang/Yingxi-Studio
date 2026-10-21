@@ -67,7 +67,7 @@ class MainActivity:ComponentActivity(){
             val openFolder=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()){uri->if(uri!=null){
                 runCatching{
                     contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    localFiles.add(uri)
+                    localFiles.add(uri){model.notifyRegistration()}
                 }.onFailure{localFiles.error="无法保存文件夹授权，请重新选择"}
             }}
             val nearby=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted ->model.refreshDiscoveryPermission();if(granted){if(model.discoveryPanelOpen)model.discover()}else model.error="未授予附近设备访问权限，本机文件仍可打开"}
@@ -98,7 +98,7 @@ class MainActivity:ComponentActivity(){
             else SourceActions(vm,current,vm.currentDirectoryBookmark()?:SourceBookmark(current.id,current.initialPath,current.label))
         }
         vm.source?.takeIf{vm.openingSource==null}?.let{source->
-            val root=source.initialPath.takeIf{!selecting&&(vm.path==it||vm.path.startsWith(it+"/"))}.orEmpty()
+            val root=""
             val relative=vm.path.removePrefix(root).trimStart('/')
             val parts=relative.split('/').filter{it.isNotEmpty()}
             val rootName=if(root.isNotEmpty())vm.startingFolderName(source)else source.root.trimEnd('/').substringAfterLast('/').ifEmpty{"根目录"}
@@ -106,8 +106,7 @@ class MainActivity:ComponentActivity(){
                 FileCrumb(if(source.protocol==Protocol.ALIYUN)AliyunCloud.folderName(source.id,name)else name,
                     "remote:"+listOf(root,parts.take(i+1).joinToString("/")).filter{it.isNotEmpty()}.joinToString("/"))
             }
-            if(selecting)FileBreadcrumbs(crumbs){index->vm.browse(parts.take(index).joinToString("/"))}
-            else FileBreadcrumbs(crumbs)
+            FileBreadcrumbs(crumbs){index->vm.browse(parts.take(index).joinToString("/"))}
             HorizontalDivider(color=Hairline)
         }
         if(selecting){

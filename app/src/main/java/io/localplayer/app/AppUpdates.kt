@@ -20,8 +20,7 @@ internal fun installedVersion(context:Context):AppVersion = context.packageManag
 internal data class AppRelease(val version:AppVersion,val notes:String,val url:String,val size:Long,val sha256:String,val signer:String)
 
 /** Uses GitHub's APK digest and the installed signing identity. */
-internal class AppUpdates(private val context:Context,private val transport:(String)->HttpURLConnection=Companion::connect) {
-    private val downloads=kotlinx.coroutines.sync.Mutex()
+internal class AppUpdates(private val context:Context,private val transport:((String)->HttpURLConnection)?=null) {
     suspend fun check():AppRelease? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val current=installedVersion(context)
         val installed=context.packageManager.getPackageInfo(context.packageName,PackageManager.GET_SIGNING_CERTIFICATES)
@@ -44,45 +43,71 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
         throw IOException("版本列表过大，未能完整检查，请到发布页查看")
     }
 
-    suspend fun download(release:AppRelease,progress:suspend (Float)->Unit):File = downloads.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    suspend fun download(release:AppRelease,progress:suspend (Float)->Unit):File = downloadLock.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         require(release.version.code>installedVersion(context).code){"更新版本必须高于当前版本"}
-        val directory=File(context.filesDir,"updates").apply{mkdirs()}
-        // Another client or Android's installer may still be reading a published APK.
-        val transfer=java.util.UUID.randomUUID().toString()
-        val partial=File(directory,"$transfer.apk.part")
-        val ready=File(directory,"yingxi-${release.version.code}-${release.sha256}-$transfer.apk")
-        try {
-            requireReleaseUrl(release.url)
-            val connection=transport(release.url)
+        requireReleaseUrl(release.url)
+        require(release.sha256.matches(Regex("[a-f0-9]{64}"))&&release.size in 1..MAX_APK){"无效的安装包校验信息"}
+        val partial=partialFile(context,release)
+        partial.parentFile!!.mkdirs()
+        if(partial.length()>release.size)partial.delete()
+        var count=partial.length()
+        progress(count.toFloat()/release.size)
+        if(count<release.size) {
+            val headers=buildMap { put("Accept-Encoding","identity");if(count>0)put("Range","bytes=$count-") }
+            val connection=open(release.url,headers)
             try {
-                if(connection.responseCode!=200)throw IOException("下载失败（HTTP ${connection.responseCode}）")
+                val status=connection.responseCode
+                if(status==416){partial.delete();throw IOException("下载断点已失效，请重试")}
+                val start=if(status==206) {
+                    val range=Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)").matchEntire(connection.getHeaderField("Content-Range")?:"")
+                        ?:throw IOException("服务器返回了无效的下载断点")
+                    val values=range.groupValues.drop(1).map{it.toLongOrNull()?:throw IOException("无效的下载范围")}
+                    if(values[0]!=count||values[1]!=release.size-1||values[2]!=release.size)throw IOException("服务器下载范围与安装包不匹配")
+                    count
+                } else if(status==200)0L else throw IOException("下载失败（HTTP $status）")
+                val encoding=connection.getHeaderField("Content-Encoding")
+                if(encoding!=null&&!encoding.equals("identity",true))throw IOException("安装包传输编码不匹配")
                 val declared=connection.contentLengthLong
-                if(declared>0 && declared!=release.size)throw IOException("安装包大小与发布信息不匹配")
-                val digest=MessageDigest.getInstance("SHA-256")
-                var count=0L;var lastReport=0L
-                connection.inputStream.use { input -> partial.outputStream().use { output ->
-                    val buffer=ByteArray(64*1024)
-                    while(true) {
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        val n=input.read(buffer);if(n<0)break
-                        count+=n;if(count>release.size)throw IOException("安装包超出声明大小")
-                        output.write(buffer,0,n);digest.update(buffer,0,n)
-                        if(count-lastReport>=256*1024 || count==release.size){progress(count.toFloat()/release.size);lastReport=count}
-                    }
-                    output.fd.sync()
+                if(declared>=0&&declared!=release.size-start)throw IOException("安装包大小与发布信息不匹配")
+                count=start
+                progress(count.toFloat()/release.size)
+                var lastReport=count
+                connection.inputStream.use { input -> java.io.FileOutputStream(partial,start>0).use { output ->
+                    try {
+                        val buffer=ByteArray(64*1024)
+                        while(true) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                            val n=input.read(buffer);if(n<0)break
+                            if(n.toLong()>release.size-count){partial.delete();throw IOException("安装包超出声明大小")}
+                            output.write(buffer,0,n);count+=n
+                            if(count-lastReport>=256*1024||count==release.size){progress(count.toFloat()/release.size);lastReport=count}
+                        }
+                    } finally {output.fd.sync()}
                 } }
-                if(count!=release.size || digest.digest().hex()!=release.sha256)throw IOException("安装包完整性校验失败，请重新下载")
-            } finally { connection.disconnect() }
-            kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            verifyArchive(context,partial,release)
-            kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            if(!partial.renameTo(ready))throw IOException("无法保存安装包")
-            ready
-        } catch(e:Exception) { partial.delete();throw e }
+                if(count!=release.size)throw IOException("下载连接中断，已保留进度，可继续下载")
+            } finally {connection.disconnect()}
+        }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        val hash=partial.inputStream().use { input ->
+            val digest=MessageDigest.getInstance("SHA-256");val buffer=ByteArray(64*1024)
+            while(true){kotlinx.coroutines.currentCoroutineContext().ensureActive();val n=input.read(buffer);if(n<0)break;digest.update(buffer,0,n)}
+            digest.digest().hex()
+        }
+        if(partial.length()!=release.size||hash!=release.sha256){partial.delete();throw IOException("安装包完整性校验失败，请重新下载")}
+        try {verifyArchive(context,partial,release)} catch(e:Exception){partial.delete();throw e}
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        // Published installer paths remain immutable; only partial transfers use a stable identity.
+        val ready=File(partial.parentFile,"yingxi-${release.version.code}-${release.sha256}-${java.util.UUID.randomUUID()}.apk")
+        if(!partial.renameTo(ready))throw IOException("无法保存安装包")
+        progress(1f)
+        ready
     } }
 
+    private fun open(value:String,headers:Map<String,String> = emptyMap()):HttpURLConnection =
+        transport?.invoke(value)?.apply{headers.forEach{(key,value)->setRequestProperty(key,value)}}?:connect(value,headers)
+
     private fun fetch(value:String,limit:Int):ByteArray {
-            val connection=transport(value)
+            val connection=open(value)
             try {
                 if(connection.responseCode!=200)throw IOException(if(connection.responseCode in setOf(403,429))"更新服务暂时限制请求，请稍后重试" else "检查更新失败（HTTP ${connection.responseCode}）")
                 return connection.inputStream.use { input ->
@@ -94,6 +119,9 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
         }
 
     companion object {
+        private val downloadLock=kotlinx.coroutines.sync.Mutex()
+        fun partialFile(context:Context,release:AppRelease)=File(context.filesDir,"updates/${release.version.code}-${release.sha256}.apk.part")
+
         fun parseAssetRelease(release:JSONObject,signer:String,minimumCode:Long=0):AppRelease? {
             val tag=release.optString("tag_name")
             if(!Regex("v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?").matches(tag))return null
@@ -146,7 +174,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
             require(uri.scheme=="https" && uri.host=="github.com" && uri.userInfo==null && uri.port==-1 && uri.path.startsWith("/$REPOSITORY/releases/download/") && uri.fragment==null){"更新地址不属于官方发布仓库"}
         }
         private const val MAX_APK=350L*1024*1024
-        private fun connect(value:String):HttpURLConnection {
+        private fun connect(value:String,headers:Map<String,String>):HttpURLConnection {
             var url=URI(value)
             repeat(6) {
                 val host=url.host ?: throw IOException("无效的更新地址")
@@ -155,6 +183,7 @@ internal class AppUpdates(private val context:Context,private val transport:(Str
                 connection.useCaches=false;connection.setRequestProperty("Cache-Control","no-cache");connection.connectTimeout=10000;connection.readTimeout=20000;connection.instanceFollowRedirects=false
                 connection.setRequestProperty("User-Agent","Yingxi-Android-Updater")
                 connection.setRequestProperty("Accept","application/vnd.github+json")
+                headers.forEach{(key,value)->connection.setRequestProperty(key,value)}
                 if(connection.responseCode in setOf(301,302,303,307,308)) {
                     val location=connection.getHeaderField("Location");connection.disconnect()
                     if(location==null)throw IOException("更新地址重定向失败")

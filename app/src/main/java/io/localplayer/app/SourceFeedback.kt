@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-internal data class SourceNotice(val id: Long, val text: String, val isError: Boolean)
+internal data class SourceNotice(val id: Long, val text: String, val isError: Boolean, val registration:Boolean=false)
 
 /** A single timer survives page and sheet changes; old timers cannot dismiss newer notices. */
 @Composable internal fun SourceFeedbackLifetime(vm: LibraryViewModel) {
@@ -57,13 +57,14 @@ internal data class SourceNotice(val id: Long, val text: String, val isError: Bo
     ) { notice ->
         if (notice != null) GlassSurface(radius = 25) {
             Row(
-                Modifier.widthIn(max = if (notice.isError) 360.dp else 300.dp).heightIn(min = 48.dp).testTag("source-toast").clickable { vm.dismissNotice(notice.id) }.semantics { liveRegion = LiveRegionMode.Polite }
+                Modifier.widthIn(max = if (notice.isError||notice.registration) 360.dp else 300.dp).heightIn(min = 48.dp).testTag("source-toast").clickable { vm.dismissNotice(notice.id) }.semantics { liveRegion = LiveRegionMode.Polite }
                     .padding(start = 14.dp, end = if (notice.isError) 2.dp else 16.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(if (notice.isError) Icons.Rounded.ErrorOutline else Icons.Rounded.CheckCircle, null,
+                if(notice.registration)StationPortrait("scavenger","阿汐",Modifier.size(32.dp),false)
+                    else Icon(if (notice.isError) Icons.Rounded.ErrorOutline else Icons.Rounded.CheckCircle, null,
                     tint = if (notice.isError) MaterialTheme.colorScheme.error else Berry, modifier = Modifier.size(18.dp))
-                Text(notice.text, Modifier.weight(1f, fill = false).padding(start = 8.dp, end = if (notice.isError) 2.dp else 0.dp), color = Ink,
+                Text(if(notice.registration)"阿汐 · ${notice.text}"else notice.text, Modifier.weight(1f, fill = false).padding(start = 8.dp, end = if (notice.isError) 2.dp else 0.dp), color = Ink,
                     fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (notice.isError) TextButton(onClick = { details = notice }) { Text("详情", maxLines = 1) }
