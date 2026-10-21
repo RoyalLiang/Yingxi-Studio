@@ -101,6 +101,10 @@ class PlaybackActivity:ComponentActivity(){
         directionMediaId=savedInstanceState?.getString("direction-media")
         manualDirection=savedInstanceState?.getInt("direction-manual",-1)?.takeIf{it>=0}
         directionLocked=savedInstanceState?.getBoolean("direction-locked")?:false
+        // The manifest orients the starting window before a controller or network metadata exists.
+        requestedOrientation=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
+            manualDirection?:savedInstanceState?.getInt("direction-auto",ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
+            ?:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         resumeAfterPicker=savedInstanceState?.getBoolean("caption-resume") ?: false;enableEdgeToEdge();window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);immersive()
         val title=PlaybackRequests.get(intent.getStringExtra("play-intent"))?.title ?: "视频"
         captionMediaId=savedInstanceState?.getString("caption-media")
@@ -195,14 +199,14 @@ class PlaybackActivity:ComponentActivity(){
         if(resumeAfterPicker)c.play()
         resumeAfterPicker=false
     }
-    override fun onSaveInstanceState(outState:Bundle){outState.putString("direction-media",directionMediaId);outState.putInt("direction-manual",manualDirection?:-1);outState.putBoolean("direction-locked",directionLocked);outState.putBoolean("caption-resume",resumeAfterPicker);outState.putString("caption-uri",captionUri?.toString());outState.putString("caption-media",captionMediaId);super.onSaveInstanceState(outState)}
+    override fun onSaveInstanceState(outState:Bundle){outState.putInt("direction-auto",requestedOrientation);outState.putString("direction-media",directionMediaId);outState.putInt("direction-manual",manualDirection?:-1);outState.putBoolean("direction-locked",directionLocked);outState.putBoolean("caption-resume",resumeAfterPicker);outState.putString("caption-uri",captionUri?.toString());outState.putString("caption-media",captionMediaId);super.onSaveInstanceState(outState)}
     private fun immersive(){WindowCompat.getInsetsController(window,window.decorView).apply{systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;hide(WindowInsetsCompat.Type.systemBars())}}
     private fun loadInitial(c:MediaController){
         if(!foreground || isFinishing || isDestroyed)return
         if(owns(c))return // Rotation or foreground return must keep the current episode.
         val target=PlaybackRequests.get(intent.getStringExtra("play-intent"))
         if(target==null){
-            android.widget.Toast.makeText(this,"播放队列已失效，请从来源重新打开",android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this,"播放队列已失效，请从避难所重新打开",android.widget.Toast.LENGTH_LONG).show()
             finish();return
         }
         val items=PlaybackRequests.items(this,target)
@@ -267,7 +271,11 @@ class PlaybackActivity:ComponentActivity(){
         if(changed)this.intent.getStringExtra("play-intent")?.let(supersededRequests::add)
         releaseSuperseded()
         setIntent(intent)
-        if(changed){pendingCaption=null;captionReady=false;captionUri=null;captionMediaId=null;resumeAfterPicker=false}
+        if(changed){
+            pendingCaption=null;captionReady=false;captionUri=null;captionMediaId=null;resumeAfterPicker=false
+            directionMediaId=null;manualDirection=null
+            if(!directionLocked)requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
         playerController?.let{loadInitial(it)}
         updatePictureInPicture()
     }
@@ -313,7 +321,7 @@ class PlaybackActivity:ComponentActivity(){
         val id=c.currentMediaItem?.mediaId?:return
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
-            manualDirection?:videoOrientation(c.videoSize)?:return
+            manualDirection?:videoOrientation(c.videoSize)?:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         if(requestedOrientation!=desired)requestedOrientation=desired
     }
     private fun rotate(){

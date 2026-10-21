@@ -86,10 +86,10 @@ import io.localplayer.core.Protocol
         Box(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-sheet")) {
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
-                    Text(if(d.source.protocol==Protocol.WEBDAV) "外部避难所" else "连接来源", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text(if(d.source.protocol==Protocol.WEBDAV) "外部避难所" else "连接避难所", modifier=Modifier.testTag("connection-title"), fontSize = 26.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
-                    if(d.source.protocol!=Protocol.WEBDAV)Text("输入地址，连接你的媒体库。", fontSize = 14.sp, color = Muted)
-                    if(d.source.protocol==Protocol.WEBDAV)StationCharacterRow("wayfinder","弥途 · 来源路标","地图可以旧，路标不能含糊。")
+                    Text("连接 NAS、服务器或网盘，把影像接回片架。", fontSize = 14.sp, color = Muted)
+                    StationCharacterRow("wayfinder","弥途 · 避难所路标","地址写清，回来的路就不会断。")
                     Spacer(Modifier.height(20.dp))
                     FlowRow(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(), maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 3) {
                         Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol ->
@@ -195,7 +195,7 @@ import io.localplayer.core.Protocol
             }
         }
         if (vm.busy) item { TextButton(onClick = { vm.cancelOperation() }, modifier = Modifier.fillMaxWidth()) { Text("取消连接") } }
-        if (vm.sources.any { it.id == d.source.id }) item { TextButton(onClick = { vm.deleteDraft() }, modifier = Modifier.fillMaxWidth()) { Text("移除此来源", color = MaterialTheme.colorScheme.error) } }
+        if (vm.sources.any { it.id == d.source.id }) item { TextButton(onClick = { vm.deleteDraft() }, modifier = Modifier.fillMaxWidth()) { Text("移除此避难所", color = MaterialTheme.colorScheme.error) } }
     }
 }
 

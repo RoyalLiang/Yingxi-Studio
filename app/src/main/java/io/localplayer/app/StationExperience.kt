@@ -80,7 +80,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
 }
 
 @Composable internal fun StationCharacterRow(kind:String,name:String,line:String,modifier:Modifier=Modifier) {
-    Row(modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GroupedSurface).padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         StationPortrait(kind,name,Modifier.size(54.dp),false)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(name,fontSize=13.sp,color=Muted)

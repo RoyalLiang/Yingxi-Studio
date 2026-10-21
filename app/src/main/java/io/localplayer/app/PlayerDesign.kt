@@ -41,14 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogWindowProvider
 
-// finesse · register=product · shell=phone-library · palette=mist+berry · material=refractive-glass · motion=fade · density=4
+// finesse · register=product · shell=phone-library · palette=warm-paper+berry · material=refractive-glass · motion=fade · density=4
 // Native Android surfaces inspired by Apple HIG. No Apple platform assets or APIs.
-val Paper = Color(0xFFF5F5F8)
-val Ink = Color(0xFF22232A)
-val Muted = Color(0xFF62636D)
+val Paper = Color(0xFFF3EFE6)
+val Ink = Color(0xFF2B302D)
+val Muted = Color(0xFF65685F)
 val Berry = Color(0xFFB91E4B)
-val GroupedSurface = Color(0xFFFCFCFE)
-val Hairline = Color(0xFF878898).copy(alpha = .15f)
+val GroupedSurface = Color(0xFFFCF9F2)
+val Hairline = Color(0xFF868B7B).copy(alpha = .15f)
 
 @Composable
 fun PlayerTheme(content: @Composable () -> Unit) {
@@ -57,8 +57,8 @@ fun PlayerTheme(content: @Composable () -> Unit) {
             primary = Berry, onPrimary = Color.White,
             primaryContainer = Color(0xFFF9E6EC), onPrimaryContainer = Color(0xFF721831),
             background = Paper, surface = GroupedSurface, onSurface = Ink, onBackground = Ink,
-            secondary = Muted, secondaryContainer = Color(0xFFECECF2), onSecondaryContainer = Ink,
-            surfaceVariant = Color(0xFFEEEEF3), onSurfaceVariant = Muted, outline = Hairline,
+            secondary = Muted, secondaryContainer = Color(0xFFE6E4D9), onSecondaryContainer = Ink,
+            surfaceVariant = Color(0xFFEDE9DF), onSurfaceVariant = Muted, outline = Hairline,
         ),
         typography = Typography(
             headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp),
