@@ -62,17 +62,7 @@ import androidx.compose.ui.unit.sp
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Surface(onClick = onArchives, color = GroupedSurface, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().testTag("home-archives")) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        StationPortrait("scavenger", "阿汐", Modifier.size(60.dp), false)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("阿汐 · 据点管理员", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-                            Text(if(greeted) "哟，回来了。今天淘着啥好货了？" else "阿汐的来信 · 人物与世界图谱", fontSize = 13.sp, lineHeight = 18.sp, color = Muted)
-                        }
-                        Text("档案室",color=Muted,fontSize=12.sp)
-                        Icon(Icons.Rounded.ChevronRight, null, tint = Muted, modifier = Modifier.size(20.dp))
-                    }
-                }
+                AdministratorArchiveEntry(if(greeted)"哟，回来了。今天淘着啥好货了？"else"阿汐的来信 · 人物与世界图谱",onArchives)
             }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {

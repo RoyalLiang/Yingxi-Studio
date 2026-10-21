@@ -74,18 +74,28 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 world.people.forEach { p ->
-                    Surface(onClick={personId=p.id;quote=0},color=if(p.id==personId)Berry.copy(alpha=.08f) else Color.Transparent,
-                        shape=RoundedCornerShape(18.dp),modifier=Modifier.weight(1f).testTag("world-person:${p.id}").semantics{selected=p.id==personId}) {
-                        Column(Modifier.padding(vertical=12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            StationPortrait(p.portrait,p.name.say(),Modifier.fillMaxWidth().aspectRatio(1f),false)
-                            Text(p.name.say(),fontSize=14.sp,color=if(p.id==personId)Berry else Ink,modifier=Modifier.padding(top=9.dp))
+                    Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,
+                        verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                        Surface(onClick={personId=p.id;quote=0},color=Color.Transparent,
+                            shape=CircleShape,border=androidx.compose.foundation.BorderStroke(
+                                if(p.id==personId)2.dp else 1.dp,
+                                if(p.id==personId)Berry else Muted.copy(alpha=.18f)),
+                            modifier=Modifier.size(64.dp).testTag("world-person:${p.id}").semantics{selected=p.id==personId}) {
+                            StationPortrait(p.portrait,p.name.say(),Modifier.fillMaxSize().padding(4.dp),false)
                         }
+                        Text(p.name.say(),fontSize=13.sp,color=if(p.id==personId)Berry else Ink,
+                            maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier=Modifier.testTag("world-person-name:${p.id}"))
                     }
                 }
             }
-            androidx.compose.animation.AnimatedContent(targetState=person.portrait,label="character portrait") { kind ->
-                StationPortrait(kind,person.name.say(),Modifier.fillMaxWidth().aspectRatio(1f))
+            androidx.compose.animation.AnimatedContent(targetState=person.portrait,
+                modifier=Modifier.align(Alignment.CenterHorizontally),label="character portrait") { kind ->
+                Box(Modifier.size(160.dp).testTag("world-profile-art")) {
+                    StationPortrait(kind,person.name.say(),Modifier.fillMaxSize())
+                }
             }
+
             Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Text(person.name.say()+" / "+person.role.say(),fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
                 Text(world.places.first{it.id==person.home}.name.say(),fontSize=12.sp,color=Berry)
