@@ -1,8 +1,6 @@
 package io.localplayer.app
 
-import android.animation.ValueAnimator
 import android.content.Context
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,9 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
@@ -68,31 +64,27 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     val place=world.places.first{it.id==placeId}
     Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("station-world")) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(lang=="zh")"返回" else "Back")}
-            Text(if(lang=="zh")"放映站档案" else "Station archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            IconButton(onClick=back,modifier=Modifier.testTag("archives-back")){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(lang=="zh")"返回" else "Back")}
+            Text(if(lang=="zh")"档案室" else "The archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
-            WorldMap(world,placeId,lang){placeId=it}
-            Text(if(lang=="zh")"点选地点阅读档案 · 实线是往返信路，虚线是传闻" else "Tap a place to read · Solid routes are known; dotted routes are rumors",fontSize=11.sp,lineHeight=18.sp,color=Muted)
-            Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                Text(place.name.say()+" · "+place.kind.say(),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
-            }
-            HorizontalDivider(color=Muted.copy(alpha=.16f))
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 world.people.forEach { p ->
                     Surface(onClick={personId=p.id;quote=0},color=if(p.id==personId)Berry.copy(alpha=.08f) else Color.Transparent,
                         shape=RoundedCornerShape(18.dp),modifier=Modifier.weight(1f).testTag("world-person:${p.id}").semantics{selected=p.id==personId}) {
                         Column(Modifier.padding(vertical=12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            StationPortrait(p.portrait,p.name.say(),Modifier.size(76.dp),p.id==personId)
+                            StationPortrait(p.portrait,p.name.say(),Modifier.fillMaxWidth().aspectRatio(1f),false)
                             Text(p.name.say(),fontSize=14.sp,color=if(p.id==personId)Berry else Ink,modifier=Modifier.padding(top=9.dp))
                         }
                     }
                 }
+            }
+            androidx.compose.animation.AnimatedContent(targetState=person.portrait,label="character portrait") { kind ->
+                StationPortrait(kind,person.name.say(),Modifier.fillMaxWidth().aspectRatio(1f))
             }
             Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Text(person.name.say()+" / "+person.role.say(),fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
@@ -106,6 +98,13 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                     }
                 }
             }
+            WorldMap(world,placeId,lang){placeId=it}
+            Text(if(lang=="zh")"点选地点阅读档案 · 实线是往返信路，虚线是传闻" else "Tap a place to read · Solid routes are known; dotted routes are rumors",fontSize=11.sp,lineHeight=18.sp,color=Muted)
+            Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                Text(place.name.say()+" · "+place.kind.say(),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+                Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
+            }
+            HorizontalDivider(color=Muted.copy(alpha=.16f))
             Text(if(lang=="zh")"信笺走过的路" else "Along the letter route",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             world.chronicles.asReversed().forEach { entry -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
@@ -140,36 +139,10 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     }
 }
 
-/** Small native illustrations: worn goggles, repaired headphones and a wayfinder's red pencil. */
-@Composable internal fun StationPortrait(kind:String,label:String,modifier:Modifier=Modifier,animate:Boolean=true) {
-    val enabled=remember{ValueAnimator.areAnimatorsEnabled()}
-    val blink=if(animate&&enabled) {
-        val transition=rememberInfiniteTransition(label="station-blink")
-        transition.animateFloat(1f,1f,infiniteRepeatable(keyframes{durationMillis=5200;1f at 0;1f at 4780;.12f at 4860;1f at 4960},RepeatMode.Restart),label="eyes").value
-    } else 1f
-    Canvas(modifier.clip(CircleShape).background(if(kind=="keeper")Color(0xFFE3E7E8) else Color(0xFFF0E2DB)).semantics{contentDescription=label}) {
-        fun p(x:Float,y:Float)=Offset(size.width*x,size.height*y)
-        fun oval(color:Color,x:Float,y:Float,w:Float,h:Float)=drawOval(color,p(x,y),Size(size.width*w,size.height*h))
-        val coat=if(kind=="keeper")Color(0xFF526069) else if(kind=="wayfinder")Color(0xFF7D8267) else Color(0xFF79665A)
-        oval(coat,.11f,.63f,.78f,.58f)
-        oval(Color(0xFFDBB69A),.29f,.24f,.42f,.49f)
-        val hair=if(kind=="keeper")Color(0xFFB1B2AB) else Color(0xFF37332F)
-        val cap=Path().apply {moveTo(size.width*.25f,size.height*.4f);cubicTo(size.width*.16f,size.height*.02f,size.width*.82f,size.height*.02f,size.width*.76f,size.height*.4f);lineTo(size.width*.64f,size.height*.3f);lineTo(size.width*.35f,size.height*.3f);close()}
-        drawPath(cap,hair)
-        if(kind=="scavenger") {
-            drawLine(coat,p(.2f,.28f),p(.79f,.28f),size.width*.09f)
-            oval(Color(0xFFE0BD75),.29f,.2f,.18f,.14f);oval(Color(0xFFE0BD75),.53f,.2f,.18f,.14f)
-            oval(Color(0xFF455257),.32f,.225f,.12f,.085f);oval(Color(0xFF455257),.56f,.225f,.12f,.085f)
-        }
-        if(kind=="keeper") {
-            drawArc(coat,190f,160f,false,p(.2f,.18f),Size(size.width*.6f,size.height*.6f),style=Stroke(size.width*.06f))
-            oval(coat,.2f,.39f,.1f,.22f);oval(coat,.7f,.39f,.1f,.22f)
-            drawLine(Color(0xFFDBBD83),p(.2f,.48f),p(.29f,.51f),size.width*.025f)
-        }
-        if(kind=="wayfinder")drawLine(Berry,p(.68f,.1f),p(.78f,.39f),size.width*.04f)
-        oval(Ink,.37f,.465f,.045f,.045f*blink);oval(Ink,.58f,.465f,.045f,.045f*blink)
-        drawLine(Color(0xFF996953),p(.46f,.61f),p(.55f,.61f),size.width*.018f)
-        val scarf=Path().apply{moveTo(size.width*.25f,size.height*.69f);lineTo(size.width*.73f,size.height*.67f);lineTo(size.width*.67f,size.height*.8f);lineTo(size.width*.33f,size.height*.77f);close()}
-        drawPath(scarf,if(kind=="keeper")Color(0xFFC9B58D) else Berry)
-    }
+/** Original portraits share the same art between the home entrance and character records. */
+@Composable internal fun StationPortrait(kind:String,label:String,modifier:Modifier=Modifier,roundedCard:Boolean=true) {
+    val art=when(kind){"keeper"->R.drawable.portrait_chideng;"wayfinder"->R.drawable.portrait_mitu;else->R.drawable.portrait_axi}
+    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art),label,
+        modifier.clip(if(roundedCard)RoundedCornerShape(22.dp) else CircleShape).testTag("character-art:$kind"),
+        contentScale=androidx.compose.ui.layout.ContentScale.Crop)
 }

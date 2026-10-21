@@ -72,3 +72,11 @@ SMB 地址支持主机、`smb://server/share/folder` 和 UNC 路径。账号和�
 ## 片名与解码提示
 
 影片标题仅在显示时移除视频扩展名和常见技术尾缀，文件路径、历史身份和资料匹配仍保留原始名称。播放器启用 Media3 解码器初始化回退，保留 SurfaceView 的硬件与 HDR 输出，并启用 Compose 画面同步。不支持视频编码或解码失败时显示编码提示；MKV 容器内的视频规格仍由设备解码器决定。
+
+## Dolby Vision Profile 7 基础层（alpha.21）
+
+Media3 1.8.0 默认排除 Profile 7 的 HEVC 替代 MIME，见 [MediaCodecUtil 源码](https://github.com/androidx/media/blob/1.8.0/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/mediacodec/MediaCodecUtil.java)。[Dolby 的 UHD Blu-ray 工作流](https://professional.dolby.com/siteassets/pdfs/dolby_vision_uhd_bluray_authoring_workflow.pdf)说明标准 Profile 7 的 HDR10 基础层兼容性。
+
+播放器在 MP4/MKV 等渐进容器的真实轨道格式入口核对 `dvhe.07.xx` 或 `dvh1.07.xx`。设备原生解码器支持当前格式时保留杜比视界；否则仅在初始化数据含可读 HEVC Main10 基础层、色彩信息没有明确冲突且无 DRM 时，使用该基础层的真实 HEVC codec 字符串与 HDR10 色彩信息。保留分辨率、时间轴、轨道、初始化数据和 HDR 静态元数据，不改文件。Profile 5、缺失/不可读基础层或冲突色彩不会强行重标。
+
+回退播放的是 HDR10 基础画面，不含完整增强层的杜比视界重建；设备仍须具备对应分辨率和级别的 HEVC 解码能力。Android 35/36 回归使用合成 Main10 基础视频加 Profile 7 配置记录，核对旧路径的杜比格式与新路径的真实 HEVC 轨道格式；支持 Main10 的设备还会执行出帧用例。当前模拟器未声明 Main10 支持，因此出帧用例跳过；它不代表已验证真实双层 FEL/MEL 文件或一加参考真机。

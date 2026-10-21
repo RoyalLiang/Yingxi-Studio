@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.sp
             item { Surface(onClick=openAbout,shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("app-version")) {
                 Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Info,null,tint=Berry)
-                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐播放器 · 版本",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
+                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐放映室 · 版本",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,tint=Muted)
                 }
             } }
@@ -86,7 +86,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable private fun VersionCounter(vm:SettingsViewModel,install:()->Unit,world:()->Unit,available:()->Unit,compact:Boolean=false) {
     Column(Modifier.fillMaxWidth().testTag("version-counter"),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text("映汐播放器 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
+        Text("映汐放映室 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
         if(!compact)Text("安装序号 "+vm.version.code,fontSize=12.sp,color=Muted)
         Column(Modifier.fillMaxWidth().testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             vm.release?.let { release ->
@@ -106,7 +106,7 @@ import androidx.compose.ui.unit.sp
             }
         }
         TextButton(onClick=world,modifier=Modifier.testTag("open-world"),contentPadding=PaddingValues(vertical=4.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"放映站档案" else "放映站档案 · 人物与图谱",fontSize=13.sp)
+            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室" else "档案室 · 人物与世界图谱",fontSize=13.sp)
         }
     }
 }

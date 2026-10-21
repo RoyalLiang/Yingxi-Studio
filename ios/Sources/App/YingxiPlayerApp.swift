@@ -34,7 +34,7 @@ struct RootView:View {
                 if store.localFiles.isEmpty{ContentUnavailableView("你的片库，从这里开始",systemImage:"film.stack",description:Text("导入视频，或在来源页连接 HTTPS WebDAV。"))}
                 ForEach(store.localFiles,id:\.lastPathComponent){url in Button{store.playLocal(url)}label:{Label(url.lastPathComponent,systemImage:"play.rectangle").lineLimit(2)}}
             }
-        }.navigationTitle("映汐播放器").toolbar{ToolbarItem(placement:.topBarTrailing){NavigationLink{AboutView()}label:{Image(systemName:"gearshape")}}}
+        }.navigationTitle("映汐放映室").toolbar{ToolbarItem(placement:.topBarTrailing){NavigationLink{AboutView()}label:{Image(systemName:"gearshape")}}}
     }
     private var history:some View {
         List {
@@ -113,6 +113,6 @@ struct DAVBrowser:View {
     }
 }
 struct AboutView:View {
-    var body:some View {List{Section("映汐播放器"){Text("iOS 0.1.0-alpha.2");Text("面向 iOS 27 的首个原生验证版本").foregroundStyle(.secondary)};Section("当前能力"){Text("本地视频 · HTTPS WebDAV · 系统播放控件 · 播放记录");Text("SMB、SFTP、Android 自定义手势和解码能力尚未迁移。").foregroundStyle(.secondary)}}.navigationTitle("关于")}
+    var body:some View {List{Section("映汐放映室"){Text("iOS 0.1.0-alpha.2");Text("面向 iOS 27 的首个原生验证版本").foregroundStyle(.secondary)};Section("当前能力"){Text("本地视频 · HTTPS WebDAV · 系统播放控件 · 播放记录");Text("SMB、SFTP、Android 自定义手势和解码能力尚未迁移。").foregroundStyle(.secondary)}}.navigationTitle("关于")}
 }
 private func time(_ value:Double)->String{let total=max(0,Int(value.isFinite ? value : 0));return total>=3600 ? String(format:"%d:%02d:%02d",total/3600,total/60%60,total%60) : String(format:"%02d:%02d",total/60,total%60)}

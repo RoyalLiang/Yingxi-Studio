@@ -38,7 +38,7 @@ class EnrichmentHttp(private val client:OkHttpClient=OkHttpClient.Builder().foll
     }
 }
 
-data class MediaIdentity(val title:String,val year:Int?=null,val season:Int?=null,val episode:Int?=null){
+data class MediaIdentity(val title:String,val year:Int?=null,val season:Int?=null,val episode:Int?=null,val series:Boolean=false){
     companion object{
         fun parse(filename:String):MediaIdentity {
             val base=filename.substringAfterLast('/').substringAfterLast('\\').replace(Regex("(?i)\\.(mkv|mp4|avi|mov|m4v|ts|webm)$"),"")
@@ -49,17 +49,34 @@ data class MediaIdentity(val title:String,val year:Int?=null,val season:Int?=nul
             val title=base.take(cut).replace(Regex("\\[[^]]*]")," ").replace(Regex("[._]+")," ").trim(' ','-','(',')','[',']')
             return MediaIdentity(title.take(150),year?.value?.toIntOrNull(),episode?.groupValues?.get(1)?.toInt(),episode?.groupValues?.get(2)?.toInt())
         }
+        /** Only anonymous episode names inherit their containing show's identity. */
+        fun forPoster(filename:String,path:String?):MediaIdentity {
+            val own=parse(filename)
+            val anonymous=own.title.isBlank() || Regex("(?i)^(?:第\\s*)?\\d{1,3}(?:\\s*[集期话話])?$|^(?:e|ep)\\s*\\d{1,3}$").matches(own.title)
+            if(!anonymous||path.isNullOrBlank())return own
+            val folders=path.replace('\\','/').substringBeforeLast('/',"").split('/').filter{it.isNotBlank()}
+            var season=own.season
+            for(folder in folders.asReversed()) {
+                val seasonFolder=Regex("(?i)^(?:season|s)\\s*(\\d{1,2})$|^第\\s*(\\d{1,2})\\s*季$").matchEntire(folder)
+                if(seasonFolder!=null){season=seasonFolder.groupValues.drop(1).firstOrNull{it.isNotBlank()}?.toIntOrNull();continue}
+                if(folder.lowercase() in setOf("tv","shows","series","电视剧","電視劇","综艺","綜藝","剧集","视频","videos","movies","电影"))return own
+                val show=parse(folder)
+                if(show.title.length>=2&&!show.title.all{it.isDigit()})return show.copy(season=season?:show.season,episode=own.episode?:own.title.filter{it.isDigit()}.toIntOrNull(),series=true)
+                return own
+            }
+            return own
+        }
     }
     fun normalized()=normalize(title)
 }
 private fun normalize(s:String)=s.lowercase().replace(Regex("\\s*\\([^)]*(?:film|电影|電影|年)[^)]*\\)"),"").filter{it.isLetterOrDigit()}
-data class PosterMatch(val imageUrl:String,val sourceUrl:String,val credit:String)
+data class PosterMatch(val imageUrl:String,val sourceUrl:String,val credit:String,val confidence:Double=.98)
 /** Reject uncertain identity rather than showing a plausible but unrelated image. */
 class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(), private val tvBase:String="https://api.tvmaze.com/", private val wikiBase:String?=null) {
     fun find(id:MediaIdentity,c:Cancellation):PosterMatch? {
         if(id.title.length<2)return null
-        if(id.season!=null) {
-            return runCatching {
+        if(id.season!=null||id.series) {
+            val tv=runCatching {
                 val url=tvBase.toHttpUrl().resolve("search/shows")!!.newBuilder().addQueryParameter("q",id.title).build()
                 val result=JsonParser.parseString(String(http.bytes(Request.Builder().url(url).build(),c,1024*1024),Charsets.UTF_8)).asJsonArray
                 val candidates=result.map{it.asJsonObject.getAsJsonObject("show")}.filter { show ->
@@ -72,11 +89,14 @@ class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(), private val
                 if(!image.toHttpUrl().isHttps||!source.isHttps)return@runCatching null
                 PosterMatch(image,source.toString(),"TVmaze CC BY-SA")
             }.onFailure{c.check()}.getOrNull()
+            if(tv!=null)return tv
         }
         val languages=if(id.title.any{it.code in 0x3400..0x9fff})listOf("zh","en")else listOf("en","zh")
         for(lang in languages) {
             val match=runCatching {
-                val titles=listOfNotNull(id.year?.let{"${id.title} ($it film)"},id.year?.let{"${id.title} (${it}年电影)"},"${id.title} (film)","${id.title} (电影)",id.title)
+                val series=id.series||id.season!=null
+                val titles=if(series)listOf("${id.title} (TV series)","${id.title} (电视剧)","${id.title} (电视节目)",id.title)
+                    else listOfNotNull(id.year?.let{"${id.title} ($it film)"},id.year?.let{"${id.title} (${it}年电影)"},"${id.title} (film)","${id.title} (电影)",id.title)
                 val url=(wikiBase?:"https://$lang.wikipedia.org/w/api.php").toHttpUrl().newBuilder()
                     .addQueryParameter("action","query").addQueryParameter("format","json").addQueryParameter("redirects","1")
                     .addQueryParameter("converttitles","1").addQueryParameter("prop","pageimages|pageprops|categories")
@@ -104,7 +124,9 @@ class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(), private val
                     }.toSet()
                     val isFilm=filmQualifier||releaseYears.isNotEmpty()||categories.any{Regex("(?i)\\bfilms\\b|電影作品|电影作品|(?:电影|電影|片)$").containsMatchIn(it)}
                     val years=explicitYears.ifEmpty{releaseYears}
-                    normalize(title) in accepted && isFilm && (id.year==null||id.year in years)
+                    val isSeries=Regex("(?i)\\([^)]*(?:TV series|television|电视剧|電視劇|电视节目|電視節目)[^)]*\\)").containsMatchIn(title)||categories.any{Regex("(?i)television series|television shows|reality shows|电视剧|電視劇|电视节目|電視節目|综艺|綜藝").containsMatchIn(it)}
+                    val seriesYears=categories.mapNotNull{Regex("(?i)((?:19|20)[0-9]{2})(?:年.*(?:开播|開播|首播)|.*television series debuts)").find(it)?.groupValues?.get(1)?.toIntOrNull()}
+                    normalize(title) in accepted && (if(series)isSeries else isFilm) && (id.year==null||id.year in if(series)seriesYears else years)
                 }.distinctBy{it.get("pageid").asLong}
                 val page=matches.singleOrNull()?:return@runCatching null
                 val image=page.getAsJsonObject("thumbnail").get("source").asString.toHttpUrl()
@@ -119,13 +141,13 @@ class PosterLookup(private val http:EnrichmentHttp=EnrichmentHttp(), private val
 }
 
 /** A shared folder cover is safe only when every video belongs to the same title. */
-fun posterSidecarNames(filename:String,siblings:List<String>):List<String> {
+fun posterSidecarNames(filename:String,siblings:List<String>,path:String?=null):List<String> {
     val stem=filename.substringBeforeLast('.',filename)
     val specific=listOf("$stem-poster.jpg","$stem.jpg","$stem-poster.png","$stem.png")
-    val identity=MediaIdentity.parse(filename)
+    val identity=MediaIdentity.forPoster(filename,path)
     val videos=siblings.filter{Regex("(?i)\\.(mkv|mp4|avi|mov|m4v|ts|webm)$").containsMatchIn(it)}
     val sameTitle=videos.isNotEmpty()&&videos.all { name ->
-        val candidate=MediaIdentity.parse(name)
+        val candidate=MediaIdentity.forPoster(name,path?.substringBeforeLast('/',"")?.let{"$it/$name"})
         candidate.normalized()==identity.normalized()&&candidate.year==identity.year&&(candidate.season==null)==(identity.season==null)
     }
     return specific + if(sameTitle)listOf("poster.jpg","folder.jpg","cover.jpg","poster.png","folder.png","cover.png")else emptyList()

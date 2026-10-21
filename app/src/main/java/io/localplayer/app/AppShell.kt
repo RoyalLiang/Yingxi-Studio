@@ -56,8 +56,10 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     SourceFeedbackLifetime(vm)
     var localOpen by rememberSaveable{mutableStateOf(false)}
     var settingsOpen by rememberSaveable{mutableStateOf(false)}
+    var archivesOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
+    if(archivesOpen){BackHandler{archivesOpen=false};StationWorldPage{archivesOpen=false};return}
     if(settingsOpen){SettingsRoute{settingsOpen=false};return}
     if(localOpen){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);return}
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
@@ -78,7 +80,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                 }}

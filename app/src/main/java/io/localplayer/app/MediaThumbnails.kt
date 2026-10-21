@@ -172,10 +172,12 @@ internal fun MediaThumbnail(media: MediaRef, modifier: Modifier = Modifier) {
     val bitmap by key(media.key,media.location,media.sizeBytes,media.localUri) {
         produceState<Bitmap?>(null, revision, posterRevision) {
             // Keep the displayed frame while other cache entries notify observers.
-            coroutineScope {
-                launch { MediaPosters.load(context,media)?.let { value=it } }
+            val saved=MediaPosters.load(context,media,localOnly=true)
+            if(saved!=null)value=saved else coroutineScope {
+                var posterLoaded=false
+                launch { MediaPosters.load(context,media)?.let { posterLoaded=true;value=it } }
                 val frame=MediaThumbnails.load(context,media)
-                if(value==null)value=frame
+                if(!posterLoaded)value=frame
             }
         }
     }

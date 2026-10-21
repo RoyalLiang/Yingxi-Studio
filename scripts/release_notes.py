@@ -12,7 +12,7 @@ def legacy_version(version):
 def load_notes(root, version):
     text = (Path(root) / "releases" / f'{version["tag"]}.md').read_text(encoding="utf-8").strip()
     if not any(text.startswith(f'# {name} {version["versionName"]} / Yingxi {version["versionName"]}')
-               for name in ("映汐", "映汐播放器")):
+               for name in ("映汐", "映汐播放器", "映汐放映室")):
         raise ValueError("Release notes title must match version.json")
     headings = list(re.finditer(r"^## (.+)$", text, re.MULTILINE))
     if [h[1] for h in headings] != ["中文", "English"]:

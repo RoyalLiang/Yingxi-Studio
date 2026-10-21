@@ -15,6 +15,15 @@ import org.junit.Test
 
 class WorldReleaseRegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
+    @Test fun homeArchiveEntranceOpensTheIllustratedCharactersWithoutEnteringSettings() {
+        ui.onNodeWithTag("home-archives").assertIsDisplayed().performClick()
+        ui.onNodeWithTag("station-world").assertIsDisplayed()
+        ui.onNodeWithTag("world-person:axi").assertIsDisplayed().assertIsSelected()
+        ui.onNodeWithTag("world-person:chideng").performClick().assertIsSelected()
+        capture("home-archives")
+        ui.onNodeWithTag("archives-back").performClick()
+        ui.onNodeWithTag("home-archives").assertIsDisplayed()
+    }
     @Test fun longCurrentLetterScrollsWithoutMovingTheCheckButton() {
         ui.runOnUiThread { val vm=SettingsViewModel(ui.activity.application);ui.activity.setContent { PlayerTheme {
             val d=LocalDensity.current
@@ -32,6 +41,7 @@ class WorldReleaseRegressionTest {
     }
     @Test fun worldGraphAndCharactersAreInteractive() {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage{} } } }
+        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:archive"))
         ui.onNodeWithTag("world-node:archive").performClick().assertIsSelected()
         ui.onNodeWithTag("world-place-detail").assertExists()
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person:mitu"))
