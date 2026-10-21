@@ -24,6 +24,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     var trail by mutableStateOf<List<LocalDirectory>>(emptyList());private set
     var entries by mutableStateOf<List<LocalEntry>>(emptyList());private set
     var active by mutableStateOf<LocalFolder?>(null);private set
+    var registration by mutableIntStateOf(0);private set
     var busy by mutableStateOf(false);private set
     var error by mutableStateOf<String?>(null)
     private var job:Job?=null
@@ -67,6 +68,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     }
     fun remove(folder:LocalFolder){
         cancel()
+        StationInventory(getApplication()).removeTree(folder.tree)
         if(active?.tree==folder.tree)root()
         runCatching{resolver.releasePersistableUriPermission(folder.tree,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)}
         folders=folders.filterNot{it.tree==folder.tree};save()
@@ -109,7 +111,9 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                     }?:throw java.io.IOException("文件夹无法读取")
                     rows.sortedWith(Comparator { a,b -> b.directory.compareTo(a.directory).takeIf { it != 0 } ?: io.localplayer.core.MediaOrdering.compare(a.name,null,a.uri.toString(),b.name,null,b.uri.toString()) })
                 }
-                if(id==generation&&folder in folders){active=folder;trail=target;entries=result}
+                if(id==generation&&folder in folders){active=folder;trail=target;entries=result
+                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size)})
+                }
             }catch(e:CancellationException){throw e}
             catch(e:Exception){if(id==generation)error="无法打开文件夹，请检查授权或文件是否仍存在（${e.javaClass.simpleName}）"}
             finally{if(id==generation){busy=false;signal=null}}

@@ -241,7 +241,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if ((buffering || controller == null) && error == null) CircularProgressIndicator(Modifier.align(Alignment.Center).size(84.dp), color = PlayerInk)
+        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration)
+
         if (!compact && visible && !locked && !queue && !settings) {
             if (!dragging) {
                 Row(Modifier.align(Alignment.TopCenter).fillMaxWidth()
@@ -258,13 +259,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     if (smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
                 }
-                if (!speedOpen) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
-                    PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
+                    PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
                     IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(72.dp).background(Color(0x8C101113), CircleShape)) {
                         Icon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", tint = PlayerInk, modifier = Modifier.size(38.dp))
                     }
-                    PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
+                    PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
                     if (items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { controller?.seekToNextMediaItem() }, index < items.lastIndex)
                 }
             }
@@ -275,6 +276,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 PlayerTimeline(shown,duration,buffered,dragging,seekable,
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
                 Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
+                    if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})
                     Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
                         Box {
@@ -361,7 +363,7 @@ internal fun PlayerAdjustmentHud(name: String, value: Int, modifier: Modifier = 
     val percent = value.coerceIn(0, 100)
     val brightness = name == "亮度"
     Surface(modifier.width(56.dp).testTag(if (brightness) "brightness-hud" else "volume-hud")
-        .semantics { contentDescription = "$name $percent%" },
+        .semantics { contentDescription = "${if(brightness) "头灯亮度（屏幕亮度）" else "通讯器音量（媒体音量）"} $percent%" },
         shape = RoundedCornerShape(24.dp), color = Color(0x99171C20), contentColor = PlayerInk) {
         Column(Modifier.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)) {

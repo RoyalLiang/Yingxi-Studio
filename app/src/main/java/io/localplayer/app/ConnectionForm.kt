@@ -86,9 +86,10 @@ import io.localplayer.core.Protocol
         Box(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-sheet")) {
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
-                    Text("连接来源", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text(if(d.source.protocol==Protocol.WEBDAV) "外部避难所" else "连接来源", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
-                    Text("输入地址，连接你的媒体库。", fontSize = 14.sp, color = Muted)
+                    if(d.source.protocol!=Protocol.WEBDAV)Text("输入地址，连接你的媒体库。", fontSize = 14.sp, color = Muted)
+                    if(d.source.protocol==Protocol.WEBDAV)StationCharacterRow("wayfinder","弥途 · 来源路标","地图可以旧，路标不能含糊。")
                     Spacer(Modifier.height(20.dp))
                     FlowRow(Modifier.fillMaxWidth().background(GroupedSurface, RoundedCornerShape(17.dp)).padding(4.dp).selectableGroup(), maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 3) {
                         Protocol.entries.filter { it != Protocol.ALIYUN }.forEach { protocol ->

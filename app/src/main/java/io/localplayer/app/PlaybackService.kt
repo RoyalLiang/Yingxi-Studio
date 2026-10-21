@@ -56,7 +56,12 @@ class PlaybackService:MediaSessionService(){
             override fun onMediaItemTransition(item:MediaItem?,reason:Int){
                 val next=item?.localConfiguration?.uri
                 player.setWakeMode(if(next?.scheme=="localplayer")C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
-                if(current!=next){OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next}
+                if(current!=next){
+                    OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next
+                    player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverrides()
+                        .setPreferredAudioLanguage(prefs.audioLanguage).setPreferredTextLanguage(prefs.textLanguage)
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,prefs.subtitlesDisabled).build()
+                }
                 persist()
             }
             override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)persist()}

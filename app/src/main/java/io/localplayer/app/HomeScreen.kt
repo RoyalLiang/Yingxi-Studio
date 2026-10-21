@@ -33,6 +33,11 @@ import androidx.compose.ui.unit.sp
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
 @Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val station = remember(context) { StationPreferences(context) }
+    val greeted = remember { station.claimGreeting() }
+    val inventoryRevision = StationInventory.revision.intValue
+    val found = remember(inventoryRevision) { StationInventory(context).today().take(8) }
     val continuing = vm.history.firstOrNull { !it.completed && it.positionMs > 0 && it.durationMs > 0 }
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -46,8 +51,14 @@ import androidx.compose.ui.unit.sp
                         Text("映汐", fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp)
                         Text("放映室", fontSize = 13.sp, color = Muted, letterSpacing = 3.sp)
                     }
-                    if (vm.history.isNotEmpty()) IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
+                    IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
                     IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "设置", tint = Muted) }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(verticalArrangement=Arrangement.spacedBy(7.dp),modifier=Modifier.testTag("station-diary")) {
+                    Text("拾荒者日记 · 第 ${station.day} 天",color=Berry,fontSize=15.sp,fontWeight=FontWeight.Medium)
+                    Text(station.dailyLine,color=Muted,fontSize=14.sp,lineHeight=21.sp)
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -55,9 +66,10 @@ import androidx.compose.ui.unit.sp
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         StationPortrait("scavenger", "阿汐", Modifier.size(60.dp), false)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("档案室", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Ink)
-                            Text("阿汐的来信 · 人物与世界图谱", fontSize = 12.sp, lineHeight = 18.sp, color = Muted)
+                            Text("阿汐 · 据点管理员", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Ink)
+                            Text(if(greeted) "哟，回来了。今天淘着啥好货了？" else "阿汐的来信 · 人物与世界图谱", fontSize = 13.sp, lineHeight = 18.sp, color = Muted)
                         }
+                        Text("档案室",color=Muted,fontSize=12.sp)
                         Icon(Icons.Rounded.ChevronRight, null, tint = Muted, modifier = Modifier.size(20.dp))
                     }
                 }
@@ -79,8 +91,21 @@ import androidx.compose.ui.unit.sp
                     Text("打开一部影片，下次从这里继续。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(24.dp))
-                    Button(onClick = openLocal, modifier = Modifier.heightIn(min = 52.dp).semantics { contentDescription = "打开视频" }, shape = RoundedCornerShape(18.dp)) {
-                        Icon(Icons.Rounded.FolderOpen, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("打开视频", maxLines = 1)
+                    Text("点右上角文件夹，开始第一场放映。",fontSize=14.sp,color=Muted)
+                }
+            }
+            if(found.isNotEmpty()) {
+                item(span={GridItemSpan(maxLineSpan)}) { Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                    Text("今日拾获",fontSize=21.sp,fontWeight=FontWeight.SemiBold)
+                    Text("今天新发现 ${StationInventory(context).today().size} 部 · 来自已浏览的目录",fontSize=12.sp,color=Muted)
+                } }
+                items(found,key={"found:${it.media.key}"}) { finding ->
+                    Surface(onClick={vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false))},color=Color.Transparent) {
+                        Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                            MediaThumbnail(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
+                            Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+                            Text(finding.media.sourceLabel,fontSize=12.sp,color=Muted,maxLines=1)
+                        }
                     }
                 }
             }

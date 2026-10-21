@@ -43,7 +43,8 @@ class FileNavigationTest {
             snapshot("local-navigation")
             ui.onNodeWithTag("breadcrumb:local:1").performClick()
             ui.waitUntil(10000){files.trail.size==2&&!files.busy}
-            ui.onNodeWithText("示例.mp4").assertIsDisplayed()
+            snapshot("parent-navigation")
+        ui.onNodeWithText("示例.mp4").assertIsDisplayed()
             ui.onNodeWithContentDescription("上一级").performClick()
             ui.waitUntil(10000){files.trail.size==1&&!files.busy}
             ui.onNodeWithTag("breadcrumb:local").performClick()

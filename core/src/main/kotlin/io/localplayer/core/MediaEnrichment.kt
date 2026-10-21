@@ -196,6 +196,13 @@ class ShooterSubtitles(private val http:EnrichmentHttp=EnrichmentHttp(),private 
         val shifted=if(match.delayMs==0L)text else shift(text,match.extension,match.delayMs)
         return shifted.removePrefix("\uFEFF").toByteArray(Charsets.UTF_8)
     }
+    fun normalizeSidecar(data:ByteArray,extension:String):ByteArray {
+        require(data.size<=4*1024*1024){"字幕文件超过4MB"}
+        val text=decode(data).removePrefix("\uFEFF")
+        require(!text.contains("\u0000")&&!text.trimStart().startsWith("<html",true)){"字幕内容无效"}
+        require(if(extension in setOf("ass","ssa"))text.contains("[Events]",true)&&text.contains("Dialogue:",true)else text.contains("-->")){"字幕格式无效"}
+        return text.toByteArray(Charsets.UTF_8)
+    }
     private fun decode(data:ByteArray):String {
         fun strict(charset:java.nio.charset.Charset,bytes:ByteArray=data)=charset.newDecoder()
             .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)

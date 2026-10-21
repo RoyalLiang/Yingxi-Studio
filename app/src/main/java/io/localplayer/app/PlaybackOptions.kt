@@ -76,7 +76,7 @@ import java.util.Locale
                     item{TrackChoice("自动选择",audioAutomatic){prefs.audioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(null).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
                     audio.forEachIndexed{g,group->for(i in 0 until group.length){
                         item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"音轨 ${g+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
-                            prefs.audioLanguage=group.getTrackFormat(i).language
+                            if(prefs.rememberManual)prefs.audioLanguage=group.getTrackFormat(i).language
                             controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                         }}
                     }}
@@ -85,12 +85,12 @@ import java.util.Locale
                 item{Text("字幕",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val disabled=parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
                 val textAutomatic=!disabled&&parameters.overrides.keys.none{it.type==C.TRACK_TYPE_TEXT}
-                item{TrackChoice("关闭字幕",disabled){prefs.subtitlesDisabled=true;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}}
-                item{TrackChoice("自动选择",textAutomatic){prefs.subtitlesDisabled=false;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage(prefs.textLanguage).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()}}
+                item{TrackChoice("关闭字幕",disabled){if(prefs.rememberManual)prefs.subtitlesDisabled=true;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}}
+                item{TrackChoice("自动选择",textAutomatic){if(prefs.rememberManual)prefs.subtitlesDisabled=false;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage(prefs.textLanguage).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()}}
                 val texts=tracks.groups.filter{it.type==C.TRACK_TYPE_TEXT}
                 texts.forEachIndexed{g,group->for(i in 0 until group.length){
                     item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${g+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
-                        prefs.subtitlesDisabled=false;prefs.textLanguage=group.getTrackFormat(i).language
+                        if(prefs.rememberManual)prefs.subtitlesDisabled=false;if(prefs.rememberManual)prefs.textLanguage=group.getTrackFormat(i).language
                         controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                     }}
                 }}
