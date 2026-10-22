@@ -65,6 +65,7 @@ class StationChapterRegressionTest {
         capture("chapter-two")
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("chapter-next"))
         ui.onNodeWithTag("chapter-next").performClick()
+        ui.onNodeWithText(if(context.resources.configuration.locales[0].language=="zh")"未署名，也留一个位置" else "A place for an unsigned reply").assertIsDisplayed()
         ui.onNodeWithTag("chapter-position").assertTextEquals(if(context.resources.configuration.locales[0].language=="zh")"第 2 / 3 封" else "Letter 2 / 3")
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-chapter:chapter_01"))
         ui.onNodeWithTag("world-chapter:chapter_01").performClick()

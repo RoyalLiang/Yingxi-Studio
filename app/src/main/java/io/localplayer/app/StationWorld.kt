@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 internal data class WorldText(val zh:String,val en:String) { fun inLanguage(language:String)=if(language=="zh")zh else en }
 internal data class WorldPlace(val id:String,val name:WorldText,val kind:WorldText,val description:WorldText,val x:Float,val y:Float,val known:Boolean)
@@ -63,6 +64,8 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     var placeId by rememberSaveable{mutableStateOf("station")}
     var personId by rememberSaveable{mutableStateOf("axi")}
     var quote by rememberSaveable{mutableIntStateOf(0)}
+    val worldScroll=rememberScrollState()
+    val readerScope=rememberCoroutineScope()
     val person=world.people.first{it.id==personId}
     val place=world.places.first{it.id==placeId}
     Column(Modifier.fillMaxSize().background(Paper).then(if(embedded)Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing)).testTag("station-world")) {
@@ -70,9 +73,9 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             if(!embedded)IconButton(onClick=back,modifier=Modifier.testTag("archives-back")){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(lang=="zh")"返回" else "Back")}
             Text(if(embedded){if(lang=="zh")"探索"else"Explore"}else if(lang=="zh")"档案室"else"Station archives",fontSize=23.sp,fontWeight=FontWeight.SemiBold,color=Ink)
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(worldScroll).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             if(!embedded) {
-            if(embedded) StationChapterReader(world,lang) else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
+            if(embedded) StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }} else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
@@ -114,7 +117,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             }
             }
             if(embedded) {
-            if(embedded) StationChapterReader(world,lang) else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
+            if(embedded) StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }} else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             WorldMap(world,placeId,lang){placeId=it}
