@@ -90,9 +90,9 @@ import io.localplayer.core.Protocol
         Box(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-sheet")) {
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
-                    Row(verticalAlignment=Alignment.CenterVertically){
-                    Text(if(adding) "连接避难所" else if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.weight(1f).testTag("connection-title"), fontSize=26.sp,fontWeight=FontWeight.Bold)
-                    IconButton(onClick=vm::dismissDraft,modifier=Modifier.testTag("connection-close")){Icon(Icons.Rounded.Close,"关闭")}
+                Row(verticalAlignment=Alignment.CenterVertically){
+                        Text(if(adding) "连接避难所" else if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.weight(1f).testTag("connection-title"), fontSize=26.sp,fontWeight=FontWeight.Bold)
+                        IconButton(onClick=vm::dismissDraft,modifier=Modifier.testTag("connection-close")){Icon(Icons.Rounded.Close,"关闭")}
                 }
                 Spacer(Modifier.height(16.dp))
                 if(adding){

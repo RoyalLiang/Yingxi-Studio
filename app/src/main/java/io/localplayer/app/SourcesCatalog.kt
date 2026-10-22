@@ -46,8 +46,8 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
     var organize by remember { mutableStateOf<SourceBookmark?>(null) }
     var groupDialog by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().testTag("source-list")) {
-        FlowRow(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp, top = 20.dp, bottom = 20.dp), horizontalArrangement=Arrangement.SpaceBetween, verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.widthIn(max=240.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp, top = 20.dp, bottom = 20.dp), verticalAlignment=Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(end=8.dp)) {
                 Text("避难所", fontSize = 32.sp, letterSpacing = (-.7).sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text(if (vm.sources.isEmpty()) "把远处的影像接回片架。" else "已登记 ${vm.sources.size} 处 · 随时回来", fontSize = 14.sp, color = Muted)
