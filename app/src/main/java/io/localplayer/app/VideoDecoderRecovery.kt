@@ -92,7 +92,7 @@ internal class VideoDecoderRecovery(
         if(player.currentMediaItem==null)return false
         val index=player.currentMediaItemIndex;val position=recoveryPosition();val playing=player.playWhenReady
         attempted=true;this.reason=reason;factory.forceSoftware=true;firstFrame=false;readySince=0
-        android.util.Log.d("YingxiDecoder","HEVC software fallback: $reason")
+        android.util.Log.d("YingxiDecoder","HEVC software fallback: $reason playing=$playing position=$position")
         // Release the failed Surface producer before FFmpeg acquires the same output Surface.
         player.stop()
         selector.parameters=selector.parameters.buildUpon().setRendererDisabled(factory.nativeVideoIndex,true).build()

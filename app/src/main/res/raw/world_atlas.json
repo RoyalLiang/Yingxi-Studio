@@ -306,6 +306,10 @@
         {
           "zh": "昨晚有位觉醒者路过，帮我把回声海飘来的杂音滤干净了；原来那是文明纪元最后一班列车的报站声。",
           "en": "An Awakened traveler passed by last night and helped me filter the static from the Echo Sea; it turned out to be the station call of the Civilization Era's last train."
+        },
+        {
+          "zh": "线盘别缠死。留一截松线，下次检修才不必把整架拆开。",
+          "en": "Leave some slack on the cable reel. The next repair should not mean taking the whole rack apart."
         }
       ],
       "personality": {
@@ -472,6 +476,13 @@
       "text": {
         "zh": "地下站的日常与共生生态归入同一套档案；性格侧写、路标和双语札记都补齐了侧签。",
         "en": "Underground life and symbiotic ecology join one archive, with clear labels for resident profiles, markers and bilingual journal notes."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.38",
+      "text": {
+        "zh": "迟灯松开检修架后缠死的线盘，用旧皮带收好余线，给下一次换接头留出转身的空隙。",
+        "en": "Chideng untangles the cable reel behind the repair rack and gathers the slack with an old belt, leaving room for the next connector repair."
       }
     }
   ],
@@ -755,8 +766,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",

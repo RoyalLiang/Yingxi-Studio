@@ -92,6 +92,7 @@ class RemoteDataSource : BaseDataSource(true) {
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec);closed=false;uri=dataSpec.uri;position=dataSpec.position;transferred=0;openedAt=android.os.SystemClock.elapsedRealtime()
         trace("open offset=$position")
+        val openNanos=System.nanoTime()
         try {
             val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open(dataSpec.position));file=opened
             if(closed) { opened.close();throw InterruptedIOException("读取已取消") }
@@ -99,7 +100,8 @@ class RemoteDataSource : BaseDataSource(true) {
             val available=opened.size-position
             remaining=if(dataSpec.length==C.LENGTH_UNSET.toLong()) available else minOf(available,dataSpec.length)
             started=true;transferStarted(dataSpec);trace("opened offset=$position remaining=$remaining took=${android.os.SystemClock.elapsedRealtime()-openedAt}ms");return remaining
-        } catch(e: Exception) { runCatching { file?.close() };file=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) }
+        } catch(e: Exception) { runCatching { file?.close() };file=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) } finally { PlaybackMetrics.opened(System.nanoTime()-openNanos) }
+
     }
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if(length==0)return 0
