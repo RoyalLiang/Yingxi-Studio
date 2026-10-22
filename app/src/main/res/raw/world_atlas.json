@@ -310,6 +310,10 @@
         {
           "zh": "线盘别缠死。留一截松线，下次检修才不必把整架拆开。",
           "en": "Leave some slack on the cable reel. The next repair should not mean taking the whole rack apart."
+        },
+        {
+          "zh": "先记哪盏灯先灭，再拿钳子。一次换三根线，谁也说不清是哪根坏了。",
+          "en": "Note which lamp went dark first, then reach for the pliers. Change three wires at once and nobody knows which one was faulty."
         }
       ],
       "personality": {
@@ -483,6 +487,13 @@
       "text": {
         "zh": "迟灯松开检修架后缠死的线盘，用旧皮带收好余线，给下一次换接头留出转身的空隙。",
         "en": "Chideng untangles the cable reel behind the repair rack and gathers the slack with an old belt, leaving room for the next connector repair."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.39",
+      "text": {
+        "zh": "迟灯给检修纸留出一栏，先记哪盏灯灭了、等了多久，再拿钳子查接头。",
+        "en": "Chideng leaves a column on the repair slip for which lamp went dark and how long it waited before reaching for the pliers."
       }
     }
   ],
@@ -766,8 +777,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
