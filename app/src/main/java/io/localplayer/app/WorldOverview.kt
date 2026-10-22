@@ -28,7 +28,16 @@ internal data class WorldSurfaceNote(val id:String,val author:String,val eyebrow
     val lang=androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
     val note=world.surfaceNotes.first { it.id=="history_empty" }
     val person=world.people.first { it.id==note.author }
-    StationCharacterRow(person.portrait,note.title.inLanguage(lang),note.body.inLanguage(lang),modifier)
+    Surface(modifier.fillMaxWidth(),color=Paper,shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp)) {
+        Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                StationPortrait(person.portrait,person.name.inLanguage(lang),Modifier.size(52.dp),false)
+                Text(person.name.inLanguage(lang),fontSize=12.sp,color=Berry)
+            }
+            Text(note.title.inLanguage(lang),fontSize=12.sp,color=Muted)
+            Text(note.body.inLanguage(lang),fontSize=14.sp,lineHeight=24.sp,color=Ink)
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
