@@ -100,9 +100,9 @@ class SourceUpdateRegressionTest {
         assertFalse(vm.draft!!.allowHttp)
     }
     @Test fun releaseLetterKeepsParagraphsAndItsOwnLanguage(){
-        val raw="# Title\n\n## 中文\n\n【拾荒者信笺】\n柜台收到新信。\n1. 自动扫描移到独立入口。\n\n## English\n\n[Scavenger letter]\nThe counter has a new letter.\n1. Discovery has its own entrance.\n"
+        val raw="# Title\n\n## 中文\n\n【拾荒者信笺】\n柜台收到新信。\n1. 搜寻附近据点移到独立入口。\n\n## English\n\n[Scavenger letter]\nThe counter has a new letter.\n1. Discovery has its own entrance.\n"
         val chinese=displayReleaseNotes(raw,"zh")
-        assertTrue(chinese.contains("柜台收到新信。\n1. 自动扫描"));assertFalse(chinese.contains("The counter"))
+        assertTrue(chinese.contains("柜台收到新信。\n1. 搜寻附近据点"));assertFalse(chinese.contains("The counter"))
         val english=displayReleaseNotes(raw,"en")
         assertTrue(english.contains("The counter"));assertFalse(english.contains("柜台"))
         val legacy=raw.replace("\n\n## English","\n### 验证与限制\n- Old audit result.\n\n## English")
@@ -110,7 +110,7 @@ class SourceUpdateRegressionTest {
     }
     @Test fun fetchedVersionAndLetterOpenTogetherWithDownloadStillReachable(){
         val version="1.9.0-alpha.1"
-        val raw="## 中文\n\n【拾荒者信笺】\n"+(1..30).joinToString("\n"){"柜台信件 "+it+"：自动扫描的新路标已经安放。"}+
+        val raw="## 中文\n\n【拾荒者信笺】\n"+(1..30).joinToString("\n"){"柜台信件 "+it+"：搜寻附近据点的新路标已经安放。"}+
             "\n\n## English\n\n[Scavenger letter]\n"+(1..30).joinToString("\n"){"Letter "+it+": the new discovery signpost is in place."}
         val asset=JSONObject().put("name","yingxi-"+version+"-199.apk").put("state","uploaded").put("size",100)
             .put("digest","sha256:"+"b".repeat(64)).put("browser_download_url","https://github.com/"+AppUpdates.REPOSITORY+"/releases/download/v"+version+"/yingxi-"+version+"-199.apk")

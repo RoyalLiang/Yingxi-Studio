@@ -122,7 +122,7 @@ class PlayerPolishTest {
     }
     @Test fun loadingContinueCardKeepsItsLayoutAndAnchor(){
         val loading=mutableStateOf(false)
-        val media=MediaRef("layout-preview","很长的影片名称 · 继续播放时保持页面位置","本机")
+        val media=MediaRef("layout-preview","很长的影片名称 · 继续放映时保持页面位置","本机")
         val entry=HistoryEntry(media,4500,30000,0,false)
         ui.activity.setContent{PlayerTheme{Column{
             ContinueCard(entry,preparing=loading.value){}

@@ -127,7 +127,7 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     val offerInstall={
         if(context.packageManager.canRequestPackageInstalls())install()
         else runCatching{permission.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+context.packageName)))}
-            .onFailure{vm.fail("请在系统设置中允许映汐放映室安装应用")}
+            .onFailure{vm.fail("请在系统设置中允许映汐放映站安装应用")}
         Unit
     }
     LaunchedEffect(vm.ready){if(vm.ready!=null&&!vm.installationOffered){vm.installationOffered=true;offerInstall()}}

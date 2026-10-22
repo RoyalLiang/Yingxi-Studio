@@ -51,11 +51,11 @@ import androidx.compose.ui.unit.sp
                 FlowRow(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.padding(top=4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("映汐", modifier = Modifier.alignByBaseline(), fontSize = brandSize, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, maxLines = 1)
-                        Text("放映室", modifier = Modifier.alignByBaseline(), fontSize = 13.sp, color = Muted, letterSpacing = 3.sp, maxLines = 1)
+                        Text("放映站", modifier = Modifier.alignByBaseline(), fontSize = 13.sp, color = Muted, letterSpacing = 3.sp, maxLines = 1)
                     }
                     Row {
                         IconButton(onClick = openLocal) { Icon(Icons.Rounded.FolderOpen, "打开视频", tint = Ink) }
-                        IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "设置", tint = Muted) }
+                        IconButton(onClick = onSettings, modifier = Modifier.testTag("open-settings")) { Icon(Icons.Rounded.Settings, "站务设置", tint = Muted) }
                     }
                 }
             }
@@ -66,7 +66,7 @@ import androidx.compose.ui.unit.sp
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("继续观看", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                        Text("继续放映", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                         ContinueCard(entry, vm.preparingKey == entry.media.key) { vm.resume(entry) }
                     }
                 }
@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.sp
                 Column(Modifier.fillMaxWidth().padding(vertical = 68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.PlayCircle, null, Modifier.size(54.dp), tint = Berry.copy(alpha = .65f))
                     Spacer(Modifier.height(24.dp))
-                    Text("还没有播放记录", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                    Text("还没有放映记录", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
                     Text("打开一部影片，下次从这里继续。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -101,7 +101,7 @@ import androidx.compose.ui.unit.sp
             if (recent.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("最近播放", Modifier.weight(1f), fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                        Text("最近放映", Modifier.weight(1f), fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                         TextButton(onClick = onHistory) { Text("全部", maxLines = 1) }
                     }
                 }
@@ -125,7 +125,7 @@ import androidx.compose.ui.unit.sp
                     Spacer(Modifier.height(5.dp))
                     Text(if (preparing) "正在准备…" else "${time(entry.positionMs)} / ${time(entry.durationMs)}", fontSize = 12.sp, lineHeight = 18.sp, color = Muted, maxLines = 2)
                 }
-                Box(Modifier.size(48.dp).clip(CircleShape).background(Berry.copy(alpha = .09f)).semantics { contentDescription = "继续播放" }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(48.dp).clip(CircleShape).background(Berry.copy(alpha = .09f)).semantics { contentDescription = "继续放映" }, contentAlignment = Alignment.Center) {
                     if (preparing) CircularProgressIndicator(Modifier.size(22.dp).testTag("continue-loading"), color = Berry, strokeWidth = 2.dp)
                     else Icon(Icons.Rounded.PlayArrow, null, Modifier.size(28.dp), tint = Berry)
                 }

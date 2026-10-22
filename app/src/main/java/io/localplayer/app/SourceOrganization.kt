@@ -22,9 +22,9 @@ class SourceOrganization(context: Context) {
     }
     fun group(name: String, id: String? = null) {
         val clean = name.trim()
-        require(clean.isNotEmpty() && clean.length <= 40) { "分组名称需为 1–40 个字符" }
+        require(clean.isNotEmpty() && clean.length <= 40) { "分册名称需为 1–40 个字符" }
         val rows = groups()
-        require(rows.none { it.id != id && it.name.equals(clean, true) }) { "已有同名分组" }
+        require(rows.none { it.id != id && it.name.equals(clean, true) }) { "已有同名分册" }
         saveGroups(rows.filterNot { it.id == id } + SourceGroup(id ?: UUID.randomUUID().toString(), clean))
     }
     fun deleteGroup(id: String) {
@@ -32,7 +32,7 @@ class SourceOrganization(context: Context) {
         saveBookmarks(bookmarks().map { if (it.groupId == id) it.copy(groupId = null) else it })
     }
     fun put(item: SourceBookmark) {
-        require(item.groupId == null || groups().any { it.id == item.groupId }) { "分组已不存在" }
+        require(item.groupId == null || groups().any { it.id == item.groupId }) { "分册已不存在" }
         val normalized = item.copy(path = Paths.clean(item.path))
         saveBookmarks(bookmarks().filterNot { it.key == normalized.key } + normalized)
     }

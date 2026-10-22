@@ -26,7 +26,7 @@ class ShelterExperienceRegressionTest {
         ui.onNodeWithTag("world-person:axi").assertDoesNotExist()
         capture("explore")
         ui.onNodeWithTag("world-node:salt").performClick().assertIsSelected()
-        ui.onNodeWithText("首页").performClick()
+        ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithTag("home-archives").performClick()
         ui.onNodeWithTag("world-person:axi").assertIsDisplayed()
         ui.onNodeWithTag("world-map").assertDoesNotExist()

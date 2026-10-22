@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.sp
     Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
-            Text(if(about)"版本" else "放映设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            Text(if(about)"版本信笺" else "站务设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             if(about)Box {
                 Box {
                 val interaction=remember{MutableInteractionSource()}
@@ -67,7 +67,7 @@ import androidx.compose.ui.unit.sp
                 val pressed by interaction.collectIsPressedAsState()
                 val tint by animateColorAsState(if(more||hovered||pressed)Berry.copy(alpha=.14f)else GroupedSurface,label="version-more-color")
                 FilledTonalIconButton(onClick={more=!more},interactionSource=interaction,colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=tint,contentColor=Berry),
-                    modifier=Modifier.testTag("version-more").hoverable(interaction).graphicsLayer{scaleX=if(pressed).94f else 1f;scaleY=scaleX}){Icon(Icons.Rounded.MoreVert,"版本更多操作")}
+                    modifier=Modifier.testTag("version-more").hoverable(interaction).graphicsLayer{scaleX=if(pressed).94f else 1f;scaleY=scaleX}){Icon(Icons.Rounded.MoreVert,"信笺更多操作")}
                 DropdownMenu(more,{more=false}) {
                     DropdownMenuItem(text={Text("阅读本版信笺")},onClick={more=false;letter="installed"})
                 DropdownMenuItem(text={Text("前往发布页")},onClick={more=false;runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,AppUpdates.RELEASES_PAGE.toUri()))}})
@@ -79,7 +79,7 @@ import androidx.compose.ui.unit.sp
             item { Surface(onClick=openAbout,shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("app-version")) {
                 Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Info,null,tint=Berry)
-                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐放映室 · 版本",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
+                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐放映站 · 版本信笺",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,tint=Muted)
                 }
             } }

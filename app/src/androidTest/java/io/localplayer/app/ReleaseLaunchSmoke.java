@@ -140,7 +140,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
     @Override public void onStart(){
         Bundle result=new Bundle();
         try{
-            launch();click("设置");click("映汐放映室 · 版本");
+            launch();click("站务设置");click("映汐放映站 · 版本信笺");
             Rect button=new Rect();await("检查更新").getBoundsInScreen(button);
             Bitmap image=getUiAutomation().takeScreenshot();
             if(image==null||button.bottom<image.getHeight()*3/4)throw new AssertionError("Update button is not at bottom");

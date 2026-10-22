@@ -158,7 +158,7 @@ fun formatSize(n:Long)=when{n>=1L.shl(30)->"%.1f GB".format(n.toDouble()/(1L.shl
     vm.settingsSourceId?.let { id -> vm.sources.firstOrNull { it.id == id }?.let { SourceSettingsSheet(vm, it) } }
     ShareSelectionDialog(vm)
     PrivateSourceAccessPrompt(vm)
-    vm.access?.let{access->AlertDialog(onDismissRequest={vm.dismissAccess()},title={Text("验证避难所")},text={Column{
+    vm.access?.let{access->AlertDialog(onDismissRequest={vm.dismissAccess()},title={Text("核验通行凭据")},text={Column{
         Text(access.source.label,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(4.dp))
         Text("${access.source.protocol} · ${access.source.host}",fontSize=13.sp,color=Muted)
         Spacer(Modifier.height(16.dp));PlayerField("密码",access.password,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password),transformation=PasswordVisualTransformation()){vm.updateAccess(password=it)}

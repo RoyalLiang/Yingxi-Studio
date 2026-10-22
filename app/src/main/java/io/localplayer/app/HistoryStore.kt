@@ -39,12 +39,12 @@ class HistoryStore(context:Context,name:String="history-v1") {
     fun entries():List<HistoryEntry> { synchronized(lock) {
         val text=prefs.getString("entries","[]") ?: "[]"
         try {
-            if(text.length>1_048_576)throw IOException("播放记录过大")
+            if(text.length>1_048_576)throw IOException("放映记录过大")
             val a=JSONArray(text)
             return (0 until a.length()).map { i -> val o=a.getJSONObject(i)
                 HistoryEntry(MediaRef.parse(o.getString("media")),o.getLong("position"),o.getLong("duration"),o.getLong("updated"),o.optBoolean("completed"))
             }.sortedByDescending { it.updatedAt }.take(100)
-        }catch(e:Exception){throw IOException("播放记录无法读取，原数据已保留；可清空记录后重试",e)}
+        }catch(e:Exception){throw IOException("放映记录无法读取，原数据已保留；可清空记录后重试",e)}
     } }
     fun token(key:String)=synchronized(lock){HistoryToken(prefs.getLong("clear-revision",0),prefs.getLong("revision-"+hash(key),0))}
     fun update(media:MediaRef,token:HistoryToken,position:Long,duration:Long,completed:Boolean):Boolean { synchronized(lock) {

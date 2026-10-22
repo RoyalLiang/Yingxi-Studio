@@ -56,7 +56,7 @@ class SourceStore(context: Context) {
     /** Presentation edits must never decrypt, replace or forget a saved credential. */
     fun updatePresentation(id: String, label: String, initialPath: String, folderName: String) = synchronized(orderLock) {
         val name = label.trim()
-        require(name.isNotEmpty() && name.length <= 100) { "避难所名称需为 1–100 个字符" }
+        require(name.isNotEmpty() && name.length <= 100) { "登记名称需为 1–100 个字符" }
         val path = io.localplayer.core.Paths.clean(initialPath)
         val rows = JSONArray(prefs.getString("sources", "[]"))
         val row = (0 until rows.length()).map { rows.getJSONObject(it) }.firstOrNull { it.getString("id") == id }

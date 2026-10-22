@@ -66,7 +66,7 @@ class WorldSettingRegressionTest {
         ui.onNodeWithTag("add-tower").assertExists()
         ui.onNodeWithText("幸存者据点").assertExists()
         ui.onNodeWithText("外部信号塔").assertExists()
-        ui.onNodeWithText("首页").performClick()
+        ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithTag("home-archives").performClick()
         ui.onNodeWithTag("world-person:axi").assertIsDisplayed()
         ui.onNodeWithTag("world-map").assertDoesNotExist()

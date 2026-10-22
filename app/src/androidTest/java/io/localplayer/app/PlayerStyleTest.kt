@@ -120,8 +120,8 @@ class PlayerStyleTest {
         ui.onNodeWithText("SFTP").performClick()
         ui.onNodeWithText("SFTP").assertIsSelected()
         ui.onNode(host).assertTextContains("nas.local")
-        ui.onNodeWithTag("connection-form").performScrollToNode(hasText("高级选项"))
-        ui.onNodeWithText("高级选项").performClick()
+        ui.onNodeWithTag("connection-form").performScrollToNode(hasText("线路设置"))
+        ui.onNodeWithText("线路设置").performClick()
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("端口") and hasSetTextAction())
         ui.onNode(hasText("端口") and hasSetTextAction()).assertTextContains("22")
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("连接并浏览"))
@@ -135,9 +135,9 @@ class PlayerStyleTest {
     }
 
     @Test fun tabAndTrackSelectionsExposeTheirState() {
-        ui.onAllNodesWithText("播放记录").filter(hasClickAction()).onFirst().performClick()
+        ui.onAllNodesWithText("放映记录").filter(hasClickAction()).onFirst().performClick()
         capture("history")
-        ui.onNodeWithText("首页").performClick()
+        ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithText("映汐").assertIsDisplayed()
         ui.runOnUiThread {
             ui.activity.setContent {
@@ -167,7 +167,7 @@ class PlayerStyleTest {
             ui.runOnIdle { androidx.lifecycle.ViewModelProvider(ui.activity)[LibraryViewModel::class.java].refreshHistory() }
             ui.onNodeWithTag("continue-player").assertIsDisplayed()
             capture("home-resume")
-            ui.onAllNodesWithText("播放记录").filter(hasClickAction()).onFirst().performClick()
+            ui.onAllNodesWithText("放映记录").filter(hasClickAction()).onFirst().performClick()
             capture("history-glass")
         } finally {
             keys.forEach(history::remove)
