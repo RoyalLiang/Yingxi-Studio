@@ -100,6 +100,8 @@ interface RemoteFile : Closeable {
 interface RemoteSession : Closeable {
     fun list(path: String): List<Entry>
     fun open(path: String): RemoteFile
+    /** Initial read position is a hint; returned files retain random access. */
+    fun open(path: String, position: Long): RemoteFile { require(position>=0);return open(path) }
 }
 interface Connector {
     fun connect(source: Source, credentials: Credentials, cancellation: Cancellation = Cancellation()): RemoteSession

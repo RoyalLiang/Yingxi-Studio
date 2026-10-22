@@ -12,25 +12,38 @@ import org.junit.Test
 
 class IndependentSourcesRegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
-    @Test fun outpostAndTowerHaveIndependentEntriesAndProtocolDropdowns(){
+    private fun capture(name:String){
+  ui.waitForIdle()
+  androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("screencap -p /sdcard/Download/source35-$name.png").use{p->java.io.FileInputStream(p.fileDescriptor).use{it.readBytes()}}
+ }
+ @Test fun singleEntryContainsCategoryTabsAndIndependentDrafts(){
         val models=ViewModelStore();lateinit var vm:LibraryViewModel
         ui.runOnIdle{vm=LibraryViewModel(ui.activity.application as Application);models.put("sources",vm);ui.activity.setContent{PlayerTheme{SourcesCatalog(vm);SourceDialogs(vm)}}}
         try{
-            ui.onNodeWithTag("add-outpost").performClick()
-            ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点")
-            ui.onNodeWithText("连接 NAS、服务器或网盘，把影像接回片架。").assertDoesNotExist()
-            ui.onNodeWithTag("connection-protocol-selector").performClick()
-            ui.onNodeWithText("SFTP").performClick()
-            ui.runOnIdle{assertEquals(Protocol.SFTP,vm.draft?.source?.protocol);vm.dismissDraft()}
-            ui.onNodeWithTag("add-tower").performClick()
-            ui.onNodeWithTag("connection-title").assertTextEquals("接入外部信号塔")
-            ui.onNodeWithTag("auto-scan-entry").assertDoesNotExist()
-            ui.onNodeWithTag("connection-protocol-selector").performClick()
-            ui.onNodeWithText("WebDAV").performClick()
-            ui.runOnIdle{assertEquals(Protocol.WEBDAV,vm.draft?.source?.protocol)}
-            ui.onNodeWithTag("connection-protocol-selector").performClick()
-            ui.onNodeWithText("SMB").assertDoesNotExist()
-            ui.onNodeWithText("SFTP").assertDoesNotExist()
-        }finally{ui.runOnIdle{vm.dismissDraft();models.clear()}}
+            ui.onNodeWithTag("add-outpost").assertDoesNotExist()
+ ui.onNodeWithTag("add-tower").assertDoesNotExist()
+ ui.onNodeWithTag("source-category-outpost").assertDoesNotExist()
+ ui.onNodeWithTag("add-source").performClick()
+ ui.onNodeWithTag("connection-title").assertTextEquals("连接避难所")
+ ui.onNodeWithTag("source-category-outpost").assertIsSelected()
+ capture("outpost")
+ ui.onNodeWithTag("connection-protocol-selector").performClick()
+ ui.onNodeWithText("SFTP").performClick()
+ ui.runOnIdle{vm.draft=vm.draft!!.let{it.copy(source=it.source.copy(host="outpost.invalid"),password="local-secret")}}
+ ui.onNodeWithTag("source-category-tower").performClick()
+ ui.onNodeWithTag("source-category-tower").assertIsSelected()
+ ui.onNodeWithTag("auto-scan-entry").assertDoesNotExist()
+ ui.onNodeWithTag("connection-protocol-selector").performClick()
+ ui.onNodeWithText("WebDAV").performClick()
+ capture("tower")
+ ui.runOnIdle{assertEquals(Protocol.WEBDAV,vm.draft?.source?.protocol);assertEquals("",vm.draft?.password);vm.draft=vm.draft!!.copy(webDavUrl="https://tower.invalid/dav/",password="tower-secret")}
+ ui.onNodeWithTag("source-category-outpost").performClick()
+ ui.runOnIdle{assertEquals(Protocol.SFTP,vm.draft?.source?.protocol);assertEquals("outpost.invalid",vm.draft?.source?.host);assertEquals("local-secret",vm.draft?.password)}
+ ui.onNodeWithTag("auto-scan-entry").assertExists()
+ ui.onNodeWithTag("source-category-tower").performClick()
+ ui.runOnIdle{assertEquals("https://tower.invalid/dav/",vm.draft?.webDavUrl);assertEquals("tower-secret",vm.draft?.password)}
+ ui.onNodeWithTag("connection-close").performClick()
+ ui.onNodeWithTag("connection-sheet").assertDoesNotExist()
+ }finally{ui.runOnIdle{vm.dismissDraft();models.clear()}}
     }
 }

@@ -29,7 +29,32 @@ class WebDavTest {
         }
     }
 
-    @Test fun readsReuseStreamAndSeekByRangeWithoutDownloadingPrefix() {
+    @Test fun openingAtResumePositionDoesNotReadPrefixOrProbe() {
+  val content=ByteArray(200){it.toByte()}
+  MockWebServer().use{server->
+   server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 100-199/200").setBody(Buffer().write(content,100,100)))
+   WebDavConnector().connect(source(server),Credentials("secret")).use{session->session.open("movie.mp4",100).use{file->
+    val output=ByteArray(10);assertEquals(200L,file.size);assertEquals(10,file.readAt(100,output,0,10));assertContentEquals(content.copyOfRange(100,110),output)
+   }}
+   assertEquals(1,server.requestCount);assertEquals("bytes=100-",server.takeRequest().getHeader("Range"))
+  }
+ }
+ @Test fun openingUsesOneRangeForMetadataAndFirstBytes() {
+  MockWebServer().use { server ->
+   repeat(2){server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-99/100").setBody("x".repeat(100)).setHeadersDelay(300,TimeUnit.MILLISECONDS))}
+   val started=System.nanoTime()
+   WebDavConnector().connect(source(server),Credentials("secret")).use{session->
+    session.open("movie.mp4").use{file->
+     assertEquals(100L,file.size)
+     val bytes=ByteArray(10);assertEquals(10,file.readAt(0,bytes,0,10));assertEquals("x".repeat(10),bytes.decodeToString())
+    }
+   }
+   println("DAV_FIRST_READ elapsedMs="+TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started)+" requests="+server.requestCount)
+   assertEquals(1,server.requestCount,"Opening must preserve the response used to obtain file size")
+   assertEquals("bytes=0-",server.takeRequest().getHeader("Range"))
+  }
+ }
+ @Test fun readsReuseStreamAndSeekByRangeWithoutDownloadingPrefix() {
         val content=ByteArray(2*1024*1024){(it%251).toByte()}
         MockWebServer().use { server ->
             server.dispatcher=object:Dispatcher(){override fun dispatch(request:RecordedRequest):MockResponse {
@@ -46,14 +71,13 @@ class WebDavTest {
                 }
                 assertEquals(-1,file.readAt(file.size,output,0,100))
             }}
-            assertEquals(4,server.requestCount)
-            assertEquals(listOf("bytes=0-0","bytes=0-","bytes=1500000-","bytes=0-"),(1..4).map{server.takeRequest().getHeader("Range")})
+            assertEquals(3,server.requestCount)
+            assertEquals(listOf("bytes=0-","bytes=1500000-","bytes=0-"),(1..3).map{server.takeRequest().getHeader("Range")})
         }
     }
 
     @Test fun slowStreamReturnsAvailableBytesWithoutFillingReadAheadWindow() {
         MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-0/2097152").setBody("x"))
             server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-2097151/2097152")
                 .setBody(Buffer().write(ByteArray(2097152){(it%251).toByte()})).throttleBody(8192,200,TimeUnit.MILLISECONDS))
             val pool=Executors.newSingleThreadExecutor()
@@ -72,7 +96,8 @@ class WebDavTest {
         }
     }
 
-    @Test fun rejectsIgnoredOrMismatchedRangeAndAuthenticationFailure() {
+
+ @Test fun rejectsIgnoredOrMismatchedRangeAndAuthenticationFailure() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("whole file"))
             server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 1-1/100").setBody("x"))
@@ -97,7 +122,7 @@ class WebDavTest {
             val config=source(origin).copy(secure=true,userAgent="pan.baidu.com",referer="https://www.alipan.com/")
             WebDavConnector(client).connect(config,Credentials("secret")).use{session->session.open("movie.mp4").close()}
             assertNotNull(origin.takeRequest().getHeader("Authorization"))
-            val request=cdn.takeRequest();assertNull(request.getHeader("Authorization"));assertEquals("bytes=0-0",request.getHeader("Range"));assertEquals("pan.baidu.com",request.getHeader("User-Agent"))
+            val request=cdn.takeRequest();assertNull(request.getHeader("Authorization"));assertEquals("bytes=0-",request.getHeader("Range"));assertEquals("pan.baidu.com",request.getHeader("User-Agent"))
         }}
     }
 
@@ -134,7 +159,7 @@ class WebDavTest {
             try {
                 val file=session.open("movie.mp4")
                 assertNotNull(server.takeRequest(3,TimeUnit.SECONDS))
-                val task=executor.submit<Boolean>{try{file.readAt(0,ByteArray(10),0,10);false}catch(e:IOException){true}}
+                val task=executor.submit<Boolean>{try{file.readAt(10,ByteArray(10),0,10);false}catch(e:IOException){true}}
                 assertNotNull(server.takeRequest(3,TimeUnit.SECONDS))
                 file.close()
                 assertTrue(task.get(2,TimeUnit.SECONDS))
