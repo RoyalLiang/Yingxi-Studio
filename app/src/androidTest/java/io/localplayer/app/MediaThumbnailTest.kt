@@ -102,7 +102,7 @@ class MediaThumbnailTest {
             verifyFrame(runBlocking{MediaThumbnails.load(context,media)})
             show(media,"local")
             assertNull(runBlocking { MediaThumbnails.load(context,media.copy(key=media.key+"missing",localUri=Uri.parse("content://unreadable/clip").toString())) })
-            ui.onNodeWithText("首页").assertIsDisplayed()
+            ui.onNodeWithText("放映站").assertIsDisplayed()
         } finally {
             resolver.delete(uri,null,null)
             HistoryStore(context).remove(media.key)

@@ -112,7 +112,7 @@ class UpdateDownloadService:Service() {
     private fun notification(progress:Float):Notification {
         val open=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val pause=PendingIntent.getService(this,1,Intent(this,UpdateDownloadService::class.java).setAction(PAUSE),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        return Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_brand_foreground).setContentTitle("映汐放映室 · 下载更新")
+        return Notification.Builder(this,CHANNEL).setSmallIcon(R.drawable.ic_brand_foreground).setContentTitle("映汐放映站 · 下载更新")
             .setContentText("已下载 ${(progress*100).toInt()}% · 中断后可继续").setProgress(100,(progress*100).toInt(),false).setOngoing(true)
             .setContentIntent(open).addAction(Notification.Action.Builder(null,"暂停",pause).build()).setOnlyAlertOnce(true).build()
     }

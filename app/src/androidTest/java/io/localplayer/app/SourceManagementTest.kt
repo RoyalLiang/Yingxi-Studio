@@ -65,7 +65,7 @@ class SourceManagementTest {
         ui.onNodeWithText("已收藏").assertIsDisplayed()
         ui.runOnIdle { assertTrue(vm.organization.bookmarks().first { it.sourceId == source.id }.favorite) }
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = false)) }
-        ui.onNodeWithText("已取消收藏").assertIsDisplayed()
+        ui.onNodeWithText("已取消收藏路标").assertIsDisplayed()
         ui.runOnIdle { assertFalse(vm.organization.bookmarks().first { it.sourceId == source.id }.favorite) }
     }
 
@@ -74,7 +74,7 @@ class SourceManagementTest {
         val stale = SourceBookmark(source.id, "", source.label)
         ui.runOnIdle { vm.toggleFavorite(stale); vm.toggleFavorite(stale) }
         ui.runOnIdle { assertFalse(vm.organization.bookmarks().first { it.key == stale.key }.favorite) }
-        ui.onNodeWithText("已取消收藏").assertIsDisplayed()
+        ui.onNodeWithText("已取消收藏路标").assertIsDisplayed()
     }
 
     @Test fun longCloudNameAndSettingsRemainReachableWithLargeText() {
@@ -145,7 +145,7 @@ class SourceManagementTest {
 
     @Test fun successToastIsCompactAndAboveThePage() {
         mount()
-        ui.runOnIdle { vm.notifySuccess("已取消收藏") }
+        ui.runOnIdle { vm.notifySuccess("已取消收藏路标") }
         ui.mainClock.advanceTimeBy(500)
         val toast = ui.onNodeWithTag("source-toast").getUnclippedBoundsInRoot()
         assertTrue("Toast should sit within the top safe area", toast.top.value < 100f)

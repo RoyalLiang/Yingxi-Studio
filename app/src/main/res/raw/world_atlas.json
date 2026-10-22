@@ -184,6 +184,10 @@
         {
           "zh": "片罐的标签写在侧面。盖子磨花了，名字也不会跟着丢。",
           "en": "Put the label on the side of the film can. A worn lid should not take its name with it."
+        },
+        {
+          "zh": "收到的信先压平。纸上的事，还要一件件核实。",
+          "en": "Flatten the letter first. What it says still needs checking, one thing at a time."
         }
       ]
     },
@@ -300,7 +304,7 @@
     {
       "version": "0.2.0-alpha.21",
       "text": {
-        "zh": "阿汐把「映汐放映室」的新名牌钉上门楣，又把档案室的指示牌挪到门外。迟灯擦亮了耳机上的铜线，弥途终于让画师留下了那支红铅笔。",
+        "zh": "阿汐把「映汐放映站」的新名牌钉上门楣，又把档案室的指示牌挪到门外。迟灯擦亮了耳机上的铜线，弥途终于让画师留下了那支红铅笔。",
         "en": "Axi fixed the new Yingxi Screening Room sign above the door and moved the archives sign outside. Chideng polished the copper on his headphones; Mitu finally persuaded the portrait artist to keep her red pencil."
       }
     },
@@ -331,11 +335,18 @@
         "zh": "阿汐把散落在旧信上的短句归回档案，又将词笺上的既有记录、传闻与待议事项分别注明。弥途没有把虚线改成实线。",
         "en": "Axi returned lines from old letters to the archives and marked the dictionary’s records, rumors, and proposals separately. Mitu left the dotted routes dotted."
       }
+    },
+    {
+      "version": "0.2.0-alpha.35",
+      "text": {
+        "zh": "映汐放映站换上统一的门牌。弥途带回盐环列站的未署名回信，阿汐分开记下“收到”与“证实”，迟灯写好的回条仍留在片架旁。",
+        "en": "Yingxi Station settles on one name above the door. Mitu brings an unsigned reply from the Salt Ring Stops; Axi records receipt separately from verification, while Chideng’s answer waits beside the shelf."
+      }
     }
   ],
   "boundary": {
-    "zh": "图谱呈现原创故事，不代表联网片库或已开放功能。虚线保留未证实线索；词典中的「演进提案」尚非既定事实。当前仅有第一章，第二章保留为方案。",
-    "en": "The atlas is original fiction, separate from connected libraries and available features. Dotted lines preserve unconfirmed leads; dictionary extensions marked “Proposal” are not established facts. Only Chapter I is present; Chapter II remains a plan."
+    "zh": "图谱与章节呈现原创故事，不代表联网片库或已开放的技术能力。第二章可直接手动阅读，第一章保留回看；不以使用天数、播放任务或奖励解锁。纸条已收到，寄信人、所述设备情况与新路线仍未证实。虚线与词典提案继续保留原确认层级。",
+    "en": "The atlas and chapters are original fiction, separate from connected libraries and technical capabilities. Chapter II is available by manual choice, with Chapter I kept for rereading; no usage days, viewing tasks or rewards unlock it. The note has arrived; its sender, equipment claims and any new route remain unverified. Dotted lines and dictionary proposals retain their existing status."
   },
   "lexicon": [
     {
@@ -744,6 +755,293 @@
       "summary": {
         "zh": "北脊山后的微光，只在无云的夜里出现。它是另一座有人值守的站，还是长潮留下的残像？信笺里暂时没有答案。",
         "en": "A glimmer beyond the northern ridge, visible only on clear nights. Another staffed station, or an afterimage of the Long Tide? The letters hold no answer yet."
+      }
+    },
+    {
+      "id": "reply_fragment",
+      "status": "confirmed",
+      "category": {
+        "zh": "物件与信笺",
+        "en": "Objects and letters"
+      },
+      "name": {
+        "zh": "回信残页",
+        "en": "Reply fragment"
+      },
+      "summary": {
+        "zh": "第二章中，弥途从盐环列站带回的未署名纸条，由阿汐登记并保存在映汐放映站。确认的是纸条被带回；寄信人身份、纸上描述的旧设备情况尚未证实。迟灯写好的回条尚未送出，不据此新增信路。",
+        "en": "The unsigned note Mitu brings from the Salt Ring Stops in Chapter II, registered by Axi at Yingxi Station. Its arrival is established; the sender and equipment claims are unverified. Chideng’s answer has not been sent, so it establishes no new route."
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "id": "chapter_01",
+      "introducedIn": "0.2.0-alpha.20",
+      "title": {
+        "zh": "第一章 · 灯还亮着",
+        "en": "Chapter I · The light is still on"
+      },
+      "introduction": {
+        "zh": "灯还亮着。先认得守灯的人，再沿已有的路标向外看。",
+        "en": "The light is still on. Meet the people who tend it, then follow the markers already on the map."
+      },
+      "letters": [
+        {
+          "id": "ch01_lamp",
+          "author": "axi",
+          "place": "station",
+          "title": {
+            "zh": "给归来的人留一盏灯",
+            "en": "A lamp for those returning"
+          },
+          "body": {
+            "zh": "这里是映汐放映站。阿汐收拾片架，迟灯照看旧设备，弥途把盐环列站的路标一笔笔记清。\n\n地图上的实线，留给已经走过的路。虚线后面的名字先夹在信里，等有了凭据再描实。\n\n灯还亮着。带回来的影像，慢慢看。",
+            "en": "This is Yingxi Station. Axi keeps the shelves, Chideng tends the old equipment, and Mitu records the markers to the Salt Ring Stops.\n\nSolid lines belong to paths already travelled. Names beyond the dotted lines stay between the pages until there is evidence to ink them in.\n\nThe lamp is still on. There is time to watch what you brought back."
+          }
+        }
+      ]
+    },
+    {
+      "id": "chapter_02",
+      "introducedIn": "0.2.0-alpha.35",
+      "title": {
+        "zh": "第二章 · 有人回信",
+        "en": "Chapter II · someone wrote back"
+      },
+      "introduction": {
+        "zh": "弥途沿已知信路带回一片未署名的回信。纸张到了放映站，写信的人仍留在纸外。",
+        "en": "Mitu brings an unsigned reply along the known mail route. The paper has reached the station; its writer remains outside the record."
+      },
+      "letters": [
+        {
+          "id": "ch02_fold",
+          "author": "mitu",
+          "place": "salt",
+          "title": {
+            "zh": "夹在片罐里的折纸",
+            "en": "A folded page in a film tin"
+          },
+          "body": {
+            "zh": "盐环列站的一只空片罐里，多了一张折成四折的纸。弥途没有抹掉边角的盐粉，把纸和片罐一并带回放映站。\n\n纸上写着：“上回留下的影像，我们看到了。灯到了夜里会晃，声音也只剩半段。你们还放映吗？下回请把片名写在罐身上。”\n\n没有署名，也没有新的地址。弥途在记录后面添了一行：纸条来自盐环列站；写信的人，还不知道。",
+            "en": "A page folded into quarters was waiting inside an empty film tin at the Salt Ring Stops. Mitu left the salt dust on its corners and carried both back to the station.\n\nIt read: “We saw the images left last time. At night the lamp flickers, and only half the sound remains. Are you still screening? Next time, please write the title on the tin.”\n\nThere was no signature and no new address. Mitu added one line: found at the Salt Ring Stops; writer unknown."
+          }
+        },
+        {
+          "id": "ch02_register",
+          "author": "axi",
+          "place": "station",
+          "title": {
+            "zh": "未署名，也留一个位置",
+            "en": "A place for an unsigned reply"
+          },
+          "body": {
+            "zh": "阿汐把折纸铺在干布上，用一只空片罐压住卷起的边角。侧签先写“回信残页”，寄信人一栏留白。\n\n她没有把纸上的每句话抄进已确认记录。纸条已经收到，灯和声音的情况却还没人核实。\n\n“收到”和“证实”，阿汐在登记页上隔开了两行。迟灯伸手拿纸时，她指了指片罐侧面：新写的片名也要留在这里，盖子丢了，名字还在。",
+            "en": "Axi spread the page on a dry cloth and held its curled corner beneath an empty tin. She labelled it “reply fragment” and left the sender blank.\n\nShe did not copy every claim into the confirmed record. The note had arrived, but no one had checked the lamp or the sound.\n\n“Received” and “verified” went on separate lines. When Chideng reached for the paper, Axi tapped the side of the tin: put the title here too; a missing lid should not take the name with it."
+          }
+        },
+        {
+          "id": "ch02_reply",
+          "author": "chideng",
+          "place": "station",
+          "title": {
+            "zh": "先把这盏灯稳住",
+            "en": "Steady this lamp first"
+          },
+          "body": {
+            "zh": "迟灯把检修用的垫圈串回细铁丝，腾出桌面。他对着纸条看了一会儿，没有写下远处设备的故障结论。\n\n他另找一张纸，写道：“这里还放映。片名会写在罐身上。若你经过盐环列站，请把设备的样子和缺失声音的片段记下来。”\n\n阿汐把这张回条夹在原纸后面。弥途认得的路线仍只有原来的实线；回条留在片架旁，等下一次真正出发时再带上。",
+            "en": "Chideng threaded the repair washers back onto their thin wire and cleared the desk. He studied the note without diagnosing equipment he had not seen.\n\nOn a fresh sheet he wrote: “We are still screening. The title will go on the tin. If you pass the Salt Ring Stops, record what the equipment looks like and which part of the sound is missing.”\n\nAxi filed the reply behind the original. Mitu’s known route remained the same solid line. The new page stayed beside the shelf, waiting for an actual departure."
+          }
+        }
+      ]
+    }
+  ],
+  "appNames": [
+    {
+      "id": "brand",
+      "name": {
+        "zh": "映汐放映站",
+        "en": "Yingxi Station"
+      },
+      "meaning": {
+        "zh": "应用品牌与故事据点共用名称；应用功能不等于故事实体。",
+        "en": "The app and story station share a name; app functions are separate from fictional entities."
+      }
+    },
+    {
+      "id": "source_kind",
+      "name": {
+        "zh": "据点设置／信号塔设置",
+        "en": "Outpost settings / relay settings"
+      },
+      "meaning": {
+        "zh": "按SMB/SFTP和网盘/WebDAV连接类别显示；不是新增地图地点。",
+        "en": "Names follow SMB/SFTP and cloud/WebDAV connection categories; they add no map locations."
+      }
+    },
+    {
+      "id": "remove_registration",
+      "name": {
+        "zh": "移除登记",
+        "en": "Remove registration"
+      },
+      "meaning": {
+        "zh": "只移除本机连接和目录路标，不删除原文件。",
+        "en": "Remove a local connection and its directory markers, leaving original files intact."
+      }
+    },
+    {
+      "id": "registered_sources",
+      "name": {
+        "zh": "查看已登记避难所",
+        "en": "View registered shelters"
+      },
+      "meaning": {
+        "zh": "打开远程连接目录，包含幸存者据点和外部信号塔。",
+        "en": "Open registered remote connections, including outposts and external relays."
+      }
+    },
+    {
+      "id": "verify_credentials",
+      "name": {
+        "zh": "核验通行凭据",
+        "en": "Verify connection credentials"
+      },
+      "meaning": {
+        "zh": "核对连接账户密码；不替代系统身份认证或服务器指纹核验。",
+        "en": "Check connection credentials; separate from system authentication and host-key verification."
+      }
+    },
+    {
+      "id": "read_quote",
+      "name": {
+        "zh": "轻触信纸，读下一句",
+        "en": "Tap paper for another line"
+      },
+      "meaning": {
+        "zh": "轮换人物文字语录，不播放朗读。",
+        "en": "Cycle written character quotes without speech playback."
+      }
+    },
+    {
+      "id": "home",
+      "name": {
+        "zh": "放映站",
+        "en": "Station"
+      },
+      "meaning": {
+        "zh": "首页导航。",
+        "en": "Home navigation."
+      }
+    },
+    {
+      "id": "history",
+      "name": {
+        "zh": "放映记录／最近放映",
+        "en": "Screening history / recent screenings"
+      },
+      "meaning": {
+        "zh": "本机观看记录与续播进度，不是世界纪年。",
+        "en": "Local viewing history and resume progress, separate from the story chronology."
+      }
+    },
+    {
+      "id": "resume",
+      "name": {
+        "zh": "继续放映",
+        "en": "Resume screening"
+      },
+      "meaning": {
+        "zh": "从实际保存的位置续播。",
+        "en": "Resume from the saved playback position."
+      }
+    },
+    {
+      "id": "settings",
+      "name": {
+        "zh": "站务设置",
+        "en": "Station settings"
+      },
+      "meaning": {
+        "zh": "应用全局设置；播放器内部保留播放设置。",
+        "en": "Global app settings; player controls retain playback settings."
+      }
+    },
+    {
+      "id": "version",
+      "name": {
+        "zh": "版本信笺",
+        "en": "Version letters"
+      },
+      "meaning": {
+        "zh": "查看真实版本与更新信笺，下载和安装操作保留原名。",
+        "en": "Actual versions and release letters; download and install actions retain explicit labels."
+      }
+    },
+    {
+      "id": "favorites",
+      "name": {
+        "zh": "收藏路标",
+        "en": "Saved markers"
+      },
+      "meaning": {
+        "zh": "收藏连接或目录入口，不表示影片已下载或加入影片收藏。",
+        "en": "Save connection or directory entries, without downloading or collecting media."
+      }
+    },
+    {
+      "id": "groups",
+      "name": {
+        "zh": "管理分册／分册与路标",
+        "en": "Manage sections / sections and markers"
+      },
+      "meaning": {
+        "zh": "组织已登记的连接与目录入口，不建立故事中的新机构。",
+        "en": "Organize registered connections and directory entries without establishing a fictional institution."
+      }
+    },
+    {
+      "id": "discovery",
+      "name": {
+        "zh": "搜寻附近据点",
+        "en": "Find nearby outposts"
+      },
+      "meaning": {
+        "zh": "按实际网络范围探测服务；发现候选与认证可用分开。",
+        "en": "Probe within the actual network scope; discovery is separate from authenticated access."
+      }
+    },
+    {
+      "id": "endpoint",
+      "name": {
+        "zh": "据点路标／中继路标",
+        "en": "Outpost address / relay address"
+      },
+      "meaning": {
+        "zh": "连接表单分节；地址、协议和主机IP保持准确。",
+        "en": "Connection-form headings; addresses, protocols and host IP remain explicit."
+      }
+    },
+    {
+      "id": "credentials",
+      "name": {
+        "zh": "通行凭据",
+        "en": "Connection credentials"
+      },
+      "meaning": {
+        "zh": "连接账户表单分节；用户名与密码字段不隐喻化。",
+        "en": "The connection account section; username and password remain literal."
+      }
+    },
+    {
+      "id": "advanced",
+      "name": {
+        "zh": "线路设置",
+        "en": "Connection options"
+      },
+      "meaning": {
+        "zh": "连接端口、根目录等选项；不是新的物理信路。",
+        "en": "Connection options such as port and root directory, separate from physical mail routes."
       }
     }
   ]

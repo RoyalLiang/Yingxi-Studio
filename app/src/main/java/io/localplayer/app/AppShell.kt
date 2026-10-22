@@ -50,7 +50,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",Icons.Rounded.Home),Sources("避难所",Icons.Rounded.Dns),History("播放记录",Icons.Rounded.History),Explore("探索",Icons.Rounded.Explore)}
+private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站",Icons.Rounded.Home),Sources("避难所",Icons.Rounded.Dns),History("放映记录",Icons.Rounded.History),Explore("探索",Icons.Rounded.Explore)}
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
     SourceFeedbackLifetime(vm)
@@ -149,13 +149,13 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
     var clearConfirm by rememberSaveable{mutableStateOf(false)}
     Column(Modifier.fillMaxSize()){
         Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("播放记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
-            IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空播放记录",tint=Muted)}
+            Column(Modifier.weight(1f)){Text("放映记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
+            IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空放映记录",tint=Muted)}
         }
         if(vm.history.isEmpty())Column(Modifier.fillMaxWidth().padding(32.dp),horizontalAlignment=Alignment.CenterHorizontally){
-            Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有播放记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
+            Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有放映记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
             Spacer(Modifier.height(10.dp));Text("实际播放影片后，会自动记住进度。",fontSize=14.sp,color=Muted)
-            Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("浏览局域网避难所")}
+            Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("查看已登记避难所")}
         }else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
             vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
                 item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
@@ -163,7 +163,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("首页",I
             }
         }
     }
-    if(clearConfirm)AlertDialog(onDismissRequest={clearConfirm=false},title={Text("清空播放记录？")},text={Text("将清除本机的观看记录与续播进度。避难所和密码会保留。")},confirmButton={TextButton(onClick={vm.clearHistory();clearConfirm=false}){Text("清空记录",color=MaterialTheme.colorScheme.error)}},dismissButton={TextButton(onClick={clearConfirm=false}){Text("取消")}})
+    if(clearConfirm)AlertDialog(onDismissRequest={clearConfirm=false},title={Text("清空放映记录？")},text={Text("将清除本机的观看记录与续播进度。避难所和密码会保留。")},confirmButton={TextButton(onClick={vm.clearHistory();clearConfirm=false}){Text("清空记录",color=MaterialTheme.colorScheme.error)}},dismissButton={TextButton(onClick={clearConfirm=false}){Text("取消")}})
 }
 
 internal fun historyDay(timestamp:Long):String{

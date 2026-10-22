@@ -148,7 +148,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
         ui.onNodeWithText("删除").performClick()
-        ui.onNodeWithText("删除避难所").performClick()
+        ui.onNodeWithText("移除登记").performClick()
         assertFalse(SourceStore(context).load().any{it.id==source.id})
         assertFalse(SourceStore(context).hasPassword(source.id))
         Protocols().connect(source,Credentials(TestFixtures.password)).use{session->assertTrue(session.list("").isNotEmpty())}
@@ -179,7 +179,7 @@ class SourceInteractionTest {
         ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithText(source.label).performClick()
         ui.waitUntil(5_000){vm.access!=null}
-        ui.onNodeWithText("验证避难所").assertIsDisplayed()
+        ui.onNodeWithText("核验通行凭据").assertIsDisplayed()
         ui.onNodeWithText("连接避难所").assertDoesNotExist()
         ui.runOnIdle{assertNull(vm.draft);vm.updateAccess(password=TestFixtures.password);vm.connectAccess()}
         ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
@@ -192,7 +192,7 @@ class SourceInteractionTest {
         store.update(media,store.token(media.key),1_245_000,6_480_000,false)
         try{
             mount()
-            ui.onNodeWithText("播放记录").performClick()
+            ui.onNodeWithText("放映记录").performClick()
             ui.onNodeWithText("今天").assertIsDisplayed()
             val bounds=ui.onNodeWithTag("history-row:${media.key}").getUnclippedBoundsInRoot()
             assertTrue("Mini-player row should stay compact",bounds.bottom.value-bounds.top.value<=84f)

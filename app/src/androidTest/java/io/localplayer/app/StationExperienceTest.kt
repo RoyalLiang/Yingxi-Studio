@@ -70,7 +70,7 @@ class StationExperienceTest {
     @Test fun diaryAndOptInSettingsAreReachable() {
         ui.onNodeWithTag("station-diary").assertIsDisplayed()
         ui.onNodeWithTag("open-settings").performClick()
-        ui.onNodeWithText("放映设置").assertIsDisplayed()
+        ui.onNodeWithText("站务设置").assertIsDisplayed()
         ui.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("station-gear-sound"))
         ui.onNodeWithTag("station-gear-sound").assertIsOff()
         ui.onNodeWithTag("station-gear-sound").performClick()
@@ -81,7 +81,7 @@ class StationExperienceTest {
         val buffering=mutableStateOf(true)
         ui.runOnUiThread{ui.activity.setContent{PlayerTheme{StationBuffering(buffering.value,false)}}}
         ui.onNodeWithTag("station-decoding").assertIsDisplayed()
-        ui.onNodeWithText("正在缓冲，稍候继续播放").assertDoesNotExist()
+        ui.onNodeWithText("正在缓冲，稍候继续放映").assertDoesNotExist()
         ui.onNodeWithTag("station-buffering-bubble").assertDoesNotExist()
         ui.runOnIdle{buffering.value=false}
         ui.onNodeWithTag("station-decoding").assertDoesNotExist()

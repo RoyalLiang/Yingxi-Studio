@@ -244,7 +244,7 @@ class PlaybackActivity:ComponentActivity(){
         val closeAction=android.app.RemoteAction(android.graphics.drawable.Icon.createWithResource(this,R.drawable.ic_brand_monochrome),"结束播放","结束播放",close)
         val builder=PictureInPictureParams.Builder().setCloseAction(closeAction)
             .setAspectRatio(pictureInPictureAspectRatio(size?.width?:0,size?.height?:0,size?.pixelWidthHeightRatio?:1f)).setSeamlessResizeEnabled(true)
-            .setTitle(c?.mediaMetadata?.title?:"映汐放映室").setSubtitle("映汐放映室")
+            .setTitle(c?.mediaMetadata?.title?:"映汐放映站").setSubtitle("映汐放映站")
             .setAutoEnterEnabled(hasVideo&&c?.playWhenReady==true&&c.playerError==null&&c.playbackState!=Player.STATE_ENDED&&
                 !captionPickerOpen&&!backgroundRequested&&!isFinishing)
         val rect=Rect()

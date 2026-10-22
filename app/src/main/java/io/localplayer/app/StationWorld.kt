@@ -38,7 +38,7 @@ internal data class WorldPerson(val id:String,val name:WorldText,val role:WorldT
 internal data class WorldEdge(val from:String,val to:String,val known:Boolean)
 internal data class WorldChronicle(val version:String,val text:WorldText)
 internal data class WorldTerm(val id:String,val status:String,val category:WorldText,val name:WorldText,val summary:WorldText,val proposal:WorldText?)
-internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val boundary:WorldText,val places:List<WorldPlace>,val people:List<WorldPerson>,val edges:List<WorldEdge>,val chronicles:List<WorldChronicle>,val lexicon:List<WorldTerm>) {
+internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val boundary:WorldText,val places:List<WorldPlace>,val people:List<WorldPerson>,val edges:List<WorldEdge>,val chronicles:List<WorldChronicle>,val lexicon:List<WorldTerm>,val chapters:List<WorldChapter>) {
     companion object {
         fun load(context:Context):StationWorld {
             val root=JSONObject(context.resources.openRawResource(R.raw.world_atlas).bufferedReader().use{it.readText()})
@@ -49,7 +49,8 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                 root.objects("characters").map{p->WorldPerson(p.getString("id"),p.words("name"),p.words("role"),p.words("description"),p.getString("home"),p.getString("portrait"),p.objects("quotes").map{WorldText(it.getString("zh"),it.getString("en"))})},
                 root.objects("edges").map{WorldEdge(it.getString("from"),it.getString("to"),it.getBoolean("known"))},
                 root.objects("chronicles").map{WorldChronicle(it.getString("version"),it.words("text"))},
-                root.objects("lexicon").map{WorldTerm(it.getString("id"),it.getString("status"),it.words("category"),it.words("name"),it.words("summary"),if(it.has("proposal"))it.words("proposal")else null)})
+                root.objects("lexicon").map{WorldTerm(it.getString("id"),it.getString("status"),it.words("category"),it.words("name"),it.words("summary"),if(it.has("proposal"))it.words("proposal")else null)},
+                root.objects("chapters").map{c->WorldChapter(c.getString("id"),c.words("title"),c.words("introduction"),c.objects("letters").map{l->WorldLetter(l.getString("id"),l.getString("author"),l.getString("place"),l.words("title"),l.words("body"))})})
         }
     }
 }
@@ -71,7 +72,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             if(!embedded) {
-            Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
+            StationChapterReader(world,lang)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
@@ -107,13 +108,13 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                     Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text("“"+person.quotes[quote%person.quotes.size].say()+"”",fontFamily=FontFamily.Serif,fontSize=19.sp,lineHeight=30.sp,color=Ink)
                         Text("— "+person.name.say(),fontSize=13.sp,color=Berry)
-                        Text(if(lang=="zh")"轻触信纸，听下一句" else "Tap the paper for another line",fontSize=11.sp,color=Muted)
+                        Text(if(lang=="zh")"轻触信纸，读下一句" else "Tap the paper for another line",fontSize=11.sp,color=Muted)
                     }
                 }
             }
             }
             if(embedded) {
-            Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
+            StationChapterReader(world,lang)
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             WorldMap(world,placeId,lang){placeId=it}

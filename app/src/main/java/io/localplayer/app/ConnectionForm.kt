@@ -103,7 +103,7 @@ import io.localplayer.core.Protocol
                     Row(Modifier.padding(horizontal=14.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
                         Icon(Icons.Rounded.WifiFind,null,tint=Berry,modifier=Modifier.size(22.dp))
                         Column(Modifier.weight(1f).padding(start=12.dp)){
-                            Text("自动扫描",fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+                            Text("搜寻附近据点",fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Ink)
                             Text("SMB · SFTP / SSH",fontSize=12.sp,color=Muted)
                         }
                         Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
@@ -137,7 +137,7 @@ import io.localplayer.core.Protocol
     LazyColumn(Modifier.fillMaxSize().testTag("connection-form"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (webDav) item { TextButton(onClick = chooseCloud) { Text("选择网盘接入") } }
 
-        item { Text("服务器", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
+        item { Text(if(webDav)"中继路标" else "据点路标", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
         if (webDav) {
             item { PlayerField("WebDAV 地址", d.webDavUrl, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)) { vm.draft = d.copy(webDavUrl = it) } }
             item { Text("填写完整地址，例如 https://你的服务器/dav/。", fontSize = 12.sp, color = Muted) }
@@ -152,7 +152,7 @@ import io.localplayer.core.Protocol
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)) { vm.draft = d.copy(source = d.source.copy(host = it, trustedKey = null, trustedAuthority = null)) }
         }
         item { PlayerField("名称（可选）", d.source.label) { vm.draft = d.copy(source = d.source.copy(label = it)) } }
-        item { Text("身份验证", Modifier.padding(top = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
+        item { Text("通行凭据", Modifier.padding(top = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
         item { PlayerField(if (d.source.protocol == Protocol.SMB) "用户名（可匿名）" else "用户名", d.source.username) { vm.draft = d.copy(source = d.source.copy(username = it)) } }
         item {
             PlayerField("密码", d.password, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -161,7 +161,7 @@ import io.localplayer.core.Protocol
                 }) { vm.draft = d.copy(password = it) }
         }
         if (!webDav) {
-            item { TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "收起高级选项" else "高级选项") } }
+            item { TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "收起线路设置" else "线路设置") } }
             if (advanced) {
                 item { PlayerField("端口", d.port, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)) { vm.draft = d.copy(port = it, source = d.source.copy(trustedKey = null, trustedAuthority = null)) } }
                 item { PlayerField(if (d.source.protocol == Protocol.SMB) "共享名（留空则选择共享）" else "根目录", d.source.root) { vm.draft = d.copy(source = d.source.copy(root = it)) } }
@@ -200,7 +200,7 @@ import io.localplayer.core.Protocol
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (vm.scanning) { CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp); Spacer(Modifier.width(12.dp)) }
                 Text(vm.discoveryMessage, Modifier.weight(1f), fontSize = 13.sp, color = Muted)
-                TextButton(onClick = { if (vm.scanning) vm.stopDiscovery() else if (vm.nearbyPermissionGranted) vm.discover() else requestNearby() }) { Text(if (vm.scanning) "停止" else "扫描") }
+                TextButton(onClick = { if (vm.scanning) vm.stopDiscovery() else if (vm.nearbyPermissionGranted) vm.discover() else requestNearby() }) { Text(if (vm.scanning) "停止" else "搜寻附近据点") }
             }
         }
         items(vm.candidates.filter{it.protocol==Protocol.SMB||it.protocol==Protocol.SFTP}, key = { it.id }) { candidate ->

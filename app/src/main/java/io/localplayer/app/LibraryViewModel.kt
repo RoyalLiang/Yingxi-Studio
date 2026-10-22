@@ -262,7 +262,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         job=viewModelScope.launch { try {
             val names=withContext(Dispatchers.IO){SmbShares.list(s,c,token)}
             if(id==generation){shareChoices=names;if(names.isEmpty())error="服务器未返回共享，请手动填写共享名"}
-        }catch(e:CancellationException){throw e}catch(e:Exception){if(id==generation)error="无法列出共享，请核对账户或在高级选项填写共享名（${e.javaClass.simpleName}）"}
+        }catch(e:CancellationException){throw e}catch(e:Exception){if(id==generation)error="无法列出共享，请核对账户或在线路设置填写共享名（${e.javaClass.simpleName}）"}
         finally{withContext(NonCancellable+Dispatchers.IO){token.close()};if(id==generation){busy=false;cancellation=null}} }
     }
     fun chooseShare(name:String){draft=draft?.let{it.copy(source=it.source.copy(root=name))};shareChoices=null;connectDraft()}
@@ -444,8 +444,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         error=null
         val before=organization.bookmarks().firstOrNull{it.key==item.key}
         runCatching{organization.put(item);organizationRevision++}.onSuccess{
-            notifySuccess(when{item.favorite!= (before?.favorite ?: false)->if(item.favorite)"已收藏"else"已取消收藏";else->"快捷入口已保存"})
-        }.onFailure{error=it.message ?: "快捷入口未保存，请重试"}
+            notifySuccess(when{item.favorite!= (before?.favorite ?: false)->if(item.favorite)"已收藏"else"已取消收藏路标";else->"路标已保存"})
+        }.onFailure{error=it.message ?: "路标未保存，请重试"}
     }
     fun toggleFavorite(item:SourceBookmark){
         val current=organization.bookmarks().firstOrNull{it.key==item.key} ?: item.copy(favorite=false)
@@ -465,8 +465,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 val updated=sources.first{it.id==current.id};source=updated
                 if(rootSelectionId==null&&!SourceRoot(updated.initialPath).contains(path))open(updated)
             }
-            if(announce)notifySuccess("避难所设置已保存")
-        }.onFailure{error=it.message ?: "避难所设置未保存，请重试"}.isSuccess
+            if(announce)notifySuccess("连接设置已保存")
+        }.onFailure{error=it.message ?: "连接设置未保存，请重试"}.isSuccess
     }
     fun beginRootSelection(saved:Source){settingsSourceId=null;open(saved,"",selectRoot=true)}
     fun useCurrentFolder(){
@@ -475,9 +475,9 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         val name=currentFolderName
         if(updateSourcePresentation(current,current.label,path,name,announce=false)){closeSource();notifySuccess("根目录已设置")}
     }
-    fun removeBookmark(key:String){organization.remove(key);organizationRevision++;notifySuccess("已移除快捷入口")}
+    fun removeBookmark(key:String){organization.remove(key);organizationRevision++;notifySuccess("已移除路标")}
     fun saveGroup(name:String,id:String?=null){error=null;runCatching{organization.group(name,id);organizationRevision++}.onSuccess{notifySuccess("已保存")}.onFailure{error=it.message}}
-    fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all";notifySuccess("已删除分组")}
+    fun deleteGroup(id:String){organization.deleteGroup(id);organizationRevision++;if(selectedGroup==id)selectedGroup="all";notifySuccess("已删除分册")}
     fun openLocation(item:SourceBookmark){sources.firstOrNull{it.id==item.sourceId}?.let{open(it,item.path)}}
     fun setAutoDiscovery(value:Boolean){autoDiscoveryEnabled=value;getApplication<Application>().getSharedPreferences("discovery",0).edit().putBoolean("auto",value).apply();if(!value)stopDiscovery()else if(autoActive)discover(true)}
     fun beginAutoDiscovery(){

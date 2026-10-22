@@ -81,12 +81,12 @@ class HomePolishTest {
         mount()
         ui.onNodeWithText("从这里打开").assertDoesNotExist()
         ui.onNodeWithContentDescription("打开视频").assertIsDisplayed()
-        ui.onNodeWithContentDescription("设置").assertIsDisplayed()
+        ui.onNodeWithContentDescription("站务设置").assertIsDisplayed()
     }
     @Test fun groupChoiceExposesSelectedStateInsteadOfAStringPrefix() {
         mount(groups = true)
-        ui.onNodeWithText("未分组").assertIsSelected()
-        ui.onNodeWithText("✓ 未分组").assertDoesNotExist()
+        ui.onNodeWithText("未归册").assertIsSelected()
+        ui.onNodeWithText("✓ 未归册").assertDoesNotExist()
     }
     @Test fun galleryHasOneContinueItemAndRecentTilesWithoutSourceOrLaunchRows() {
         seedHistory();mount(fontScale=1f,width=411)
@@ -94,8 +94,8 @@ class HomePolishTest {
         ui.onAllNodesWithContentDescription("打开视频").assertCountEquals(1)
         ui.onNodeWithText("从这里打开").assertDoesNotExist()
         ui.onNodeWithText("网络避难所").assertDoesNotExist()
-        ui.onNodeWithTag("home-list").performScrollToNode(hasText("最近播放"))
-        ui.onNodeWithText("最近播放").assertIsDisplayed()
+        ui.onNodeWithTag("home-list").performScrollToNode(hasText("最近放映"))
+        ui.onNodeWithText("最近放映").assertIsDisplayed()
         capture("gallery")
         ui.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-film:${savedMedia[0]}"))
         ui.onNodeWithContentDescription("记录操作 旷野来信").performClick()
@@ -123,7 +123,7 @@ class HomePolishTest {
         organization.group(name);savedGroups+=organization.groups().first{it.name==name}.id
         mount(groups=true)
         ui.onNodeWithText(name).performScrollTo().performClick().assertIsSelected()
-        ui.onNodeWithText("未分组").assertIsNotSelected()
+        ui.onNodeWithText("未归册").assertIsNotSelected()
         ui.onNodeWithText("保存").performClick()
         ui.runOnIdle{assertEquals(savedGroups.single(),vm.organization.bookmarks().first{it.sourceId==bookmarkSourceId}.groupId)}
     }
@@ -144,7 +144,7 @@ class HomePolishTest {
 
     @Test fun inAppVersionNotesUseTheCurrentChangeOnlyCopy() {
         mount(fontScale=1f,width=411)
-        ui.onNodeWithContentDescription("设置").performClick()
+        ui.onNodeWithContentDescription("站务设置").performClick()
         ui.onNodeWithTag("app-version").performClick()
         capture("updates")
         ui.onNodeWithTag("version-more").performClick()

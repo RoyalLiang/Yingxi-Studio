@@ -6,6 +6,22 @@ from pathlib import Path
 from worldbook import validate, render_glossary
 
 class WorldbookTests(unittest.TestCase):
+    def test_rejects_duplicate_chapter_letter_identity(self):
+        self.atlas['chapters'][1]['letters'][0]['id']=self.atlas['chapters'][0]['letters'][0]['id']
+        with self.assertRaisesRegex(ValueError,'letter identity'):self.check(self.atlas)
+
+    def test_rejects_unknown_chapter_author(self):
+        self.atlas['chapters'][1]['letters'][0]['author']='unknown-person'
+        with self.assertRaisesRegex(ValueError,'letter reference'):self.check(self.atlas)
+
+    def test_rejects_empty_chapter(self):
+        self.atlas['chapters'][1]['letters']=[]
+        with self.assertRaisesRegex(ValueError,'Empty chapter'):self.check(self.atlas)
+
+    def test_rejects_missing_chapter_translation(self):
+        self.atlas['chapters'][1]['letters'][0]['body']['en']=''
+        with self.assertRaisesRegex(ValueError,'Chinese English'):self.check(self.atlas)
+
     def setUp(self):
         self.atlas=json.loads((Path(__file__).resolve().parents[1]/'app/src/main/res/raw/world_atlas.json').read_text())
     def check(self,atlas):

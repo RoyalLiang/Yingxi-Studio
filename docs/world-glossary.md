@@ -4,7 +4,7 @@
 
 确认层级只约束词条正文；「演进提案」单独列示，尚未成为既定事实。核爆起源及新增聚居、生命概念来自 2026-10-21 用户确认。具体制度、机制、年代与路线仍按各条标注处理。
 
-人物、地点衔接、矛盾处理及第二章方案见[世界书](worldbook.md)。第二章当前没有剧情数据或解锁入口。
+人物、地点衔接、矛盾处理及第二章内容见[世界书](worldbook.md)。第一、二章均可手动阅读，分别保留阅读位置；第二章纸条的寄信人和所述设备情况仍未证实。
 
 | 名词 | English | 分类 | 确认层级 | 定义 | 演进提案 |
 | --- | --- | --- | --- | --- | --- |
@@ -31,11 +31,35 @@
 | 沉没档案馆 | Drowned Archive | 地点 | 传闻 | 回声海退潮时露出的圆形屋顶。拾荒者带回过它的胶片盒，馆内还有多少层，没人说得准。 | — |
 | 回声海 | Echo Sea | 地点 | 传闻 | 潮水没过旧城，风把废弃广播送回岸上。迟灯说，海声里偶尔会多出一个本不该存在的频道。 | — |
 | 远灯观测所 | Far Lantern Observatory | 地点 | 传闻 | 北脊山后的微光，只在无云的夜里出现。它是另一座有人值守的站，还是长潮留下的残像？信笺里暂时没有答案。 | — |
+| 回信残页 | Reply fragment | 物件与信笺 | 已确认设定 | 第二章中，弥途从盐环列站带回的未署名纸条，由阿汐登记并保存在映汐放映站。确认的是纸条被带回；寄信人身份、纸上描述的旧设备情况尚未证实。迟灯写好的回条尚未送出，不据此新增信路。 | — |
 
 ## 应用名称与故事实体分开解释
 
-应用保留「避难所」「外部避难所」「废墟档案库」等废土风格名称。远程媒体通过「幸存者据点」（SMB/SFTP）与「外部信号塔」（网盘/WebDAV）分别登记，「废墟档案库」指本机影像；故事中的避难所指实体聚居据点。「档案室」指人物与来信，「据点大事记」按应用版本选录变化，「相伴第 N 天」按本地首次安装日期计天。
+应用统一为「映汐放映站」，保留「避难所」「废墟档案库」等废土风格名称。远程媒体通过「幸存者据点」（SMB/SFTP）与「外部信号塔」（网盘/WebDAV）分别登记，「废墟档案库」指本机影像；故事中的避难所指实体聚居据点。「档案室」指人物与来信，「据点大事记」按应用版本选录变化，「相伴第 N 天」按本地首次安装日期计天。
 
 阿汐给旧片罐补写侧签、迟灯照看设备，属于既有据点日常，不改变建筑与路线的确认边界。「封存柜」是应用内私密目录与剧集登记，不移动或加密原文件。
 
 「今日拾获」是实际浏览目录时新记录的媒体；「信号破译中」保留「正在缓冲」的读屏说明。这些名称不代表物资掉落、文件修复、觉醒能力或章节解锁。
+
+
+## 应用称谓与功能边界
+
+| 稳定标识 | 中文 | English | 功能含义 | Meaning |
+| --- | --- | --- | --- | --- |
+| brand | 映汐放映站 | Yingxi Station | 应用品牌与故事据点共用名称；应用功能不等于故事实体。 | The app and story station share a name; app functions are separate from fictional entities. |
+| source_kind | 据点设置／信号塔设置 | Outpost settings / relay settings | 按SMB/SFTP和网盘/WebDAV连接类别显示；不是新增地图地点。 | Names follow SMB/SFTP and cloud/WebDAV connection categories; they add no map locations. |
+| remove_registration | 移除登记 | Remove registration | 只移除本机连接和目录路标，不删除原文件。 | Remove a local connection and its directory markers, leaving original files intact. |
+| registered_sources | 查看已登记避难所 | View registered shelters | 打开远程连接目录，包含幸存者据点和外部信号塔。 | Open registered remote connections, including outposts and external relays. |
+| verify_credentials | 核验通行凭据 | Verify connection credentials | 核对连接账户密码；不替代系统身份认证或服务器指纹核验。 | Check connection credentials; separate from system authentication and host-key verification. |
+| read_quote | 轻触信纸，读下一句 | Tap paper for another line | 轮换人物文字语录，不播放朗读。 | Cycle written character quotes without speech playback. |
+| home | 放映站 | Station | 首页导航。 | Home navigation. |
+| history | 放映记录／最近放映 | Screening history / recent screenings | 本机观看记录与续播进度，不是世界纪年。 | Local viewing history and resume progress, separate from the story chronology. |
+| resume | 继续放映 | Resume screening | 从实际保存的位置续播。 | Resume from the saved playback position. |
+| settings | 站务设置 | Station settings | 应用全局设置；播放器内部保留播放设置。 | Global app settings; player controls retain playback settings. |
+| version | 版本信笺 | Version letters | 查看真实版本与更新信笺，下载和安装操作保留原名。 | Actual versions and release letters; download and install actions retain explicit labels. |
+| favorites | 收藏路标 | Saved markers | 收藏连接或目录入口，不表示影片已下载或加入影片收藏。 | Save connection or directory entries, without downloading or collecting media. |
+| groups | 管理分册／分册与路标 | Manage sections / sections and markers | 组织已登记的连接与目录入口，不建立故事中的新机构。 | Organize registered connections and directory entries without establishing a fictional institution. |
+| discovery | 搜寻附近据点 | Find nearby outposts | 按实际网络范围探测服务；发现候选与认证可用分开。 | Probe within the actual network scope; discovery is separate from authenticated access. |
+| endpoint | 据点路标／中继路标 | Outpost address / relay address | 连接表单分节；地址、协议和主机IP保持准确。 | Connection-form headings; addresses, protocols and host IP remain explicit. |
+| credentials | 通行凭据 | Connection credentials | 连接账户表单分节；用户名与密码字段不隐喻化。 | The connection account section; username and password remain literal. |
+| advanced | 线路设置 | Connection options | 连接端口、根目录等选项；不是新的物理信路。 | Connection options such as port and root directory, separate from physical mail routes. |

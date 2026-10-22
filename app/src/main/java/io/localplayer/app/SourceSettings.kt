@@ -28,19 +28,19 @@ import io.localplayer.core.Source
     Box {
         IconButton(onClick = { beforeOpen(); expanded = true }, modifier = Modifier.testTag("source-menu:${source.id}")
             .background(if (expanded) Berry.copy(alpha = .10f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(15.dp))) {
-            Icon(Icons.Rounded.MoreHoriz, "避难所操作 ${source.label}", tint = if (expanded) Berry else Muted)
+            Icon(Icons.Rounded.MoreHoriz, "${source.stationKind}操作 ${source.label}", tint = if (expanded) Berry else Muted)
         }
         DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.widthIn(min = 240.dp, max = 300.dp),
             shape = RoundedCornerShape(22.dp), containerColor = GroupedSurface, tonalElevation = 0.dp) {
             Text(current.label, Modifier.padding(horizontal = 18.dp, vertical = 12.dp), fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(color = Hairline)
-            DropdownMenuItem(text = { Text("避难所设置") }, leadingIcon = { Icon(Icons.Rounded.Tune, null) }, onClick = { expanded = false; vm.showSourceSettings(source) })
-            DropdownMenuItem(text = { Text(if (current.favorite) "取消收藏" else "收藏") }, leadingIcon = { Icon(if (current.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null) }, onClick = { expanded = false; vm.toggleFavorite(current) })
-            DropdownMenuItem(text = { Text("分组与快捷入口") }, leadingIcon = { Icon(Icons.Rounded.FolderCopy, null) }, onClick = { expanded = false; organize = true })
+            DropdownMenuItem(text = { Text("${source.stationKind}设置") }, leadingIcon = { Icon(Icons.Rounded.Tune, null) }, onClick = { expanded = false; vm.showSourceSettings(source) })
+            DropdownMenuItem(text = { Text(if (current.favorite) "取消收藏路标" else "收藏路标") }, leadingIcon = { Icon(if (current.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null) }, onClick = { expanded = false; vm.toggleFavorite(current) })
+            DropdownMenuItem(text = { Text("分册与路标") }, leadingIcon = { Icon(Icons.Rounded.FolderCopy, null) }, onClick = { expanded = false; organize = true })
             DropdownMenuItem(text = { Text(if (source.id in vm.pinnedIds) "取消置顶" else "置顶") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { expanded = false; vm.togglePin(source) })
             DropdownMenuItem(text = { Text("封存目录") }, leadingIcon = { Icon(Icons.Rounded.Fingerprint, null) }, onClick = { expanded = false; vm.sealRemote(source,io.localplayer.core.Entry(current.label,current.path,true,0)) })
             HorizontalDivider(color = Hairline, modifier = Modifier.padding(vertical = 4.dp))
-            DropdownMenuItem(text = { Text("删除避难所", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) }, onClick = { expanded = false; deleting = true })
+            DropdownMenuItem(text = { Text("移除登记", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) }, onClick = { expanded = false; deleting = true })
         }
     }
     if (deleting) ConfirmSourceRemoval(vm, source) { deleting = false }
@@ -48,8 +48,8 @@ import io.localplayer.core.Source
 }
 
 @Composable internal fun ConfirmSourceRemoval(vm: LibraryViewModel, source: Source, dismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = dismiss, title = { Text("删除避难所？") }, text = { Text("移除 ${source.label} 及其快捷入口，服务器上的文件不受影响。") },
-        confirmButton = { TextButton(onClick = { vm.removeSource(source); dismiss() }) { Text("删除避难所", color = MaterialTheme.colorScheme.error) } },
+    AlertDialog(onDismissRequest = dismiss, title = { Text("移除登记？") }, text = { Text("移除 ${source.label} 及其路标，服务器上的文件不受影响。") },
+        confirmButton = { TextButton(onClick = { vm.removeSource(source); dismiss() }) { Text("移除登记", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton(onClick = dismiss) { Text("取消") } }, shape = RoundedCornerShape(28.dp))
 }
 
@@ -64,12 +64,12 @@ import io.localplayer.core.Source
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(bottom = 24.dp).testTag("source-settings"), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("避难所设置", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        Text("${source.stationKind}设置", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                         Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", Modifier.padding(top = 6.dp), fontSize = 13.sp, color = Muted)
                     }
-                    IconButton(onClick = vm::dismissSourceSettings) { Icon(Icons.Rounded.Close, "关闭避难所设置", tint = Muted) }
+                    IconButton(onClick = vm::dismissSourceSettings) { Icon(Icons.Rounded.Close, "关闭连接设置", tint = Muted) }
                 }
-                PlayerField("避难所名称", name) { name = it }
+                PlayerField("${source.stationKind}名称", name) { name = it }
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("来源根目录", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Surface(onClick = {

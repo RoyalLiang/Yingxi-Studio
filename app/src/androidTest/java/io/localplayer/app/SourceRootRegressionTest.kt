@@ -49,10 +49,10 @@ class SourceRootRegressionTest {
             ui.onNodeWithTag("breadcrumb:remote:media/series").assertDoesNotExist()
             ui.runOnIdle{vm.up();assertNull(vm.source)}
             ui.runOnIdle{
-                vm.organization.put(SourceBookmark(source.id,"media","越界快捷入口"))
+                vm.organization.put(SourceBookmark(source.id,"media","越界路标"))
                 ui.activity.setContent{PlayerTheme{SourcesCatalog(vm)}}
             }
-            ui.onNodeWithText("越界快捷入口").assertDoesNotExist()
+            ui.onNodeWithText("越界路标").assertDoesNotExist()
         } finally {ui.runOnIdle{models.clear();SourceStore(app).delete(source.id)}}
     }
     @Test fun historyReplayCannotAddOutsideRootFilesToQueue(){

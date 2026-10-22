@@ -5,7 +5,7 @@
 ## 提交一个新版本
 
 1. 在 `version.json` 设置新的 `versionName` 和 `versionCode`。
-2. 创建 `releases/v<versionName>.md`，参考已有版本说明。文件标题使用 `# 映汐放映室 <versionName> / Yingxi <versionName>`，随后依次包含 `## 中文` 和 `## English`。
+2. 创建 `releases/v<versionName>.md`，参考已有版本说明。文件标题使用 `# 映汐放映站 <versionName> / Yingxi <versionName>`，随后依次包含 `## 中文` 和 `## English`。
 3. 两种语言都只写本版实际改动的项目列表，采用已确认的“拾荒者短笺”语气。验证范围与限制单独保存在 CI 和交付记录，不放进 Release 正文。历史版本的说明格式仍可读取，不改写已发布内容。
 4. 验证并 commit、push 到 `main`。不要将其他任务未完成的改动混入提交。
 

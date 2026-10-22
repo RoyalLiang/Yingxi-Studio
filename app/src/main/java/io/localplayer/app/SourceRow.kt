@@ -71,7 +71,7 @@ import kotlin.math.roundToInt
             modifier = Modifier.fillMaxWidth().offset { IntOffset(offset.roundToInt(), 0) }.graphicsLayer { scaleX = scale; scaleY = scale }
                 .semantics { this.selected = selected; customActions = listOf(
                     CustomAccessibilityAction(if (pinned) "取消置顶" else "置顶") { pin(); true },
-                    CustomAccessibilityAction("删除避难所") { remove(); true },
+                    CustomAccessibilityAction("移除登记") { remove(); true },
                     CustomAccessibilityAction("封存目录") { privateAccess(); true }) }
                 .draggable(orientation = Orientation.Horizontal, state = rememberDraggableState { delta ->
                     val next = offset + delta
@@ -87,7 +87,7 @@ import kotlin.math.roundToInt
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (selected) Icon(Icons.Rounded.Check, "已选择避难所", Modifier.size(14.dp), tint = Berry)
                         if (pinned) Icon(Icons.Rounded.PushPin, "已置顶", Modifier.size(12.dp), tint = Berry)
-                        if (favorite) Icon(Icons.Rounded.Star, "已收藏避难所", Modifier.size(12.dp), tint = Berry)
+                        if (favorite) Icon(Icons.Rounded.Star, "已收藏路标", Modifier.size(12.dp), tint = Berry)
                         Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", fontSize = 12.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (source.initialPath.isNotEmpty()) Text("进入 $folder", Modifier.padding(top = 4.dp), fontSize = 12.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
