@@ -15,6 +15,17 @@ import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 internal class VideoOutputStateException(cause:IllegalStateException):IllegalStateException(cause)
 
+// Kotlin interface delegation inherits Java default methods instead of forwarding them.
+// Renderer defaults include speed and wake-up scheduling, so forward those explicitly.
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal open class ForwardingPlaybackRenderer(private val delegate:Renderer):Renderer by delegate {
+    override fun setPlaybackSpeed(currentPlaybackSpeed:Float,targetPlaybackSpeed:Float)=delegate.setPlaybackSpeed(currentPlaybackSpeed,targetPlaybackSpeed)
+    override fun getDurationToProgressUs(positionUs:Long,elapsedRealtimeUs:Long)=delegate.getDurationToProgressUs(positionUs,elapsedRealtimeUs)
+    override fun supportsResetPositionWithoutKeyFrameReset(positionUs:Long)=delegate.supportsResetPositionWithoutKeyFrameReset(positionUs)
+    override fun enableMayRenderStartOfStream()=delegate.enableMayRenderStartOfStream()
+    override fun release()=delegate.release()
+}
+
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun hardwarePreferredSelector(delegate:MediaCodecSelector)=MediaCodecSelector { mime,secure,tunneling ->
     val codecs=delegate.getDecoderInfos(mime,secure,tunneling)
@@ -61,7 +72,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
                 if(forceSoftware&&format.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null)androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
                 else renderer.capabilities.supportsFormat(format)
         }
-        return object:Renderer by renderer {
+        return object:ForwardingPlaybackRenderer(renderer) {
             override fun getCapabilities()=capabilities
             override fun handleMessage(messageType:Int,message:Any?) {
                 if(messageType==Renderer.MSG_SET_VIDEO_OUTPUT)videoOutput=message
@@ -92,7 +103,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
                 return software.capabilities.supportsFormat(format)
             }
         }
-        out.add(object:Renderer by software {
+        out.add(object:ForwardingPlaybackRenderer(software) {
             override fun getCapabilities()=capabilities
             override fun handleMessage(messageType:Int,message:Any?) {
                 if(messageType==Renderer.MSG_SET_VIDEO_OUTPUT)videoOutput=message

@@ -39,9 +39,8 @@ class Ui44RegressionTest {
             val second=ui.onNodeWithTag("shelter-title:/long.mp4",true).getUnclippedBoundsInRoot()
             assertEquals(first.top.value,second.top.value,.5f)
             assertEquals(first.bottom.value,second.bottom.value,.5f)
-            val one=ui.onNodeWithTag("shelter-info:/short",true).getUnclippedBoundsInRoot()
-            val two=ui.onNodeWithTag("shelter-info:/long.mp4",true).getUnclippedBoundsInRoot()
-            assertEquals(one.top.value,two.top.value,.5f)
+            ui.onNodeWithTag("shelter-info:/short",true).assertDoesNotExist()
+            ui.onNodeWithTag("shelter-info:/long.mp4",true).assertDoesNotExist()
             assertEquals(ui.onNodeWithTag("shelter-entry:/short").getUnclippedBoundsInRoot().let{it.bottom.value-it.top.value},
                 ui.onNodeWithTag("shelter-entry:/long.mp4").getUnclippedBoundsInRoot().let{it.bottom.value-it.top.value},.5f)
             val card=ui.onNodeWithTag("shelter-entry:/short").getUnclippedBoundsInRoot()
@@ -52,9 +51,8 @@ class Ui44RegressionTest {
         } finally {prefs.posters=previous}
     }
 
-    @Test fun sidecarsUseFullWidthCompactRowsAndPartialDownloadsAreNotPlayable() {
-        val entries=listOf(Entry("Elemental.2023.1080p.WEB-DL.DDP5.1.Atmos.nfo","/film.nfo",false,2048),
-            Entry("疯狂元素城.jpg","/poster.jpg",false,3000),Entry("疯狂元素城.mkv.part","/movie.mkv.part",false,4000))
+    @Test fun sourceDirectoriesHideSidecarsAndPartialDownloads() {
+        val entries=listOf(Entry("Elemental.2023.nfo","/film.nfo",false,2048),Entry("疯狂元素城.jpg","/poster.jpg",false,3000),Entry("疯狂元素城.mkv.part","/movie.mkv.part",false,4000))
         assertFalse(entries.last().isVideo)
         for(scale in listOf(1f,1.8f)) {
             ui.runOnUiThread{ui.activity.setContent{PlayerTheme{
@@ -63,16 +61,12 @@ class Ui44RegressionTest {
                     Box(Modifier.width(320.dp).fillMaxHeight()){SourceDirectory(entries,source,null,false,null,{fail("A sidecar cannot open")},{})}
                 }
             }}}
-            val rows=entries.map{ui.onNodeWithTag("directory-file:${it.path}").assertHasNoClickAction().getUnclippedBoundsInRoot()}
-            rows.forEach{assertEquals(20f,it.left.value,.5f);assertEquals(280f,it.right.value-it.left.value,.5f)}
-            assertEquals(12f,rows[1].top.value-rows[0].bottom.value,.5f)
-            assertEquals(12f,rows[2].top.value-rows[1].bottom.value,.5f)
+            entries.forEach{ui.onNodeWithText(it.name).assertDoesNotExist()}
             ui.onNodeWithText("非视频文件").assertDoesNotExist()
-            capture("directory-$scale")
         }
     }
 
-    @Test fun findCardsHaveEqualTitleAreasWithoutSourceLabels() {
+    @Test fun findCardsHaveEqualTitleAreasAndSourceLabelsOnPosters() {
         val a=StationFinding(MediaRef("fixture-short","短片.mp4","private-source-label"),0)
         val b=StationFinding(MediaRef("fixture-long","A very long film title that needs two lines.mp4","private-source-label"),0)
         ui.runOnUiThread{ui.activity.setContent{PlayerTheme{Row(Modifier.width(393.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)){
@@ -82,7 +76,7 @@ class Ui44RegressionTest {
         val one=ui.onNodeWithTag("found-title:${a.media.key}",true).getUnclippedBoundsInRoot()
         val two=ui.onNodeWithTag("found-title:${b.media.key}",true).getUnclippedBoundsInRoot()
         assertEquals(one.top.value,two.top.value,.5f);assertEquals(one.bottom.value,two.bottom.value,.5f)
-        ui.onNodeWithText("private-source-label").assertDoesNotExist()
+        ui.onAllNodesWithText("private-source-label",useUnmergedTree=true).assertCountEquals(2)
         capture("finds")
     }
 

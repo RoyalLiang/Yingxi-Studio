@@ -167,7 +167,7 @@ class SourceManagementTest {
         ui.onNodeWithText("删除").assertDoesNotExist()
         ui.runOnIdle { assertNull(vm.source); assertNull(vm.openingSource) }
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput { swipeRight() }
-        ui.onNodeWithText("封存目录").assertIsDisplayed()
+        ui.onNodeWithText("封存片架").assertIsDisplayed()
         capture("swipe-right")
     }
 

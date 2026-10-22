@@ -36,9 +36,9 @@ import io.localplayer.core.Source
             HorizontalDivider(color = Hairline)
             DropdownMenuItem(text = { Text("${source.stationKind}设置") }, leadingIcon = { Icon(Icons.Rounded.Tune, null) }, onClick = { expanded = false; vm.showSourceSettings(source) })
             DropdownMenuItem(text = { Text(if (current.favorite) "取消路标标记" else "路标") }, leadingIcon = { Icon(if (current.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline, null) }, onClick = { expanded = false; vm.toggleFavorite(current) })
-            DropdownMenuItem(text = { Text("信源") }, leadingIcon = { Icon(Icons.Rounded.FolderCopy, null) }, onClick = { expanded = false; organize = true })
+            DropdownMenuItem(text = { Text("归入分册") }, leadingIcon = { Icon(Icons.Rounded.FolderCopy, null) }, onClick = { expanded = false; organize = true })
             DropdownMenuItem(text = { Text(if (source.id in vm.pinnedIds) "取消置顶" else "置顶") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { expanded = false; vm.togglePin(source) })
-            DropdownMenuItem(text = { Text("封存目录") }, leadingIcon = { Icon(Icons.Rounded.Fingerprint, null) }, onClick = { expanded = false; vm.sealRemote(source,io.localplayer.core.Entry(current.label,current.path,true,0)) })
+            DropdownMenuItem(text = { Text(sealActionLabel(true)) }, leadingIcon = { Icon(Icons.Rounded.Fingerprint, null) }, onClick = { expanded = false; vm.sealRemote(source,io.localplayer.core.Entry(current.label,current.path,true,0)) })
             HorizontalDivider(color = Hairline, modifier = Modifier.padding(vertical = 4.dp))
             DropdownMenuItem(text = { Text("移除登记", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) }, onClick = { expanded = false; deleting = true })
         }

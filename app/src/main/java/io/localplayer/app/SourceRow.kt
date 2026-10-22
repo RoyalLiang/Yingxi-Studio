@@ -60,7 +60,7 @@ import kotlin.math.roundToInt
     val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed && !dragging) .985f else 1f, spring(stiffness = 650f), label = "source press")
     Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).height(IntrinsicSize.Min)
         .clip(RoundedCornerShape(22.dp)).testTag("source-row:${source.id}")) {
-        if (offset > 1f) SwipeAction("封存目录", Icons.Rounded.Fingerprint, Modifier.align(Alignment.CenterStart).width(82.dp).fillMaxHeight(), false) { collapse(); privateAccess() }
+        if (offset > 1f) SwipeAction("封存片架", Icons.Rounded.Fingerprint, Modifier.align(Alignment.CenterStart).width(82.dp).fillMaxHeight(), false) { collapse(); privateAccess() }
         if (offset < -1f) Row(Modifier.align(Alignment.CenterEnd).width(158.dp).fillMaxHeight(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SwipeAction(if (pinned) "取消置顶" else "置顶", Icons.Rounded.PushPin, Modifier.weight(1f).fillMaxHeight(), false) { collapse(); pin() }
             SwipeAction("删除", Icons.Rounded.DeleteOutline, Modifier.weight(1f).fillMaxHeight(), true) { collapse(); remove() }
@@ -72,7 +72,7 @@ import kotlin.math.roundToInt
                 .semantics { this.selected = selected; customActions = listOf(
                     CustomAccessibilityAction(if (pinned) "取消置顶" else "置顶") { pin(); true },
                     CustomAccessibilityAction("移除登记") { remove(); true },
-                    CustomAccessibilityAction("封存目录") { privateAccess(); true }) }
+                    CustomAccessibilityAction(sealActionLabel(true)) { privateAccess(); true }) }
                 .draggable(orientation = Orientation.Horizontal, state = rememberDraggableState { delta ->
                     val next = offset + delta
                     offset = when { next > leftLimit -> leftLimit + (next - leftLimit) * .2f; next < -rightLimit -> -rightLimit + (next + rightLimit) * .2f; else -> next }
