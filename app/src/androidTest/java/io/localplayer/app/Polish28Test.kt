@@ -50,7 +50,7 @@ class Polish28Test {
         }finally{ui.runOnUiThread{owner.clear();ui.activity.requestedOrientation=android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}}
     }
     @Test fun registrationBubbleIsCompactAndAboveBottomNavigation(){
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.runOnIdle{androidx.lifecycle.ViewModelProvider(ui.activity)[LibraryViewModel::class.java].notifyRegistration()}
         val toast=ui.onNodeWithTag("source-toast").getUnclippedBoundsInRoot()
         val root=ui.onRoot().getUnclippedBoundsInRoot()

@@ -60,12 +60,12 @@ class SourceStore(context: Context) {
         val path = io.localplayer.core.Paths.clean(initialPath)
         val rows = JSONArray(prefs.getString("sources", "[]"))
         val row = (0 until rows.length()).map { rows.getJSONObject(it) }.firstOrNull { it.getString("id") == id }
-        requireNotNull(row) { "这个避难所已移除" }
+        requireNotNull(row) { "这个信源已移除" }
         row.put("label", name).put("initialPath", path)
         prefs.edit().putString("sources", rows.toString()).apply()
-        presentation.edit { putString("start-label:$id", if (path.isEmpty()) "避难所根目录" else folderName) }
+        presentation.edit { putString("start-label:$id", if (path.isEmpty()) "信源根目录" else folderName) }
     }
-    fun startingFolderName(source: Source): String = if (source.initialPath.isEmpty()) "避难所根目录" else
+    fun startingFolderName(source: Source): String = if (source.initialPath.isEmpty()) "信源根目录" else
         presentation.getString("start-label:${source.id}", null) ?: if (source.protocol == Protocol.ALIYUN) "已选文件夹" else source.initialPath.substringAfterLast('/')
     fun delete(id: String) = synchronized(orderLock) {
         val a=JSONArray(prefs.getString("sources","[]"));val next=JSONArray()

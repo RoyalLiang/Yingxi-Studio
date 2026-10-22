@@ -14,7 +14,7 @@ class CloudSourceTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private val context=InstrumentationRegistry.getInstrumentation().targetContext
     private fun startPicker() {
-        ui.onNodeWithText("避难所").performClick();ui.onNodeWithContentDescription("添加避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick();ui.onNodeWithContentDescription("添加避难所").performClick()
         ui.onNodeWithText("WebDAV").performClick();ui.onNodeWithTag("cloud-provider-picker").assertIsDisplayed()
     }
     private fun capture(name:String) {

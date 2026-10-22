@@ -61,11 +61,11 @@ class WorldSettingRegressionTest {
     }
 
     @Test fun themedEntryNamesKeepTheirFunctionalMeaning() {
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("add-source").assertExists()
         ui.onNodeWithTag("add-tower").assertDoesNotExist()
         ui.onNodeWithText("幸存者据点").assertDoesNotExist()
- ui.onNodeWithText("外部信号塔").assertDoesNotExist()
+ ui.onNodeWithText("信号塔").assertDoesNotExist()
  ui.onNodeWithTag("add-source").performClick()
  ui.onNodeWithTag("source-category-outpost").assertExists()
  ui.onNodeWithTag("source-category-tower").assertExists()

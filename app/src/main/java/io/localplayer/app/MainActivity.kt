@@ -58,7 +58,7 @@ class MainActivity:ComponentActivity(){
         // The library uses a light palette even when Android is in dark mode.
         enableEdgeToEdge(statusBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT),
             navigationBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT))
-        configureLaunchTransition()
+        configureLaunchTransition(savedInstanceState==null)
         setContent{
         PlayerTheme{
             val openFile=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri -> if(uri!=null){
@@ -91,7 +91,7 @@ class MainActivity:ComponentActivity(){
     BackHandler(enabled=vm.draft==null&&vm.access==null){back()}
     Column(Modifier.fillMaxSize().testTag("source-browser")){
         Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty()||!selecting&&vm.path==current.initialPath)"返回避难所"else"上一级",tint=Berry)}
+            IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty()||!selecting&&vm.path==current.initialPath)"返回信源"else"上一级",tint=Berry)}
             Column(Modifier.weight(1f).padding(horizontal=8.dp)){
                 Text(if(selecting)"选择默认目录"else if(vm.path.isNotEmpty())(vm.currentDirectoryBookmark()?.label?:current.label) else current.label,fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 if(selecting||vm.path.isNotEmpty())Text(current.label,Modifier.padding(top=5.dp),fontSize=13.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -164,7 +164,7 @@ fun formatSize(n:Long)=when{n>=1L.shl(30)->"%.1f GB".format(n.toDouble()/(1L.shl
         Spacer(Modifier.height(16.dp));PlayerField("密码",access.password,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password),transformation=PasswordVisualTransformation()){vm.updateAccess(password=it)}
         Row(verticalAlignment=Alignment.CenterVertically){Text("在本机记住密码",Modifier.weight(1f),fontSize=14.sp);Switch(checked=access.remember,onCheckedChange={vm.updateAccess(remember=it)})}
         vm.error?.let{Text(it,color=MaterialTheme.colorScheme.error,fontSize=13.sp)}
-    }},confirmButton={TextButton(onClick={vm.connectAccess()},enabled=!vm.busy){Text(if(vm.busy)"正在连接…"else"打开避难所")}},dismissButton={TextButton(onClick={vm.dismissAccess()}){Text("取消")}})}
+    }},confirmButton={TextButton(onClick={vm.connectAccess()},enabled=!vm.busy){Text(if(vm.busy)"正在连接…"else"打开信源")}},dismissButton={TextButton(onClick={vm.dismissAccess()}){Text("取消")}})}
     vm.draft?.let{d ->ConnectionDialog(vm,d,requestNearby)}
     vm.trust?.let{t ->AlertDialog(onDismissRequest={vm.rejectKey()},title={Text(if(t.previous==null)"核验 SFTP 服务器身份" else "服务器身份发生变化")},text={Column{
         Text("请通过服务器管理员或独立渠道核对指纹。未信任前不会发送账号认证信息。")

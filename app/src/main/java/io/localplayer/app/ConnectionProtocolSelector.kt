@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
   Modifier.fillMaxWidth().selectableGroup(),
   horizontalArrangement=androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)
  ){
-  listOf(false to "幸存者据点",true to "外部信号塔").forEach{(tower,title)->
+  listOf(false to "幸存者据点",true to "信号塔").forEach{(tower,title)->
    val active=tower==external
    Surface(onClick={select(tower)},color=if(active)Berry.copy(alpha=.09f)else GroupedSurface,
     shape=RoundedCornerShape(16.dp),modifier=Modifier.weight(1f).testTag(if(tower)"source-category-tower"else"source-category-outpost")

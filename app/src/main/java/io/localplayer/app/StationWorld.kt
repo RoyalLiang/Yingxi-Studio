@@ -147,7 +147,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                 Text(entry.text.say(),fontSize=14.sp,lineHeight=24.sp,color=Ink)
             } }
             }
-            Text(world.boundary.say(),fontSize=11.sp,lineHeight=18.sp,color=Muted,modifier=Modifier.padding(bottom=28.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }

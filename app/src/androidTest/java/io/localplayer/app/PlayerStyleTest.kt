@@ -110,7 +110,7 @@ class PlayerStyleTest {
 
     @Test fun connectionSegmentsKeepHostAndExposeScrollableForm() {
         capture("home")
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithContentDescription("添加避难所").performClick()
         ui.onNodeWithText("SMB").assertIsSelected()
         val host = (hasText("主机 IP") or hasText("服务器地址")) and hasSetTextAction()

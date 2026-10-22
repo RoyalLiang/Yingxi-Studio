@@ -48,14 +48,14 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
     Column(Modifier.fillMaxSize().testTag("source-list")) {
         Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp, top = 20.dp, bottom = 20.dp), verticalAlignment=Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(end=8.dp)) {
-                Text("避难所", fontSize = 32.sp, letterSpacing = (-.7).sp, fontWeight = FontWeight.Bold)
+                Text("信源", fontSize = 32.sp, letterSpacing = (-.7).sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text(if (vm.sources.isEmpty()) "把远处的影像接回片架。" else "已登记 ${vm.sources.size} 处 · 随时回来", fontSize = 14.sp, color = Muted)
             }
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 IconButton(onClick=onSealed,modifier=Modifier.testTag("open-sealed-cabinet")){Icon(Icons.Rounded.Lock,"封存柜",tint=Berry)}
                 FilledIconButton(onClick={vm.add()},modifier=Modifier.size(48.dp).testTag("add-source")){
-                    Icon(Icons.Rounded.Add,"连接避难所")
+                    Icon(Icons.Rounded.Add,"登记信源")
                 }
             }
 
@@ -77,9 +77,9 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
                         Icon(if (vm.selectedGroup == "favorites") Icons.Rounded.StarOutline else Icons.Rounded.VideoLibrary, null, Modifier.size(34.dp), tint = Berry)
                     }
                     Spacer(Modifier.height(24.dp))
-                    Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有路标" else "这个分册还没有避难所", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有路标" else "这个分册还没有信源", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
-                    Text(if (vm.sources.isEmpty()) "点右上角 ＋，登记一处避难所，\n把远处的影像接回片架。" else "把常用连接或目录标记为路标，再按分册整理，回来时更好找。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(if (vm.sources.isEmpty()) "点右上角 ＋，登记一处信源，\n把远处的影像接回片架。" else "把常用连接或目录标记为路标，再按分册整理，回来时更好找。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             items(shown, key = { it.key }) { item ->

@@ -57,7 +57,7 @@ class SourceManagementTest {
         ui.onNodeWithTag("source-title:${source.id}",useUnmergedTree=true).assertDoesNotExist()
         ui.onNodeWithText("已保存的避难所").assertDoesNotExist()
         ui.onNodeWithText("网络避难所").assertDoesNotExist()
-        ui.onNodeWithText("避难所").assertIsDisplayed()
+        ui.onNodeWithText("信源").assertIsDisplayed()
     }
     @Test fun favoriteAndUnfavoriteHaveDistinctFeedback() {
         val source = mount()
@@ -79,7 +79,7 @@ class SourceManagementTest {
 
     @Test fun longCloudNameAndSettingsRemainReachableWithLargeText() {
         val source = mount(fontScale = 1.5f)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         val layouts = mutableListOf<TextLayoutResult>()
         ui.onNodeWithTag("source-title:${source.id}", useUnmergedTree = true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertFalse("Source name must wrap instead of being clipped", layouts.single().hasVisualOverflow)
@@ -97,7 +97,7 @@ class SourceManagementTest {
         val store = SourceStore(ui.activity)
         val secretBefore = ui.activity.getSharedPreferences("secrets-v1", 0).getString(source.id, null)
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = true)) }
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithContentDescription("${source.stationKind}操作 ${source.label}").performClick()
         ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithText("浏览并选择文件夹").performClick()
@@ -121,7 +121,7 @@ class SourceManagementTest {
 
     @Test fun cancellingFolderSelectionPreservesExistingDefault() {
         val source = mount(Protocol.SFTP, initialPath = "previous")
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.runOnIdle { vm.beginRootSelection(source) }
         ui.waitUntil(10_000) { vm.source != null && !vm.busy }
         ui.onNodeWithText("取消").performClick()
@@ -143,12 +143,14 @@ class SourceManagementTest {
         assertEquals(updated, store.load().first { it.id == source.id })
     }
 
-    @Test fun successToastIsCompactAndAboveThePage() {
+    @Test fun successToastIsCompactAndAboveNavigation() {
         mount()
         ui.runOnIdle { vm.notifySuccess("已取消路标标记") }
         ui.mainClock.advanceTimeBy(500)
         val toast = ui.onNodeWithTag("source-toast").getUnclippedBoundsInRoot()
-        assertTrue("Toast should sit within the top safe area", toast.top.value < 100f)
+        val root=ui.onRoot().getUnclippedBoundsInRoot()
+        assertTrue("Toast stays above navigation",toast.bottom.value < root.bottom.value-70f)
+        assertTrue("Toast stays in the lower safe area",toast.top.value > root.bottom.value/2f)
         assertTrue("Success should be a compact capsule", (toast.right-toast.left).value < 240f)
         assertTrue("Success height: $toast", (toast.bottom-toast.top).value in 47.5f..64.5f)
         capture("toast")
@@ -156,7 +158,7 @@ class SourceManagementTest {
 
     @Test fun swipeOnlyRevealsActionsAndTapCollapsesTheRow() {
         val source = mount()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput { swipeLeft() }
         ui.onNodeWithText("删除").assertIsDisplayed()
         ui.runOnIdle { assertNull(vm.source); assertNull(vm.openingSource); assertNull(vm.draft) }
@@ -165,7 +167,7 @@ class SourceManagementTest {
         ui.onNodeWithText("删除").assertDoesNotExist()
         ui.runOnIdle { assertNull(vm.source); assertNull(vm.openingSource) }
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput { swipeRight() }
-        ui.onNodeWithText("私密访问").assertIsDisplayed()
+        ui.onNodeWithText("封存目录").assertIsDisplayed()
         capture("swipe-right")
     }
 

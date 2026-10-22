@@ -9,7 +9,8 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 object PlaybackMetrics {
  data class Snapshot(val firstFrameMs:Long?,val rebufferCount:Int,val droppedFrames:Int,
   val bytes:Long,val readCalls:Long,val readTimeMs:Long,val openCalls:Long=0,
-  val openTimeMs:Long=0,val maxReadMs:Long=0,val decoder:String?=null,val decoderInitMs:Long=0)
+  val openTimeMs:Long=0,val maxReadMs:Long=0,val decoder:String?=null,val decoderInitMs:Long=0,val videoInputBuffers:Int?=null,val videoRenderedBuffers:Int?=null,
+        val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0)
  private var started=0L
  private var firstFrame:Long?=null
  private var played=false
@@ -25,17 +26,32 @@ object PlaybackMetrics {
  private var decoder:String?=null
  private var decoderInitMs=0L
  private var bufferingSince=0L
+    private var videoCounters:androidx.media3.exoplayer.DecoderCounters?=null
+    private var videoEnabled=false
+    private var videoCodecErrors=0
+    private var videoDecoderReleases=0
  @Synchronized fun reset(){
   PlaybackIoProbe.reset()
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0
+        videoCounters=null;videoEnabled=false;videoCodecErrors=0;videoDecoderReleases=0
  }
  @Synchronized fun read(count:Int,nanos:Long){bytes+=count;reads++;readNanos+=nanos;maxReadNanos=maxOf(maxReadNanos,nanos)}
  @Synchronized fun opened(nanos:Long){opens++;openNanos+=nanos}
- @Synchronized fun snapshot()=Snapshot(firstFrame,rebuffers,dropped,bytes,reads,readNanos/1_000_000,opens,openNanos/1_000_000,maxReadNanos/1_000_000,decoder,decoderInitMs)
+ @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    @Synchronized fun snapshot():Snapshot {
+        val counters=videoCounters;counters?.ensureUpdated()
+        return Snapshot(firstFrame,rebuffers,dropped,bytes,reads,readNanos/1_000_000,opens,openNanos/1_000_000,maxReadNanos/1_000_000,decoder,decoderInitMs,
+            counters?.queuedInputBufferCount,counters?.renderedOutputBufferCount,counters?.skippedInputBufferCount,videoEnabled,videoCodecErrors,videoDecoderReleases)
+    }
  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
  fun listener()=object:AnalyticsListener{
+        override fun onVideoEnabled(eventTime:AnalyticsListener.EventTime,counters:androidx.media3.exoplayer.DecoderCounters){synchronized(this@PlaybackMetrics){videoCounters=counters;videoEnabled=true}}
+        override fun onVideoDisabled(eventTime:AnalyticsListener.EventTime,counters:androidx.media3.exoplayer.DecoderCounters){synchronized(this@PlaybackMetrics){if(videoCounters===counters)videoEnabled=false}}
+        override fun onVideoCodecError(eventTime:AnalyticsListener.EventTime,error:Exception){synchronized(this@PlaybackMetrics){videoCodecErrors++}}
+        override fun onVideoDecoderReleased(eventTime:AnalyticsListener.EventTime,name:String){synchronized(this@PlaybackMetrics){videoDecoderReleases++}}
+
   override fun onMediaItemTransition(eventTime:AnalyticsListener.EventTime,mediaItem:MediaItem?,reason:Int){reset()}
   override fun onVideoDecoderInitialized(eventTime:AnalyticsListener.EventTime,name:String,initializedTimestampMs:Long,initializationDurationMs:Long){
    synchronized(this@PlaybackMetrics){decoder=name;decoderInitMs=initializationDurationMs}

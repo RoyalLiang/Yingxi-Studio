@@ -50,12 +50,12 @@ class SourcePresentationTest {
         ui.runOnIdle { vm.add() }
         ui.waitForIdle()
         val windows = WindowInspector.getGlobalWindowViews().toSet()
-        val top = ui.onNodeWithText("连接避难所").getUnclippedBoundsInRoot().top
+        val top = ui.onNodeWithText("登记信源").getUnclippedBoundsInRoot().top
         listOf("SFTP", "WebDAV", "SMB", "WebDAV", "SFTP").forEach { protocol ->
             ui.onNodeWithText(protocol).performClick()
             ui.waitForIdle()
             assertEquals("Protocol switching must retain the sheet window", windows, WindowInspector.getGlobalWindowViews().toSet())
-            assertEquals(top.value, ui.onNodeWithText("连接避难所").getUnclippedBoundsInRoot().top.value, 2f)
+            assertEquals(top.value, ui.onNodeWithText("登记信源").getUnclippedBoundsInRoot().top.value, 2f)
         }
     }
 
@@ -84,7 +84,7 @@ class SourcePresentationTest {
         ui.mainClock.advanceTimeBy(100)
         ui.onNode(hasText("服务器地址") and hasSetTextAction()).assertExists()
         ui.onNode(hasText("主机 IP") and hasSetTextAction()).assertExists()
-        ui.onAllNodesWithText("连接避难所").assertCountEquals(1)
+        ui.onAllNodesWithText("登记信源").assertCountEquals(1)
         ui.mainClock.advanceTimeBy(300)
         ui.onNode(hasText("服务器地址") and hasSetTextAction()).assertDoesNotExist()
         ui.onNode(hasText("主机 IP") and hasSetTextAction()).assertIsDisplayed()
@@ -97,7 +97,7 @@ class SourcePresentationTest {
         ui.onNodeWithText("添加第一个避难所").assertDoesNotExist()
         ui.onNodeWithText("附近服务").assertDoesNotExist()
         ui.runOnIdle { assertFalse(vm.scanning) }
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("auto-discovery").assertDoesNotExist()
         ui.onNodeWithText("附近设备 · 待验证").assertDoesNotExist()
         capture("sources")
@@ -113,7 +113,7 @@ class SourcePresentationTest {
 
     @Test fun repeatedErrorsRestartTimeoutWithoutMovingPage() {
         mount()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         val page = ui.onNodeWithTag("source-list").getUnclippedBoundsInRoot()
         ui.mainClock.autoAdvance = false
         ui.runOnIdle { vm.error = "无法连接服务器，请检查地址或网络后重试" }
@@ -166,12 +166,12 @@ class SourcePresentationTest {
 
     @Test fun largeTextKeepsProtocolAndPrimaryControlsReachable() {
         mount(fontScale = 1.5f)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithContentDescription("添加避难所").assertIsDisplayed().performClick()
         ui.onNodeWithText("SFTP").assertIsDisplayed().performClick()
         ui.onNode(hasText("主机 IP") and hasSetTextAction()).performTextInput("192.0.2.10")
         ui.onNodeWithText("SMB").performClick()
-        ui.onNodeWithText("连接避难所").assertIsDisplayed()
+        ui.onNodeWithText("登记信源").assertIsDisplayed()
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("连接并浏览"))
         ui.onNodeWithText("连接并浏览").assertIsDisplayed()
         capture("large-text")

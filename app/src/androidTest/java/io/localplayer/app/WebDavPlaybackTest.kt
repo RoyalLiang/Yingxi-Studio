@@ -45,7 +45,7 @@ class WebDavPlaybackTest {
             val keys=server.names.map{"${source.id}:$it"}
             try {
                 // Exercise the real form, including the explicit cleartext choice.
-                ui.onNodeWithText("避难所").performClick()
+                ui.onNodeWithTag("nav:Sources").performClick()
                 ui.onNodeWithContentDescription("添加避难所").performClick()
                 ui.onNodeWithText("WebDAV").performClick()
                 ui.onNodeWithTag("manual-webdav").performClick()

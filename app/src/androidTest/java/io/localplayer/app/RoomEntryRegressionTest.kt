@@ -96,7 +96,7 @@ class RoomEntryRegressionTest {
         assertFalse(layouts.single().isLineEllipsized(0))
         assertTrue(layouts.single().getLineRight(0)<=layouts.single().size.width+1f)
         assertEquals(13.sp,layouts.single().layoutInput.style.fontSize)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("add-outpost").assertIsDisplayed();ui.onNodeWithTag("add-tower").assertIsDisplayed()
         capture("shelters-large")
         ui.onNodeWithTag("add-outpost").performClick()
@@ -106,7 +106,7 @@ class RoomEntryRegressionTest {
     }
 
     @Test fun shelterRouteUsesTheWorldbookTerms() {
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("add-outpost").assertIsDisplayed();ui.onNodeWithTag("add-tower").assertIsDisplayed()
         ui.onNodeWithText("点击右上角新建",substring=true).assertDoesNotExist()
         capture("shelters")

@@ -11,7 +11,7 @@ class YPAuthActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); receive(intent) }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); receive(intent) }
     private fun receive(value: Intent) {
-        if (!AliyunCloud.callback(value)) Toast.makeText(this, "授权会话不存在或已过期，请回到避难所重新授权", Toast.LENGTH_LONG).show()
+        if (!AliyunCloud.callback(value)) Toast.makeText(this, "授权会话不存在或已过期，请回到信源重新授权", Toast.LENGTH_LONG).show()
         finish()
     }
 }
