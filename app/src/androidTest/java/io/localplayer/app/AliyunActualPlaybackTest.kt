@@ -75,7 +75,7 @@ class AliyunActualPlaybackTest {
             apiServer.dispatcher=object:Dispatcher(){
                 override fun dispatch(request:RecordedRequest):MockResponse=when(request.path){
                     "/adrive/v1.0/openFile/get"->{fileQueries.incrementAndGet();MockResponse().setBody(JSONObject().put("file_id","video").put("name",sample.name).put("type","file").put("size",data.size).toString())}
-                    "/adrive/v1.0/openFile/getDownloadUrl"->{urlQueries.incrementAndGet();MockResponse().setHeadersDelay(250,TimeUnit.MILLISECONDS).setBody(JSONObject().put("url",cdn.url("/video").toString()).toString())}
+                    "/adrive/v1.0/openFile/getDownloadUrl"->{urlQueries.incrementAndGet();MockResponse().setHeadersDelay(250,TimeUnit.MILLISECONDS).setBody(JSONObject().put("url",cdn.url("/video").toString()).apply{if(matroska)put("description","当前用户未购买权益包，下载速度可能较慢。")}.toString())}
                     else->MockResponse().setResponseCode(404)
                 }
             }
@@ -112,7 +112,7 @@ class AliyunActualPlaybackTest {
                 assertEquals("Same playback session reuses the signed location",1,urlQueries.get())
                 val report=main{JSONObject(playbackDiagnostic(player))}
                 assertTrue(report.getInt("videoInputBuffers")>0);assertTrue(report.getInt("videoRenderedBuffers")>0)
-                assertEquals("ALIYUN",report.getString("source"));assertTrue(report.getLong("rangeRequests")>0)
+                assertEquals(matroska,report.getBoolean("downloadRightsNotice"));assertEquals("ALIYUN",report.getString("source"));assertTrue(report.getLong("rangeRequests")>0)
                 assertTrue(report.getLong("sourceReadBytes")>0)
                 println("ALIYUN_ACTUAL_SEEK hevc=$hevc start=$start files=${fileQueries.get()} urls=${urlQueries.get()} ranges=${rangeQueries.get()} diagnostics=$report")
             }finally{

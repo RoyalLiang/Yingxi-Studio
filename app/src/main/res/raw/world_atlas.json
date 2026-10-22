@@ -322,6 +322,10 @@
         {
           "zh": "先记哪盏灯先灭，再拿钳子。一次换三根线，谁也说不清是哪根坏了。",
           "en": "Note which lamp went dark first, then reach for the pliers. Change three wires at once and nobody knows which one was faulty."
+        },
+        {
+          "zh": "片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。",
+          "en": "Running the projector will not bring a film case in sooner. Check the delivery road before reaching for the wrench."
         }
       ],
       "personality": {
@@ -516,6 +520,13 @@
       "text": {
         "zh": "阿汐收起片架旁重复的附记，将来处写在路牌上；迟灯把细账夹进登记簿，翻查时仍能找到。",
         "en": "Axi takes down repeated notes beside the film rack and marks the way on its sign. Chideng keeps the details in the ledger for later reference."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.42",
+      "text": {
+        "zh": "迟灯在进片口旁留一截退役胶片，试齿轮咬合；阿汐擦净片匣上的湿砂，再把到站时刻抄进登记簿。晚到的片匣与不亮的灯，分开记在两行。",
+        "en": "Chideng keeps a retired strip by the film gate to check the sprockets. Axi wipes wet sand from each case and records its arrival. Late cases and unlit lamps go on separate lines."
       }
     }
   ],

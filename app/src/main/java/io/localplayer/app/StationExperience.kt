@@ -100,6 +100,10 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
 @Composable internal fun StationBuffering(show:Boolean,allowHint:Boolean,details:@Composable ()->Unit={}) {
     val context=LocalContext.current
     var hint by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf(playbackWaitTitle()) }
+    LaunchedEffect(show) {
+        while(show){status=playbackWaitTitle();delay(1000)}
+    }
     var lastHint by remember { mutableLongStateOf(0L) }
     LaunchedEffect(show,allowHint) {
         hint=false
@@ -112,10 +116,10 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     if(show) BoxWithConstraints(Modifier.fillMaxSize()) {
         Column(Modifier.align(Alignment.Center).heightIn(max=maxHeight).verticalScroll(rememberScrollState()).padding(horizontal=24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Column(Modifier.testTag("station-decoding").clearAndSetSemantics {
-                contentDescription="信号破译中，正在缓冲";progressBarRangeInfo=ProgressBarRangeInfo.Indeterminate
+                contentDescription="$status，正在缓冲";progressBarRangeInfo=ProgressBarRangeInfo.Indeterminate
             },horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 StationDecodingMark()
-                Text("信号破译中",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Medium)
+                Text(status,color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Medium)
             }
             details()
         }
