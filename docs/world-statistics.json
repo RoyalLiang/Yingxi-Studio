@@ -3,7 +3,7 @@
     "versionName": "0.2.0-alpha.42",
     "versionCode": 44
   },
-  "atlasSha256": "2fe5d22c499f716c8fd0eeb519504da7f71571c33a45f3b8f208daf539222b40",
+  "atlasSha256": "62833bc26c1ebf486e361e436544694c88051ad326f206dd8e0d6cddc88dcd28",
   "counts": {
     "places": 6,
     "surveyedPlaces": 2,
@@ -13,10 +13,10 @@
     "unverifiedRoutes": 4,
     "characters": 3,
     "personalityProfiles": 3,
-    "quotes": 35,
+    "quotes": 36,
     "quotesByPerson": {
       "axi": 14,
-      "chideng": 15,
+      "chideng": 16,
       "mitu": 6
     },
     "terms": 28,
