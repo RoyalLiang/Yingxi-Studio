@@ -51,8 +51,8 @@ class PlaybackLease(val source: Source, val credentials: Credentials, val path: 
 object PlaybackRegistry {
     private val leases=ConcurrentHashMap<String,PlaybackLease>()
     private val closer=Executors.newSingleThreadExecutor()
-    fun add(source: Source, credentials: Credentials, path: String, name: String): Uri {
-        val token=UUID.randomUUID().toString();leases[token]=PlaybackLease(source,credentials,path)
+    fun add(source: Source, credentials: Credentials, path: String, name: String, connector:Connector=AppConnectors()): Uri {
+        val token=UUID.randomUUID().toString();leases[token]=PlaybackLease(source,credentials,path,connector)
         return Uri.Builder().scheme("localplayer").authority(token).appendPath(name).build()
     }
     fun get(uri: Uri): PlaybackLease = leases[uri.authority] ?: throw IOException("播放上下文已过期，请从避难所重新打开")
@@ -96,7 +96,7 @@ class RemoteDataSource : BaseDataSource(true) {
         val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,runCatching{PlaybackRegistry.get(dataSpec.uri).source.protocol.name}.getOrNull())
         var probeError:Throwable?=null
         try {
-            val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open(dataSpec.position));file=opened
+            val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open(dataSpec.position));file=opened;PlaybackIoProbe.attach(probe,opened.readTelemetry)
             if(closed) { opened.close();throw InterruptedIOException("读取已取消") }
             if(position>opened.size) throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             val available=opened.size-position
@@ -112,6 +112,7 @@ class RemoteDataSource : BaseDataSource(true) {
         val readAt=android.os.SystemClock.elapsedRealtime()
         val readNanos=System.nanoTime()
         val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.READ)
+        PlaybackIoProbe.attach(probe,file?.readTelemetry)
         var probeError:Throwable?=null
         try {
             val n=file?.readAt(position,buffer,offset,minOf(length.toLong(),remaining).toInt()) ?: throw IOException("文件未打开")

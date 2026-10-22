@@ -171,5 +171,136 @@ class AliyunTest {
             assertTrue(lock.isHeldByCurrentThread)
         }finally{lock.unlock();file.close();reader.join(3000)}
     }
+    @Test fun reopeningForResumeReusesFileLookupAndSignedLocation():Unit {
+        val certificate=okhttp3.tls.HeldCertificate.Builder().addSubjectAlternativeName("localhost").addSubjectAlternativeName("127.0.0.1").build()
+        val serverTls=okhttp3.tls.HandshakeCertificates.Builder().heldCertificate(certificate).build()
+        val clientTls=okhttp3.tls.HandshakeCertificates.Builder().addTrustedCertificate(certificate.certificate).build()
+        val client=OkHttpClient.Builder().sslSocketFactory(clientTls.sslSocketFactory(),clientTls.trustManager)
+            .followRedirects(false).followSslRedirects(false).build()
+        MockWebServer().use{cdn->MockWebServer().use{server->
+            cdn.useHttps(serverTls.sslSocketFactory(),false)
+            val size=4*1024*1024
+            val lookups=java.util.concurrent.atomic.AtomicInteger()
+            val locations=java.util.concurrent.atomic.AtomicInteger()
+            val leakedAuthorization=java.util.concurrent.atomic.AtomicBoolean()
+            val expireNext=java.util.concurrent.atomic.AtomicBoolean()
+            cdn.dispatcher=object:okhttp3.mockwebserver.Dispatcher(){
+                override fun dispatch(request:okhttp3.mockwebserver.RecordedRequest):MockResponse {
+                    if(request.getHeader("Authorization")!=null)leakedAuthorization.set(true)
+                    if(expireNext.getAndSet(false))return MockResponse().setResponseCode(403)
+                    val match=Regex("bytes=([0-9]+)-([0-9]*)").matchEntire(request.getHeader("Range").orEmpty())?:return MockResponse().setResponseCode(400)
+                    val start=match.groupValues[1].toInt();val end=match.groupValues[2].toIntOrNull()?:size-1
+                    val bytes=ByteArray(end-start+1){((start+it)%251).toByte()}
+                    return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $start-$end/$size")
+                        .setHeadersDelay(120,java.util.concurrent.TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(bytes))
+                }
+            }
+            server.dispatcher=object:okhttp3.mockwebserver.Dispatcher(){
+                override fun dispatch(request:okhttp3.mockwebserver.RecordedRequest):MockResponse=when(request.path){
+                    "/adrive/v1.0/openFile/get"->{lookups.incrementAndGet();MockResponse().setBody("""{"file_id":"video","name":"resume.mkv","type":"file","size":$size}""")}
+                    "/adrive/v1.0/openFile/getDownloadUrl"->{locations.incrementAndGet();MockResponse().setHeadersDelay(250,java.util.concurrent.TimeUnit.MILLISECONDS).setBody(com.google.gson.JsonObject().apply{addProperty("url",cdn.url("/movie").toString())}.toString())}
+                    else->MockResponse().setResponseCode(404)
+                }
+            }
+            val access=object:AliyunAccess{override fun <T> authorized(cancellation:Cancellation,action:(String)->T)=action("fixture")}
+            val source=Source(label="cloud",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
+            val started=System.nanoTime()
+            AliyunConnector(api(server),access,downloadClient=client).connect(source,Credentials(""),Cancellation()).use{session->
+                for(position in listOf(0L,size-512L,65536L,2*1024*1024L)){
+                    ReadAheadFile(session.open("video",position)).use{file->
+                        val bytes=ByteArray(32);assertEquals(32,file.readAt(position,bytes,0,bytes.size))
+                        assertContentEquals(ByteArray(32){((position+it)%251).toByte()},bytes)
+                    }
+                }
+            }
+            println("ALIYUN_RESUME opens=4 lookups=${lookups.get()} locations=${locations.get()} elapsedMs=${(System.nanoTime()-started)/1000000}")
+            assertFalse(leakedAuthorization.get())
+            assertEquals(1,locations.get(),"One playback session should reuse its signed URL across extractor reopen/seek")
+            assertEquals(1,lookups.get(),"Metadata for the same playback file should not be fetched on every reopen")
+            expireNext.set(true)
+            AliyunConnector(api(server),access,downloadClient=client).connect(source,Credentials(""),Cancellation()).use{session->
+                session.open("video").use{file->assertEquals(1,file.readAt(0,ByteArray(1),0,1))}
+            }
+            assertEquals(3,locations.get(),"A new session resolves once; 403 refreshes once without reusing the rejected cache entry")
+            assertEquals(2,lookups.get(),"Cached file metadata must not escape its source session")
+            assertFalse(leakedAuthorization.get())
+
+        }}
+    }
+
+    @Test fun telemetrySnapshotDoesNotWaitForBlockedBodyAndCancellationStillWorks():Unit=MockWebServer().use{server->
+        server.enqueue(MockResponse().setResponseCode(206).addHeader("Content-Range","bytes 0-7/8")
+            .setBody("abcdefgh").setBodyDelay(2,java.util.concurrent.TimeUnit.SECONDS))
+        val file=AliyunRangeFile(8,Cancellation()){server.url("/body").toString()}
+        val worker=java.util.concurrent.Executors.newSingleThreadExecutor()
+        try{
+            val reading=worker.submit<Int>{file.readAt(0,ByteArray(1),0,1)}
+            val deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(3)
+            while(file.readTelemetry.snapshot().stage!=RemoteReadTelemetry.Stage.BODY&&System.nanoTime()<deadline)Thread.sleep(5)
+            val began=System.nanoTime();val snapshot=file.readTelemetry.snapshot()
+            assertEquals(RemoteReadTelemetry.Stage.BODY,snapshot.stage)
+            assertTrue((System.nanoTime()-began)/1000000<150,"Diagnostic reads must not wait for body I/O")
+            assertEquals(1L,snapshot.rangeRequests);assertEquals(0L,snapshot.sourceBytes)
+            file.close()
+            val failure=assertFailsWith<java.util.concurrent.ExecutionException>{reading.get(2,java.util.concurrent.TimeUnit.SECONDS)}
+            assertTrue(failure.cause is IOException)
+        }finally{file.close();worker.shutdownNow()}
+    }
+
+    @Test fun continuousCloudReadKeepsOneRangeStream():Unit=MockWebServer().use{server->
+        val data=ByteArray(24*1024*1024){(it%251).toByte()}
+        val requests=java.util.concurrent.atomic.AtomicInteger()
+        server.dispatcher=object:okhttp3.mockwebserver.Dispatcher(){
+            override fun dispatch(request:okhttp3.mockwebserver.RecordedRequest):MockResponse {
+                requests.incrementAndGet()
+                val range=Regex("bytes=([0-9]+)-([0-9]*)").matchEntire(request.getHeader("Range").orEmpty())?:return MockResponse().setResponseCode(400)
+                val start=range.groupValues[1].toInt();val end=range.groupValues[2].toIntOrNull()?:data.lastIndex
+                return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $start-$end/${data.size}")
+                    .setHeadersDelay(150,java.util.concurrent.TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(data,start,end-start+1))
+            }
+        }
+        val began=System.nanoTime()
+        ReadAheadFile(AliyunRangeFile(data.size.toLong(),Cancellation()){server.url("/continuous").toString()}).use{file->
+            var position=0L;val bytes=ByteArray(8192);val digest=java.security.MessageDigest.getInstance("SHA-256")
+            while(position<file.size){
+                val n=file.readAt(position,bytes,0,bytes.size);assertTrue(n>0)
+                digest.update(bytes,0,n);position+=n
+            }
+            assertContentEquals(java.security.MessageDigest.getInstance("SHA-256").digest(data),digest.digest())
+            assertEquals(data.size.toLong(),file.readTelemetry!!.snapshot().sourceBytes)
+        }
+        println("ALIYUN_CONTINUOUS requests=${requests.get()} elapsedMs=${(System.nanoTime()-began)/1000000}")
+        assertEquals(1,requests.get(),"Continuous playback should not incur another HTTP response wait at each local chunk boundary")
+    }
+
+    @Test fun serverBoundedRangeContinuesWithoutSkippingBytes():Unit=MockWebServer().use{server->
+        val data=ByteArray(512*1024+19){(it%251).toByte()}
+        val requests=java.util.concurrent.atomic.AtomicInteger()
+        server.dispatcher=object:okhttp3.mockwebserver.Dispatcher(){
+            override fun dispatch(request:okhttp3.mockwebserver.RecordedRequest):MockResponse {
+                assertTrue(request.getHeader("Range")!!.endsWith("-"))
+                val start=request.getHeader("Range")!!.removePrefix("bytes=").removeSuffix("-").toInt()
+                val end=minOf(start+65536-1,data.lastIndex);requests.incrementAndGet()
+                return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $start-$end/${data.size}")
+                    .setBody(okio.Buffer().write(data,start,end-start+1))
+            }
+        }
+        ReadAheadFile(AliyunRangeFile(data.size.toLong(),Cancellation()){server.url("/bounded").toString()}).use{file->
+            var position=0L;val bytes=ByteArray(32768)
+            while(position<data.size){val n=file.readAt(position,bytes,0,bytes.size);assertTrue(n>0)
+                assertContentEquals(data.copyOfRange(position.toInt(),position.toInt()+n),bytes.copyOf(n));position+=n}
+        }
+        assertEquals(9,requests.get())
+    }
+
+    @Test fun changedTotalAndInvalidRangeBoundsRemainRejected():Unit=MockWebServer().use{server->
+        for(header in listOf("bytes 5-7/9","bytes 4-7/8","bytes 5-8/8","bytes 5-4/8")){
+            server.enqueue(MockResponse().setResponseCode(206).addHeader("Content-Range",header).setBody("abc"))
+            AliyunRangeFile(8,Cancellation()){server.url("/invalid").toString()}.use{file->
+                assertFailsWith<IOException>{file.readAt(5,ByteArray(3),0,3)}
+            }
+        }
+    }
+
     private fun api(server: MockWebServer) = AliyunApi(server.url("/"), OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).build())
 }

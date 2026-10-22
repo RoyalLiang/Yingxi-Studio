@@ -94,6 +94,7 @@ class Cancellation : Closeable {
 }
 
 interface RemoteFile : Closeable {
+    val readTelemetry: RemoteReadTelemetry? get() = null
     val size: Long
     fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int
 }

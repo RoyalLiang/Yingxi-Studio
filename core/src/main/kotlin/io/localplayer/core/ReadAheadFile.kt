@@ -9,6 +9,7 @@ class ReadAheadFile(private val delegate:RemoteFile,capacity:Int=1024*1024):Remo
     private var start=-1L
     private var count=0
     private val closed=AtomicBoolean(false)
+    override val readTelemetry get()=delegate.readTelemetry
     override val size get()=delegate.size
 
     @Synchronized override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {
