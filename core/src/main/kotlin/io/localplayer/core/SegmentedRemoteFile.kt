@@ -29,7 +29,8 @@ internal class SegmentedRemoteFile(
     private var previousEnd = -1L
     private val ownership = java.io.Closeable { close() }.also(cancellation::own)
 
-    private class Slot(val start: Long, val length: Int, val cancellation: Cancellation) {
+    private class Slot(val start: Long, val length: Int, val cancellation: Cancellation,
+                       val alignedStart:Long=start,val alignedLength:Int=length) {
         val monitor = Object()
         val bytes = ByteArray(length)
         var available = 0
@@ -61,11 +62,17 @@ internal class SegmentedRemoteFile(
         val stale: List<Slot>
         synchronized(state) {
             cancellation.check()
-            val (start, count) = segment(position)
+            val (alignedStart, alignedCount) = segment(position)
+            val candidate=slots.values.firstOrNull{position>=it.start&&position<it.start+it.length}
+            val ready=candidate?.let{synchronized(it.monitor){it.available>position-it.start}}==true
             // A seek discards speculative work instead of queuing behind the old position.
-            val seek = previousEnd >= 0 && position != previousEnd && slots[start] == null
+            val seek = previousEnd >= 0 && position != previousEnd && !ready
             stale = if (seek) slots.values.toList().also { slots.clear() } else emptyList()
-            slot = slots.getOrPut(start) { Slot(start, count, Cancellation().also(cancellation::own)) }
+            slot = if(!seek&&candidate!=null)candidate else {
+                // A cold request starts at the requested byte, never at an unused window prefix.
+                Slot(position,(alignedStart+alignedCount-position).toInt(),Cancellation().also(cancellation::own),alignedStart,alignedCount)
+                    .also{slots[it.start]=it}
+            }
         }
         stale.forEach { it.cancel(); cancellation.release(it.cancellation) }
         schedule(slot)
@@ -108,10 +115,15 @@ internal class SegmentedRemoteFile(
     private fun fill(slot: Slot) {
         try {
             slot.cancellation.check()
-            val cached = options.cache?.get(identity,slot.start,slot.length)
+            var cached = options.cache?.get(identity,slot.start,slot.length)
+            var cacheBytes=cached?.size?:0
+            if(cached==null&&slot.start!=slot.alignedStart){
+                val full=options.cache?.get(identity,slot.alignedStart,slot.alignedLength)
+                if(full!=null){cacheBytes=full.size;cached=full.copyOfRange((slot.start-slot.alignedStart).toInt(),full.size)}
+            }
             if (cached != null) {
                 synchronized(slot.monitor) { cached.copyInto(slot.bytes); slot.available=cached.size; slot.monitor.notifyAll() }
-                readTelemetry.cacheHit(cached.size)
+                readTelemetry.cacheHit(cacheBytes)
                 return
             }
             var attempts = 0

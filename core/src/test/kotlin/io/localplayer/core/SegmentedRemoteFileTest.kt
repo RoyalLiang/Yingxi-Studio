@@ -67,6 +67,50 @@ class SegmentedRemoteFileTest {
             assertContentEquals(bytes(0,out.size),out);assertEquals(listOf(0L,8192L),starts)
         }
     }
+    @Test fun coldSeekAndTailProbeStartAtDemandedByteWithoutReadingWindowPrefix() {
+        val size=100L*1024*1024;val target=72L*1024*1024-513
+        val starts=java.util.Collections.synchronizedList(mutableListOf<Long>())
+        val received=java.util.concurrent.atomic.AtomicLong()
+        remote(size,Cancellation(),1){start,_,c->
+            starts.add(start)
+            object:RemoteFile {
+                override val size=size
+                override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {
+                    c.check();val n=minOf(length,513);received.addAndGet(n.toLong());bytes(position,n).copyInto(buffer,offset);return n
+                }
+                override fun close(){}
+            }
+        }.use { file ->
+            val output=ByteArray(8);assertEquals(8,file.readAt(target,output,0,8))
+            assertContentEquals(bytes(target,8),output)
+            assertEquals(target,starts.first(),"Cold seek must not fetch the preceding 8MiB window prefix")
+            assertTrue(received.get()<=64*1024,"Bytes before first demand result must stay bounded")
+            val tail=size-7;assertEquals(7,file.readAt(tail,output,0,8));assertContentEquals(bytes(tail,7),output.copyOf(7))
+            assertTrue(starts.contains(tail))
+        }
+    }
+    @Test fun seekIntoUnfinishedLookaheadCancelsUnusedPrefix() {
+        val size=4L*1024*1024;val target=1024*1024+900_000L
+        val starts=java.util.Collections.synchronizedList(mutableListOf<Long>())
+        val prefetch=CountDownLatch(1)
+        remote(size,Cancellation(),2){start,_,c->
+            starts.add(start);val release=CountDownLatch(1);c.own(java.io.Closeable{release.countDown()})
+            object:RemoteFile {
+                override val size=size
+                override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {
+                    if(start==1024*1024L){prefetch.countDown();release.await()}
+                    if(start==0L&&position>0)release.await()
+                    c.check();val n=minOf(8,length);bytes(position,n).copyInto(buffer,offset);return n
+                }
+                override fun close(){release.countDown()}
+            }
+        }.use { file ->
+            val out=ByteArray(8);assertEquals(8,file.readAt(0,out,0,8));assertTrue(prefetch.await(2,TimeUnit.SECONDS))
+            val pool=Executors.newSingleThreadExecutor()
+            try{assertEquals(8,pool.submit<Int>{file.readAt(target,out,0,8)}.get(2,TimeUnit.SECONDS))}finally{pool.shutdownNow()}
+            assertContentEquals(bytes(target,8),out);assertTrue(starts.contains(target))
+        }
+    }
     @Test fun exhaustedFailuresDoNotSkipAheadOrRetryForever() {
         val calls=AtomicInteger()
         remote(1024*1024L,Cancellation(),1){start,_,_->assertEquals(0L,start);calls.incrementAndGet();throw IOException("fixture")}.use { file ->
