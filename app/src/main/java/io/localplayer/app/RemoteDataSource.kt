@@ -22,7 +22,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
-class PlaybackLease(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=AppConnectors()) : java.io.Closeable {
+class PlaybackLease(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=AppConnectors(),private val prefetch:Boolean=true) : java.io.Closeable {
     private val cancellation=Cancellation()
     private var session: RemoteSession?=null
     private var closed=false
@@ -30,7 +30,7 @@ class PlaybackLease(val source: Source, val credentials: Credentials, val path: 
     @Synchronized fun open(position:Long=0): RemoteFile {
         if(closed) throw IOException("播放已结束")
         val connected=session ?: connector.connect(source,credentials,cancellation).also { session=it }
-        try { return connected.open(path,position) }
+        try { return if(prefetch)connected.open(path,position)else connected.open(path) }
         catch(e:Exception) {
             cancellation.check()
             if(Thread.currentThread().isInterrupted)throw e
@@ -38,7 +38,7 @@ class PlaybackLease(val source: Source, val credentials: Credentials, val path: 
             // Read-only reopen, once per open call. Reconnect repeats the same
             // source authentication and SFTP host-key verification.
             val renewed=connector.connect(source,credentials,cancellation).also { session=it }
-            return renewed.open(path,position)
+            return if(prefetch)renewed.open(path,position)else renewed.open(path)
         }
     }
     override fun close() {
@@ -57,7 +57,7 @@ object PlaybackRegistry {
     }
     fun get(uri: Uri): PlaybackLease = leases[uri.authority] ?: throw IOException("播放上下文已过期，请从信源重新打开")
     // Artwork uses its own transport and cancellation; it must never close the player's lease.
-    fun preview(uri:Uri):PlaybackLease { val active=get(uri); return PlaybackLease(active.source,active.credentials,active.path) }
+    fun preview(uri:Uri):PlaybackLease { val active=get(uri); return PlaybackLease(active.source,active.credentials,active.path,prefetch=false) }
     fun remove(uri: Uri?) { if(uri?.scheme=="localplayer") leases.remove(uri.authority)?.let { lease -> closer.execute { lease.close() } } }
     // Preserve the opaque registration for previous/next, but close its old transport.
     // Replacement is atomic: a rapid jump back gets a fresh lease, never one closing later.

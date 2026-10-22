@@ -90,7 +90,7 @@ internal object AliyunCloud {
     private fun encode(token: AliyunToken) = JSONObject().put("access", token.access).put("refresh", token.refresh).put("expiresAt", token.expiresAt).toString()
     private fun decode(value: String): AliyunToken = try { JSONObject(value).let { AliyunToken(it.getString("access"), it.optString("refresh").takeIf { text -> text.isNotBlank() && text != "null" }, it.getLong("expiresAt")) } }
         catch (_: Exception) { throw AliyunUnauthorized() }
-    fun connector(source: Source): Connector = AliyunConnector(api, object : AliyunAccess {
+    fun connector(source: Source, parallelism:Int?=null): Connector = AliyunConnector(api, object : AliyunAccess {
         override fun <T> authorized(cancellation: Cancellation, action: (String) -> T): T {
             fun token(force: Boolean): AliyunToken = cancellation.withLock(accountLock) {
                 val encoded = store.password(source.id) ?: throw AliyunUnauthorized()
@@ -106,7 +106,7 @@ internal object AliyunCloud {
             val current = token(false)
             return try { action(current.access) } catch (_: AliyunUnauthorized) { action(token(true).access) }
         }
-    }) { id, name -> rememberFolderName(source.id,id,name) }
+    }, readOptions={CloudReadPreferences(context).options().let{if(parallelism==null)it else it.copy(workers=parallelism)}}) { id, name -> rememberFolderName(source.id,id,name) }
 }
 
 internal class AppConnectors : Connector {

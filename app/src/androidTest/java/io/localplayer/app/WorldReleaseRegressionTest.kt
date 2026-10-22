@@ -26,6 +26,7 @@ class WorldReleaseRegressionTest {
     }
     @Test fun chidengArrivalNoteIsReadableInTheArchive() {
         val person=StationWorld.load(ui.activity).people.first{it.id=="chideng"}
+        assertEquals("几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。",person.quotes.last().zh)
         val daily=person.quotes.single{it.zh=="片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。"}
         for(language in listOf("zh","en")) {
             ui.runOnUiThread { ui.activity.setContent { PlayerTheme {

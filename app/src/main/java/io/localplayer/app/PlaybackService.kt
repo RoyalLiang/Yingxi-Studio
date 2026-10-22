@@ -19,6 +19,7 @@ class PlaybackService:MediaSessionService(){
     private var session:MediaSession?=null
  private var privateObserver:(()->Unit)?=null
  private var videoRecovery:VideoDecoderRecovery?=null
+    private var nextEpisode:NextEpisodePrefetch?=null
     private lateinit var store:SourceStore
     private lateinit var history:HistoryStore
     private var requestIds=setOf<String>()
@@ -27,7 +28,7 @@ class PlaybackService:MediaSessionService(){
     private val completedItems=mutableSetOf<String>()
     private val handler=Handler(Looper.getMainLooper())
     private val checkpoint=object:Runnable{
-        override fun run(){if(session?.player?.isPlaying==true)persist();handler.postDelayed(this,5000)}
+        override fun run(){session?.player?.let{if(it.isPlaying)persist();nextEpisode?.consider(it)};handler.postDelayed(this,5000)}
     }
     override fun onCreate(){
         super.onCreate();store=SourceStore(this);history=HistoryStore(this)
@@ -39,6 +40,7 @@ class PlaybackService:MediaSessionService(){
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(player,renderers)
+        nextEpisode=NextEpisodePrefetch(this)
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
             if(protected){player.pause();player.stop();player.clearMediaItems()}
@@ -62,6 +64,7 @@ class PlaybackService:MediaSessionService(){
                 if(player.mediaItemCount==0)stopSelf()
             }
             override fun onMediaItemTransition(item:MediaItem?,reason:Int){
+                nextEpisode?.transition()
                 val next=item?.localConfiguration?.uri
                 player.setWakeMode(if(next?.scheme=="localplayer")C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
                 if(current!=next){
@@ -72,7 +75,7 @@ class PlaybackService:MediaSessionService(){
                 }
                 persist()
             }
-            override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)persist()}
+            override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)nextEpisode?.cancel();if(!isPlaying)persist()}
             override fun onPlaybackStateChanged(state:Int){
                 if(state==Player.STATE_READY||state==Player.STATE_ENDED)persist()
                 if(state==Player.STATE_READY)OnlineSubtitles.schedule(this@PlaybackService,player)
@@ -142,7 +145,7 @@ class PlaybackService:MediaSessionService(){
     override fun onDestroy(){
         privateObserver?.invoke();privateObserver=null
         val owned=requestIds
-        OnlineSubtitles.cancel();persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
+        OnlineSubtitles.cancel();nextEpisode?.close();nextEpisode=null;persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.
         // This service only releases requests actually adopted by its timeline.
         PlaybackRequests.retainActive(emptySet());owned.forEach(PlaybackRequests::remove)

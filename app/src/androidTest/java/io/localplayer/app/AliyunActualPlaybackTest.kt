@@ -65,11 +65,11 @@ class AliyunActualPlaybackTest {
             cdn.dispatcher=object:Dispatcher(){
                 override fun dispatch(request:RecordedRequest):MockResponse{
                     assertNull(request.getHeader("Authorization"));rangeQueries.incrementAndGet()
-                    val range=Regex("bytes=([0-9]+)-").matchEntire(request.getHeader("Range").orEmpty())?:return MockResponse().setResponseCode(400)
-                    val position=range.groupValues[1].toInt()
+                    val range=Regex("bytes=([0-9]+)-([0-9]*)").matchEntire(request.getHeader("Range").orEmpty())?:return MockResponse().setResponseCode(400)
+                    val position=range.groupValues[1].toInt();val end=range.groupValues[2].toIntOrNull()?:data.lastIndex
                     if(matroska)println("ALIYUN_MKV_RANGE position=$position")
-                    return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $position-${data.lastIndex}/${data.size}")
-                        .setHeadersDelay(if(matroska)3000 else 150,TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(data,position,data.size-position))
+                    return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $position-$end/${data.size}")
+                        .setHeadersDelay(if(matroska)3000 else 150,TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(data,position,end-position+1))
                 }
             }
             apiServer.dispatcher=object:Dispatcher(){
@@ -84,7 +84,8 @@ class AliyunActualPlaybackTest {
         val api=AliyunApi::class.java.getConstructor(okhttp3.HttpUrl::class.java,OkHttpClient::class.java)
             .newInstance(apiServer.url("/"),OkHttpClient.Builder().followRedirects(false).build())
             val source=Source(label="Aliyun playback fixture",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")
-            val connector=AliyunConnector(api,access,downloadClient=client)
+            val segmentCache=SegmentCache(File(app.cacheDir,"parallel-playback-fixture"))
+            val connector=AliyunConnector(api,access,downloadClient=client,readOptions={AliyunReadOptions(3,segmentCache)})
             val ref=MediaRef(source.id+":video",sample.name,source.label,source.id,"video",sizeBytes=data.size.toLong(),location=mediaLocation(source))
             val uri=PlaybackRegistry.add(source,Credentials(""),"video",sample.name,connector)
             val target=PlayTarget(uri,ref.title,start,ref)
@@ -112,7 +113,7 @@ class AliyunActualPlaybackTest {
                 assertEquals("Same playback session reuses the signed location",1,urlQueries.get())
                 val report=main{JSONObject(playbackDiagnostic(player))}
                 assertTrue(report.getInt("videoInputBuffers")>0);assertTrue(report.getInt("videoRenderedBuffers")>0)
-                assertEquals(matroska,report.getBoolean("downloadRightsNotice"));assertEquals("ALIYUN",report.getString("source"));assertTrue(report.getLong("rangeRequests")>0)
+                assertEquals(matroska,report.getBoolean("downloadRightsNotice"));assertEquals(3,report.getInt("readParallelism"));assertEquals("ALIYUN",report.getString("source"));assertTrue(report.getLong("rangeRequests")>0)
                 assertTrue(report.getLong("sourceReadBytes")>0)
                 println("ALIYUN_ACTUAL_SEEK hevc=$hevc start=$start files=${fileQueries.get()} urls=${urlQueries.get()} ranges=${rangeQueries.get()} diagnostics=$report")
             }finally{
