@@ -77,6 +77,7 @@ class WorldReleaseRegressionTest {
             }}}
             for(id in listOf("station","salt","archive","ideal","sea","beacon")) {
                 ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:$id"))
+                ui.onNodeWithTag("world-node:$id").assertContentDescriptionEquals(StationWorld.load(ui.activity).places.first{it.id==id}.name.inLanguage(language))
                 val card=ui.onNodeWithTag("world-node:$id").performScrollTo().fetchSemanticsNode().boundsInRoot
                 val label=ui.onNodeWithTag("world-node-label:$id",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
                 assertTrue(kotlin.math.abs(card.center.x-label.center.x)<2f)

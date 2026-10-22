@@ -25,6 +25,11 @@ class WorldCorpusValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'corpus author'):
             self.check(self.atlas)
 
+    def test_rejects_untranslated_map_alias(self):
+        next(node for node in self.atlas["nodes"] if node["id"] == "beacon")["mapLabel"]["en"] = ""
+        with self.assertRaisesRegex(ValueError, "Chinese.*English"):
+            self.check(self.atlas)
+
     def test_rejects_duplicate_diary_and_invalid_canon_status(self):
         self.atlas['dailyLines'].append(copy.deepcopy(self.atlas['dailyLines'][0]))
         with self.assertRaisesRegex(ValueError, 'corpus identity'):

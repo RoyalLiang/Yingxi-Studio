@@ -98,6 +98,10 @@
       "description": {
         "zh": "北脊山后的高地微光，只在辐射云散去的晴夜出现。觉醒者说那是另一座仍在发报的气象与影像中继站，信笺里暂时只记下了它的方向。",
         "en": "A highland glimmer beyond the northern ridge, visible when radiation clouds part on clear nights. The Awakened say it is an active weather and image relay station; for now, the letters record only its bearing."
+      },
+      "mapLabel": {
+        "zh": "远灯观测所",
+        "en": "Far Lantern"
       }
     },
     {
@@ -1419,8 +1423,8 @@
         "en": "Night screening log"
       },
       "title": {
-        "zh": "迟灯 · 放映值夜记录",
-        "en": "Chideng · night screening log"
+        "zh": "值夜记录",
+        "en": "Night screening log"
       },
       "body": {
         "zh": "放映机记得每一盘旧纪元片子停在哪一格，下次推门接着看。",
