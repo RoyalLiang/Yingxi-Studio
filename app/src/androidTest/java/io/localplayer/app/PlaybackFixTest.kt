@@ -96,8 +96,8 @@ class PlaybackFixTest {
             ui.onNodeWithText("WEBDAV · 文件浏览").assertDoesNotExist()
             ui.onNodeWithTag("directory-actions").assertDoesNotExist()
             ui.onNodeWithTag("source-menu:"+source.id).assertIsDisplayed().performClick()
-            ui.onNodeWithText("收藏路标").assertIsDisplayed()
-            ui.onNodeWithText("分册与路标").assertIsDisplayed()
+            ui.onNodeWithText("路标").assertIsDisplayed()
+            ui.onNodeWithText("信源").assertIsDisplayed()
 
         }finally{instrumentation.runOnMainSync{owner.clear()}}
     }

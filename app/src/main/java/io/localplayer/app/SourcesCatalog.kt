@@ -59,10 +59,10 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SourceFilter("全部",vm.selectedGroup == "all") { vm.selectedGroup = "all" }
-                    SourceFilter("收藏路标",vm.selectedGroup == "favorites") { vm.selectedGroup = "favorites" }
+                    SourceFilter("路标",vm.selectedGroup == "favorites") { vm.selectedGroup = "favorites" }
                     groups.forEach { group -> SourceFilter(group.name,vm.selectedGroup == group.id) { vm.selectedGroup = group.id } }
                 }
-                IconButton(onClick = { groupDialog = true }) { Icon(Icons.Rounded.FolderCopy, "管理分册", tint = Muted) }
+                IconButton(onClick = { groupDialog = true }) { Icon(Icons.Rounded.FolderCopy, "信源", tint = Muted) }
             }
         }
         LazyColumn(Modifier.weight(1f).testTag("source-bookmarks"), contentPadding = PaddingValues(top = 8.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -111,8 +111,8 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
                             var expanded by remember { mutableStateOf(false) }
                             IconButton(onClick = { expanded = true }) { Icon(Icons.Rounded.MoreHoriz, "管理 ${item.label}", tint = Muted) }
                             DropdownMenu(expanded, { expanded = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
-                                DropdownMenuItem(text = { Text(if (item.favorite) "取消收藏路标" else "收藏路标") }, onClick = { expanded = false; vm.toggleFavorite(item) })
-                                DropdownMenuItem(text = { Text("分册与路标") }, onClick = { expanded = false; organize = item })
+                                DropdownMenuItem(text = { Text(if (item.favorite) "取消路标标记" else "路标") }, onClick = { expanded = false; vm.toggleFavorite(item) })
+                                DropdownMenuItem(text = { Text("信源") }, onClick = { expanded = false; organize = item })
                             }
                         }
                     }
@@ -129,10 +129,10 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
 fun BookmarkOrganizer(vm: LibraryViewModel, initial: SourceBookmark, dismiss: () -> Unit) {
     var item by remember(initial) { mutableStateOf(initial) }
     val groups = vm.organization.groups()
-    AlertDialog(onDismissRequest = dismiss, title = { Text("分册与路标") }, text = {
+    AlertDialog(onDismissRequest = dismiss, title = { Text("信源") }, text = {
         Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(initial.label, fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
-            Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = item.favorite, onCheckedChange = { item = item.copy(favorite = it) }); Text("收藏此路标") }
+            Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = item.favorite, onCheckedChange = { item = item.copy(favorite = it) }); Text("标记为路标") }
             Text("分册", Modifier.padding(vertical = 8.dp), color = Muted)
             SelectionRow("未归册", item.groupId == null) { item = item.copy(groupId = null) }
             groups.forEach { group -> SelectionRow(group.name, item.groupId == group.id) { item = item.copy(groupId = group.id) } }
@@ -145,7 +145,7 @@ fun BookmarkOrganizer(vm: LibraryViewModel, initial: SourceBookmark, dismiss: ()
 @Composable private fun SourceGroupDialog(vm: LibraryViewModel, groups: List<SourceGroup>, dismiss: () -> Unit) {
     var selected by remember { mutableStateOf<SourceGroup?>(null) }
     var name by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = dismiss, title = { Text("管理分册") }, text = {
+    AlertDialog(onDismissRequest = dismiss, title = { Text("信源") }, text = {
         Column(Modifier.heightIn(max=400.dp).verticalScroll(rememberScrollState())) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { SourceFilter("新分册", selected == null) { selected = null; name = "" }; groups.forEach { group -> SourceFilter(group.name, selected?.id == group.id) { selected = group; name = group.name } } }
             PlayerField("分册名称", name) { name = it }

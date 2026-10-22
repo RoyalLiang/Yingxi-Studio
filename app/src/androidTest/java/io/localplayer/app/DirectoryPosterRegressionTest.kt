@@ -68,7 +68,7 @@ class DirectoryPosterRegressionTest {
         val source=browser();ui.runOnIdle{vm.browse("child")};ui.waitUntil(5000){vm.path=="child"&&!vm.busy}
         ui.onNodeWithTag("directory-actions").assertDoesNotExist()
         ui.onNodeWithTag("source-menu:"+source.id).performClick()
-        capture("directory-menu");ui.onNodeWithText("收藏路标").performClick()
+        capture("directory-menu");ui.onNodeWithText("路标").performClick()
         ui.runOnIdle{assertTrue(vm.organization.bookmarks().any{it.sourceId==source.id&&it.path=="child"&&it.favorite})}
     }
     @Test fun browsingDoesNotReplayRegistrationDialogue(){

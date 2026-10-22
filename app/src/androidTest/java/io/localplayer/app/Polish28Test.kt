@@ -68,10 +68,10 @@ class Polish28Test {
         ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithText("探索").performClick()
         ui.onNodeWithTag("world-node:salt").assertIsSelected()
-        ui.onNodeWithText("放映记录").assertIsDisplayed()
+        ui.onNodeWithText("拾荒记录").assertIsDisplayed()
     }
     @Test fun updateFooterStaysBelowScrollableContentAndMoreHasAnchoredActions(){
-        ui.onNodeWithContentDescription("站务设置").performClick()
+        ui.onNodeWithContentDescription("站务").performClick()
         val footer=ui.onNodeWithTag("update-footer").getUnclippedBoundsInRoot()
         ui.onNodeWithTag("settings-list").performScrollToNode(hasText("角色问候"))
         assertEquals(footer,ui.onNodeWithTag("update-footer").getUnclippedBoundsInRoot())

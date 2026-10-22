@@ -444,7 +444,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         error=null
         val before=organization.bookmarks().firstOrNull{it.key==item.key}
         runCatching{organization.put(item);organizationRevision++}.onSuccess{
-            notifySuccess(when{item.favorite!= (before?.favorite ?: false)->if(item.favorite)"已收藏"else"已取消收藏路标";else->"路标已保存"})
+            notifySuccess(when{item.favorite!= (before?.favorite ?: false)->if(item.favorite)"已收藏"else"已取消路标标记";else->"路标已保存"})
         }.onFailure{error=it.message ?: "路标未保存，请重试"}
     }
     fun toggleFavorite(item:SourceBookmark){

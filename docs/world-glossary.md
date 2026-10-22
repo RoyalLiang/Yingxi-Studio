@@ -49,16 +49,16 @@
 | brand | 映汐放映站 | Yingxi Station | 应用品牌与故事据点共用名称；应用功能不等于故事实体。 | The app and story station share a name; app functions are separate from fictional entities. |
 | source_kind | 据点设置／信号塔设置 | Outpost settings / relay settings | 按SMB/SFTP和网盘/WebDAV连接类别显示；不是新增地图地点。 | Names follow SMB/SFTP and cloud/WebDAV connection categories; they add no map locations. |
 | remove_registration | 移除登记 | Remove registration | 只移除本机连接和目录路标，不删除原文件。 | Remove a local connection and its directory markers, leaving original files intact. |
-| registered_sources | 查看已登记避难所 | View registered shelters | 打开远程连接目录，包含幸存者据点和外部信号塔。 | Open registered remote connections, including outposts and external relays. |
+| registered_sources | 查看已登记信源 | View registered sources | 打开远程连接目录，包含幸存者据点和外部信号塔。 | Open registered remote connections, including outposts and external relays. |
 | verify_credentials | 核验通行凭据 | Verify connection credentials | 核对连接账户密码；不替代系统身份认证或服务器指纹核验。 | Check connection credentials; separate from system authentication and host-key verification. |
 | read_quote | 轻触信纸，读下一句 | Tap paper for another line | 轮换人物文字语录，不播放朗读。 | Cycle written character quotes without speech playback. |
 | home | 放映站 | Station | 首页导航。 | Home navigation. |
-| history | 放映记录／最近放映 | Screening history / recent screenings | 本机观看记录与续播进度，不是世界纪年。 | Local viewing history and resume progress, separate from the story chronology. |
+| history | 拾荒记录／最近拾荒 | Scavenging log / recent scavenging | 借用拾荒称谓记录本机真实观看与续播进度；不是今日拾获、文件发现或世界纪年。 | A scavenging metaphor for actual viewing history and resume progress, distinct from today’s finds, file discovery and story chronology. |
 | resume | 继续放映 | Resume screening | 从实际保存的位置续播。 | Resume from the saved playback position. |
-| settings | 站务设置 | Station settings | 应用全局设置；播放器内部保留播放设置。 | Global app settings; player controls retain playback settings. |
-| version | 版本信笺 | Version letters | 查看真实版本与更新信笺，下载和安装操作保留原名。 | Actual versions and release letters; download and install actions retain explicit labels. |
-| favorites | 收藏路标 | Saved markers | 收藏连接或目录入口，不表示影片已下载或加入影片收藏。 | Save connection or directory entries, without downloading or collecting media. |
-| groups | 管理分册／分册与路标 | Manage sections / sections and markers | 组织已登记的连接与目录入口，不建立故事中的新机构。 | Organize registered connections and directory entries without establishing a fictional institution. |
+| settings | 站务 | Station affairs | 应用全局设置；播放器内部保留播放设置。 | Global app settings; player controls retain playback settings. |
+| version | 信笺 | Letters | 查看真实版本与更新信笺，下载和安装操作保留原名。 | Actual versions and release letters; download and install actions retain explicit labels. |
+| favorites | 路标 | Markers | 应用筛选和菜单中指已收藏的连接或目录入口；标记和取消标记不移动、不下载影片。故事里的物理路标保持原义。 | Saved connection or directory entries in app filters and menus. Marking or unmarking neither moves nor downloads films; physical markers retain their story meaning. |
+| groups | 信源 | Source register | 分册与连接、目录路标的管理入口；分册字段仍标明分册名称和未归册，不因此新增信号技术或世界制度。 | Manage sections and connection or directory markers. Section fields remain explicit; the name adds no signal technology or fictional institution. |
 | discovery | 搜寻附近据点 | Find nearby outposts | 按实际网络范围探测服务；发现候选与认证可用分开。 | Probe within the actual network scope; discovery is separate from authenticated access. |
 | endpoint | 据点路标／中继路标 | Outpost address / relay address | 连接表单分节；地址、协议和主机IP保持准确。 | Connection-form headings; addresses, protocols and host IP remain explicit. |
 | credentials | 通行凭据 | Connection credentials | 连接账户表单分节；用户名与密码字段不隐喻化。 | The connection account section; username and password remain literal. |

@@ -81,7 +81,7 @@ class HomePolishTest {
         mount()
         ui.onNodeWithText("从这里打开").assertDoesNotExist()
         ui.onNodeWithContentDescription("打开视频").assertIsDisplayed()
-        ui.onNodeWithContentDescription("站务设置").assertIsDisplayed()
+        ui.onNodeWithContentDescription("站务").assertIsDisplayed()
     }
     @Test fun groupChoiceExposesSelectedStateInsteadOfAStringPrefix() {
         mount(groups = true)
@@ -94,8 +94,8 @@ class HomePolishTest {
         ui.onAllNodesWithContentDescription("打开视频").assertCountEquals(1)
         ui.onNodeWithText("从这里打开").assertDoesNotExist()
         ui.onNodeWithText("网络避难所").assertDoesNotExist()
-        ui.onNodeWithTag("home-list").performScrollToNode(hasText("最近放映"))
-        ui.onNodeWithText("最近放映").assertIsDisplayed()
+        ui.onNodeWithTag("home-list").performScrollToNode(hasText("最近拾荒"))
+        ui.onNodeWithText("最近拾荒").assertIsDisplayed()
         capture("gallery")
         ui.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-film:${savedMedia[0]}"))
         ui.onNodeWithContentDescription("记录操作 旷野来信").performClick()
@@ -144,7 +144,7 @@ class HomePolishTest {
 
     @Test fun inAppVersionNotesUseTheCurrentChangeOnlyCopy() {
         mount(fontScale=1f,width=411)
-        ui.onNodeWithContentDescription("站务设置").performClick()
+        ui.onNodeWithContentDescription("站务").performClick()
         ui.onNodeWithTag("app-version").performClick()
         capture("updates")
         ui.onNodeWithTag("version-more").performClick()

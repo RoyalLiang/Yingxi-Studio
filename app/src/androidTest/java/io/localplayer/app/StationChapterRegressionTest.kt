@@ -36,6 +36,7 @@ class StationChapterRegressionTest {
         assertTrue(button.top>=body.bottom)
         assertTrue(button.width>avatar.width*3)
         ui.onNodeWithText("阿汐 · 据点管理员").assertDoesNotExist()
+        capture("diary-large")
     }
 
     @Test fun chapterAndLetterPositionsSurviveNewReaderInstancesIndependently() {
@@ -61,15 +62,42 @@ class StationChapterRegressionTest {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage(embedded=true){} } } }
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-chapter:chapter_02"))
         ui.onNodeWithTag("world-chapter:chapter_02").performClick().assertIsSelected()
+        capture("chapter-two")
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("chapter-next"))
         ui.onNodeWithTag("chapter-next").performClick()
-        ui.onNodeWithTag("chapter-position").assertTextEquals("第 2 / 3 封")
+        ui.onNodeWithTag("chapter-position").assertTextEquals(if(context.resources.configuration.locales[0].language=="zh")"第 2 / 3 封" else "Letter 2 / 3")
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-chapter:chapter_01"))
         ui.onNodeWithTag("world-chapter:chapter_01").performClick()
         ui.onNodeWithTag("world-chapter:chapter_02").performClick()
         ui.onNodeWithTag("chapter-letter:ch02_register").assertExists()
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage(embedded=true){} } } }
         ui.onNodeWithTag("chapter-letter:ch02_register").assertExists()
+    }
+
+    @Test fun chapterBodyAndControlsRemainReadableInBothLanguagesAtLargeText() {
+        for(language in listOf("en","zh")) {
+            val world=StationWorld.load(context)
+            ChapterReading(context).select(world.chapters[1],world.chapters[1].letters[0])
+            val config=android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
+                val density=LocalDensity.current
+                CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides config,LocalDensity provides Density(density.density,1.8f)) {
+                    Box(Modifier.width(320.dp).fillMaxHeight()) { StationWorldPage(embedded=true){} }
+                }
+            } } }
+            val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            ui.onNodeWithTag("chapter-letter-body").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){it(layouts)}
+            assertFalse(layouts.single().hasVisualOverflow)
+            ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("chapter-next"))
+            ui.onNodeWithTag("chapter-next").assertIsDisplayed().assertIsEnabled()
+            capture("chapter-large-$language")
+        }
+    }
+
+    private fun capture(name:String) {
+        InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { bitmap ->
+            java.io.File(context.cacheDir,"station35-$name.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
+        }
     }
 
     @Test fun connectionKindsKeepCloudAndLanSourcesDistinct() {
