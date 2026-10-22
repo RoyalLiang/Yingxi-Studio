@@ -21,7 +21,7 @@ class StationChapterRegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private val context get()=InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Test fun diaryNameSitsBelowAvatarAndArchiveHasItsOwnRowAtLargeText() {
+    @Test fun diaryOmitsNameAndArchiveKeepsItsOwnRowAtLargeText() {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
             val density=LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f)) {
@@ -29,10 +29,10 @@ class StationChapterRegressionTest {
             }
         } } }
         val avatar=ui.onNodeWithTag("home-admin-avatar",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
-        val name=ui.onNodeWithTag("home-admin-title",useUnmergedTree=true).assertTextEquals("阿汐").fetchSemanticsNode().boundsInRoot
+        ui.onNodeWithTag("home-admin-title",useUnmergedTree=true).assertDoesNotExist()
         val body=ui.onNodeWithTag("home-admin-quote",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         val button=ui.onNodeWithTag("home-archives").assertHasClickAction().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue(name.top>=avatar.bottom)
+        assertTrue(body.top>=avatar.bottom)
         assertTrue(button.top>=body.bottom)
         assertTrue(button.width>avatar.width*3)
         ui.onNodeWithText("阿汐 · 据点管理员").assertDoesNotExist()

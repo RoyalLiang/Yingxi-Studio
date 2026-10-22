@@ -139,8 +139,6 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                 Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
             }
             HorizontalDivider(color=Muted.copy(alpha=.16f))
-            WorldDictionary(world.lexicon,lang)
-        WorldApplicationGlossary(world.appNames,lang)
             Text(if(lang=="zh")"据点大事记" else "Station chronicles",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             world.chronicles.asReversed().forEach { entry -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
@@ -191,29 +189,4 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art),label,
         modifier.clip(if(roundedCard)RoundedCornerShape(22.dp) else CircleShape).testTag("character-art:$kind"),
         contentScale=androidx.compose.ui.layout.ContentScale.Crop)
-}
-
-
-@Composable
-private fun WorldDictionary(terms:List<WorldTerm>,language:String) {
-    var open by rememberSaveable{mutableStateOf(false)}
-    val zh=language=="zh"
-    TextButton(onClick={open=!open},modifier=Modifier.testTag("world-dictionary-toggle")) {
-        Text(if(zh){if(open)"收起废土词典"else"废土词典 · ${terms.size} 条"}else{if(open)"Close wasteland dictionary"else"Wasteland dictionary · ${terms.size} entries"})
-    }
-    if(open) {
-        Text(if(zh)"正式设定、站内证据与演进提案分别标明。"else"Established facts, rumors, and proposals are labeled separately.",fontSize=12.sp,lineHeight=19.sp,color=Muted)
-        terms.forEach { term ->
-            Column(Modifier.fillMaxWidth().testTag("world-term:${term.id}"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                val status=if(term.canonStatus=="proposal"){if(zh)"演进提案"else"Proposal"}else if(term.status=="rumor"){if(zh)"正式设定 · 站内传闻"else"Adopted canon · station hearsay"}else{if(zh)"已确认设定"else"Established"}
-                Text(term.category.inLanguage(language)+" · "+status,fontSize=12.sp,color=Berry)
-                Text(term.name.inLanguage(language),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-                Text(term.summary.inLanguage(language),fontSize=14.sp,lineHeight=24.sp,color=Ink)
-                term.proposal?.let {
-                    Text(if(zh)"演进提案"else"Proposal",fontSize=12.sp,color=Berry)
-                    Text(it.inLanguage(language),fontSize=14.sp,lineHeight=24.sp,color=Muted)
-                }
-            }
-        }
-    }
 }

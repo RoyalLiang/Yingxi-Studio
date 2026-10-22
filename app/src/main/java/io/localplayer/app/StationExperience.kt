@@ -45,8 +45,27 @@ internal class StationPreferences(context:Context,name:String="station-experienc
     }
     private val appContext=context.applicationContext
     private val world by lazy { StationWorld.load(appContext) }
-    val dailyLines:List<WorldDiaryLine> get()=world.dailyLines
-    fun dailyLine(language:String):String=dailyLines[Math.floorMod(LocalDate.now().toEpochDay(),dailyLines.size).toInt()].text.inLanguage(language)
+    val dailyLines:List<WorldDiaryLine> by lazy {
+        (world.dailyLines+world.people.flatMap { person->person.quotes.mapIndexed { index,text->
+            WorldDiaryLine("quote:${person.id}:$index",person.id,text)
+        }}).distinctBy{it.author to it.text}
+    }
+    // Refresh at home entry/resume, never on a timer while somebody is reading.
+    fun diary(now:Long=System.currentTimeMillis(),force:Boolean=false):WorldDiaryLine {
+        val current=dailyLines.firstOrNull{it.id==p.getString("diary-line",null)}
+        val last=p.getLong("diary-at",0)
+        if(!force&&current!=null&&now>=last&&now-last<30*60_000L)return current
+        val authors=dailyLines.map{it.author}.distinct()
+        val author=authors[(authors.indexOf(current?.author)+1).mod(authors.size)]
+        val lines=dailyLines.filter{it.author==author}
+        val index=p.getInt("diary-next:$author",0).mod(lines.size)
+        val next=lines[index]
+        p.edit().putString("diary-line",next.id).putLong("diary-at",now)
+            .putInt("diary-next:$author",(index+1)%lines.size).apply()
+        return next
+    }
+    fun diaryAuthor(line:WorldDiaryLine)=world.people.first{it.id==line.author}
+    fun dailyLine(language:String):String=diary().text.inLanguage(language)
     val dailyLine:String get()=dailyLine(appContext.resources.configuration.locales[0].language)
 
     fun seekClick(context:Context){if(gearSound)context.getSystemService(AudioManager::class.java)?.playSoundEffect(AudioManager.FX_KEY_CLICK,.18f)}
@@ -152,9 +171,8 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     var greetings by remember{mutableStateOf(prefs.greetings)}
     var sound by remember{mutableStateOf(prefs.gearSound)}
     Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { Column(Modifier.padding(14.dp)) {
-        Text("据点氛围",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
-        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("角色问候");Text("当天首次进入时出现",fontSize=12.sp,color=Muted)};SettingsSwitch(greetings,{greetings=it;prefs.greetings=it},modifier=Modifier.testTag("station-greetings")) }
-        Row(verticalAlignment=Alignment.CenterVertically) { Column(Modifier.weight(1f)){Text("齿轮音效");Text("快进、快退时播放轻提示音",fontSize=12.sp,color=Muted)};SettingsSwitch(sound,{sound=it;prefs.gearSound=it},modifier=Modifier.testTag("station-gear-sound")) }
+        Row(verticalAlignment=Alignment.CenterVertically) { Text("角色问候",Modifier.weight(1f));SettingsSwitch(greetings,{greetings=it;prefs.greetings=it},modifier=Modifier.testTag("station-greetings")) }
+        Row(verticalAlignment=Alignment.CenterVertically) { Text("齿轮音效",Modifier.weight(1f));SettingsSwitch(sound,{sound=it;prefs.gearSound=it},modifier=Modifier.testTag("station-gear-sound")) }
     } }
     Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text("播放手势",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
@@ -163,24 +181,36 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     } }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun StationAudioSettings() {
     val context=LocalContext.current
-    val prefs=remember{PlaybackPreferences(context)}
+    val prefs=remember(context){PlaybackPreferences(context)}
     var language by remember{mutableStateOf(prefs.audioLanguage)}
     var rememberManual by remember{mutableStateOf(prefs.rememberManual)}
-    var selecting by remember{mutableStateOf(false)}
-    Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { Column(Modifier.padding(14.dp)) {
-        Text("音轨与字幕",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
-        TextButton(onClick={selecting=true},modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
-            Text("音轨偏好",Modifier.weight(1f),color=Ink)
-            Text(when(language){"zh"->"中文优先";"en"->"英文优先";else->"跟随影片"},color=Muted)
-            Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
+    Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) {
+        Column(Modifier.padding(14.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val options:@Composable ()->Unit={
+                    SingleChoiceSegmentedButtonRow(Modifier.testTag("audio-language-options")) {
+                        listOf(null to "跟随","en" to "英文","zh" to "中文").forEachIndexed { index,(value,label)->
+                            SegmentedButton(selected=language==value,onClick={language=value;prefs.audioLanguage=value},
+                                shape=SegmentedButtonDefaults.itemShape(index,3),icon={},
+                                modifier=Modifier.testTag("audio-language-${value?:"follow"}")) {Text(label,maxLines=1)}
+                        }
+                    }
+                }
+                // Keep the choices in the row at normal size; wrap only for accessibility.
+                if(maxWidth>=300.dp&&androidx.compose.ui.platform.LocalDensity.current.fontScale<=1.3f) {
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text("音轨偏好",Modifier.weight(1f),color=Ink)
+                        options()
+                    }
+                } else Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text("音轨偏好",color=Ink)
+                    options()
+                }
+            }
+            Row(verticalAlignment=Alignment.CenterVertically){Text("记住手动选择",Modifier.weight(1f));SettingsSwitch(rememberManual,{rememberManual=it;prefs.rememberManual=it})}
         }
-        Row(verticalAlignment=Alignment.CenterVertically){Text("记住手动选择",Modifier.weight(1f));SettingsSwitch(rememberManual,{rememberManual=it;prefs.rememberManual=it})}
-    } }
-    if(selecting)AlertDialog(onDismissRequest={selecting=false},title={Text("音轨偏好")},text={Column{
-        listOf(null to "跟随影片","zh" to "中文优先","en" to "英文优先").forEach{(value,label)->
-            TextButton(onClick={language=value;prefs.audioLanguage=value;selecting=false},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(label,color=if(value==language)Berry else Ink)}
-        }
-    }},confirmButton={TextButton(onClick={selecting=false}){Text("取消")}})
+    }
 }

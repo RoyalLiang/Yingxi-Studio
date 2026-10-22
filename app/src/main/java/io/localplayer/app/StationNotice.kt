@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
 // Existing paper, lamp and pine palette; a single quiet entrance sweep settles at rest.
-@Composable internal fun StationNotice(eyebrow:String,title:String,body:String,modifier:Modifier=Modifier,onArchives:(()->Unit)?=null) {
+@Composable internal fun StationNotice(eyebrow:String,title:String,body:String,modifier:Modifier=Modifier,onArchives:(()->Unit)?=null,person:WorldPerson?=null,onRefresh:(()->Unit)?=null) {
     val lamp=Color(0xFFE6C78C)
     val motionEnabled=ValueAnimator.areAnimatorsEnabled()
     val light=remember { Animatable(if(motionEnabled) 0f else 1f) }
@@ -58,9 +58,12 @@ import kotlin.math.abs
                     }
                     Text(title,color=Color(0xFFF9F2E4),fontSize=18.sp,lineHeight=26.sp,fontWeight=FontWeight.SemiBold)
                 }
-                if(onArchives!=null) Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                    StationPortrait("scavenger","阿汐",Modifier.size(52.dp).testTag("home-admin-avatar"),false)
-                    Text("阿汐",modifier=Modifier.testTag("home-admin-title"),fontSize=12.sp,lineHeight=18.sp,color=lamp)
+                if(onArchives!=null) {
+                    val portrait=person?.portrait?:"scavenger"
+                    val name=person?.name?.inLanguage(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language)?:"阿汐"
+                    if(onRefresh!=null) IconButton(onClick=onRefresh,modifier=Modifier.size(52.dp).testTag("home-diary-refresh")) {
+                        Box(Modifier.size(52.dp).testTag("home-admin-avatar")) {StationPortrait(portrait,"$name，换一则札记",Modifier.fillMaxSize(),false)}
+                    } else Box(Modifier.size(52.dp).testTag("home-admin-avatar")) {StationPortrait(portrait,name,Modifier.fillMaxSize(),false)}
                 }
             }
             Text(body,color=Color(0xFFD7DED2),fontSize=if(onArchives!=null)16.sp else 14.sp,lineHeight=if(onArchives!=null)25.sp else 22.sp,modifier=if(onArchives!=null)Modifier.testTag("home-admin-quote")else Modifier)
@@ -72,7 +75,6 @@ import kotlin.math.abs
                     Icon(Icons.Rounded.MenuBook,null,tint=lamp,modifier=Modifier.size(20.dp))
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
                         Text("档案室",color=Color(0xFFF9F2E4),fontSize=14.sp,fontWeight=FontWeight.Medium)
-                        Text("人物与来信",color=Color(0xFFD7DED2),fontSize=11.sp,lineHeight=16.sp)
                     }
                     Icon(Icons.Rounded.ChevronRight,null,Modifier.size(19.dp),tint=lamp)
                 }

@@ -19,45 +19,16 @@ import java.util.Locale
 class WorldSettingRegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
 
-    private fun dictionary() {
-        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-dictionary-toggle"))
-        ui.onNodeWithTag("world-dictionary-toggle").performClick()
-    }
-
-    @Test fun dictionarySeparatesEstablishedFactsRumorsAndExtensions() {
+    @Test fun dictionaryDataRetainsCanonAndProposalBoundariesWithoutEntryButtons() {
+        val world=StationWorld.load(ui.activity)
+        org.junit.Assert.assertTrue(world.lexicon.first{it.id=="long_tide"}.proposal!=null)
+        org.junit.Assert.assertTrue(world.lexicon.first{it.id=="awakened"}.proposal!=null)
         showWorld(Locale.SIMPLIFIED_CHINESE)
-        capture("map")
-        dictionary()
-        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:long_tide"))
-        ui.onNode(hasText("演进提案") and hasAnyAncestor(hasTestTag("world-term:long_tide")),useUnmergedTree=true).assertExists()
-        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:archive"))
-        ui.onNode(hasText("正式设定 · 站内传闻",substring=true) and hasAnyAncestor(hasTestTag("world-term:archive")),useUnmergedTree=true).assertExists()
-        capture("dictionary-rumor")
-    }
-
-    @Test fun dictionaryUsesEnglishDefinitionsAndProposalLabels() {
+        ui.onNodeWithTag("world-dictionary-toggle").assertDoesNotExist()
+        ui.onNodeWithTag("world-app-glossary-toggle").assertDoesNotExist()
         showWorld(Locale.ENGLISH)
-        dictionary()
-        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:awakened"))
-        ui.onNode(hasText("Proposal") and hasAnyAncestor(hasTestTag("world-term:awakened")),useUnmergedTree=true).assertExists()
-        ui.onNodeWithText("The Awakened").assertExists()
-        capture("dictionary-english")
-    }
-
-    @Test fun dictionaryWrapsAtLargeFontOnNarrowScreen() {
-        val config=Configuration(ui.activity.resources.configuration).apply { setLocales(LocaleList(Locale.SIMPLIFIED_CHINESE)) }
-        ui.runOnUiThread { ui.activity.setContent { CompositionLocalProvider(LocalConfiguration provides config) { PlayerTheme {
-            val density=LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f)) {
-                Box(Modifier.width(320.dp).fillMaxHeight()) { StationWorldPage(embedded=true){} }
-            }
-        } } } }
-        dictionary()
-        ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:spores"))
-        val page=ui.onNodeWithTag("station-world").fetchSemanticsNode().boundsInRoot
-        val term=ui.onNodeWithTag("world-term:spores").fetchSemanticsNode().boundsInRoot
-        org.junit.Assert.assertTrue(term.left>=page.left && term.right<=page.right)
-        capture("dictionary-large-font")
+        ui.onNodeWithTag("world-dictionary-toggle").assertDoesNotExist()
+        ui.onNodeWithTag("world-app-glossary-toggle").assertDoesNotExist()
     }
 
     @Test fun themedEntryNamesKeepTheirFunctionalMeaning() {
