@@ -31,7 +31,7 @@ class WorldSettingRegressionTest {
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:long_tide"))
         ui.onNode(hasText("演进提案") and hasAnyAncestor(hasTestTag("world-term:long_tide")),useUnmergedTree=true).assertExists()
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-term:archive"))
-        ui.onNode(hasText("传闻",substring=true) and hasAnyAncestor(hasTestTag("world-term:archive")),useUnmergedTree=true).assertExists()
+        ui.onNode(hasText("正式设定 · 站内传闻",substring=true) and hasAnyAncestor(hasTestTag("world-term:archive")),useUnmergedTree=true).assertExists()
         capture("dictionary-rumor")
     }
 

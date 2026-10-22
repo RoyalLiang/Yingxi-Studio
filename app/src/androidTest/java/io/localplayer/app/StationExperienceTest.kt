@@ -116,7 +116,8 @@ class StationExperienceTest {
             ui.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("station-gear-sound"));capture("atmosphere")
             ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()}
             ui.runOnIdle{player.draft=Draft(Source(label="西区仓库",protocol=Protocol.WEBDAV,host="media.example.com",root="/dav/"))}
-            ui.onNodeWithText("接入外部信号塔").assertIsDisplayed();ui.onNodeWithText("网盘连接").assertDoesNotExist();capture("source")
+            ui.onNodeWithTag("connection-title").assertTextEquals("连接避难所").assertIsDisplayed()
+            ui.onNodeWithTag("source-category-tower").assertIsSelected();ui.onNodeWithText("网盘连接").assertDoesNotExist();capture("source")
             ui.runOnIdle{player.dismissDraft()}
             ui.onNodeWithContentDescription("打开视频").performClick()
             ui.runOnIdle{files.add(tree)}
@@ -125,6 +126,7 @@ class StationExperienceTest {
             ui.onNodeWithText("继续第 6 集 · 23:18",substring=true).assertIsDisplayed()
             capture("archive")
             ui.runOnIdle{files.root()}
+            ui.onNodeWithTag("station-local-notice").assertExists()
             ui.onNodeWithContentDescription("返回").performClick()
             ui.onNodeWithText("今日拾获").assertExists()
             capture("home")

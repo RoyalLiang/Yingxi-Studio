@@ -60,7 +60,7 @@ import androidx.compose.ui.unit.sp
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", station.dailyLine,
+                StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", station.dailyLine(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
                     modifier=Modifier.testTag("station-diary"),onArchives=onArchives)
             }
             continuing?.let { entry ->

@@ -68,6 +68,9 @@ data class FileCrumb(val label:String,val key:String)
         if(files.busy)Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在读取文件夹…",Modifier.weight(1f).padding(start=12.dp));TextButton(onClick={files.cancel()}){Text("取消")}}
         if(files.active==null){
             LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp)){
+                item(key="station-local-notice") {
+                    LocalArchiveWorldNotice(Modifier.padding(horizontal=20.dp,vertical=8.dp).testTag("station-local-notice"))
+                }
                 item{Column(Modifier.padding(24.dp)){
                     Text("你的文件夹",fontSize=22.sp,fontWeight=FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp));Text("由你选择可访问的文件夹，影片留在原处。",fontSize=14.sp,color=Muted)
