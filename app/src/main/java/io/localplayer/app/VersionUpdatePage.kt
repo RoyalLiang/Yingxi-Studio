@@ -86,8 +86,8 @@ import androidx.compose.ui.unit.sp
             item { Surface(color=GroupedSurface,shape=RoundedCornerShape(22.dp)) { StationCharacterRow("keeper","迟灯 · 设备修理师","先把设备调顺，今晚安心看。") } }
             item { StorageUsageSettings() }
             item { StationAudioSettings() }
-            item { EnrichmentSettings()
-            CloudPlaybackSettings() }
+            item { EnrichmentSettings() }
+            item { CloudPlaybackSettings() }
             item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { StationAtmosphereSettings() } }
         } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             if(maxHeight<420.dp)Row(Modifier.fillMaxSize().padding(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
@@ -118,7 +118,7 @@ import androidx.compose.ui.unit.sp
         Text("当前版本 "+vm.version.name,fontSize=if(compact)18.sp else 22.sp,lineHeight=if(compact)25.sp else 31.sp,fontWeight=FontWeight.SemiBold,color=Ink,modifier=Modifier.testTag("installed-version"))
         Text("安装序号 "+vm.version.code,fontSize=12.sp,color=Muted)
         TextButton(onClick=world,modifier=Modifier.testTag("open-world"),contentPadding=PaddingValues(vertical=4.dp)){
-            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(if(compact)"档案室"else"档案室 · 人物与来信",fontSize=13.sp)
+            Icon(Icons.AutoMirrored.Rounded.Article,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("档案室",fontSize=13.sp)
         }
     }
 }

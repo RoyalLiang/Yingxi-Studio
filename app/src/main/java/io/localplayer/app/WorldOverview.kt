@@ -3,7 +3,6 @@ package io.localplayer.app
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -58,21 +57,5 @@ internal data class WorldSurfaceNote(val id:String,val author:String,val eyebrow
         }
         Text(if(zh)"${world.places.count { it.known }} 处路标已核；${world.places.count { !it.known }} 处位置或路线待核。"else"${world.places.count { it.known }} surveyed places; ${world.places.count { !it.known }} with location or route unverified.",fontSize=12.sp,lineHeight=20.sp,color=Muted)
         Text(world.canonNote.inLanguage(language),fontSize=12.sp,lineHeight=20.sp,color=Muted,modifier=Modifier.testTag("world-canon-boundary"))
-    }
-}
-
-@Composable internal fun WorldApplicationGlossary(names:List<WorldAppName>,language:String) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    val zh=language=="zh"
-    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        TextButton(onClick={open=!open},modifier=Modifier.testTag("world-app-glossary-toggle")) {
-            Text(if(zh)"${if(open)"收起"else"查看"}站内用语 · ${names.size} 项"else"${if(open)"Close"else"Open"} station terms · ${names.size}",color=Berry)
-        }
-        if(open) names.forEach { item ->
-            Column(Modifier.fillMaxWidth().testTag("world-app-name:${item.id}"),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Text(item.name.inLanguage(language),fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
-                Text(item.meaning.inLanguage(language),fontSize=14.sp,lineHeight=24.sp,color=Muted)
-            }
-        }
     }
 }

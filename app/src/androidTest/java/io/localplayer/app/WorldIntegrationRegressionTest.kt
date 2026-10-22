@@ -24,7 +24,7 @@ class WorldIntegrationRegressionTest {
     @Test fun diarySelectsTheSameRecordInBothLanguagesAndKeepsChapterIds() {
         val world = StationWorld.load(ui.activity)
         val preferences = StationPreferences(ui.activity, "world-integration-test")
-        val selected = world.dailyLines[(LocalDate.now().toEpochDay() % world.dailyLines.size).toInt()]
+        val selected = preferences.diary()
         assertEquals(selected.text.zh, preferences.dailyLine("zh"))
         assertEquals(selected.text.en, preferences.dailyLine("en"))
         assertTrue(world.dailyLines.all { it.text.zh.isNotBlank() && it.text.en.isNotBlank() })
@@ -35,9 +35,10 @@ class WorldIntegrationRegressionTest {
     @Test fun characterSwitchResetsQuoteProgressAndShowsTheSelectedPersonality() {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme { StationWorldPage {} } } }
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-quote"))
-        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("1 / 12", substring = true)
+        val count=StationWorld.load(ui.activity).people.first{it.id=="axi"}.quotes.size
+        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("1 / $count", substring = true)
         ui.onNodeWithTag("world-quote").performClick()
-        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("2 / 12", substring = true)
+        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("2 / $count", substring = true)
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person:mitu"))
         ui.onNodeWithTag("world-person:mitu").performClick()
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person-personality"))
@@ -47,33 +48,19 @@ class WorldIntegrationRegressionTest {
         ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("1 / 6", substring = true)
     }
 
-    @Test fun overviewAndFunctionalGlossaryWrapInBothLanguagesAtLargeText() {
-        for (language in listOf("zh", "en")) {
-            ui.runOnUiThread {
-                ui.activity.setContent {
-                    PlayerTheme {
-                        val density = LocalDensity.current
-                        val config = Configuration(ui.activity.resources.configuration).apply { setLocale(Locale(language)) }
-                        CompositionLocalProvider(LocalDensity provides Density(density.density, 1.8f), LocalConfiguration provides config) {
-                            androidx.compose.runtime.key(language) { Box(Modifier.width(320.dp).fillMaxHeight()) { StationWorldPage(embedded = true) {} } }
-                        }
-                    }
+    @Test fun overviewRemainsReadableWithoutGlossaryButtonsInBothLanguagesAtLargeText() {
+        for(language in listOf("zh","en")) {
+            ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
+                val density=LocalDensity.current
+                val config=Configuration(ui.activity.resources.configuration).apply{setLocale(Locale.forLanguageTag(language))}
+                CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f),LocalConfiguration provides config) {
+                    Box(Modifier.width(320.dp).fillMaxHeight()) {StationWorldPage(embedded=true){}}
                 }
-            }
+            } } }
             ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-canon-boundary"))
             ui.onNodeWithTag("world-canon-boundary").assertIsDisplayed()
-            capture("overview-$language")
-            ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-app-glossary-toggle"))
-            ui.onNodeWithTag("world-app-glossary-toggle").performClick()
-            val names = StationWorld.load(ui.activity).appNames
-            for (name in listOf(names.first(), names.last())) {
-                ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-app-name:${name.id}"))
-                val bounds = ui.onNodeWithTag("world-app-name:${name.id}").fetchSemanticsNode().boundsInRoot
-                val screen = ui.onNodeWithTag("station-world").fetchSemanticsNode().boundsInRoot
-                assertTrue(bounds.left >= screen.left && bounds.right <= screen.right)
-                ui.onNodeWithText(name.meaning.inLanguage(language), useUnmergedTree = true).assertExists()
-                capture("glossary-$language-${name.id}")
-            }
+            ui.onNodeWithTag("world-app-glossary-toggle").assertDoesNotExist()
+            ui.onNodeWithTag("world-dictionary-toggle").assertDoesNotExist()
         }
     }
 

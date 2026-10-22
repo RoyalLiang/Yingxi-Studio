@@ -43,39 +43,64 @@ internal fun shelterPosterRef(source: Source, entry: Entry, parentName: String? 
     posterPathHint = listOfNotNull(parentName?.takeIf{it.isNotBlank()}, entry.name,
         if(entry.directory) ".yingxi-folder" else null).joinToString("/"))
 
-@Composable internal fun ShelterDirectory(vm: LibraryViewModel, source: Source,
-    selectedPath: String?, open: (Entry) -> Unit) {
+@Composable internal fun ShelterDirectory(vm:LibraryViewModel,source:Source,selectedPath:String?,open:(Entry)->Unit) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
-    key(source.id, vm.path) {
-        LazyVerticalGrid(columns = GridCells.Adaptive(128.dp), modifier = Modifier.fillMaxWidth()
-            .testTag("shelter-poster-wall"), contentPadding = PaddingValues(start=20.dp,end=20.dp,bottom=112.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            items(vm.entries, key = { it.path },span={if(!it.directory&&!it.isVideo)GridItemSpan(maxLineSpan)else GridItemSpan(1)}) { entry ->
-                if(!entry.directory&&!entry.isVideo) {
-                    MediaRow(entry.name,"非视频文件",Icons.Rounded.Description){open(entry)}
-                } else {
-                val selected = selectedPath == entry.path
-                Surface(color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth().clickable(interactionSource=remember{MutableInteractionSource()},indication=null,enabled=!vm.busy||!selected){open(entry)}.testTag("shelter-entry:${entry.path}")
-                        .semantics { this.selected = selected }) {
-                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(Modifier.fillMaxWidth().aspectRatio(2f/3f).clip(RoundedCornerShape(14.dp))
-                            .background(GroupedSurface).border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(14.dp))) {
-                            ShelterPoster(shelterPosterRef(source, entry, vm.currentDirectoryBookmark()?.label), entry.directory)
-                            SealItemMenu(entry.directory,{vm.sealRemote(source,entry)},Modifier.align(Alignment.TopEnd))
-                        if(entry.directory)Surface(color=Paper.copy(alpha=.94f),shape=RoundedCornerShape(8.dp),
-                                modifier=Modifier.align(Alignment.BottomStart).padding(8.dp)) {
-                                Icon(Icons.Rounded.FolderOpen,"打开目录",Modifier.padding(6.dp).size(16.dp),tint=Berry)
+    key(source.id,vm.path) {
+        SourceDirectory(vm.entries,source,selectedPath,vm.busy,vm.currentDirectoryBookmark()?.label,open){vm.sealRemote(source,it)}
+    }
+}
+
+@Composable internal fun SourceDirectory(entries:List<Entry>,source:Source,selectedPath:String?,busy:Boolean,
+    parentName:String?,open:(Entry)->Unit,seal:(Entry)->Unit) {
+    val minWidth=if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)200.dp else 128.dp
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val columns=((maxWidth-40.dp+14.dp)/(minWidth+14.dp)).toInt().coerceAtLeast(1)
+        // Adaptive columns may differ by one physical pixel; keep the image baseline common.
+        val posterHeight=((maxWidth-40.dp-14.dp*(columns-1))/columns)*1.5f
+        LazyVerticalGrid(columns=GridCells.Fixed(columns),modifier=Modifier.fillMaxWidth().testTag("shelter-poster-wall"),
+            contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=112.dp),
+            horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            items(entries,key={it.path},contentType={if(!it.directory&&!it.isVideo)"file"else"poster"},
+                span={if(!it.directory&&!it.isVideo)GridItemSpan(maxLineSpan)else GridItemSpan(1)}) { entry->
+                if(!entry.directory&&!entry.isVideo) DirectoryFileRow(entry)
+                else {
+                    val selected=selectedPath==entry.path
+                    Surface(color=Color.Transparent,modifier=Modifier.fillMaxWidth()
+                        .clickable(interactionSource=remember{MutableInteractionSource()},indication=null,enabled=!busy||!selected){open(entry)}
+                        .testTag("shelter-entry:${entry.path}").semantics{this.selected=selected}) {
+                        Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                            Box(Modifier.fillMaxWidth().height(posterHeight).clip(RoundedCornerShape(14.dp))
+                                .background(GroupedSurface).border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(14.dp))) {
+                                ShelterPoster(shelterPosterRef(source,entry,parentName),entry.directory)
+                                SealItemMenu(entry.directory,{seal(entry)},Modifier.align(Alignment.TopEnd))
+                                if(entry.directory)Surface(color=Paper.copy(alpha=.94f),shape=RoundedCornerShape(8.dp),
+                                    modifier=Modifier.align(Alignment.BottomStart).padding(8.dp)) {
+                                    Icon(Icons.Rounded.FolderOpen,"打开目录",Modifier.padding(6.dp).size(16.dp),tint=Berry)
+                                }
+                                if(selected&&busy)CircularProgressIndicator(Modifier.align(Alignment.Center).size(26.dp),strokeWidth=2.dp)
                             }
-                            if(selected && vm.busy)CircularProgressIndicator(Modifier.align(Alignment.Center).size(26.dp),strokeWidth=2.dp)
+                            Text(if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,
+                                modifier=Modifier.fillMaxWidth().testTag("shelter-title:${entry.path}"),color=Ink,fontSize=14.sp,lineHeight=20.sp,
+                                fontWeight=FontWeight.Medium,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis)
+                            Text(if(entry.directory)"文件夹"else formatSize(entry.size),
+                                modifier=Modifier.testTag("shelter-info:${entry.path}"),color=Muted,fontSize=11.sp,lineHeight=16.sp,maxLines=1)
                         }
-                        Text(if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,
-                            color=Ink,fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium,
-                            maxLines=2,overflow=TextOverflow.Ellipsis)
-                        if(!entry.directory)Text(formatSize(entry.size),color=Muted,fontSize=11.sp)
                     }
                 }
-                }
+            }
+        }
+    }
+}
+
+@Composable internal fun DirectoryFileRow(entry:Entry) {
+    // Sidecars and incomplete downloads remain visible, without implying a playable item.
+    Surface(modifier=Modifier.fillMaxWidth().testTag("directory-file:${entry.path}"),color=GroupedSurface,shape=RoundedCornerShape(12.dp)) {
+        Row(Modifier.heightIn(min=72.dp).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Rounded.Description,null,Modifier.size(28.dp),tint=Muted)
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Text(entry.name,fontSize=15.sp,lineHeight=21.sp,color=Ink,maxLines=2,overflow=TextOverflow.Ellipsis)
+                val extension=entry.name.substringAfterLast('.',"").takeIf{it.length in 1..8}?.uppercase(java.util.Locale.ROOT)?:"文件"
+                Text("$extension · ${formatSize(entry.size)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1)
             }
         }
     }

@@ -22,10 +22,10 @@ class ShelterExperienceRegressionTest {
 
     @Test fun exploreKeepsPlacesAndArchivesKeepPeople() {
         ui.onNodeWithText("探索").performClick()
-        ui.onNodeWithTag("world-map").assertIsDisplayed()
+        ui.onNodeWithTag("world-map").performScrollTo().assertIsDisplayed()
         ui.onNodeWithTag("world-person:axi").assertDoesNotExist()
         capture("explore")
-        ui.onNodeWithTag("world-node:salt").performClick().assertIsSelected()
+        ui.onNodeWithTag("world-node:salt").performScrollTo().performClick().assertIsSelected()
         ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithTag("home-archives").performClick()
         ui.onNodeWithTag("world-person:axi").assertIsDisplayed()
@@ -33,7 +33,7 @@ class ShelterExperienceRegressionTest {
         capture("archives")
         ui.onNodeWithTag("archives-back").performClick()
         ui.onNodeWithText("探索").performClick()
-        ui.onNodeWithTag("world-node:salt").assertIsSelected()
+        ui.onNodeWithTag("world-node:salt").performScrollTo().assertIsSelected()
     }
 
     @Test fun remoteSeriesFoldersAndEpisodesHavePostersAndRealDirectoryNames() {

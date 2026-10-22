@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val context = androidx.compose.ui.platform.LocalContext.current
     val station = remember(context) { StationPreferences(context) }
+    var diary by remember(station){mutableStateOf(station.diary())}
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){diary=station.diary()}
     remember { station.claimGreeting() }
     val inventoryRevision = StationInventory.revision.intValue
     val found = remember(inventoryRevision) { StationInventory(context).today().filter{SealedMedia.visible(it.media)}.take(8) }
@@ -60,8 +62,8 @@ import androidx.compose.ui.unit.sp
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", station.dailyLine(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
-                    modifier=Modifier.testTag("station-diary"),onArchives=onArchives)
+                StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", diary.text.inLanguage(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
+                    modifier=Modifier.testTag("station-diary"),onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
             }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -89,13 +91,7 @@ import androidx.compose.ui.unit.sp
                     Text("今天新发现 ${StationInventory(context).today().size} 部 · 来自已浏览的目录",fontSize=12.sp,color=Muted)
                 } }
                 items(found,key={"found:${it.media.key}"}) { finding ->
-                    Surface(onClick={vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false))},color=Color.Transparent) {
-                        Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                            MediaThumbnail(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
-                            Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
-                            Text(finding.media.sourceLabel,fontSize=12.sp,color=Muted,maxLines=1)
-                        }
-                    }
+                    FindingCard(finding) { vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false)) }
                 }
             }
             if (recent.isNotEmpty()) {
@@ -185,5 +181,15 @@ import androidx.compose.ui.unit.sp
         Spacer(Modifier.height(6.dp))
         LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(3.dp),
             color=Color(0xFFFFB5C8),trackColor=Color.White.copy(alpha=.35f),drawStopIndicator={})
+    }
+}
+
+@Composable internal fun FindingCard(finding:StationFinding,play:()->Unit) {
+    Surface(onClick=play,color=Color.Transparent,modifier=Modifier.fillMaxWidth().testTag("found:${finding.media.key}")) {
+        Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            MediaThumbnail(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
+            Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,lineHeight=22.sp,minLines=2,maxLines=2,
+                overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().testTag("found-title:${finding.media.key}"))
+        }
     }
 }
