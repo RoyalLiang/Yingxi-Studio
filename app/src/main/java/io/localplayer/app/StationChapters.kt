@@ -27,7 +27,7 @@ internal class ChapterReading(context:android.content.Context,name:String="stati
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun StationChapterReader(world:StationWorld,language:String) {
+@Composable internal fun StationChapterReader(world:StationWorld,language:String,onTurn:()->Unit) {
     val context=LocalContext.current
     val reading=remember(context) { ChapterReading(context) }
     var chapterId by remember { mutableStateOf(reading.chapter(world.chapters).id) }
@@ -35,11 +35,11 @@ internal class ChapterReading(context:android.content.Context,name:String="stati
     var letterId by remember(chapterId) { mutableStateOf(reading.letter(chapter).id) }
     val index=chapter.letters.indexOfFirst { it.id==letterId }.coerceAtLeast(0)
     val letter=chapter.letters[index]
-    fun select(target:WorldLetter) { letterId=target.id;reading.select(chapter,target) }
+    fun select(target:WorldLetter) { letterId=target.id;reading.select(chapter,target);onTurn() }
     fun WorldText.say()=inLanguage(language)
     FlowRow(Modifier.fillMaxWidth().testTag("world-chapters"),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         world.chapters.forEachIndexed { number,item ->
-            FilterChip(selected=item.id==chapter.id,onClick={chapterId=item.id;reading.select(item,reading.letter(item))},
+            FilterChip(selected=item.id==chapter.id,onClick={chapterId=item.id;reading.select(item,reading.letter(item));onTurn()},
                 label={Text(if(language=="zh")"第${if(number==0)"一"else"二"}章" else "Chapter ${number+1}")},
                 modifier=Modifier.heightIn(min=48.dp).testTag("world-chapter:${item.id}"))
         }
