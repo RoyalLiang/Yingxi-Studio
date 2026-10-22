@@ -9,19 +9,27 @@ internal object PlaybackIoProbe {
         val sinceProgressMs:Long?, val failures:Int, val lastFailure:String?)
     private data class Pending(val operation:Operation,val started:Long)
     private val pending=linkedMapOf<Long,Pending>()
+    private val transports=mutableListOf<io.localplayer.core.RemoteReadTelemetry>()
     private var serial=0L
     private var protocol="UNKNOWN"
     private var lastProgress:Long?=null
     private var failures=0
     private var lastFailure:String?=null
 
-    @Synchronized fun reset(){pending.clear();protocol="UNKNOWN";lastProgress=null;failures=0;lastFailure=null}
+    @Synchronized fun reset(){pending.clear();transports.clear();protocol="UNKNOWN";lastProgress=null;failures=0;lastFailure=null}
     @Synchronized fun begin(operation:Operation,kind:String?=null):Long {
         if(kind!=null)protocol=kind.takeIf{it in setOf("SMB","SFTP","WEBDAV","ALIYUN")}?:"UNKNOWN"
         // Bound diagnostic state even if a broken caller never completes its operation.
         if(pending.size>=16)pending.remove(pending.keys.first())
         val id=++serial;pending[id]=Pending(operation,SystemClock.elapsedRealtime());return id
     }
+    @Synchronized fun attach(id:Long,stats:io.localplayer.core.RemoteReadTelemetry?){
+        if(stats!=null&&pending.containsKey(id)&&stats !in transports){
+            if(transports.size>=16)transports.removeAt(0)
+            transports+=stats
+        }
+    }
+    @Synchronized fun transportSnapshots()=transports.map{it.snapshot()}
     @Synchronized fun progress(id:Long,count:Int){if(count>0&&pending.containsKey(id))lastProgress=SystemClock.elapsedRealtime()}
     @Synchronized fun end(id:Long,error:Throwable?=null){
         val operation=pending.remove(id)?:return

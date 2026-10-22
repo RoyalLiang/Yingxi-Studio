@@ -235,6 +235,10 @@
         {
           "zh": "核火烧掉了旧世界的街牌，但只要片头字幕还能亮起来，那些日子就不算彻底消失。",
           "en": "Nuclear fire burned away the old world's street signs, but as long as the opening credits still light up, those days are not truly gone."
+        },
+        {
+          "zh": "同一只片匣，纸条夹在一起。别翻一页，就重抄一遍。",
+          "en": "Keep the slips for one film case together. Turning a page should not mean copying them all again."
         }
       ],
       "personality": {
@@ -494,6 +498,13 @@
       "text": {
         "zh": "迟灯给检修纸留出一栏，先记哪盏灯灭了、等了多久，再拿钳子查接头。",
         "en": "Chideng leaves a column on the repair slip for which lamp went dark and how long it waited before reaching for the pliers."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.40",
+      "text": {
+        "zh": "阿汐将同一片匣的登记纸与检修纸夹好，迟灯翻查时不用再往登记台跑一趟。",
+        "en": "Axi clips each film case’s registration and repair slips together, saving Chideng another trip to the desk."
       }
     }
   ],
@@ -777,8 +788,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",

@@ -1,5 +1,6 @@
 package io.localplayer.app
 
+import io.localplayer.core.RemoteReadTelemetry
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Build
@@ -23,6 +24,9 @@ import java.util.Locale
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):String {
     val metrics=PlaybackMetrics.snapshot();val io=PlaybackIoProbe.snapshot()
+    val transports=PlaybackIoProbe.transportSnapshots()
+    val active=transports.filter{it.stage!=null}.maxByOrNull{it.currentMs}
+
     val state=when(player?.playbackState){Player.STATE_BUFFERING->"BUFFERING";Player.STATE_READY->"READY";Player.STATE_ENDED->"ENDED";Player.STATE_IDLE->"IDLE";else->"SESSION_CONNECTING"}
     val scheme=player?.currentMediaItem?.localConfiguration?.uri?.scheme
     val kind=if(scheme=="file"||scheme=="content")"LOCAL" else io.protocol
@@ -32,6 +36,11 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
     }
     val mime=selected?.sampleMimeType?.takeIf{it in setOf("video/avc","video/hevc","video/dolby-vision","video/av01","video/x-vnd.on2.vp9","video/x-vnd.on2.vp8","video/mp4v-es","video/mpeg2","video/3gpp") }
     return JSONObject().put("report","yingxi-playback-v1")
+        .put("httpPhase",active?.stage?.name?:if(transports.isEmpty())JSONObject.NULL else "IDLE")
+        .put("httpPhaseMs",active?.currentMs?:0).put("urlRequests",transports.sumOf{it.urlRequests})
+        .put("rangeRequests",transports.sumOf{it.rangeRequests}).put("sourceReadBytes",transports.sumOf{it.sourceBytes})
+        .put("urlResolveMs",transports.sumOf{it.urlMs}).put("responseWaitMs",transports.sumOf{it.responseMs})
+        .put("bodyReadMs",transports.sumOf{it.bodyMs}).put("lastHttpStatus",transports.lastOrNull()?.httpStatus?:JSONObject.NULL)
         .put("version",BuildConfig.VERSION_NAME).put("versionCode",BuildConfig.VERSION_CODE)
         .put("manufacturer",Build.MANUFACTURER).put("model",Build.MODEL).put("android",Build.VERSION.RELEASE).put("sdk",Build.VERSION.SDK_INT)
         .put("state",state).put("bufferingWaitMs",bufferingWaitMs?:JSONObject.NULL).put("playRequested",player?.playWhenReady?:false)
@@ -54,6 +63,9 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
 internal fun playbackWaitSummary():String {
     val io=PlaybackIoProbe.snapshot();val metrics=PlaybackMetrics.snapshot()
     val received=String.format(Locale.ROOT,"%.1f",metrics.bytes/1048576.0)
+    val http=PlaybackIoProbe.transportSnapshots().filter{it.stage!=null}.maxByOrNull{it.currentMs}
+    if(http?.stage==RemoteReadTelemetry.Stage.URL)return "正在取得播放地址\n已等待 ${http.currentMs/1000}\u00A0秒"
+    if(http?.stage==RemoteReadTelemetry.Stage.HEADERS)return "等待片源响应\n已等待 ${http.currentMs/1000}\u00A0秒"
     return when(io.operation){
         PlaybackIoProbe.Operation.OPEN->"正在连接来源\n已等待 ${io.waitingMs/1000}\u00A0秒"
         PlaybackIoProbe.Operation.READ->"正在读取影片\n已接收 $received\u00A0MB"

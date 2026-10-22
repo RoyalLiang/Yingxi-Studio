@@ -1,9 +1,9 @@
 {
   "version": {
-    "versionName": "0.2.0-alpha.39",
-    "versionCode": 41
+    "versionName": "0.2.0-alpha.40",
+    "versionCode": 42
   },
-  "atlasSha256": "b2af4452fe51fe10fd6784bd5f9ea45fa870e3f1651cefaf09004a8055bdac3c",
+  "atlasSha256": "62e58b2ce1b0a5475f1c28cd4d30cb4af4b3196b0149563fb0d0f03624e7b136",
   "counts": {
     "places": 6,
     "surveyedPlaces": 2,
@@ -13,9 +13,9 @@
     "unverifiedRoutes": 4,
     "characters": 3,
     "personalityProfiles": 3,
-    "quotes": 32,
+    "quotes": 33,
     "quotesByPerson": {
-      "axi": 12,
+      "axi": 13,
       "chideng": 14,
       "mitu": 6
     },
@@ -25,14 +25,14 @@
     "proposalExtensions": 4,
     "dailyNotes": 18,
     "surfaceNotes": 2,
-    "chronicles": 18,
+    "chronicles": 19,
     "chapters": 2,
     "letters": 4,
     "applicationNames": 17
   },
   "repository": {
-    "releaseNoteFiles": 36,
-    "scavengerLetterFiles": 24,
-    "attributedLetterFiles": 19
+    "releaseNoteFiles": 37,
+    "scavengerLetterFiles": 25,
+    "attributedLetterFiles": 20
   }
 }

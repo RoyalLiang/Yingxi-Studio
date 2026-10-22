@@ -50,18 +50,23 @@ class PlaybackDiagnosticTest {
     @Test fun copiedReportDoesNotContainUriTitleOrRawFailure(){
         PlaybackMetrics.reset()
         val operation=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,"SMB")
+        val transport=RemoteReadTelemetry();transport.urlRequest();PlaybackIoProbe.attach(operation,transport)
         PlaybackIoProbe.end(operation,java.io.IOException("nas-secret/private-film password123"))
         var report=""
         ui.runOnUiThread{
             val player=ExoPlayer.Builder(ui.activity).build()
             try{
                 player.setMediaItem(MediaItem.fromUri(android.net.Uri.Builder().scheme("https").encodedAuthority("user:password123@nas-secret").path("/private-film").appendQueryParameter("token","secret-value").build()))
-                report=playbackDiagnostic(player)
+                transport.measure(RemoteReadTelemetry.Stage.HEADERS){
+                    report=playbackDiagnostic(player)
+                    assertTrue(playbackWaitSummary().startsWith("等待片源响应"))
+                }
             }finally{player.release()}
         }
         listOf("nas-secret","private-film","password123","secret-value","https://").forEach{assertFalse(report.contains(it))}
         val json=JSONObject(report)
         assertEquals("SMB",json.getString("source"))
+        assertEquals("HEADERS",json.getString("httpPhase"));assertEquals(1,json.getInt("urlRequests"))
         assertEquals("OPEN:IO",json.getString("lastIoFailure"))
         assertEquals(1,json.getInt("ioFailures"))
         assertTrue(json.has("model"));assertTrue(json.has("sdk"));assertTrue(json.has("decoder"))
