@@ -52,7 +52,12 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
                 Spacer(Modifier.height(6.dp))
                 Text(if (vm.sources.isEmpty()) "把远处的影像接回片架。" else "已登记 ${vm.sources.size} 处 · 随时回来", fontSize = 14.sp, color = Muted)
             }
-            IconButton(onClick=onSealed,modifier=Modifier.testTag("open-sealed-cabinet")){Icon(Icons.Rounded.Lock,"封存柜",tint=Berry)}
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                IconButton(onClick=onSealed,modifier=Modifier.testTag("open-sealed-cabinet")){Icon(Icons.Rounded.Lock,"封存柜",tint=Berry)}
+                FilledIconButton(onClick={vm.add()},modifier=Modifier.size(48.dp).testTag("add-source")){
+                    Icon(Icons.Rounded.Add,"连接避难所")
+                }
+            }
 
         }
         if (vm.sources.isNotEmpty() || groups.isNotEmpty()) {
@@ -66,23 +71,6 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
             }
         }
         LazyColumn(Modifier.weight(1f).testTag("source-bookmarks"), contentPadding = PaddingValues(top = 8.dp, bottom = 112.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            item(key="source-kind-entries"){
-                Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                    Surface(onClick={vm.add()},color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("add-outpost")){
-                        Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
-                            Column(Modifier.weight(1f)){Text("幸存者据点",fontSize=19.sp,fontWeight=FontWeight.SemiBold);Text("SMB / SFTP",fontSize=13.sp,color=Muted)}
-                            Icon(Icons.Rounded.Add,"连接幸存者据点",tint=Berry)
-                        }
-                    }
-                    Surface(onClick=vm::addExternal,color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("add-tower")){
-                        Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically){
-                            Column(Modifier.weight(1f)){Text("外部信号塔",fontSize=19.sp,fontWeight=FontWeight.SemiBold);Text("网盘 / WebDAV",fontSize=13.sp,color=Muted)}
-                            Icon(Icons.Rounded.Add,"接入外部信号塔",tint=Berry)
-                        }
-                    }
-                }
-            }
-
             if (shown.isEmpty()) item {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(76.dp).background(Berry.copy(alpha = .07f), RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
@@ -91,7 +79,7 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
                     Spacer(Modifier.height(24.dp))
                     Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有路标" else "这个分册还没有避难所", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
-                    Text(if (vm.sources.isEmpty()) "选择「幸存者据点」连接 SMB / SFTP，\n或从「外部信号塔」接入网盘 / WebDAV。" else "把常用连接或目录标记为路标，再按分册整理，回来时更好找。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(if (vm.sources.isEmpty()) "点右上角 ＋，登记一处避难所，\n把远处的影像接回片架。" else "把常用连接或目录标记为路标，再按分册整理，回来时更好找。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             items(shown, key = { it.key }) { item ->

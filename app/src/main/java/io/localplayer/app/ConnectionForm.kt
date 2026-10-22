@@ -39,7 +39,10 @@ import io.localplayer.core.Protocol
 /** All protocols share one Android window. Only the configuration body crossfades. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable internal fun ConnectionDialog(vm: LibraryViewModel, d: Draft, requestNearby: () -> Unit = {}) {
-    val external=remember(d.source.id){d.source.protocol==Protocol.WEBDAV||d.source.protocol==Protocol.ALIYUN}
+    val external=d.source.protocol==Protocol.WEBDAV||d.source.protocol==Protocol.ALIYUN
+    val adding=vm.sources.none{it.id==d.source.id}
+    val categoryDrafts=remember(d.source.id){mutableMapOf<Boolean,Draft>()}
+    categoryDrafts[external]=d
     var manualWebDav by remember(d.source.id) { mutableStateOf(d.webDavUrl.trim() !in listOf("", "https://")) }
     val focus = LocalFocusManager.current
     val scene = rememberGraphicsLayer()
@@ -87,8 +90,20 @@ import io.localplayer.core.Protocol
         Box(Modifier.fillMaxWidth().fillMaxHeight().imePadding().testTag("connection-sheet")) {
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
-                    Text(if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.testTag("connection-title"), fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(20.dp))
+                    Row(verticalAlignment=Alignment.CenterVertically){
+                    Text(if(adding) "连接避难所" else if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.weight(1f).testTag("connection-title"), fontSize=26.sp,fontWeight=FontWeight.Bold)
+                    IconButton(onClick=vm::dismissDraft,modifier=Modifier.testTag("connection-close")){Icon(Icons.Rounded.Close,"关闭")}
+                }
+                Spacer(Modifier.height(16.dp))
+                if(adding){
+                    ConnectionCategoryTabs(external){tower->
+                        if(tower!=external){
+                            focus.clearFocus();vm.stopDiscovery();vm.cancelOperation();vm.discoveryPanelOpen=false
+                            vm.draft=categoryDrafts[tower] ?: Draft(io.localplayer.core.Source(id=d.source.id,label="",protocol=if(tower)Protocol.WEBDAV else Protocol.SMB,host=""),webDavUrl=if(tower)"https://"else"")
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
                 ConnectionProtocolSelector(external,if(external){if(manualWebDav)"WebDAV"else"阿里云盘"}else d.source.protocol.name){choice->
                     focus.clearFocus();vm.discoveryPanelOpen=false;vm.stopDiscovery()
                     if(external)manualWebDav=choice=="WebDAV" else vm.switchDraftProtocol(Protocol.valueOf(choice))

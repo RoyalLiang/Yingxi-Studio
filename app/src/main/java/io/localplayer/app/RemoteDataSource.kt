@@ -27,10 +27,10 @@ class PlaybackLease(val source: Source, val credentials: Credentials, val path: 
     private var session: RemoteSession?=null
     private var closed=false
     val resumeKey get()="${source.id}:$path"
-    @Synchronized fun open(): RemoteFile {
+    @Synchronized fun open(position:Long=0): RemoteFile {
         if(closed) throw IOException("播放已结束")
         val connected=session ?: connector.connect(source,credentials,cancellation).also { session=it }
-        try { return connected.open(path) }
+        try { return connected.open(path,position) }
         catch(e:Exception) {
             cancellation.check()
             if(Thread.currentThread().isInterrupted)throw e
@@ -38,7 +38,7 @@ class PlaybackLease(val source: Source, val credentials: Credentials, val path: 
             // Read-only reopen, once per open call. Reconnect repeats the same
             // source authentication and SFTP host-key verification.
             val renewed=connector.connect(source,credentials,cancellation).also { session=it }
-            return renewed.open(path)
+            return renewed.open(path,position)
         }
     }
     override fun close() {
@@ -93,7 +93,7 @@ class RemoteDataSource : BaseDataSource(true) {
         transferInitializing(dataSpec);closed=false;uri=dataSpec.uri;position=dataSpec.position;transferred=0;openedAt=android.os.SystemClock.elapsedRealtime()
         trace("open offset=$position")
         try {
-            val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open());file=opened
+            val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open(dataSpec.position));file=opened
             if(closed) { opened.close();throw InterruptedIOException("读取已取消") }
             if(position>opened.size) throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             val available=opened.size-position

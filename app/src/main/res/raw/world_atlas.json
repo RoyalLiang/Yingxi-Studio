@@ -188,6 +188,10 @@
         {
           "zh": "收到的信先压平。纸上的事，还要一件件核实。",
           "en": "Flatten the letter first. What it says still needs checking, one thing at a time."
+        },
+        {
+          "zh": "登记簿的夹页别抽走。两边的来信各有去处，回头才找得到。",
+          "en": "Leave the dividers in the logbook. Each bundle of letters has its place; we need to find them again."
         }
       ]
     },
@@ -633,8 +637,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线上的放映与影像归档据点，阿汐和迟灯在此工作。阿汐给旧片罐补写侧签，迟灯照看放映设备。迟灯把检修拆下的垫圈按尺寸串在细铁丝上，免得混用。",
-        "en": "A screening and image archive on the old railway, where Axi and Chideng work. Axi renews labels on old film cans while Chideng tends the projection equipment. Chideng sorts washers from repairs on a thin wire by size so they do not get mixed up."
+        "zh": "旧铁路线上的放映与影像归档据点，阿汐和迟灯在此工作。阿汐给旧片罐补写侧签，迟灯照看放映设备。迟灯把检修拆下的垫圈按尺寸串在细铁丝上，免得混用。阿汐把磨软的厚纸裁成登记簿夹页，用短棉线系在书脊，翻查来信时不容易散落。",
+        "en": "A screening and image archive on the old railway, where Axi and Chideng work. Axi renews labels on old film cans while Chideng tends the projection equipment. Chideng sorts washers from repairs on a thin wire by size so they do not get mixed up. Axi cuts worn card into logbook dividers and ties them to the spine with short cotton thread so they stay put when letters are checked."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",

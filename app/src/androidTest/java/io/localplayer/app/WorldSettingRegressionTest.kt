@@ -62,8 +62,8 @@ class WorldSettingRegressionTest {
 
     @Test fun themedEntryNamesKeepTheirFunctionalMeaning() {
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithTag("add-outpost").assertExists()
-        ui.onNodeWithTag("add-tower").assertExists()
+        ui.onNodeWithTag("add-source").assertExists()
+        ui.onNodeWithTag("add-tower").assertDoesNotExist()
         ui.onNodeWithText("幸存者据点").assertExists()
         ui.onNodeWithText("外部信号塔").assertExists()
         ui.onNodeWithText("放映站").performClick()

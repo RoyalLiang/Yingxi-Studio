@@ -133,7 +133,7 @@ class WebDavPlaybackTest {
 }
 
 /** A local authenticated DAV fixture; no real accounts or network services are used. */
-internal class DavFixture(private val media:File,private val chunkDelayMs:Long=40):java.io.Closeable {
+internal class DavFixture(private val media:File,private val chunkDelayMs:Long=40,private val headerDelayMs:Long=0):java.io.Closeable {
     val username="reader";val password=UUID.randomUUID().toString()
     val names=listOf("01-海边.mp4","02-落日.mp4")
     val mediaProbes=java.util.concurrent.atomic.AtomicInteger()
@@ -159,7 +159,8 @@ internal class DavFixture(private val media:File,private val chunkDelayMs:Long=4
             val body=("<d:multistatus xmlns:d=\"DAV:\">"+names.joinToString(""){name->"<d:response><d:href>"+URI(null,null,"/dav/$name",null).toASCIIString()+"</d:href><d:propstat><d:prop><d:resourcetype/><d:getcontentlength>${media.length()}</d:getcontentlength></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>"}+"</d:multistatus>").toByteArray()
             header("207 Multi-Status",body.size.toLong(),"Content-Type: application/xml\r\n");output.write(body);return
         }
-        val range=headers["range"]?.removePrefix("bytes=") ?: "0-"
+        if(headerDelayMs>0)Thread.sleep(headerDelayMs)
+  val range=headers["range"]?.removePrefix("bytes=") ?: "0-"
         val start=range.substringBefore('-').toLong();val end=range.substringAfter('-').toLongOrNull() ?: media.length()-1
         positions.add(start)
         if(range=="0-0")mediaProbes.incrementAndGet()

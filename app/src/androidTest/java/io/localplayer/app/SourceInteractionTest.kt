@@ -82,7 +82,7 @@ class SourceInteractionTest {
     @Test fun expandedConnectionSheetKeepsTopWhenProtocolChanges(){
         mount()
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithTag("add-outpost").performClick()
+        ui.onNodeWithTag("add-source").performClick()
         ui.onNodeWithTag("connection-form").performTouchInput{swipeUp()}
         ui.onNodeWithTag("connection-form").performScrollToIndex(0)
         val top=ui.onNodeWithTag("connection-title").getUnclippedBoundsInRoot().top
@@ -106,7 +106,8 @@ class SourceInteractionTest {
         ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithText("连接与账户配置").performClick()
         ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点")
-        ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
+        ui.onNodeWithTag("source-category-tower").assertDoesNotExist()
+  ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
     }
 
     @Test fun swipingOnlyRevealsActionsAndPinLimitIsPersisted(){

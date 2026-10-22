@@ -117,15 +117,20 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
         } finally { release(response) }
     }
 
-    override fun open(path:String):RemoteFile {
+    override fun open(path:String):RemoteFile = open(path,0)
+    override fun open(path:String,position:Long):RemoteFile {
+        require(position>=0)
         val url=uri(path)
-        val probe=request(url,"GET","bytes=0-0")
-        val size=try { contentRange(probe,0).third } finally { release(probe) }
+        // Reuse metadata headers and body at the extractor's actual offset.
+        // No discarded one-byte probe or prefix stream before a seek/rebuffer.
+        val initialCall=java.util.concurrent.atomic.AtomicReference<Call?>()
+        val initial=request(url,"GET","bytes=$position-",ownCall={initialCall.set(it)})
+        val size=try { contentRange(initial,position).third } catch(e:Exception) { release(initial);throw e }
         return object:RemoteFile {
             override val size=size
-            @Volatile private var response:Response?=null
-            private val currentCall=java.util.concurrent.atomic.AtomicReference<Call?>()
-            private var cursor=-1L
+            @Volatile private var response:Response?=initial
+            private val currentCall=initialCall
+            private var cursor=position
             private val done=AtomicBoolean(false)
             private fun ensureOpen(){check();if(done.get())throw InterruptedIOException("读取已关闭")}
             @Synchronized override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {
