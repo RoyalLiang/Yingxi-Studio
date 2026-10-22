@@ -93,6 +93,8 @@ class RemoteDataSource : BaseDataSource(true) {
         transferInitializing(dataSpec);closed=false;uri=dataSpec.uri;position=dataSpec.position;transferred=0;openedAt=android.os.SystemClock.elapsedRealtime()
         trace("open offset=$position")
         val openNanos=System.nanoTime()
+        val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,runCatching{PlaybackRegistry.get(dataSpec.uri).source.protocol.name}.getOrNull())
+        var probeError:Throwable?=null
         try {
             val opened=ReadAheadFile(PlaybackRegistry.get(dataSpec.uri).open(dataSpec.position));file=opened
             if(closed) { opened.close();throw InterruptedIOException("读取已取消") }
@@ -100,7 +102,7 @@ class RemoteDataSource : BaseDataSource(true) {
             val available=opened.size-position
             remaining=if(dataSpec.length==C.LENGTH_UNSET.toLong()) available else minOf(available,dataSpec.length)
             started=true;transferStarted(dataSpec);trace("opened offset=$position remaining=$remaining took=${android.os.SystemClock.elapsedRealtime()-openedAt}ms");return remaining
-        } catch(e: Exception) { runCatching { file?.close() };file=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) } finally { PlaybackMetrics.opened(System.nanoTime()-openNanos) }
+        } catch(e: Exception) { probeError=e;runCatching { file?.close() };file=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) } finally { PlaybackIoProbe.end(probe,probeError);PlaybackMetrics.opened(System.nanoTime()-openNanos) }
 
     }
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -109,14 +111,19 @@ class RemoteDataSource : BaseDataSource(true) {
         if(remaining==0L)return C.RESULT_END_OF_INPUT
         val readAt=android.os.SystemClock.elapsedRealtime()
         val readNanos=System.nanoTime()
-        val n=file?.readAt(position,buffer,offset,minOf(length.toLong(),remaining).toInt()) ?: throw IOException("文件未打开")
-        if(n>0)PlaybackMetrics.read(n,System.nanoTime()-readNanos)
-        val elapsed=android.os.SystemClock.elapsedRealtime()-readAt
-        if(transferred==0L||elapsed>100)trace("read offset=$position bytes=$n took=${elapsed}ms")
-        if(closed)throw InterruptedIOException("读取已取消")
-        if(n<0)throw java.io.EOFException("远程文件提前结束，文件可能已改变")
-        if(n==0)throw IOException("远程服务返回空读取")
-        position+=n;remaining-=n;transferred+=n;bytesTransferred(n);return n
+        val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.READ)
+        var probeError:Throwable?=null
+        try {
+            val n=file?.readAt(position,buffer,offset,minOf(length.toLong(),remaining).toInt()) ?: throw IOException("文件未打开")
+            if(n>0)PlaybackMetrics.read(n,System.nanoTime()-readNanos)
+            val elapsed=android.os.SystemClock.elapsedRealtime()-readAt
+            if(transferred==0L||elapsed>100)trace("read offset=$position bytes=$n took=${elapsed}ms")
+            if(closed)throw InterruptedIOException("读取已取消")
+            if(n<0)throw java.io.EOFException("远程文件提前结束，文件可能已改变")
+            if(n==0)throw IOException("远程服务返回空读取")
+            PlaybackIoProbe.progress(probe,n)
+            position+=n;remaining-=n;transferred+=n;bytesTransferred(n);return n
+        } catch(e:Exception){probeError=e;throw e} finally {PlaybackIoProbe.end(probe,probeError)}
     }
     override fun close() {
         closed=true

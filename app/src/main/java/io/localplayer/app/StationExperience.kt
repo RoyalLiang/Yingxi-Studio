@@ -5,6 +5,8 @@ import android.media.AudioManager
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.compose.animation.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -95,7 +97,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
 }
 
 /** Only the real buffering state controls this overlay; a character hint is optional and time bounded. */
-@Composable internal fun StationBuffering(show:Boolean,allowHint:Boolean) {
+@Composable internal fun StationBuffering(show:Boolean,allowHint:Boolean,details:@Composable ()->Unit={}) {
     val context=LocalContext.current
     var hint by remember { mutableStateOf(false) }
     var lastHint by remember { mutableLongStateOf(0L) }
@@ -108,11 +110,14 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
         }
     }
     if(show) BoxWithConstraints(Modifier.fillMaxSize()) {
-        Column(Modifier.align(Alignment.Center).testTag("station-decoding").clearAndSetSemantics {
-            contentDescription="信号破译中，正在缓冲";progressBarRangeInfo=ProgressBarRangeInfo.Indeterminate
-        },horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            StationDecodingMark()
-            Text("信号破译中",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Medium)
+        Column(Modifier.align(Alignment.Center).heightIn(max=maxHeight).verticalScroll(rememberScrollState()).padding(horizontal=24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.testTag("station-decoding").clearAndSetSemantics {
+                contentDescription="信号破译中，正在缓冲";progressBarRangeInfo=ProgressBarRangeInfo.Indeterminate
+            },horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                StationDecodingMark()
+                Text("信号破译中",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Medium)
+            }
+            details()
         }
         // Reserve the center status region; adapt bubble width before hiding it on compact screens.
         val fontScale=androidx.compose.ui.platform.LocalDensity.current.fontScale

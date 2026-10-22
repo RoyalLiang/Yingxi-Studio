@@ -26,6 +26,7 @@ object PlaybackMetrics {
  private var decoderInitMs=0L
  private var bufferingSince=0L
  @Synchronized fun reset(){
+  PlaybackIoProbe.reset()
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0

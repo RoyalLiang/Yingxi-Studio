@@ -64,8 +64,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private val PlayerInk = Color(0xFFF7F7F6)
-private val PlayerAccent = Color(0xFFFF9AB6)
+internal val PlayerInk = Color(0xFFF7F7F6)
+internal val PlayerAccent = Color(0xFFFF9AB6)
 private val PlayerPanel = Color(0xF5202326)
 
 @Composable
@@ -235,7 +235,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration)
+        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration){ if(!locked&&!settings&&!queue&&!dragging&&!speedOpen)PlaybackWaitDiagnostics(controller) }
 
         if (!compact && visible && !locked && !queue && !settings) {
             if (!dragging) {
