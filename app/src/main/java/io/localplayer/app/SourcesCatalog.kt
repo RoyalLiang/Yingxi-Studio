@@ -89,9 +89,9 @@ fun SourcesCatalog(vm: LibraryViewModel,onSealed:()->Unit={}) {
                         Icon(if (vm.selectedGroup == "favorites") Icons.Rounded.StarOutline else Icons.Rounded.VideoLibrary, null, Modifier.size(34.dp), tint = Berry)
                     }
                     Spacer(Modifier.height(24.dp))
-                    Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有收藏" else "这个分册还没有避难所", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (vm.sources.isEmpty()) "你的片库，从这里开始" else if (vm.selectedGroup == "favorites") "还没有路标" else "这个分册还没有避难所", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(10.dp))
-                    Text(if (vm.sources.isEmpty()) "选择「幸存者据点」连接 SMB / SFTP，\n或从「外部信号塔」接入网盘 / WebDAV。" else "收藏避难所或把文件夹添加到分册，便能快速找到它。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(if (vm.sources.isEmpty()) "选择「幸存者据点」连接 SMB / SFTP，\n或从「外部信号塔」接入网盘 / WebDAV。" else "把常用连接或目录标记为路标，再按分册整理，回来时更好找。", fontSize = 14.sp, lineHeight = 22.sp, color = Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
             items(shown, key = { it.key }) { item ->
