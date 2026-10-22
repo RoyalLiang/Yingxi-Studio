@@ -59,7 +59,7 @@ class AliyunApiFailure(operation: AliyunOperation, status: Int, code: String? = 
     }
 }
 data class AliyunDrive(val userId: String, val name: String, val driveId: String)
-data class AliyunItem(val id: String, val name: String, val directory: Boolean, val size: Long, val createdAt: Long?)
+data class AliyunItem(val id: String, val name: String, val directory: Boolean, val size: Long, val createdAt: Long?, val contentHash: String? = null)
 
 /** No automatic redirects: API bearer credentials must remain at the API origin. */
 class AliyunApi internal constructor(private val base: HttpUrl, private val client: OkHttpClient) {
@@ -167,12 +167,17 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
         val description=response.get("description")?.takeIf { it.isJsonPrimitive&&it.asJsonPrimitive.isString }?.asString.orEmpty()
         // Keep only a known advisory, never arbitrary provider text or signed URL in diagnostics.
         val notice=description.contains("未购买权益包")&&description.contains("下载速度")
-        return AliyunDownloadLocation(result,notice,url.queryParameter("x-oss-traffic-limit")?.toLongOrNull()?.takeIf{it>0})
+        val expiration=response.get("expiration")?.takeIf{it.isJsonPrimitive&&it.asJsonPrimitive.isString}?.asString
+            ?.let{runCatching{java.time.Instant.parse(it).toEpochMilli()}.getOrNull()}
+            ?:url.queryParameter("Expires")?.toLongOrNull()?.takeIf{it in 1..Long.MAX_VALUE/1000}?.times(1000)
+        return AliyunDownloadLocation(result,notice,url.queryParameter("x-oss-traffic-limit")?.toLongOrNull()?.takeIf{it>0},expiration)
     }
     private fun item(o: JsonObject): AliyunItem {
         val id = o.text("file_id"); if (id.any { it == '/' || it == '\\' } || id in setOf(".", "..")) throw IOException("文件标识无效")
         val created = o.get("created_at")?.takeUnless { it.isJsonNull }?.asString?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
-        return AliyunItem(id, o.text("name"), o.text("type") == "folder", o.get("size")?.takeUnless { it.isJsonNull }?.asLong ?: 0, created)
+        val hash=o.get("content_hash")?.takeIf{it.isJsonPrimitive&&it.asJsonPrimitive.isString}?.asString
+            ?.takeIf{it.matches(Regex("[0-9a-fA-F]{40}"))}?.lowercase()
+        return AliyunItem(id, o.text("name"), o.text("type") == "folder", o.get("size")?.takeUnless { it.isJsonNull }?.asLong ?: 0, created, hash)
     }
     private fun JsonObject.text(key: String) = get(key)?.takeUnless { it.isJsonNull }?.asString?.takeIf { it.isNotBlank() } ?: throw IOException("阿里云盘响应缺少 $key")
     private fun json(vararg entries: Pair<String, String>) = JsonObject().apply { entries.forEach { addProperty(it.first, it.second) } }
@@ -180,7 +185,7 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
 
 /** Tokens are provided only for API calls; the CDN client receives no API credentials. */
 interface AliyunAccess { fun <T> authorized(cancellation: Cancellation, action: (String) -> T): T }
-class AliyunConnector(private val api: AliyunApi, private val access: AliyunAccess, private val downloadClient: OkHttpClient = newAliyunDownloadClient(), private val rememberName: (String, String) -> Unit = { _, _ -> }) : Connector {
+class AliyunConnector(private val api: AliyunApi, private val access: AliyunAccess, private val downloadClient: OkHttpClient = newAliyunDownloadClient(), private val readOptions: (() -> AliyunReadOptions)? = null, private val rememberName: (String, String) -> Unit = { _, _ -> }) : Connector {
     override fun connect(source: Source, credentials: Credentials, cancellation: Cancellation): RemoteSession {
         require(source.protocol == Protocol.ALIYUN && source.domain.isNotBlank())
         cancellation.check()
@@ -195,12 +200,17 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
             }
             private fun location(entry:AliyunPlaybackEntry,handle:Cancellation,stats:RemoteReadTelemetry,rejected:String?=null):String=handle.withLock(playbackLock){
                 val current=entry.location
-                if(current!=null&&(rejected==null||current.url!=rejected)){
+                if(current!=null&&(rejected==null||current.url!=rejected)&&
+                    (current.expiresAtMillis==null||current.expiresAtMillis-System.currentTimeMillis()>30_000)){
                     stats.downloadAdvisory(current.downloadRightsNotice,current.signedTrafficLimitBitsPerSecond)
                     return@withLock current.url
                 }
                 stats.urlRequest()
-                access.authorized(handle){api.downloadLocation(it,source.domain,entry.file.id,handle)}.also{
+                val resolved=try{access.authorized(handle){api.downloadLocation(it,source.domain,entry.file.id,handle)}}catch(error:IOException){
+                    handle.check()
+                    if(rejected==null&&current?.expiresAtMillis?.let{it>System.currentTimeMillis()}==true)current else throw error
+                }
+                resolved.also{
                     entry.location=it;stats.downloadAdvisory(it.downloadRightsNotice,it.signedTrafficLimitBitsPerSecond)
                 }.url
             }
@@ -212,10 +222,20 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
                     Entry(item.name, Paths.join(path, item.id), item.directory, item.size, item.createdAt)
                 }.sortedWith(MediaOrdering.entries)
             }
-            override fun open(path: String): RemoteFile {
+            override fun open(path: String): RemoteFile = openFile(path,false)
+            override fun open(path: String,position:Long): RemoteFile { require(position>=0);return openFile(path,true) }
+            private fun openFile(path: String,parallel:Boolean): RemoteFile {
                 val entry=playbackFile(id(path));val file=entry.file
                 if (file.directory || file.size <= 0) throw IOException("该文件无法播放")
                 val stats=RemoteReadTelemetry()
+                val options=if(parallel)readOptions?.invoke()else null
+                if(options!=null){
+                    val identity=SegmentCache.digest("${source.id}:${source.domain}:${file.id}:${file.size}:${file.contentHash?:entry.cacheNonce}".toByteArray())
+                    return SegmentedRemoteFile(file.size,sessionCancellation,options,identity,stats,reusableCache=file.contentHash!=null&&options.cache!=null){_,end,handle->
+                        AliyunRangeFile(file.size,handle,downloadClient,
+                            refresh={child,rejected->location(entry,child,stats,rejected)},readTelemetry=stats,endExclusive=end,validateResponse=entry::verify){child->location(entry,child,stats)}
+                    }
+                }
                 return AliyunRangeFile(file.size,sessionCancellation,downloadClient,
                     refresh={handle,rejected->location(entry,handle,stats,rejected)},readTelemetry=stats){handle->location(entry,handle,stats)}
             }
@@ -224,14 +244,24 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
     }
 }
 
-internal class AliyunDownloadLocation(val url:String,val downloadRightsNotice:Boolean,val signedTrafficLimitBitsPerSecond:Long?) {
+internal class AliyunDownloadLocation(val url:String,val downloadRightsNotice:Boolean,val signedTrafficLimitBitsPerSecond:Long?,val expiresAtMillis:Long?=null) {
     override fun toString()="AliyunDownloadLocation([redacted])"
 }
-private class AliyunPlaybackEntry(val file:AliyunItem,var location:AliyunDownloadLocation?=null)
+private class AliyunPlaybackEntry(val file:AliyunItem,var location:AliyunDownloadLocation?=null){
+    val cacheNonce=java.util.UUID.randomUUID().toString()
+    private val etag=java.util.concurrent.atomic.AtomicReference<String?>()
+    fun verify(response:okhttp3.Response){
+        val value=response.header("ETag")?:return
+        etag.compareAndSet(null,value)
+        if(etag.get()!=value)throw AliyunRangeResponseFailure(false)
+    }
+}
 
 private fun newAliyunDownloadClient() = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).readTimeout(30, TimeUnit.SECONDS).build()
 
-internal class AliyunRangeFile(override val size: Long, private val parent: Cancellation, private val client: OkHttpClient = newAliyunDownloadClient(), private val refresh:((Cancellation,String)->String)?=null, override val readTelemetry:RemoteReadTelemetry=RemoteReadTelemetry(), private val resolve: (Cancellation) -> String) : RemoteFile {
+internal class AliyunRangeResponseFailure(val retryable:Boolean):IOException("网盘服务器未正确响应分段播放请求")
+
+internal class AliyunRangeFile(override val size: Long, private val parent: Cancellation, private val client: OkHttpClient = newAliyunDownloadClient(), private val refresh:((Cancellation,String)->String)?=null, override val readTelemetry:RemoteReadTelemetry=RemoteReadTelemetry(), private val endExclusive:Long=size, private val validateResponse:((okhttp3.Response)->Unit)?=null, private val resolve: (Cancellation) -> String) : RemoteFile {
     private val cancellation = Cancellation().also(parent::own)
 
     private var url: String? = null
@@ -246,7 +276,7 @@ internal class AliyunRangeFile(override val size: Long, private val parent: Canc
         require(position >= 0 && offset >= 0 && length >= 0 && offset <= buffer.size - length)
         cancellation.check(); if (closed) throw IOException("播放连接已关闭")
         if (length == 0) return 0
-        if (position >= size) return -1
+        if (position >= minOf(size,endExclusive)) return -1
         if (position != cursor || remaining == 0L) {
             response?.close(); stream = null
             // Keep one response while consuming sequentially; a seek opens a new range.
@@ -254,7 +284,8 @@ internal class AliyunRangeFile(override val size: Long, private val parent: Canc
                 cancellation.check()
                 if (url == null) url = readTelemetry.measure(RemoteReadTelemetry.Stage.URL){resolve(cancellation)}
                 cancellation.check()
-                val request = Request.Builder().url(url!!).header("Range", "bytes=$position-").header("Accept-Encoding", "identity").build()
+                val rangeHeader=if(endExclusive<size)"bytes=$position-${endExclusive-1}" else "bytes=$position-"
+                val request = Request.Builder().url(url!!).header("Range", rangeHeader).header("Accept-Encoding", "identity").build()
                 val call = client.newCall(request); active = call
                 cancellation.check()
                 readTelemetry.rangeRequest()
@@ -265,9 +296,10 @@ internal class AliyunRangeFile(override val size: Long, private val parent: Canc
                 val from=range?.groupValues?.get(1)?.toLongOrNull()?:-1L
                 val end=range?.groupValues?.get(2)?.toLongOrNull()?:-1L
                 val total=range?.groupValues?.get(3)?.toLongOrNull()?:-1L
-                if (result.code != 206 || (from != position || total != size || end < position || end >= size) || result.header("Content-Encoding").let { it != null && it != "identity" } || result.body == null || result.body!!.contentLength().let { it != -1L && it != end - position + 1 }) {
-                    result.close(); throw IOException("网盘服务器未正确响应分段播放请求")
+                if (result.code != 206 || (from != position || total != size || end < position || end >= minOf(size,endExclusive)) || result.header("Content-Encoding").let { it != null && it != "identity" } || result.body == null || result.body!!.contentLength().let { it != -1L && it != end - position + 1 }) {
+                    val retryable=result.code==429||result.code in 500..599;result.close(); throw AliyunRangeResponseFailure(retryable)
                 }
+                try{validateResponse?.invoke(result)}catch(error:Exception){result.close();throw error}
                 response = result; stream = result.body!!.byteStream(); cursor = position; remaining = end - position + 1; break
             }
         }

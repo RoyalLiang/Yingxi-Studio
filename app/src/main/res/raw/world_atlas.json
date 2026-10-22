@@ -330,6 +330,10 @@
         {
           "zh": "纸响不算片子到了。先看片轮走了几格，再把那一格记上。",
           "en": "Rustling paper does not mean the reel has arrived. Watch how far the reel turns, then mark only what moved."
+        },
+        {
+          "zh": "几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。",
+          "en": "Sort the trays together, but check the frame numbers in order. Leave a gap where a frame is missing; do not call it complete."
         }
       ],
       "personality": {
@@ -531,6 +535,13 @@
       "text": {
         "zh": "迟灯在进片口旁留一截退役胶片，试齿轮咬合；阿汐擦净片匣上的湿砂，再把到站时刻抄进登记簿。晚到的片匣与不亮的灯，分开记在两行。",
         "en": "Chideng keeps a retired strip by the film gate to check the sprockets. Axi wipes wet sand from each case and records its arrival. Late cases and unlit lamps go on separate lines."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.43",
+      "text": {
+        "zh": "迟灯把几只浅铁盘并排放好，盘边夹着片号，缺格仍留白。阿汐接过检修纸，先对齐号码，再把完整片匣放回架上。",
+        "en": "Chideng lines up the shallow trays, case numbers clipped to their rims and missing frames left blank. Axi aligns the numbers on the repair sheet before returning a complete case to the shelf."
       }
     }
   ],
@@ -814,8 +825,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",

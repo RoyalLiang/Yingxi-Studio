@@ -40,6 +40,7 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("httpPhase",active?.stage?.name?:if(transports.isEmpty())JSONObject.NULL else "IDLE")
         .put("httpPhaseMs",active?.currentMs?:0).put("urlRequests",transports.sumOf{it.urlRequests})
         .put("rangeRequests",transports.sumOf{it.rangeRequests}).put("sourceReadBytes",transports.sumOf{it.sourceBytes})
+            .put("readParallelism",transports.maxOfOrNull{it.parallelism}?:1).put("diskCacheReadBytes",transports.sumOf{it.cacheBytes})
         .put("urlResolveMs",transports.sumOf{it.urlMs}).put("responseWaitMs",transports.sumOf{it.responseMs})
         .put("bodyReadMs",transports.sumOf{it.bodyMs}).put("lastHttpStatus",transports.lastOrNull()?.httpStatus?:JSONObject.NULL)
         .put("sourceBodyAverageBytesPerSecond",bodyAverageBytesPerSecond(transports)?:JSONObject.NULL)
