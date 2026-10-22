@@ -92,8 +92,8 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
-                    AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby){cabinetOpen=true}
-                    AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
+                    AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
+                    AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources}){cabinetOpen=true}
                     AppTab.Explore->StationWorldPage(embedded=true){tab=AppTab.Home}
                 }}
             }
@@ -146,12 +146,20 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     }
 }
 
-@Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit){
+@Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onSealed:()->Unit={}){
     var clearConfirm by rememberSaveable{mutableStateOf(false)}
     Column(Modifier.fillMaxSize()){
         Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){Text("拾荒记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"观看记录 · ${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
             IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空拾荒记录",tint=Muted)}
+        }
+        Surface(onClick=onSealed,color=GroupedSurface,shape=RoundedCornerShape(16.dp),
+            modifier=Modifier.padding(start=24.dp,end=24.dp,bottom=12.dp).fillMaxWidth().testTag("open-sealed-cabinet")) {
+            Row(Modifier.heightIn(min=56.dp).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Rounded.Inventory2,null,tint=Berry,modifier=Modifier.size(22.dp))
+                Text("封存柜",Modifier.weight(1f),fontSize=15.sp,fontWeight=FontWeight.Medium)
+                Icon(Icons.Rounded.ChevronRight,null,tint=Muted,modifier=Modifier.size(20.dp))
+            }
         }
         if(vm.history.isEmpty())Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(start=24.dp,end=24.dp,top=16.dp,bottom=112.dp),horizontalAlignment=Alignment.CenterHorizontally){
             HistoryWorldNote(Modifier.padding(bottom=20.dp).testTag("history-keeper-note"))
@@ -181,16 +189,16 @@ internal fun historyDay(timestamp:Long):String{
         color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
         Column{
             Row(Modifier.padding(start=10.dp,end=4.dp,top=9.dp,bottom=9.dp),verticalAlignment=Alignment.CenterVertically){
-                MediaThumbnail(entry.media,Modifier.width(78.dp).height(44.dp))
+                MediaPoster(entry.media,Modifier.width(96.dp).height(if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)96.dp else 56.dp),compact=true)
                 Column(Modifier.weight(1f).padding(horizontal=12.dp)){
                     Text(mediaDisplayTitle(entry.media.title),fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)} · ${entry.media.sourceLabel}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
                 Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(24.dp))
                 Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${mediaDisplayTitle(entry.media.title)}",tint=Muted,modifier=Modifier.size(20.dp))}
                     DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
                         DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()})
-                        if(onSeal!=null)DropdownMenuItem(text={Text("封存剧集（私密）")},onClick={menu=false;onSeal()})
+                        if(onSeal!=null)DropdownMenuItem(text={Text(sealActionLabel(false))},onClick={menu=false;onSeal()})
                 DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
                     }
                 }

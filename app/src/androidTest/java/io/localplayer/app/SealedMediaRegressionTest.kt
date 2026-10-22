@@ -17,6 +17,51 @@ import kotlinx.coroutines.runBlocking
 class SealedMediaRegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
 
+    @Test fun sealingLocalVideoPreservesKnownBytesButDirectoryHasNoSize() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val context=instrumentation.targetContext
+        val tree=DocumentsContract.buildTreeDocumentUri(FixtureDocumentsProvider.AUTHORITY,"root")
+        context.startActivity(Intent().setClassName(instrumentation.context.packageName,GrantFixtureActivity::class.java.name)
+            .putExtra("tree",tree.toString()).putExtra("target",context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        ui.waitUntil(10000){context.checkUriPermission(tree,android.os.Process.myPid(),android.os.Process.myUid(),Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}
+        context.contentResolver.takePersistableUriPermission(tree,Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val models=ViewModelStore()
+        lateinit var files:LocalFilesViewModel
+        lateinit var vm:LibraryViewModel
+        val sealed=mutableListOf<String>()
+        try {
+            ui.runOnIdle {
+                files=LocalFilesViewModel(ui.activity.application);models.put("files",files)
+                vm=LibraryViewModel(ui.activity.application);models.put("library",vm)
+                files.add(tree)
+            }
+            ui.waitUntil(10000){!files.busy&&files.active!=null}
+            ui.runOnIdle{files.enter(files.entries.first{it.directory})}
+            ui.waitUntil(10000){!files.busy&&files.trail.size==2}
+            val video=files.entries.first{it.video&&!it.directory}
+            val directory=files.entries.first{it.directory}
+            assertTrue(video.size>0)
+            for(entry in listOf(video,directory)) {
+                ui.runOnIdle {vm.sealLocal(entry,files);vm.completePrivateAccess(vm.privateRequest!!.id)}
+                ui.waitUntil(10000){!vm.busy}
+                ui.runOnIdle {
+                    assertNull(vm.error)
+                    val item=SealedMedia.items().first{it.id==entry.uri.toString()}
+                    sealed+=item.id
+                    assertEquals(if(entry.directory)null else entry.size,item.media.sizeBytes)
+                    SealedMedia.lock();SealedMedia.reload();SealedMedia.unlock()
+                    assertEquals(item.media.sizeBytes,SealedMedia.items().first{it.id==item.id}.media.sizeBytes)
+                }
+            }
+        } finally {
+            ui.runOnIdle {
+                SealedMedia.unlock();sealed.forEach{SealedMedia.unseal(it)};SealedMedia.lock()
+                files.folders.firstOrNull{it.tree==tree}?.let{files.remove(it)}
+                models.clear()
+            }
+        }
+    }
+
     @Test fun directoryIsPersistentlyHiddenAcrossPublicBrowseHistoryColdLoadAndRelock() {
         val app=ui.activity.application as Application
         val source=Source(label="封存回归",protocol=Protocol.SFTP,host="fixture.invalid",root="/",initialPath="series")

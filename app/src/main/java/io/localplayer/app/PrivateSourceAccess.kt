@@ -26,7 +26,7 @@ internal fun PrivateSourceAccessPrompt(vm:LibraryViewModel){
             vm.cancelPrivateAccess(request.id,"请先在系统设置中配置指纹或锁屏密码，再使用封存柜")
         }else{
             val prompt=BiometricPrompt.Builder(activity).setTitle("封存柜（私密）").setSubtitle(request.label)
-                .setDescription("验证身份后操作封存柜。退到后台后会重新落锁。")
+                .setDescription("核验通行凭据后整理封存柜。这里只收起站内显示与访问，原片仍留在原处；退到后台后柜门会重新落锁。")
                 .setAllowedAuthenticators(authenticators).build()
             prompt.authenticate(cancellation,activity.mainExecutor,object:BiometricPrompt.AuthenticationCallback(){
                 override fun onAuthenticationSucceeded(result:BiometricPrompt.AuthenticationResult){vm.completePrivateAccess(request.id)}

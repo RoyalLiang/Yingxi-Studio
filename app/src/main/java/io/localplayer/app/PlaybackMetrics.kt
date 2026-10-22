@@ -11,7 +11,7 @@ object PlaybackMetrics {
  data class Snapshot(val firstFrameMs:Long?,val rebufferCount:Int,val droppedFrames:Int,
   val bytes:Long,val readCalls:Long,val readTimeMs:Long,val openCalls:Long=0,
   val openTimeMs:Long=0,val maxReadMs:Long=0,val decoder:String?=null,val decoderInitMs:Long=0,val videoInputBuffers:Int?=null,val videoRenderedBuffers:Int?=null,
-        val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0)
+        val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0,val videoSkippedOutputs:Int?=null)
  private var started=0L
  private var firstFrame:Long?=null
  private var played=false
@@ -44,7 +44,7 @@ object PlaybackMetrics {
     @Synchronized fun snapshot():Snapshot {
         val counters=videoCounters;counters?.ensureUpdated()
         return Snapshot(firstFrame,rebuffers,dropped,bytes,reads,readNanos/1_000_000,opens,openNanos/1_000_000,maxReadNanos/1_000_000,decoder,decoderInitMs,
-            counters?.queuedInputBufferCount,counters?.renderedOutputBufferCount,counters?.skippedInputBufferCount,videoEnabled,videoCodecErrors,videoDecoderReleases)
+            counters?.queuedInputBufferCount,counters?.renderedOutputBufferCount,counters?.skippedInputBufferCount,videoEnabled,videoCodecErrors,videoDecoderReleases,videoCounters?.skippedOutputBufferCount)
     }
  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
  fun listener()=object:AnalyticsListener{

@@ -74,7 +74,8 @@ class ShelterExperienceRegressionTest {
             capture("shelter-wall")
             ui.onNodeWithTag("shelter-entry:show").performClick()
             ui.waitUntil(5000){vm.path=="show"&&!vm.busy}
-            ui.onNodeWithText("Example (2024)").assertIsDisplayed()
+            ui.onNodeWithTag("source-browser-title").assertTextEquals(source.label)
+            ui.onNodeWithTag("breadcrumb:remote:show").assertIsDisplayed()
             ui.onNodeWithText("文件夹").assertDoesNotExist()
             ui.waitUntil(5000){runCatching{ui.onNodeWithTag("shelter-poster:${source.id}:show/01.mkv",useUnmergedTree=true).assertIsDisplayed()}.isSuccess}
             capture("episodes")

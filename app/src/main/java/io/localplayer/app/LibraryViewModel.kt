@@ -163,28 +163,28 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     }
     fun cancelPrivateAccess(id:String,message:String?=null){if(privateRequest?.id!=id)return;privateRequest=null;if(message!=null)error=message}
     internal fun sealMedia(ref:MediaRef){
-        requestPrivate("封存剧集",sources.firstOrNull{it.id==ref.sourceId}){
-            SealedMedia.seal(SealedItem(ref,false,ignoreCase=sources.firstOrNull{it.id==ref.sourceId}?.protocol==Protocol.SMB));notifySuccess("剧集已封存")
+        requestPrivate("收进封存柜："+ref.title,sources.firstOrNull{it.id==ref.sourceId}){
+            SealedMedia.seal(SealedItem(ref,false,ignoreCase=sources.firstOrNull{it.id==ref.sourceId}?.protocol==Protocol.SMB));notifySuccess("影像已收进封存柜")
         }
     }
     internal fun sealRemote(saved:Source,entry:Entry){
-        requestPrivate((if(entry.directory)"封存目录："else"封存剧集：")+entry.name,saved){
-            val ref=MediaRef("${saved.id}:${entry.path}",entry.name,saved.label,saved.id,entry.path,location=mediaLocation(saved))
-            SealedMedia.seal(SealedItem(ref,entry.directory,ignoreCase=saved.protocol==Protocol.SMB));notifySuccess(if(entry.directory)"目录已封存"else"剧集已封存")
+        requestPrivate((if(entry.directory)"封存片架："else"封存影像：")+entry.name,saved){
+            val ref=MediaRef("${saved.id}:${entry.path}",entry.name,saved.label,saved.id,entry.path,sizeBytes=entry.size.takeIf{!entry.directory&&it>0},location=mediaLocation(saved))
+            SealedMedia.seal(SealedItem(ref,entry.directory,ignoreCase=saved.protocol==Protocol.SMB));notifySuccess(if(entry.directory)"片架已收进封存柜"else"影像已收进封存柜")
             if(source?.id==saved.id&&SealedMedia.protects(saved,path))closeSource()
         }
     }
     internal fun sealLocal(entry:LocalEntry,files:LocalFilesViewModel){
         val folder=files.active?:return
         val trail=files.trail+if(entry.directory)listOf(LocalDirectory(entry.uri,entry.name))else emptyList()
-        requestPrivate((if(entry.directory)"封存目录："else"封存剧集：")+entry.name){
+        requestPrivate((if(entry.directory)"封存片架："else"封存影像：")+entry.name){
             val sealGeneration=generation;val signal=android.os.CancellationSignal();privateLocalSignal=signal;busy=true
             job=viewModelScope.launch{
                 try{
                 val aliases=withContext(Dispatchers.IO){if(entry.directory){SealedMedia.checkDirectorySupport(entry.uri,signal);SealedMedia.localAliases(entry.uri,historyRows.map{it.media}+StationInventory(getApplication()).today().map{it.media})}else emptySet()}
                 if(!SealedMedia.unlocked||signal.isCanceled||sealGeneration!=generation)return@launch
-                val ref=MediaRef(entry.uri.toString(),entry.name,folder.name,localUri=entry.uri.toString(),localParentUri=entry.parentUri?.toString(),localAncestors=entry.ancestorUris)
-                runCatching{SealedMedia.seal(SealedItem(ref,entry.directory,folder.tree.toString(),trail,aliases));notifySuccess(if(entry.directory)"目录已封存"else"剧集已封存")}.onFailure{error=it.message}
+                val ref=MediaRef(entry.uri.toString(),entry.name,folder.name,localUri=entry.uri.toString(),localParentUri=entry.parentUri?.toString(),localAncestors=entry.ancestorUris,sizeBytes=entry.size.takeIf{!entry.directory&&it>0})
+                runCatching{SealedMedia.seal(SealedItem(ref,entry.directory,folder.tree.toString(),trail,aliases));notifySuccess(if(entry.directory)"片架已收进封存柜"else"影像已收进封存柜")}.onFailure{error=it.message}
                 }catch(e:CancellationException){throw e}catch(e:Exception){if(sealGeneration==generation)error=e.message?:"封存未完成，请重试"}finally{if(privateLocalSignal===signal)privateLocalSignal=null;if(sealGeneration==generation)busy=false}
             }
         }

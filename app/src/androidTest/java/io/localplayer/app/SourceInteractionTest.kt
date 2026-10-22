@@ -162,7 +162,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         capture("swipe-right")
-        ui.onNodeWithText("封存目录").performClick()
+        ui.onNodeWithText(sealActionLabel(true)).performClick()
         ui.runOnIdle{assertNull(vm.source);assertNull(vm.openingSource);assertNull(vm.draft)}
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         if(context.getSystemService(android.app.KeyguardManager::class.java).isDeviceSecure){
@@ -215,7 +215,7 @@ class SourceInteractionTest {
         ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
-        ui.onNodeWithText("封存目录").performClick()
+        ui.onNodeWithText(sealActionLabel(true)).performClick()
         assertNull(vm.source)
         awaitSystemPrompt()
         shell("input text $pin")

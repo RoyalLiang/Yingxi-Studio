@@ -52,7 +52,7 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
                     Surface(color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=6.dp)) {
                         Row(Modifier.padding(12.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                             val ref=MediaRef(chosen.uri.toString(),chosen.name,files.active?.name?:"本机文件",localUri=chosen.uri.toString(),sizeBytes=chosen.size)
-                            MediaThumbnail(ref,Modifier.width(82.dp).height(110.dp))
+                            MediaPoster(ref,Modifier.width(82.dp).height(110.dp),compact=true)
                             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                                 Text(group.first,fontSize=19.sp,fontWeight=FontWeight.SemiBold)
                                 Text("${members.size} ${if(group.second=="综艺")"期" else "集"}",fontSize=13.sp,color=Muted)

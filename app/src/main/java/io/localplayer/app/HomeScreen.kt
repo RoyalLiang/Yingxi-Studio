@@ -115,7 +115,7 @@ import androidx.compose.ui.unit.sp
         Column {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 val largeText = LocalDensity.current.fontScale > 1.4f
-                MediaThumbnail(entry.media, Modifier.width(if (largeText) 76.dp else 96.dp).aspectRatio(1.6f))
+                MediaPoster(entry.media, Modifier.width(if (largeText) 76.dp else 96.dp).aspectRatio(if(largeText)1f else 1.6f),compact=true)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(mediaDisplayTitle(entry.media.title), fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(5.dp))
@@ -144,6 +144,7 @@ import androidx.compose.ui.unit.sp
             Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp))
                 .border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(16.dp)).testTag("film-poster:${entry.media.key}")) {
                 MediaThumbnail(entry.media, Modifier.fillMaxSize())
+                PosterLabels(entry.media)
                 PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
                 Box(Modifier.fillMaxWidth().height(64.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
@@ -154,7 +155,7 @@ import androidx.compose.ui.unit.sp
                     }
                     DropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(20.dp), containerColor = GroupedSurface) {
                         DropdownMenuItem(text = { Text("从头播放") }, onClick = { menu = false; restart() })
-                        if(seal!=null)DropdownMenuItem(text={Text("封存剧集（私密）")},onClick={menu=false;seal()})
+                        if(seal!=null)DropdownMenuItem(text={Text(sealActionLabel(false))},onClick={menu=false;seal()})
                         MediaPosters.credit(context, entry.media)?.takeIf { it.second.startsWith("https://") }?.let { credit ->
                             DropdownMenuItem(text = { Text("海报来源 · "+credit.first) }, onClick = {
                                 menu = false
@@ -187,7 +188,7 @@ import androidx.compose.ui.unit.sp
 @Composable internal fun FindingCard(finding:StationFinding,play:()->Unit) {
     Surface(onClick=play,color=Color.Transparent,modifier=Modifier.fillMaxWidth().testTag("found:${finding.media.key}")) {
         Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-            MediaThumbnail(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
+            MediaPoster(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
             Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,lineHeight=22.sp,minLines=2,maxLines=2,
                 overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().testTag("found-title:${finding.media.key}"))
         }
