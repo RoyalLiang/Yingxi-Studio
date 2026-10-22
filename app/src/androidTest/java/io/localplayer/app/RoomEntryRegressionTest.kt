@@ -68,7 +68,7 @@ class RoomEntryRegressionTest {
 
     @Test fun appNameStaysOnOneBaselineAndRoomCaptionKeepsItsSize() {
         val name=ui.onNodeWithText("映汐",useUnmergedTree=true)
-        val room=ui.onNodeWithText("放映室",useUnmergedTree=true)
+        val room=ui.onNodeWithTag("home-brand-caption",useUnmergedTree=true)
         val nameLayout=mutableListOf<TextLayoutResult>()
         val roomLayout=mutableListOf<TextLayoutResult>()
         name.performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(nameLayout)}
@@ -90,7 +90,7 @@ class RoomEntryRegressionTest {
             }
         } }
         val layouts=mutableListOf<TextLayoutResult>()
-        ui.onNodeWithText("放映室",useUnmergedTree=true).performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
+        ui.onNodeWithTag("home-brand-caption",useUnmergedTree=true).performSemanticsAction(SemanticsActions.GetTextLayoutResult){it(layouts)}
         capture("home-large")
         assertEquals(1,layouts.single().lineCount)
         assertFalse(layouts.single().isLineEllipsized(0))

@@ -59,7 +59,7 @@ import androidx.compose.ui.unit.sp
     Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回")}
-            Text(if(about)"版本信笺" else "站务设置",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            Text(if(about)"信笺" else "站务",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             if(about)Box {
                 Box {
                 val interaction=remember{MutableInteractionSource()}
@@ -79,7 +79,7 @@ import androidx.compose.ui.unit.sp
             item { Surface(onClick=openAbout,shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("app-version")) {
                 Row(Modifier.padding(14.dp),verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Info,null,tint=Berry)
-                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐放映站 · 版本信笺",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
+                    Column(Modifier.weight(1f).padding(horizontal=16.dp)) { Text("映汐放映站 · 信笺",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink);Text(vm.version.name,fontSize=14.sp,color=Muted) }
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,tint=Muted)
                 }
             } }

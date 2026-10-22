@@ -87,7 +87,7 @@ import kotlin.math.roundToInt
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         if (selected) Icon(Icons.Rounded.Check, "已选择避难所", Modifier.size(14.dp), tint = Berry)
                         if (pinned) Icon(Icons.Rounded.PushPin, "已置顶", Modifier.size(12.dp), tint = Berry)
-                        if (favorite) Icon(Icons.Rounded.Star, "已收藏路标", Modifier.size(12.dp), tint = Berry)
+                        if (favorite) Icon(Icons.Rounded.Star, "已标记路标", Modifier.size(12.dp), tint = Berry)
                         Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", fontSize = 12.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (source.initialPath.isNotEmpty()) Text("进入 $folder", Modifier.padding(top = 4.dp), fontSize = 12.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)

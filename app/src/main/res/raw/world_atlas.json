@@ -305,7 +305,7 @@
       "version": "0.2.0-alpha.21",
       "text": {
         "zh": "阿汐把「映汐放映站」的新名牌钉上门楣，又把档案室的指示牌挪到门外。迟灯擦亮了耳机上的铜线，弥途终于让画师留下了那支红铅笔。",
-        "en": "Axi fixed the new Yingxi Screening Room sign above the door and moved the archives sign outside. Chideng polished the copper on his headphones; Mitu finally persuaded the portrait artist to keep her red pencil."
+        "en": "Axi fixed the new Yingxi Station sign above the door and moved the archives sign outside. Chideng polished the copper on his headphones; Mitu finally persuaded the portrait artist to keep her red pencil."
       }
     },
     {
@@ -893,8 +893,8 @@
     {
       "id": "registered_sources",
       "name": {
-        "zh": "查看已登记避难所",
-        "en": "View registered shelters"
+        "zh": "查看已登记信源",
+        "en": "View registered sources"
       },
       "meaning": {
         "zh": "打开远程连接目录，包含幸存者据点和外部信号塔。",
@@ -937,12 +937,12 @@
     {
       "id": "history",
       "name": {
-        "zh": "放映记录／最近放映",
-        "en": "Screening history / recent screenings"
+        "zh": "拾荒记录／最近拾荒",
+        "en": "Scavenging log / recent scavenging"
       },
       "meaning": {
-        "zh": "本机观看记录与续播进度，不是世界纪年。",
-        "en": "Local viewing history and resume progress, separate from the story chronology."
+        "zh": "借用拾荒称谓记录本机真实观看与续播进度；不是今日拾获、文件发现或世界纪年。",
+        "en": "A scavenging metaphor for actual viewing history and resume progress, distinct from today’s finds, file discovery and story chronology."
       }
     },
     {
@@ -959,8 +959,8 @@
     {
       "id": "settings",
       "name": {
-        "zh": "站务设置",
-        "en": "Station settings"
+        "zh": "站务",
+        "en": "Station affairs"
       },
       "meaning": {
         "zh": "应用全局设置；播放器内部保留播放设置。",
@@ -970,8 +970,8 @@
     {
       "id": "version",
       "name": {
-        "zh": "版本信笺",
-        "en": "Version letters"
+        "zh": "信笺",
+        "en": "Letters"
       },
       "meaning": {
         "zh": "查看真实版本与更新信笺，下载和安装操作保留原名。",
@@ -981,23 +981,23 @@
     {
       "id": "favorites",
       "name": {
-        "zh": "收藏路标",
-        "en": "Saved markers"
+        "zh": "路标",
+        "en": "Markers"
       },
       "meaning": {
-        "zh": "收藏连接或目录入口，不表示影片已下载或加入影片收藏。",
-        "en": "Save connection or directory entries, without downloading or collecting media."
+        "zh": "应用筛选和菜单中指已收藏的连接或目录入口；标记和取消标记不移动、不下载影片。故事里的物理路标保持原义。",
+        "en": "Saved connection or directory entries in app filters and menus. Marking or unmarking neither moves nor downloads films; physical markers retain their story meaning."
       }
     },
     {
       "id": "groups",
       "name": {
-        "zh": "管理分册／分册与路标",
-        "en": "Manage sections / sections and markers"
+        "zh": "信源",
+        "en": "Source register"
       },
       "meaning": {
-        "zh": "组织已登记的连接与目录入口，不建立故事中的新机构。",
-        "en": "Organize registered connections and directory entries without establishing a fictional institution."
+        "zh": "分册与连接、目录路标的管理入口；分册字段仍标明分册名称和未归册，不因此新增信号技术或世界制度。",
+        "en": "Manage sections and connection or directory markers. Section fields remain explicit; the name adds no signal technology or fictional institution."
       }
     },
     {

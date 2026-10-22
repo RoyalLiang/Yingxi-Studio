@@ -72,7 +72,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=24.dp).padding(bottom=if(embedded)112.dp else 0.dp).testTag("world-scroll"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             if(!embedded) {
-            StationChapterReader(world,lang)
+            if(embedded) StationChapterReader(world,lang) else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
@@ -114,7 +114,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             }
             }
             if(embedded) {
-            StationChapterReader(world,lang)
+            if(embedded) StationChapterReader(world,lang) else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
             WorldMap(world,placeId,lang){placeId=it}

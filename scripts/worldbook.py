@@ -36,12 +36,13 @@ def validate(root):
         if edge['from'] not in places or edge['to'] not in places:raise ValueError('Unknown world edge endpoint')
         text(edge['label'])
     for chapter in world['chronicles']:text(chapter['text'])
+    if not isinstance(world.get('chapters'),list) or not world['chapters']:raise ValueError('Chapters must be a nonempty list')
     chapter_ids=set();letter_ids=set()
     for chapter in world['chapters']:
         if not chapter['id'] or chapter['id'] in chapter_ids:raise ValueError('Duplicate chapter identity')
         chapter_ids.add(chapter['id'])
         text(chapter['title']);text(chapter['introduction'])
-        if not chapter['letters']:raise ValueError('Empty chapter')
+        if not isinstance(chapter.get('letters'),list) or not chapter['letters']:raise ValueError('Empty chapter')
         for letter in chapter['letters']:
             if not letter['id'] or letter['id'] in letter_ids:raise ValueError('Duplicate letter identity')
             letter_ids.add(letter['id'])

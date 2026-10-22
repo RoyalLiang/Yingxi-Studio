@@ -102,8 +102,8 @@ class SourceInteractionTest {
         mount(source)
         ui.onNodeWithText("添加第一个避难所").assertDoesNotExist()
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
-        ui.onNodeWithText("避难所设置").performClick()
+        ui.onNodeWithContentDescription("${source.stationKind}操作 ${source.label}").performClick()
+        ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithText("连接与账户配置").performClick()
         ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点")
         ui.runOnIdle{assertEquals(source.id,vm.draft?.source?.id)}
@@ -192,7 +192,7 @@ class SourceInteractionTest {
         store.update(media,store.token(media.key),1_245_000,6_480_000,false)
         try{
             mount()
-            ui.onNodeWithText("放映记录").performClick()
+            ui.onNodeWithText("拾荒记录").performClick()
             ui.onNodeWithText("今天").assertIsDisplayed()
             val bounds=ui.onNodeWithTag("history-row:${media.key}").getUnclippedBoundsInRoot()
             assertTrue("Mini-player row should stay compact",bounds.bottom.value-bounds.top.value<=84f)

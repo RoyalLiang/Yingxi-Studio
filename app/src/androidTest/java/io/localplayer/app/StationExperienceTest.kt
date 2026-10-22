@@ -70,7 +70,7 @@ class StationExperienceTest {
     @Test fun diaryAndOptInSettingsAreReachable() {
         ui.onNodeWithTag("station-diary").assertIsDisplayed()
         ui.onNodeWithTag("open-settings").performClick()
-        ui.onNodeWithText("站务设置").assertIsDisplayed()
+        ui.onNodeWithText("站务").assertIsDisplayed()
         ui.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("station-gear-sound"))
         ui.onNodeWithTag("station-gear-sound").assertIsOff()
         ui.onNodeWithTag("station-gear-sound").performClick()
@@ -116,7 +116,7 @@ class StationExperienceTest {
             ui.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("station-gear-sound"));capture("atmosphere")
             ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()}
             ui.runOnIdle{player.draft=Draft(Source(label="西区仓库",protocol=Protocol.WEBDAV,host="media.example.com",root="/dav/"))}
-            ui.onNodeWithText("外部避难所").assertIsDisplayed();ui.onNodeWithText("网盘连接").assertDoesNotExist();capture("source")
+            ui.onNodeWithText("接入外部信号塔").assertIsDisplayed();ui.onNodeWithText("网盘连接").assertDoesNotExist();capture("source")
             ui.runOnIdle{player.dismissDraft()}
             ui.onNodeWithContentDescription("打开视频").performClick()
             ui.runOnIdle{files.add(tree)}

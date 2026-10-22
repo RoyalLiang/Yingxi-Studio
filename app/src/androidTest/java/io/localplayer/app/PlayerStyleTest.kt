@@ -135,7 +135,7 @@ class PlayerStyleTest {
     }
 
     @Test fun tabAndTrackSelectionsExposeTheirState() {
-        ui.onAllNodesWithText("放映记录").filter(hasClickAction()).onFirst().performClick()
+        ui.onAllNodesWithText("拾荒记录").filter(hasClickAction()).onFirst().performClick()
         capture("history")
         ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithText("映汐").assertIsDisplayed()
@@ -167,7 +167,7 @@ class PlayerStyleTest {
             ui.runOnIdle { androidx.lifecycle.ViewModelProvider(ui.activity)[LibraryViewModel::class.java].refreshHistory() }
             ui.onNodeWithTag("continue-player").assertIsDisplayed()
             capture("home-resume")
-            ui.onAllNodesWithText("放映记录").filter(hasClickAction()).onFirst().performClick()
+            ui.onAllNodesWithText("拾荒记录").filter(hasClickAction()).onFirst().performClick()
             capture("history-glass")
         } finally {
             keys.forEach(history::remove)

@@ -14,8 +14,8 @@ class NavigationTest {
         ui.onNodeWithText("映汐").assertIsDisplayed()
         ui.onNodeWithText("避难所").performClick()
         ui.onNodeWithContentDescription("添加避难所").assertIsDisplayed()
-        ui.onAllNodesWithText("放映记录").filter(hasClickAction()).onFirst().performClick()
-        ui.onNodeWithContentDescription("清空放映记录").assertIsDisplayed()
+        ui.onAllNodesWithText("拾荒记录").filter(hasClickAction()).onFirst().performClick()
+        ui.onNodeWithContentDescription("清空拾荒记录").assertIsDisplayed()
         ui.onNodeWithText("放映站").performClick()
         ui.onNodeWithText("映汐").assertIsDisplayed()
     }

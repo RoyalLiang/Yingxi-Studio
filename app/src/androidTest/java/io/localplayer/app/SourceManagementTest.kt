@@ -65,7 +65,7 @@ class SourceManagementTest {
         ui.onNodeWithText("已收藏").assertIsDisplayed()
         ui.runOnIdle { assertTrue(vm.organization.bookmarks().first { it.sourceId == source.id }.favorite) }
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = false)) }
-        ui.onNodeWithText("已取消收藏路标").assertIsDisplayed()
+        ui.onNodeWithText("已取消路标标记").assertIsDisplayed()
         ui.runOnIdle { assertFalse(vm.organization.bookmarks().first { it.sourceId == source.id }.favorite) }
     }
 
@@ -74,7 +74,7 @@ class SourceManagementTest {
         val stale = SourceBookmark(source.id, "", source.label)
         ui.runOnIdle { vm.toggleFavorite(stale); vm.toggleFavorite(stale) }
         ui.runOnIdle { assertFalse(vm.organization.bookmarks().first { it.key == stale.key }.favorite) }
-        ui.onNodeWithText("已取消收藏路标").assertIsDisplayed()
+        ui.onNodeWithText("已取消路标标记").assertIsDisplayed()
     }
 
     @Test fun longCloudNameAndSettingsRemainReachableWithLargeText() {
@@ -84,10 +84,10 @@ class SourceManagementTest {
         ui.onNodeWithTag("source-title:${source.id}", useUnmergedTree = true).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertFalse("Source name must wrap instead of being clipped", layouts.single().hasVisualOverflow)
         ui.onNodeWithContentDescription("修改配置 ${source.label}").assertDoesNotExist()
-        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
-        ui.onNodeWithText("避难所设置").performClick()
+        ui.onNodeWithContentDescription("${source.stationKind}操作 ${source.label}").performClick()
+        ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithTag("source-settings").assertIsDisplayed()
-        ui.onNodeWithText("默认进入目录").assertIsDisplayed()
+        ui.onNodeWithText("来源根目录").assertIsDisplayed()
         ui.runOnIdle { assertNull(vm.draft); assertNull(vm.openingSource); assertNull(vm.source) }
         capture("settings-large")
     }
@@ -98,8 +98,8 @@ class SourceManagementTest {
         val secretBefore = ui.activity.getSharedPreferences("secrets-v1", 0).getString(source.id, null)
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = true)) }
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithContentDescription("避难所操作 ${source.label}").performClick()
-        ui.onNodeWithText("避难所设置").performClick()
+        ui.onNodeWithContentDescription("${source.stationKind}操作 ${source.label}").performClick()
+        ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithText("浏览并选择文件夹").performClick()
         ui.waitUntil(10_000) { vm.source != null && !vm.busy }
         ui.onNodeWithText("movie.mp4").assertDoesNotExist()
@@ -145,7 +145,7 @@ class SourceManagementTest {
 
     @Test fun successToastIsCompactAndAboveThePage() {
         mount()
-        ui.runOnIdle { vm.notifySuccess("已取消收藏路标") }
+        ui.runOnIdle { vm.notifySuccess("已取消路标标记") }
         ui.mainClock.advanceTimeBy(500)
         val toast = ui.onNodeWithTag("source-toast").getUnclippedBoundsInRoot()
         assertTrue("Toast should sit within the top safe area", toast.top.value < 100f)
