@@ -59,7 +59,7 @@ class PlaybackDiagnosticTest {
                 player.setMediaItem(MediaItem.fromUri(android.net.Uri.Builder().scheme("https").encodedAuthority("user:password123@nas-secret").path("/private-film").appendQueryParameter("token","secret-value").build()))
                 transport.measure(RemoteReadTelemetry.Stage.HEADERS){
                     report=playbackDiagnostic(player)
-                    assertTrue(playbackWaitSummary().startsWith("等待片源响应"))
+                    assertTrue(playbackWaitSummary().startsWith("等待信源回应"))
                 }
             }finally{player.release()}
         }
@@ -123,4 +123,37 @@ class PlaybackDiagnosticTest {
             ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
         }finally{PlaybackIoProbe.end(pending)}
     }
+    @Test fun slowOriginalReadShowsAdvisoryAndCopyAtLargeFont() {
+        PlaybackMetrics.reset()
+        val pending=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.READ,"ALIYUN")
+        val transport=RemoteReadTelemetry().apply{urlRequest();rangeRequest();received(128000);downloadAdvisory(true,1048576)}
+        PlaybackIoProbe.attach(pending,transport)
+        PlaybackMetrics.read(128000,1_000_000_000)
+        val entered=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
+        val worker=Executors.newSingleThreadExecutor()
+        val reading=worker.submit{transport.measure(RemoteReadTelemetry.Stage.BODY){entered.countDown();release.await(30,TimeUnit.SECONDS)}}
+        try {
+            assertTrue(entered.await(3,TimeUnit.SECONDS))
+            ui.runOnUiThread{ui.activity.setContent{
+                PlayerTheme{CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density,2f)){
+                    Box(Modifier.width(320.dp).height(300.dp).background(Color(0xFF101113))){
+                        StationBuffering(true,false){PlaybackWaitDiagnostics(null,0)}
+                    }
+                }}
+            }}
+            ui.onNodeWithContentDescription("原片传输中，正在缓冲").assertExists()
+            ui.onNodeWithText("可核对账户的下载高速流量配额",substring=true).assertExists()
+            ui.waitUntil(5000){ui.onAllNodesWithText("平均读取",substring=true).fetchSemanticsNodes().isNotEmpty()}
+            ui.onNodeWithTag("playback-diagnostic-copy").performScrollTo().assertIsDisplayed().performClick()
+            var copied="";ui.runOnUiThread{copied=ui.activity.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()}
+            val json=JSONObject(copied)
+            assertTrue(json.getBoolean("downloadRightsNotice"))
+            assertEquals(1048576L,json.getLong("signedTrafficLimitBitsPerSecond"))
+            assertTrue(json.getLong("sourceBodyAverageBytesPerSecond") in 1..128000)
+            assertEquals("BODY",json.getString("httpPhase"))
+            val image=ui.onRoot().captureToImage().asAndroidBitmap()
+            File(ui.activity.cacheDir,"aliyun-slow-wait-2x.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+        } finally { release.countDown();reading.get(3,TimeUnit.SECONDS);worker.shutdownNow();PlaybackIoProbe.end(pending);PlaybackMetrics.reset() }
+    }
+
 }

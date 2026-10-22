@@ -158,11 +158,16 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
         return items
     }
     fun file(token: String, drive: String, id: String, c: Cancellation) = item(post("adrive/v1.0/openFile/get", json("drive_id" to drive, "file_id" to id), token, c))
-    fun download(token: String, drive: String, id: String, c: Cancellation): String {
-        val result = post("adrive/v1.0/openFile/getDownloadUrl", json("drive_id" to drive, "file_id" to id), token, c).text("url")
-        val url = result.toHttpUrl()
-        if (url.scheme != "https" || url.username.isNotEmpty() || url.password.isNotEmpty()) throw IOException("下载地址不安全")
-        return result
+    fun download(token: String, drive: String, id: String, c: Cancellation): String = downloadLocation(token,drive,id,c).url
+    internal fun downloadLocation(token:String,drive:String,id:String,c:Cancellation):AliyunDownloadLocation {
+        val response=post("adrive/v1.0/openFile/getDownloadUrl",json("drive_id" to drive,"file_id" to id),token,c)
+        val result=response.text("url")
+        val url=result.toHttpUrl()
+        if(url.scheme!="https"||url.username.isNotEmpty()||url.password.isNotEmpty())throw IOException("下载地址不安全")
+        val description=response.get("description")?.takeIf { it.isJsonPrimitive&&it.asJsonPrimitive.isString }?.asString.orEmpty()
+        // Keep only a known advisory, never arbitrary provider text or signed URL in diagnostics.
+        val notice=description.contains("未购买权益包")&&description.contains("下载速度")
+        return AliyunDownloadLocation(result,notice,url.queryParameter("x-oss-traffic-limit")?.toLongOrNull()?.takeIf{it>0})
     }
     private fun item(o: JsonObject): AliyunItem {
         val id = o.text("file_id"); if (id.any { it == '/' || it == '\\' } || id in setOf(".", "..")) throw IOException("文件标识无效")
@@ -190,9 +195,14 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
             }
             private fun location(entry:AliyunPlaybackEntry,handle:Cancellation,stats:RemoteReadTelemetry,rejected:String?=null):String=handle.withLock(playbackLock){
                 val current=entry.location
-                if(current!=null&&(rejected==null||current!=rejected))return@withLock current
+                if(current!=null&&(rejected==null||current.url!=rejected)){
+                    stats.downloadAdvisory(current.downloadRightsNotice,current.signedTrafficLimitBitsPerSecond)
+                    return@withLock current.url
+                }
                 stats.urlRequest()
-                access.authorized(handle){api.download(it,source.domain,entry.file.id,handle)}.also{entry.location=it}
+                access.authorized(handle){api.downloadLocation(it,source.domain,entry.file.id,handle)}.also{
+                    entry.location=it;stats.downloadAdvisory(it.downloadRightsNotice,it.signedTrafficLimitBitsPerSecond)
+                }.url
             }
 
             private fun id(path: String) = Paths.clean(path).substringAfterLast('/').ifEmpty { "root" }
@@ -214,7 +224,10 @@ class AliyunConnector(private val api: AliyunApi, private val access: AliyunAcce
     }
 }
 
-private class AliyunPlaybackEntry(val file:AliyunItem,var location:String?=null)
+internal class AliyunDownloadLocation(val url:String,val downloadRightsNotice:Boolean,val signedTrafficLimitBitsPerSecond:Long?) {
+    override fun toString()="AliyunDownloadLocation([redacted])"
+}
+private class AliyunPlaybackEntry(val file:AliyunItem,var location:AliyunDownloadLocation?=null)
 
 private fun newAliyunDownloadClient() = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).readTimeout(30, TimeUnit.SECONDS).build()
 

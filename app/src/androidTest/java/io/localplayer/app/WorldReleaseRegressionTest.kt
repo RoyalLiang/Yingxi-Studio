@@ -24,6 +24,28 @@ class WorldReleaseRegressionTest {
         ui.onNodeWithTag("archives-back").performClick()
         ui.onNodeWithTag("home-archives").assertIsDisplayed()
     }
+    @Test fun chidengArrivalNoteIsReadableInTheArchive() {
+        val person=StationWorld.load(ui.activity).people.first{it.id=="chideng"}
+        assertEquals("片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。",person.quotes.last().zh)
+        for(language in listOf("zh","en")) {
+            ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
+                CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides
+                    android.content.res.Configuration(ui.activity.resources.configuration).apply{setLocale(java.util.Locale.forLanguageTag(language))}) {
+                    StationWorldPage{}
+                }
+            } } }
+            ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person:chideng"))
+            ui.onNodeWithTag("world-person:chideng").performClick().assertIsSelected()
+            ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-quote"))
+            val quote=ui.onNodeWithTag("world-quote");val expected=person.quotes.last().inLanguage(language)
+            var found=false
+            repeat(person.quotes.size){
+                if(quote.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString().contains(expected))found=true
+                if(!found)quote.performClick()
+            }
+            assertTrue("$language daily note must be accessible through the real archive",found)
+        }
+    }
     @Test fun longCurrentLetterScrollsWithoutMovingTheCheckButton() {
         ui.runOnUiThread { val vm=SettingsViewModel(ui.activity.application);ui.activity.setContent { PlayerTheme {
             val d=LocalDensity.current

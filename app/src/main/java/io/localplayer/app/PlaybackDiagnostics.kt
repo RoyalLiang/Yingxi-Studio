@@ -26,6 +26,7 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
     val metrics=PlaybackMetrics.snapshot();val io=PlaybackIoProbe.snapshot()
     val transports=PlaybackIoProbe.transportSnapshots()
     val active=transports.filter{it.stage!=null}.maxByOrNull{it.currentMs}
+    val advisory=transports.lastOrNull{it.rangeRequests>0||it.urlRequests>0}
 
     val state=when(player?.playbackState){Player.STATE_BUFFERING->"BUFFERING";Player.STATE_READY->"READY";Player.STATE_ENDED->"ENDED";Player.STATE_IDLE->"IDLE";else->"SESSION_CONNECTING"}
     val scheme=player?.currentMediaItem?.localConfiguration?.uri?.scheme
@@ -41,6 +42,9 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("rangeRequests",transports.sumOf{it.rangeRequests}).put("sourceReadBytes",transports.sumOf{it.sourceBytes})
         .put("urlResolveMs",transports.sumOf{it.urlMs}).put("responseWaitMs",transports.sumOf{it.responseMs})
         .put("bodyReadMs",transports.sumOf{it.bodyMs}).put("lastHttpStatus",transports.lastOrNull()?.httpStatus?:JSONObject.NULL)
+        .put("sourceBodyAverageBytesPerSecond",bodyAverageBytesPerSecond(transports)?:JSONObject.NULL)
+        .put("downloadRightsNotice",advisory?.downloadRightsNotice?:false)
+        .put("signedTrafficLimitBitsPerSecond",advisory?.signedTrafficLimitBitsPerSecond?:JSONObject.NULL)
         .put("version",BuildConfig.VERSION_NAME).put("versionCode",BuildConfig.VERSION_CODE)
         .put("manufacturer",Build.MANUFACTURER).put("model",Build.MODEL).put("android",Build.VERSION.RELEASE).put("sdk",Build.VERSION.SDK_INT)
         .put("state",state).put("bufferingWaitMs",bufferingWaitMs?:JSONObject.NULL).put("playRequested",player?.playWhenReady?:false)
@@ -64,17 +68,44 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .toString(2)
 }
 
+/** Socket-read average, excluding API/headers and player idle time. Includes the current blocked read. */
+internal fun bodyAverageBytesPerSecond(transports:List<RemoteReadTelemetry.Snapshot>):Long? {
+    val time=transports.sumOf{it.bodyMs+if(it.stage==RemoteReadTelemetry.Stage.BODY)it.currentMs else 0}
+    val bytes=transports.sumOf{it.sourceBytes}
+    return if(time<1000||bytes<=0)null else (bytes.toDouble()*1000/time).toLong()
+}
+
+internal fun playbackWaitTitle():String {
+    val phase=PlaybackIoProbe.transportSnapshots().filter{it.stage!=null}.maxByOrNull{it.currentMs}?.stage
+    return when(phase){
+        RemoteReadTelemetry.Stage.URL->"接洽信源中"
+        RemoteReadTelemetry.Stage.HEADERS->"等待信源回应"
+        RemoteReadTelemetry.Stage.BODY->"原片传输中"
+        null->when(PlaybackIoProbe.snapshot().operation){
+            PlaybackIoProbe.Operation.OPEN->"接洽信源中"
+            PlaybackIoProbe.Operation.READ->"原片读取中"
+            null->"等待画面"
+        }
+    }
+}
+
 internal fun playbackWaitSummary():String {
     val io=PlaybackIoProbe.snapshot();val metrics=PlaybackMetrics.snapshot()
     val received=String.format(Locale.ROOT,"%.1f",metrics.bytes/1048576.0)
-    val http=PlaybackIoProbe.transportSnapshots().filter{it.stage!=null}.maxByOrNull{it.currentMs}
-    if(http?.stage==RemoteReadTelemetry.Stage.URL)return "正在取得播放地址\n已等待 ${http.currentMs/1000}\u00A0秒"
-    if(http?.stage==RemoteReadTelemetry.Stage.HEADERS)return "等待片源响应\n已等待 ${http.currentMs/1000}\u00A0秒"
-    return when(io.operation){
-        PlaybackIoProbe.Operation.OPEN->"正在连接来源\n已等待 ${io.waitingMs/1000}\u00A0秒"
-        PlaybackIoProbe.Operation.READ->"正在读取影片\n已接收 $received\u00A0MB"
-        null->if(metrics.firstFrameMs==null&&metrics.bytes>0)"已接收 $received\u00A0MB\n等待画面" else if(metrics.firstFrameMs!=null)"正在恢复播放\n已接收 $received\u00A0MB" else "正在准备播放"
+    val transports=PlaybackIoProbe.transportSnapshots()
+    val http=transports.filter{it.stage!=null}.maxByOrNull{it.currentMs}
+    val rate=bodyAverageBytesPerSecond(transports)?.let{String.format(Locale.ROOT,"%.0f",it/1024.0)}
+    val progress=when(http?.stage){
+        RemoteReadTelemetry.Stage.URL->"正在解析信源\n已等待 ${http.currentMs/1000}\u00A0秒"
+        RemoteReadTelemetry.Stage.HEADERS->"等待信源回应\n已等待 ${http.currentMs/1000}\u00A0秒"
+        else->when(io.operation){
+            PlaybackIoProbe.Operation.OPEN->"正在连接信源\n已等待 ${io.waitingMs/1000}\u00A0秒"
+            PlaybackIoProbe.Operation.READ->"原片已接收 $received\u00A0MB"+(rate?.let{"\n平均读取 $it\u00A0KB/s"}?:"")
+            null->if(metrics.firstFrameMs==null&&metrics.bytes>0)"已接收 $received\u00A0MB\n等待画面" else if(metrics.firstFrameMs!=null)"正在恢复播放\n已接收 $received\u00A0MB" else "正在准备播放"
+        }
     }
+    val advisory=transports.lastOrNull{it.rangeRequests>0||it.urlRequests>0}
+    return progress+if(advisory?.downloadRightsNotice==true)"\n阿里云盘返回下载通道提示\n可核对账户的下载高速流量配额" else ""
 }
 
 /** Only composed during buffering. Sampling stops with the overlay; it never controls playback. */
