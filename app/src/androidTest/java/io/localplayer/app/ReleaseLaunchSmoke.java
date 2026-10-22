@@ -36,7 +36,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         while(!nodes.isEmpty()){
             AccessibilityNodeInfo n=nodes.remove();
             Rect bounds=new Rect();n.getBoundsInScreen(bounds);
-            boolean visible=n.isVisibleToUser()&&!bounds.isEmpty();
+            boolean visible=n.isVisibleToUser()&&bounds.width()>=24&&bounds.height()>=24;
             for(AccessibilityNodeInfo parent=n.getParent();visible&&parent!=null;parent=parent.getParent()){
                 if(parent.isScrollable()){
                     Rect viewport=new Rect();parent.getBoundsInScreen(viewport);
@@ -109,13 +109,29 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         throw new AssertionError("No decoded picture on real surface");
     }
     private MediaController controller() throws Exception {
-        getUiAutomation().adoptShellPermissionIdentity("android.permission.MEDIA_CONTENT_CONTROL");
         MediaSessionManager manager=(MediaSessionManager)getTargetContext().getSystemService(android.content.Context.MEDIA_SESSION_SERVICE);
         for(int i=0;i<30;i++){
-            for(MediaController c:manager.getActiveSessions(null))if(c.getPackageName().equals(getTargetContext().getPackageName()))return c;
+            // Shell identity is needed only for enumeration. Keeping it while
+            // playback runs changes the app's audio-focus permission checks.
+            getUiAutomation().adoptShellPermissionIdentity("android.permission.MEDIA_CONTENT_CONTROL");
+            try{
+                for(MediaController c:manager.getActiveSessions(null))if(c.getPackageName().equals(getTargetContext().getPackageName()))return c;
+            }finally{getUiAutomation().dropShellPermissionIdentity();}
             SystemClock.sleep(100);
         }
         throw new AssertionError("No platform media session");
+    }
+    private void awaitPlaying(MediaController controller,long minimum,long after) {
+        long deadline=SystemClock.elapsedRealtime()+20000;
+        while(SystemClock.elapsedRealtime()<deadline){
+            android.media.session.PlaybackState state=controller.getPlaybackState();
+            if(state!=null&&state.getState()==android.media.session.PlaybackState.STATE_PLAYING){
+                long position=state.getPosition()+(long)((SystemClock.elapsedRealtime()-state.getLastPositionUpdateTime())*state.getPlaybackSpeed());
+                if(position>=minimum&&state.getLastPositionUpdateTime()>=after)return;
+            }
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("Media clock did not start advancing: state="+controller.getPlaybackState()+" title="+(controller.getMetadata()==null?null:controller.getMetadata().getDescription().getTitle()));
     }
     private void playback(String source,String clip) throws Exception {
         launch();click("避难所");clickNode(scrollTo(source),source);
@@ -126,10 +142,13 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         if(activity==null)throw new AssertionError("Playback activity did not open");
         MediaController controller=null;
         try{
+            controller=controller();taps.put("session for "+clip+": "+(controller.getMetadata()==null?null:controller.getMetadata().getDescription().getTitle())+" "+controller.getPlaybackState());awaitPlaying(controller,250,0);
             long first=frame(activity);SystemClock.sleep(600);long next=frame(activity);
             if(first==next)throw new AssertionError("Picture did not advance");
-            controller=controller();controller.getTransportControls().seekTo(2500);SystemClock.sleep(600);
-            frame(activity);
+            long issued=SystemClock.elapsedRealtime();controller.getTransportControls().seekTo(2500);awaitPlaying(controller,2700,issued);
+            long deadline=SystemClock.elapsedRealtime()+10000;boolean changed=false;
+            while(SystemClock.elapsedRealtime()<deadline){if(frame(activity)!=next){changed=true;break;}SystemClock.sleep(100);}
+            if(!changed)throw new AssertionError("Picture did not change after seek");
             if(controller.getPlaybackState()==null||controller.getPlaybackState().getPosition()<1500)throw new AssertionError("Seek did not advance position");
             passed.put(source+" / "+clip+": real decoded frames, progress and seek");
         }finally{
@@ -147,7 +166,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
             if(image.getPixel(4,button.centerY())!=0xFFF3EFE6)throw new AssertionError("Footer background mismatch");
             image.recycle();passed.put("Production R8 rules: launch, settings and fixed footer");
             if(args!=null&&"media".equals(args.getString("mode"))){
-                for(String source:new String[]{"R8 SMB","R8 SFTP"})for(String clip:new String[]{"r8-avc","r8-hevc"})playback(source,clip);
+                for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:new String[]{"r8-avc","r8-hevc"})playback(source,clip);
             }
             result.putString("passed",passed.toString());finish(Activity.RESULT_OK,result);
         }catch(Throwable error){

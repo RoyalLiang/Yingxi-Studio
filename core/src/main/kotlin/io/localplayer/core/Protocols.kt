@@ -28,7 +28,9 @@ class SmbConnector : Connector {
         cancellation.own(client)
         try {
             val connection = client.connect(source.host, source.port)
-            cancellation.own(connection); cancellation.check()
+            // Cancellation must close the transport immediately; graceful session
+            // logoff can wait another network round trip while a read is stuck.
+            cancellation.own(Closeable{connection.close(true)}); cancellation.check()
             val auth = if (source.username.isBlank()) AuthenticationContext.anonymous() else
                 AuthenticationContext(source.username, credentials.password.toCharArray(), source.domain)
             val session = connection.authenticate(auth)
@@ -49,21 +51,8 @@ class SmbConnector : Connector {
                         SMB2CreateDisposition.FILE_OPEN, EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE))
                     try {
                         val length = file.fileInformation.standardInformation.endOfFile
-                        return object : RemoteFile {
-                            override val size = length
-                            private val done = AtomicBoolean(false)
-                            override fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int {
-                                require(position >= 0); cancellation.check()
-                                if (done.get()) throw java.io.InterruptedIOException("读取已关闭")
-                                if (length == 0) return 0
-                                if (position >= size) return -1
-                                val n = file.read(buffer, position, offset, length)
-                                if (done.get()) throw java.io.InterruptedIOException("读取已关闭")
-                                return if (n == 0) -1 else n
-                            }
-                            override fun close() { if (done.compareAndSet(false, true)) file.close() }
-                        }
-                    } catch (e: Exception) { runCatching { file.close() }; throw e }
+                        return SmbReadFile(file,length,cancellation,connection.negotiatedProtocol.maxReadSize)
+                } catch (e: Exception) { runCatching { file.close() }; throw e }
                 }
                 override fun close() {
                     if (closed.compareAndSet(false, true)) {
@@ -117,16 +106,33 @@ class SftpConnector : Connector {
                         return object : RemoteFile {
                             override val size = length
                             private val done = AtomicBoolean(false)
-                            override fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int {
-                                require(position >= 0); cancellation.check()
-                                if (done.get()) throw java.io.InterruptedIOException("读取已关闭")
-                                if (length == 0) return 0
-                                if (position >= size) return -1
-                                val n = file.read(position, buffer, offset, length)
-                                if (done.get()) throw java.io.InterruptedIOException("读取已关闭")
-                                return n
-                            }
-                            override fun close() { if (done.compareAndSet(false, true)) file.close() }
+                    private var cursor=-1L
+                    private var warmed=false
+                    private var stream:java.io.InputStream?=null
+                    @Synchronized override fun readAt(position: Long, buffer: ByteArray, offset: Int, length: Int): Int {
+                        require(position>=0 && offset>=0 && length>=0 && offset<=buffer.size && length<=buffer.size-offset);cancellation.check()
+                        if(done.get()) throw java.io.InterruptedIOException("读取已关闭")
+                        if(length==0)return 0
+                        if(position>=size)return -1
+                        if(stream==null || cursor!=position){
+                            // Bounded SFTP request window, not a full-file download. A seek
+                            // starts at its own offset instead of waiting for old prefetch.
+                            stream=file.ReadAheadRemoteFileInputStream(0,position,size-position)
+                            cursor=position;warmed=false
+                        }else if(!warmed){
+                            // Only expand after the caller consumes the first block.
+                            // Metadata probes and discontinuous seeks stay small.
+                            stream=file.ReadAheadRemoteFileInputStream(15,position,size-position)
+                            warmed=true
+                        }
+                        // Keep packets small even when the outer cache asks for 1 MiB.
+                        // This avoids oversized reads being truncated by common servers.
+                        val n=stream!!.read(buffer,offset,minOf(length,32768,(size-position).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()))
+                        if(done.get()) throw java.io.InterruptedIOException("读取已关闭")
+                        if(n>0)cursor+=n
+                        return n
+                    }
+                    override fun close() { if (done.compareAndSet(false, true)) file.close() }
                         }
                     } catch (e: Exception) { runCatching { file.close() }; throw e }
                 }
