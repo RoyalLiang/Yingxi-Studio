@@ -6,6 +6,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 
 /** Bounded local counters. Never records media paths, addresses or credentials. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 object PlaybackMetrics {
  data class Snapshot(val firstFrameMs:Long?,val rebufferCount:Int,val droppedFrames:Int,
   val bytes:Long,val readCalls:Long,val readTimeMs:Long,val openCalls:Long=0,
