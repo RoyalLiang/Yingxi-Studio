@@ -60,9 +60,9 @@ class WorldReleaseRegressionTest {
             CompositionLocalProvider(LocalDensity provides Density(d.density,1.8f)) {Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage(embedded=true){}}}
         } } }
         val screen=ui.onNodeWithTag("station-world").fetchSemanticsNode().boundsInRoot
-        listOf("station","salt","archive","sea","beacon").forEach { id ->
+        listOf("station","salt","archive","ideal","sea","beacon").forEach { id ->
             ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:$id"))
-            val node=ui.onNodeWithTag("world-node:$id").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val node=ui.onNodeWithTag("world-node:$id").performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot
             assertTrue(node.left>=screen.left&&node.right<=screen.right)
         }
     }
@@ -75,12 +75,12 @@ class WorldReleaseRegressionTest {
                     Box(Modifier.width(320.dp).fillMaxHeight()){StationWorldPage(embedded=true){}}
                 }
             }}}
-            for(id in listOf("station","salt","archive","sea","beacon")) {
+            for(id in listOf("station","salt","archive","ideal","sea","beacon")) {
                 ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-node:$id"))
-                val card=ui.onNodeWithTag("world-node:$id").fetchSemanticsNode().boundsInRoot
+                val card=ui.onNodeWithTag("world-node:$id").performScrollTo().fetchSemanticsNode().boundsInRoot
                 val label=ui.onNodeWithTag("world-node-label:$id",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
                 assertTrue(kotlin.math.abs(card.center.x-label.center.x)<2f)
-                assertTrue(kotlin.math.abs(card.center.y-label.center.y)<2f)
+                assertTrue("$language $id label must be vertically centered: $card / $label",kotlin.math.abs(card.center.y-label.center.y)<2f)
                 ui.onNodeWithTag("world-node-label:$id",useUnmergedTree=true)
                     .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { action ->
                         val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();action(layouts)

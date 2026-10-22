@@ -35,23 +35,29 @@ import kotlinx.coroutines.launch
 
 internal data class WorldText(val zh:String,val en:String) { fun inLanguage(language:String)=if(language=="zh")zh else en }
 internal data class WorldPlace(val id:String,val name:WorldText,val kind:WorldText,val description:WorldText,val x:Float,val y:Float,val known:Boolean)
-internal data class WorldPerson(val id:String,val name:WorldText,val role:WorldText,val description:WorldText,val home:String,val portrait:String,val quotes:List<WorldText>)
+internal data class WorldPerson(val id:String,val name:WorldText,val role:WorldText,val description:WorldText,val home:String,val portrait:String,val quotes:List<WorldText>,val personality:WorldText)
 internal data class WorldEdge(val from:String,val to:String,val known:Boolean)
 internal data class WorldChronicle(val version:String,val text:WorldText)
-internal data class WorldTerm(val id:String,val status:String,val category:WorldText,val name:WorldText,val summary:WorldText,val proposal:WorldText?)
-internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val boundary:WorldText,val places:List<WorldPlace>,val people:List<WorldPerson>,val edges:List<WorldEdge>,val chronicles:List<WorldChronicle>,val lexicon:List<WorldTerm>,val chapters:List<WorldChapter>) {
+internal data class WorldTerm(val id:String,val status:String,val category:WorldText,val name:WorldText,val summary:WorldText,val proposal:WorldText?,val canonStatus:String)
+internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val boundary:WorldText,val places:List<WorldPlace>,val people:List<WorldPerson>,val edges:List<WorldEdge>,val chronicles:List<WorldChronicle>,val lexicon:List<WorldTerm>,val chapters:List<WorldChapter>,val dailyLines:List<WorldDiaryLine>,val appNames:List<WorldAppName>,val canonNote:WorldText,val surfaceNotes:List<WorldSurfaceNote>) {
     companion object {
-        fun load(context:Context):StationWorld {
+        private var cached:StationWorld?=null
+        @Synchronized fun load(context:Context):StationWorld {
+            cached?.let { return it }
             val root=JSONObject(context.resources.openRawResource(R.raw.world_atlas).bufferedReader().use{it.readText()})
             fun JSONObject.words(key:String)=getJSONObject(key).let{WorldText(it.getString("zh"),it.getString("en"))}
             fun JSONObject.objects(key:String)=getJSONArray(key).let{a->(0 until a.length()).map(a::getJSONObject)}
             return StationWorld(root.words("chapter"),root.words("premise"),root.words("boundary"),
                 root.objects("nodes").map{WorldPlace(it.getString("id"),it.words("name"),it.words("kind"),it.words("description"),it.getDouble("x").toFloat(),it.getDouble("y").toFloat(),it.getBoolean("known"))},
-                root.objects("characters").map{p->WorldPerson(p.getString("id"),p.words("name"),p.words("role"),p.words("description"),p.getString("home"),p.getString("portrait"),p.objects("quotes").map{WorldText(it.getString("zh"),it.getString("en"))})},
+                root.objects("characters").map{p->WorldPerson(p.getString("id"),p.words("name"),p.words("role"),p.words("description"),p.getString("home"),p.getString("portrait"),p.objects("quotes").map{WorldText(it.getString("zh"),it.getString("en"))},p.words("personality"))},
                 root.objects("edges").map{WorldEdge(it.getString("from"),it.getString("to"),it.getBoolean("known"))},
                 root.objects("chronicles").map{WorldChronicle(it.getString("version"),it.words("text"))},
-                root.objects("lexicon").map{WorldTerm(it.getString("id"),it.getString("status"),it.words("category"),it.words("name"),it.words("summary"),if(it.has("proposal"))it.words("proposal")else null)},
-                root.objects("chapters").map{c->WorldChapter(c.getString("id"),c.words("title"),c.words("introduction"),c.objects("letters").map{l->WorldLetter(l.getString("id"),l.getString("author"),l.getString("place"),l.words("title"),l.words("body"))})})
+                root.objects("lexicon").map{WorldTerm(it.getString("id"),it.getString("status"),it.words("category"),it.words("name"),it.words("summary"),if(it.has("proposal"))it.words("proposal")else null,it.getString("canonStatus"))},
+                root.objects("chapters").map{c->WorldChapter(c.getString("id"),c.words("title"),c.words("introduction"),c.objects("letters").map{l->WorldLetter(l.getString("id"),l.getString("author"),l.getString("place"),l.words("title"),l.words("body"))})},
+                root.objects("dailyLines").map{WorldDiaryLine(it.getString("id"),it.getString("author"),it.words("text"))},
+                root.objects("appNames").map{WorldAppName(it.getString("id"),it.words("name"),it.words("meaning"))},
+                root.getJSONObject("canonAdoption").words("note"),
+                root.objects("surfaceNotes").map{WorldSurfaceNote(it.getString("id"),it.getString("author"),it.words("eyebrow"),it.words("title"),it.words("body"))}).also { cached=it }
         }
     }
 }
@@ -78,6 +84,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             if(embedded) StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }} else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"灯外，还有整个世界。" else "A world beyond the light.",fontFamily=FontFamily.Serif,fontSize=30.sp,lineHeight=39.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
+        WorldOverview(world,lang)
             Text(if(lang=="zh")"把名字留在信上" else "Names on the letters",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 world.people.forEach { p ->
@@ -106,11 +113,16 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Text(person.name.say()+" / "+person.role.say(),fontSize=16.sp,fontWeight=FontWeight.Medium,color=Ink)
                 Text(world.places.first{it.id==person.home}.name.say(),fontSize=12.sp,color=Berry)
-                Text(person.description.say(),fontSize=14.sp,lineHeight=24.sp,color=Muted)
+                Column(verticalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.testTag("world-person-personality")) {
+                Text(if(lang=="zh")"性格侧写"else"Personality",fontSize=12.sp,color=Berry)
+                Text(person.personality.say(),fontSize=14.sp,lineHeight=24.sp,color=Ink)
+            }
+            Text(person.description.say(),fontSize=14.sp,lineHeight=24.sp,color=Muted)
                 Surface(onClick={quote=(quote+1)%person.quotes.size},color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("world-quote")) {
                     Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text("“"+person.quotes[quote%person.quotes.size].say()+"”",fontFamily=FontFamily.Serif,fontSize=19.sp,lineHeight=30.sp,color=Ink)
                         Text("— "+person.name.say(),fontSize=13.sp,color=Berry)
+                Text(if(lang=="zh")"语录 ${quote%person.quotes.size+1} / ${person.quotes.size}"else"Quote ${quote%person.quotes.size+1} / ${person.quotes.size}",fontSize=11.sp,color=Muted,modifier=Modifier.testTag("world-quote-progress"))
                         Text(if(lang=="zh")"轻触信纸，读下一句" else "Tap the paper for another line",fontSize=11.sp,color=Muted)
                     }
                 }
@@ -120,14 +132,16 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             if(embedded) StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }} else Text(world.chapter.say(),fontSize=13.sp,color=Berry,fontWeight=FontWeight.Medium)
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
+        WorldOverview(world,lang)
             WorldMap(world,placeId,lang){placeId=it}
-            Text(if(lang=="zh")"废土图谱 · 实线是往返信路，虚线是传闻" else "Wasteland atlas · Solid routes are known; dotted routes are rumors",fontSize=11.sp,lineHeight=18.sp,color=Muted)
+            Text(if(lang=="zh")"废土图谱 · 实线已核，虚线位置或路线待核" else "Wasteland atlas · Solid: surveyed; dotted: location or route unverified",fontSize=11.sp,lineHeight=18.sp,color=Muted)
             Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                 Text(place.name.say()+" · "+place.kind.say(),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
                 Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
             }
             HorizontalDivider(color=Muted.copy(alpha=.16f))
             WorldDictionary(world.lexicon,lang)
+        WorldApplicationGlossary(world.appNames,lang)
             Text(if(lang=="zh")"据点大事记" else "Station chronicles",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
             world.chronicles.asReversed().forEach { entry -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
@@ -140,7 +154,16 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
 }
 
 @Composable private fun WorldMap(world:StationWorld,selectedId:String,language:String,select:(String)->Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth().height((340*androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceIn(1f,1.8f)).dp).clip(RoundedCornerShape(24.dp)).background(GroupedSurface).testTag("world-map")) {
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val measurer=androidx.compose.ui.text.rememberTextMeasurer()
+    val labelStyle=androidx.compose.ui.text.TextStyle(textAlign=androidx.compose.ui.text.style.TextAlign.Center,fontSize=12.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium)
+    val labelWidth=with(density){102.dp.roundToPx()}
+    val nodeHeight=world.places.maxOf { place ->
+        val measured=measurer.measure(place.name.inLanguage(language),style=labelStyle,constraints=androidx.compose.ui.unit.Constraints(maxWidth=labelWidth))
+        maxOf(50.dp,with(density){measured.size.height.toDp()}+16.dp)
+    }
+    val mapHeight=maxOf(340.dp,nodeHeight*3.8f+64.dp)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(mapHeight).clip(RoundedCornerShape(24.dp)).background(GroupedSurface).testTag("world-map")){
         val width=maxWidth;val height=maxHeight
         Canvas(Modifier.fillMaxSize()) {
             // Faint survey grid; solid routes are known, dotted routes remain story leads.
@@ -148,15 +171,15 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             for(i in 1..5)drawLine(Muted.copy(alpha=.06f),Offset(0f,size.height*i/6),Offset(size.width,size.height*i/6),1.dp.toPx())
             world.edges.forEach { edge ->
                 val from=world.places.first{it.id==edge.from};val to=world.places.first{it.id==edge.to}
-                drawLine(if(edge.known)Berry.copy(alpha=.5f) else Muted.copy(alpha=.35f),Offset(from.x*size.width,from.y*size.height),Offset(to.x*size.width,to.y*size.height),1.2.dp.toPx(),pathEffect=if(edge.known)null else PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(),5.dp.toPx())))
+                drawLine(if(edge.known)Berry.copy(alpha=.5f) else Muted.copy(alpha=.35f),Offset((width*from.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*from.y+nodeHeight/2).toPx()),Offset((width*to.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*to.y+nodeHeight/2).toPx()),1.2.dp.toPx(),pathEffect=if(edge.known)null else PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(),5.dp.toPx())))
             }
         }
         world.places.forEach { place ->
             Surface(onClick={select(place.id)},color=if(place.id==selectedId)Berry else Paper,contentColor=if(place.id==selectedId)Color.White else Ink,
-                shape=RoundedCornerShape(14.dp),modifier=Modifier.offset(x=(width*place.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)),y=height*place.y-25.dp).width(112.dp).heightIn(min=50.dp)
+                shape=RoundedCornerShape(14.dp),modifier=Modifier.offset(x=(width*place.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)),y=(height-nodeHeight)*place.y).width(112.dp).height(nodeHeight)
                     .testTag("world-node:${place.id}").semantics{selected=place.id==selectedId}) {
-                Box(Modifier.fillMaxWidth().heightIn(min=50.dp).padding(horizontal=5.dp,vertical=8.dp),contentAlignment=Alignment.Center) {
-                    Text(place.name.inLanguage(language),textAlign=androidx.compose.ui.text.style.TextAlign.Center,fontSize=12.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium,modifier=Modifier.fillMaxWidth().testTag("world-node-label:${place.id}"))
+                Box(Modifier.fillMaxSize().padding(horizontal=5.dp,vertical=8.dp),contentAlignment=Alignment.Center) {
+                    Text(place.name.inLanguage(language),style=labelStyle,modifier=Modifier.fillMaxWidth().testTag("world-node-label:${place.id}"))
                 }
             }
         }
@@ -180,10 +203,10 @@ private fun WorldDictionary(terms:List<WorldTerm>,language:String) {
         Text(if(zh){if(open)"收起废土词典"else"废土词典 · ${terms.size} 条"}else{if(open)"Close wasteland dictionary"else"Wasteland dictionary · ${terms.size} entries"})
     }
     if(open) {
-        Text(if(zh)"既有设定、传闻与演进提案分别标明。"else"Established facts, rumors, and proposals are labeled separately.",fontSize=12.sp,lineHeight=19.sp,color=Muted)
+        Text(if(zh)"正式设定、站内证据与演进提案分别标明。"else"Established facts, rumors, and proposals are labeled separately.",fontSize=12.sp,lineHeight=19.sp,color=Muted)
         terms.forEach { term ->
             Column(Modifier.fillMaxWidth().testTag("world-term:${term.id}"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                val status=if(term.status=="rumor"){if(zh)"传闻"else"Rumor"}else{if(zh)"已确认设定"else"Established"}
+                val status=if(term.canonStatus=="proposal"){if(zh)"演进提案"else"Proposal"}else if(term.status=="rumor"){if(zh)"正式设定 · 站内传闻"else"Adopted canon · station hearsay"}else{if(zh)"已确认设定"else"Established"}
                 Text(term.category.inLanguage(language)+" · "+status,fontSize=12.sp,color=Berry)
                 Text(term.name.inLanguage(language),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
                 Text(term.summary.inLanguage(language),fontSize=14.sp,lineHeight=24.sp,color=Ink)

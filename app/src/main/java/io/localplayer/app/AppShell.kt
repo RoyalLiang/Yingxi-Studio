@@ -3,6 +3,7 @@ package io.localplayer.app
 import io.localplayer.core.mediaDisplayTitle
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
@@ -152,7 +153,8 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
             Column(Modifier.weight(1f)){Text("拾荒记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"观看记录 · ${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
             IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空拾荒记录",tint=Muted)}
         }
-        if(vm.history.isEmpty())Column(Modifier.fillMaxWidth().padding(32.dp),horizontalAlignment=Alignment.CenterHorizontally){
+        if(vm.history.isEmpty())Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(start=24.dp,end=24.dp,top=16.dp,bottom=112.dp),horizontalAlignment=Alignment.CenterHorizontally){
+            HistoryWorldNote(Modifier.padding(bottom=20.dp).testTag("history-keeper-note"))
             Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有拾荒记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
             Spacer(Modifier.height(10.dp));Text("实际播放影片后，会自动记住进度。",fontSize=14.sp,color=Muted)
             Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("查看已登记信源")}

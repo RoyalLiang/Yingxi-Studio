@@ -41,14 +41,12 @@ internal class StationPreferences(context:Context,name:String="station-experienc
         if(!greetings||p.getString("greeted",null)==today)return false
         p.edit().putString("greeted",today).apply();return true
     }
-    val dailyLine:String get()=listOf(
-        "片罐侧签补好了，盖子丢了，片名也不会跟着走。",
-        "迟灯把垫圈串回细铁丝，给下一次检修留出桌面。",
-        "弥途重描了盐环的旧路标，虚线处仍留着空白。",
-        "新收到的纸条压在干布下，寄信人的名字先空着。",
-        "片架旁留着一张回条，等真正出发时再带上。",
-        "灯亮着。带回来的影像，今天也能慢慢看。"
-    )[Math.floorMod(LocalDate.now().toEpochDay(),6).toInt()]
+    private val appContext=context.applicationContext
+    private val world by lazy { StationWorld.load(appContext) }
+    val dailyLines:List<WorldDiaryLine> get()=world.dailyLines
+    fun dailyLine(language:String):String=dailyLines[Math.floorMod(LocalDate.now().toEpochDay(),dailyLines.size).toInt()].text.inLanguage(language)
+    val dailyLine:String get()=dailyLine(appContext.resources.configuration.locales[0].language)
+
     fun seekClick(context:Context){if(gearSound)context.getSystemService(AudioManager::class.java)?.playSoundEffect(AudioManager.FX_KEY_CLICK,.18f)}
 }
 

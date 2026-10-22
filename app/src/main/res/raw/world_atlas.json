@@ -6,8 +6,8 @@
   },
   "introducedIn": "0.2.0-alpha.20",
   "premise": {
-    "zh": "核爆终结文明纪元，幸存者在废土纪元重建生活。长潮退去，散落的影像被带回映汐放映站。灯外还有聚落、理想城与尚未走过的路。",
-    "en": "Nuclear destruction ended the Civilization Era; survivors rebuild in the Wasteland Era. After the Long Tide receded, scattered images returned to Yingxi Station. Beyond its light lie settlements, Ideal City, and unwalked roads."
+    "zh": "文明纪元在核火及其引发的长潮中终结。地下放映站、盐环聚落与理想城各有灯火；孢子、变异生灵、变种人与觉醒者共同生活。这里收拢旧影像，也给尚未走完的路留着空白。",
+    "en": "Nuclear fire and the Long Tide it triggers end the Civilization Era. Underground stations, Salt Ring settlements and Ideal City keep their own lights; spores, altered life, mutants and Awakened people share the world. Here, old images are gathered and unfinished routes retain their blank spaces."
   },
   "nodes": [
     {
@@ -17,15 +17,15 @@
         "en": "Yingxi Station"
       },
       "kind": {
-        "zh": "有人守候",
-        "en": "A light kept on"
+        "zh": "地下避难所 · 有人守候",
+        "en": "Underground shelter · A light kept on"
       },
-      "x": 0.5,
-      "y": 0.48,
+      "x": 0.22,
+      "y": 0.14,
       "known": true,
       "description": {
-        "zh": "旧铁路线的最后一间放映室。长潮之后，幸存的影像在这里归档，流浪的人可以借一晚灯光。",
-        "en": "The last projection room on an old railway. After the Long Tide, surviving images are catalogued here; travelers may borrow its light for a night."
+        "zh": "旧铁路线终点的防辐射地下避难所，也是还在运转的最后一间放映室。文明纪元幸存的影像在这里归档，无论是拾荒者、变种人行商还是觉醒者旅人，都能借一晚灯光。",
+        "en": "A radiation-shielded underground shelter at the end of an old railway, and its last working screening room. Surviving images from the Civilization Era are catalogued here; scavengers, mutant traders, and Awakened travelers alike may borrow its light."
       }
     },
     {
@@ -35,15 +35,15 @@
         "en": "Salt Ring Stops"
       },
       "kind": {
-        "zh": "路标已立",
-        "en": "Signposts standing"
+        "zh": "幸存者聚落 · 路标已立",
+        "en": "Survivor settlement · Signposts standing"
       },
-      "x": 0.19,
-      "y": 0.2,
+      "x": 0.78,
+      "y": 0.14,
       "known": true,
       "description": {
-        "zh": "盐壳包住停运的车厢，弥途把能走的路画在车门内侧。这里的地图会褪色，人却总会回来补上一笔。",
-        "en": "Salt crusts the abandoned carriages. Mitu marks passable routes inside their doors. The maps fade; someone always returns to redraw a line."
+        "zh": "盐壳包住文明纪元停运的列车车厢，地表幸存者与温顺的变种人匠人在此筑起聚落。弥途把能走的路画在车门内侧，行商与驮兽总会顺着路标回来补上一笔。",
+        "en": "Salt crusts the train carriages left from the Civilization Era, where surface survivors and gentle mutant artisans built a settlement. Mitu marks passable routes inside the doors; traders and pack beasts always return to redraw the lines."
       }
     },
     {
@@ -53,15 +53,15 @@
         "en": "Drowned Archive"
       },
       "kind": {
-        "zh": "等待打捞",
-        "en": "Awaiting salvage"
+        "zh": "孢子共生 · 等待打捞",
+        "en": "Spore symbiosis · Awaiting salvage"
       },
-      "x": 0.8,
-      "y": 0.19,
+      "x": 0.22,
+      "y": 0.5,
       "known": false,
       "description": {
-        "zh": "回声海退潮时露出的圆形屋顶。拾荒者带回过它的胶片盒，馆内还有多少层，没人说得准。",
-        "en": "A circular roof exposed at low tide. Scavengers have brought back its film cans; no one agrees how many floors remain beneath them."
+        "zh": "核爆后沉入回声海的文明纪元资料库，退潮时露出圆形屋顶。馆内冷光闪烁的自进化孢子包裹着密封胶片盒，替旧世界守住了未受潮水侵蚀的底片。",
+        "en": "A Civilization Era repository submerged after the nuclear fall, its circular roof exposed at low tide. Bioluminescent self-evolving spores wrap the sealed film cans inside, shielding old reels from the water."
       }
     },
     {
@@ -71,15 +71,15 @@
         "en": "Echo Sea"
       },
       "kind": {
-        "zh": "传闻地带",
-        "en": "Beyond the charts"
+        "zh": "变异生态 · 传闻地带",
+        "en": "Mutated ecology · Beyond the charts"
       },
-      "x": 0.2,
-      "y": 0.8,
+      "x": 0.22,
+      "y": 0.86,
       "known": false,
       "description": {
-        "zh": "潮水没过旧城，风把废弃广播送回岸上。迟灯说，海声里偶尔会多出一个本不该存在的频道。",
-        "en": "The old city lies under tidal water. Wind carries abandoned broadcasts ashore. Chideng says an impossible extra channel sometimes slips between the waves."
+        "zh": "核爆与长潮漫过旧城形成的辐射内海，岸边栖息着循电磁波迁徙的温和变异水鸟。迟灯与路过的觉醒者都听见过，海浪里偶尔会多出一个旧纪元的清晰频段。",
+        "en": "A radiant inland sea formed where the Long Tide covered the old city, home to gentle mutated seabirds that migrate along radio waves. Both Chideng and passing Awakened listeners have heard an extra old-era frequency between the waves."
       }
     },
     {
@@ -89,15 +89,33 @@
         "en": "Far Lantern Observatory"
       },
       "kind": {
-        "zh": "尚未抵达",
-        "en": "Not yet reached"
+        "zh": "觉醒信标 · 尚未抵达",
+        "en": "Awakened beacon · Not yet reached"
       },
-      "x": 0.79,
-      "y": 0.8,
+      "x": 0.78,
+      "y": 0.86,
       "known": false,
       "description": {
-        "zh": "北脊山后的微光，只在无云的夜里出现。它是另一座有人值守的站，还是长潮留下的残像？信笺里暂时没有答案。",
-        "en": "A glimmer beyond the northern ridge, visible only on clear nights. Another staffed station, or an afterimage of the Long Tide? The letters hold no answer yet."
+        "zh": "北脊山后的高地微光，只在辐射云散去的晴夜出现。觉醒者说那是另一座仍在发报的气象与影像中继站，信笺里暂时只记下了它的方向。",
+        "en": "A highland glimmer beyond the northern ridge, visible when radiation clouds part on clear nights. The Awakened say it is an active weather and image relay station; for now, the letters record only its bearing."
+      }
+    },
+    {
+      "id": "ideal",
+      "name": {
+        "zh": "理想城",
+        "en": "Ideal City"
+      },
+      "kind": {
+        "zh": "秩序高塔 · 远方灯火",
+        "en": "Order spires · Distant lights"
+      },
+      "x": 0.78,
+      "y": 0.5,
+      "known": false,
+      "description": {
+        "zh": "围绕旧能源塔与环状净水工程重建的洁净秩序城邦，经盐环商队与避难所互通修配零件和旧纪元纪录片。城邦与贸易已纳入正式设定；站内仍未掌握可实地循行的城址与路线。",
+        "en": "A clean, ordered city rebuilt around surviving energy towers and circular waterworks. Salt Ring caravans exchange repair parts and old-era documentaries with shelters. The city and trade are established canon; the station still lacks a surveyed location and route."
       }
     }
   ],
@@ -137,6 +155,15 @@
         "zh": "未证实的线索",
         "en": "An unconfirmed lead"
       }
+    },
+    {
+      "from": "station",
+      "to": "ideal",
+      "known": false,
+      "label": {
+        "zh": "商队转递线索 · 路线未核",
+        "en": "Caravan messages · route unverified"
+      }
     }
   ],
   "characters": [
@@ -153,8 +180,8 @@
       "home": "station",
       "portrait": "scavenger",
       "description": {
-        "zh": "旧风镜与拼装头灯压在帽檐上，灰绿工装补着回收布料，口袋里总有一颗不配套的螺丝。撬拆工具、呼吸防护与胶片罐挂在胸前；嘴上嫌修理麻烦，却从不肯把还能放映的影像留在雨里。",
-        "en": "Old goggles and a jury-rigged headlamp on her cap; salvaged cloth patches across grey-green workwear, one mismatched screw in every pocket. Pry tools, breathing protection and film canisters hang from her harness. Complains about repairs; never leaves a playable image out in the rain."
+        "zh": "旧风镜与拼装头灯压在帽檐上，灰绿工装补着回收布料，口袋里总有一颗不配套的螺丝。撬拆工具、防辐射呼吸面罩与胶片罐挂在胸前；嘴上嫌修理麻烦，却常和盐环聚落的变种人搬运工一起从废墟里抢出旧磁盘，从不肯把还能放映的影像留在辐射雨里。 她仍把“收到”和“证实”分栏，片名写在罐身侧签上。",
+        "en": "Old goggles and a jury-rigged headlamp on her cap; salvaged cloth patches across grey-green workwear, one mismatched screw in every pocket. Pry tools, radiation respirator, and film canisters hang from her harness. She grumbles about repairs, yet teams up with Salt Ring mutant haulers to rescue old drives from the ruins, never leaving a playable image in the fallout rain. She still records receipt separately from verification, with titles on the sides of the tins."
       },
       "quotes": [
         {
@@ -192,8 +219,24 @@
         {
           "zh": "登记簿的夹页别抽走。两边的来信各有去处，回头才找得到。",
           "en": "Leave the dividers in the logbook. Each bundle of letters has its place; we need to find them again."
+        },
+        {
+          "zh": "沉没档案馆的自进化孢子倒是懂事，把文明纪元的铁盒裹得严严实实，一滴潮水都没漏进去。",
+          "en": "The self-evolving spores in the Drowned Archive know their job—wrapped those Civilization Era tins so tight not a drop of tidewater got in."
+        },
+        {
+          "zh": "不管是理想城捎来的精密零件，还是聚落变种人兄弟扛来的旧硬盘，进了放映站，都得先登记上册。",
+          "en": "Whether it is a precision part from Ideal City or an old drive hauled in by our mutant friends from the settlement, everything gets logged at the counter first."
+        },
+        {
+          "zh": "核火烧掉了旧世界的街牌，但只要片头字幕还能亮起来，那些日子就不算彻底消失。",
+          "en": "Nuclear fire burned away the old world's street signs, but as long as the opening credits still light up, those days are not truly gone."
         }
-      ]
+      ],
+      "personality": {
+        "zh": "嘴硬心软 · 务实利落 · 珍视旧纪元遗物 · 对聚落来客一视同仁",
+        "en": "Sharp-tongued yet warm · Pragmatic · Guards old-era relics · Welcomes every traveler"
+      }
     },
     {
       "id": "chideng",
@@ -208,8 +251,8 @@
       "home": "station",
       "portrait": "keeper",
       "description": {
-        "zh": "灰白的鬓角，补过三次的耳机；旧工装外罩着磨损的维修围裙，表笔、电线和钳子各有落脚处。提灯用回收金属拼了护网。他记得每台放映机的脾气，却总忘记自己的茶已经凉了。",
-        "en": "Grey at the temples, headphones patched three times. A worn repair apron over old coveralls, with a place for meter probes, wire and pliers. Scrap metal guards his work light. Remembers every projector’s temperament; forgets the tea."
+        "zh": "灰白的鬓角，补过三次的铜线耳机；旧工装外罩着磨损的维修围裙，表笔、电线和钳子各有落脚处。提灯用回收金属拼了护网，灯罩边常停着循光而来的温顺孢子蛾。他记得每台文明纪元放映机的脾气，也常和路过的觉醒者一起校准旧广播频段，却总忘记自己的茶已经凉了。 拆下的垫圈按尺寸串回细铁丝，桌边留着尚未送出的回条。",
+        "en": "Grey at the temples, copper-wired headphones patched three times. A worn repair apron over old coveralls holds meter probes, wire, and pliers. Scrap metal guards his work light, where gentle spore-moths often rest. He remembers every Civilization Era projector's temperament and tunes old broadcast bands with passing Awakened listeners, yet always forgets his tea has gone cold. Removed washers return to a wire sorted by size; an unsent reply waits beside his desk."
       },
       "quotes": [
         {
@@ -255,8 +298,16 @@
         {
           "zh": "垫圈按尺寸串在细铁丝上。合不上，拧得再紧也不会稳。",
           "en": "Sort the washers on a thin wire by size. Tightening the wrong one will not make it fit."
+        },
+        {
+          "zh": "昨晚有位觉醒者路过，帮我把回声海飘来的杂音滤干净了；原来那是文明纪元最后一班列车的报站声。",
+          "en": "An Awakened traveler passed by last night and helped me filter the static from the Echo Sea; it turned out to be the station call of the Civilization Era's last train."
         }
-      ]
+      ],
+      "personality": {
+        "zh": "温和沉静 · 慢条斯理 · 熟稔机械与频段 · 常为夜归人留灯",
+        "en": "Gentle and unhurried · Patient with machines and frequencies · Keeps a lamp for night travelers"
+      }
     },
     {
       "id": "mitu",
@@ -271,8 +322,8 @@
       "home": "salt",
       "portrait": "wayfinder",
       "description": {
-        "zh": "短发间别着一支褪色的红铅笔，短雨披和背架上尽是修补痕迹，绳索、片罐与水壶沿着橙色肩带固定。地图贴身收着，罗盘从不离手。她把没走过的路线画成虚线，不愿把猜测当成路。",
-        "en": "A faded red pencil tucked into short hair, repairs across her short rain poncho and pack frame. Rope, film canisters and a flask are secured beside an orange strap. Keeps the map close and the compass at hand. Unwalked routes stay dotted: a guess is no road to send someone down."
+        "zh": "短发间别着一支褪色的红铅笔，防尘短雨披和回收背架上尽是修补痕迹，绳索、片罐与净水水壶沿着橙色肩带固定。她常与幸存者聚落的变种人向导结伴穿行盐原，懂得根据变异兽群的迁徙避开辐射风带；地图贴身收着，罗盘从不离手，没走过的路线一律画成虚线。 商队的口信可以转递，但未亲走的路线仍保留虚线。",
+        "en": "A faded red pencil tucked into short hair, repairs across her dust poncho and salvaged pack frame. Rope, film canisters, and a purified-water flask sit along an orange strap. She crosses the salt flats with mutant guides from the survivor settlements and reads mutated herd migrations to skirt fallout winds. Unwalked routes stay dotted on her map. She can carry a caravan’s message without claiming to have walked its route; unwalked ground stays dotted."
       },
       "quotes": [
         {
@@ -286,8 +337,24 @@
         {
           "zh": "下一封信，等我过了盐环再寄。",
           "en": "The next letter goes out once I cross the Salt Ring."
+        },
+        {
+          "zh": "地址写清，回来的路就不会断。",
+          "en": "Write the address clearly, and the way back will stay unbroken."
+        },
+        {
+          "zh": "盐环聚落的变种人铁匠替我加固了背架，这一趟能多背四盒旧纪元纪录片。",
+          "en": "The mutant blacksmith at the Salt Ring settlement reinforced my pack frame; I can carry four more old-era documentary reels this trip."
+        },
+        {
+          "zh": "看到发光的自进化孢子往高处爬，就说明辐射潮要涨了——跟着它们的边界走，准能绕回避难所。",
+          "en": "When glowing self-evolving spores climb to higher ground, the radiant tide is rising—follow their edge and you will make it back to the shelter."
         }
-      ]
+      ],
+      "personality": {
+        "zh": "言简意赅 · 严谨重诺 · 只认亲脚丈量的实路 · 熟知废土生态",
+        "en": "Concise and steadfast · Trusts only walked ground · Reads wasteland ecology with care"
+      }
     }
   ],
   "chronicles": [
@@ -334,10 +401,52 @@
       }
     },
     {
+      "version": "0.2.0-alpha.28",
+      "text": {
+        "zh": "档案里的字调得更清楚，长句不必再挤成一行。",
+        "en": "Archive text grows clearer; long lines no longer need to squeeze into one row."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.29",
+      "text": {
+        "zh": "据点与片库的路标沿用同一套门牌，暖纸与深绿告示牌衔接起来。",
+        "en": "Connections and shelves share consistent signs, with warm paper beside pine-green notices."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.30",
+      "text": {
+        "zh": "探索从片架旁独立出来，登记后的短笺在下方轻轻递到手边。",
+        "en": "Exploration gains its own place beside the shelves, with a quiet note after registration."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.31",
+      "text": {
+        "zh": "旧词重新校对，放映与登记的边界写得更明白。",
+        "en": "Old words are checked again, making the boundaries of screening and registration clearer."
+      }
+    },
+    {
       "version": "0.2.0-alpha.32",
       "text": {
         "zh": "阿汐把散落在旧信上的短句归回档案，又将词笺上的既有记录、传闻与待议事项分别注明。弥途没有把虚线改成实线。",
         "en": "Axi returned lines from old letters to the archives and marked the dictionary’s records, rumors, and proposals separately. Mitu left the dotted routes dotted."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.33",
+      "text": {
+        "zh": "封存柜只收起私密登记，影像仍留在原处；回到柜前再核验身份。",
+        "en": "The sealed cabinet hides private registrations while images stay in place; identity is checked on returning."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.34",
+      "text": {
+        "zh": "画纸换了轻一些的封装，边缘与原色仍留着，更新柜台也归回纸页下方。",
+        "en": "Artwork receives lighter wrapping without losing its edges or colors, and the update counter returns below the page."
       }
     },
     {
@@ -346,11 +455,25 @@
         "zh": "映汐放映站换上统一的门牌。弥途带回盐环列站的未署名回信，阿汐分开记下“收到”与“证实”，迟灯写好的回条仍留在片架旁。",
         "en": "Yingxi Station settles on one name above the door. Mitu brings an unsigned reply from the Salt Ring Stops; Axi records receipt separately from verification, while Chideng’s answer waits beside the shelf."
       }
+    },
+    {
+      "version": "0.2.0-alpha.36",
+      "text": {
+        "zh": "据点与信号塔各自摆好牌架，放映途中已取回的片段得以接续使用。",
+        "en": "Outposts and relays regain separate signs, while retrieved pieces of a screening can be reused."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.37",
+      "text": {
+        "zh": "地下站的日常与共生生态归入同一套档案；性格侧写、路标和双语札记都补齐了侧签。",
+        "en": "Underground life and symbiotic ecology join one archive, with clear labels for resident profiles, markers and bilingual journal notes."
+      }
     }
   ],
   "boundary": {
-    "zh": "图谱与章节呈现原创故事，不代表联网片库或已开放的技术能力。第二章可直接手动阅读，第一章保留回看；不以使用天数、播放任务或奖励解锁。纸条已收到，寄信人、所述设备情况与新路线仍未证实。虚线与词典提案继续保留原确认层级。",
-    "en": "The atlas and chapters are original fiction, separate from connected libraries and technical capabilities. Chapter II is available by manual choice, with Chapter I kept for rereading; no usage days, viewing tasks or rewards unlock it. The note has arrived; its sender, equipment claims and any new route remain unverified. Dotted lines and dictionary proposals retain their existing status."
+    "zh": "核爆长潮、地下放映站、共生生态与理想城贸易已正式采用。地图实线表示站内已核路线，虚线仍是待核位置或路径；人物台词不能代替实地记录。第二章的未署名寄信人及其设备情况仍未证实，回条尚未寄出。应用权限、连接与播放能力保持真实，不随剧情自动解锁或获得修复能力。",
+    "en": "The Nuclear Long Tide, underground station, symbiotic ecology and Ideal City trade are adopted canon. Solid lines are routes verified by the station; dotted lines are unsurveyed locations or paths, and dialogue is not a field survey. Chapter II’s unsigned sender and equipment claims remain unverified, and its reply is unsent. Permissions, connections and playback capabilities stay factual, without story-based unlocks or repair powers."
   },
   "lexicon": [
     {
@@ -365,9 +488,10 @@
         "en": "Civilization Era"
       },
       "summary": {
-        "zh": "核爆毁灭之前的旧文明时代；具体年代与技术全貌尚未确定。",
-        "en": "The era of the old civilization before nuclear destruction; its dates and full technological scope remain unspecified."
-      }
+        "zh": "核爆毁灭前的旧文明时代，留下地下掩体、铁路设施、能源塔、净水工程，以及散落在磁盘、服务器和胶片盒中的影像与声轨遗物。",
+        "en": "The age before nuclear destruction, leaving shelters, railway works, energy towers, waterworks, and image and sound records scattered across drives, servers and film tins."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "nuclear_break",
@@ -381,9 +505,10 @@
         "en": "Nuclear Break"
       },
       "summary": {
-        "zh": "核爆导致文明纪元终结，随后进入废土纪元。起因、次数、范围与距今年数尚未确定。",
-        "en": "Nuclear destruction ended the Civilization Era and preceded the Wasteland Era. Its causes, number of detonations, extent, and date remain unspecified."
-      }
+        "zh": "核爆毁灭文明纪元，并引发地质与气候剧变，继而形成漫过旧城的长潮。核爆事件与后续长潮分别记录，不把两者当作同一个瞬间。",
+        "en": "Nuclear destruction ends the Civilization Era and triggers geological and climatic upheaval, followed by the Long Tide across old cities. The blast and the ensuing tide are distinct events, not one instant."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "wasteland_era",
@@ -397,9 +522,10 @@
         "en": "Wasteland Era"
       },
       "summary": {
-        "zh": "文明纪元毁灭后的时代，多种聚居形态与生命形态并存。",
-        "en": "The era after the destruction of the Civilization Era, with diverse settlements and forms of life."
-      }
+        "zh": "核爆与长潮重塑地表后的当下纪元。辐射渐退的土地上，地下避难所、地表聚落与理想城相互往来，多元生命共同生活。辐射渐退不代表所有区域均已安全。",
+        "en": "The present era after nuclear fire and the Long Tide reshape the surface. Shelters, settlements and Ideal City share a world of diverse life as radiation recedes; receding radiation does not make every area safe."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "old_world",
@@ -415,7 +541,8 @@
       "summary": {
         "zh": "居民对文明纪元及其遗存的日常称呼。",
         "en": "The everyday name for the Civilization Era and what survives from it."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "long_tide",
@@ -429,12 +556,13 @@
         "en": "Long Tide"
       },
       "summary": {
-        "zh": "既有故事中的潮水事件，与旧城被淹、盐壳和退潮后的影像遗存相连；不等同于核爆。",
-        "en": "The tidal event associated with the flooded old city, salt crusts, and surviving images exposed by receding water; it is distinct from the nuclear destruction."
+        "zh": "核爆所引发地质与气候剧变后的漫长潮水，淹没旧城并参与重塑废土地貌。它与核爆合称核爆长潮；潮水持续多久、覆盖多广仍留待展开。",
+        "en": "The prolonged waters following nuclear-driven geological and climatic upheaval, flooding old cities and reshaping the wasteland. Together with the blasts they form the Nuclear Long Tide sequence; duration and extent remain open."
       },
+      "canonStatus": "confirmed",
       "proposal": {
-        "zh": "可发展为断代后的区域性海侵与城市积水史；与核爆的时间间隔、地质和气候成因待定。",
-        "en": "It may develop into a regional history of marine incursions and flooding after the break; its timing and geological or climatic causes remain proposed."
+        "zh": "长潮的具体年月、持续时间和不同地域的退潮过程仍待后续故事展开。",
+        "en": "Dates, duration and regional patterns of retreat remain for future stories."
       }
     },
     {
@@ -445,17 +573,14 @@
         "en": "Settlements"
       },
       "name": {
-        "zh": "避难所",
-        "en": "Shelters"
+        "zh": "地下避难所",
+        "en": "Underground Shelters"
       },
       "summary": {
-        "zh": "废土世界中存在的实体避难与居住据点。应用中的同名入口另指远程媒体连接。",
-        "en": "Physical places of refuge and habitation in the wasteland. The app uses the same name separately for remote media connections."
+        "zh": "由文明纪元地下掩体、旧铁路隧道和重型混凝土隔离门改建的防辐射据点；映汐放映站属于这一类。应用中的避难所入口只是连接登记，不说明真实服务器位于地下。",
+        "en": "Radiation shelters adapted from old bunkers, railway tunnels and heavy concrete doors. Yingxi Station belongs to this group. The app’s shelter entrance is a connection register, not a claim that servers are underground."
       },
-      "proposal": {
-        "zh": "可由灾前防护设施或灾后工程延续而来；地下结构、维生设备和治理方式逐处设定。放映站尚未确定属于地下避难所。",
-        "en": "They may continue pre-disaster protective facilities or later construction; underground layouts, life-support systems, and governance must be established individually. The station is not established as an underground shelter."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "settlements",
@@ -469,13 +594,10 @@
         "en": "Survivor Settlements"
       },
       "summary": {
-        "zh": "灾后幸存者形成的生活共同体，与避难所和理想城等形态并存。",
-        "en": "Communities formed by survivors after the disaster, coexisting with shelters and Ideal City."
+        "zh": "人类、变种人工匠与觉醒者依托停运列站、盐原高地和净水井组成的共生社区。盐环列站是已知聚落；职业举例不限制个体的身份与选择。",
+        "en": "Communities of humans, mutant craftspeople and Awakened residents around disused stations, salt highlands and wells. Salt Ring is a known settlement; example occupations do not determine every individual’s identity."
       },
-      "proposal": {
-        "zh": "可围绕水源、农业、铁路和工坊发展；与其他共同体交换物资、维修服务和消息。",
-        "en": "They may grow around water, farming, railways, and workshops, exchanging goods, repairs, and news with other communities."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "ideal_city",
@@ -489,13 +611,10 @@
         "en": "Ideal City"
       },
       "summary": {
-        "zh": "已确认存在的城市设定。位置、数量、制度、技术水平及与放映站的通路尚未确定。",
-        "en": "An established city concept. Its location, number, institutions, technology, and routes to the station remain unspecified."
+        "zh": "围绕旧能源塔与环状净水工程重建的洁净秩序城邦，经盐环商队与避难所互通修配零件和旧纪元纪录片。城邦与贸易已纳入正式设定；站内仍未掌握可实地循行的城址与路线。",
+        "en": "A clean, ordered city rebuilt around surviving energy towers and circular waterworks. Salt Ring caravans exchange repair parts and old-era documentaries with shelters. The city and trade are established canon; the station still lacks a surveyed location and route."
       },
-      "proposal": {
-        "zh": "可先按一座保留部分工业能力的城市展开，以能源、净水和精密维修联系周边共同体；制度与贸易细节待定。",
-        "en": "It may first be developed as a city retaining some industrial capacity, connected to its neighbors through energy, clean water, and precision repairs; its institutions and trade remain proposed."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "mutated_species",
@@ -509,13 +628,10 @@
         "en": "Radiation-mutated Species"
       },
       "summary": {
-        "zh": "废土中存在受辐射影响而产生变化的生命；具体物种、生态习性与危险程度尚未逐一设定。",
-        "en": "Forms of life changed by radiation exist in the wasteland; individual species, ecology, and hazards have not yet been established."
+        "zh": "核后辐射演化出的多样生灵，已记录的温顺种群包括循无线电波迁徙的回声海水鸟、趋光孢子蛾和盐原驮兽，与据点居民形成共处生态。",
+        "en": "Diverse life shaped by postwar radiation. Recorded gentle populations include radio-guided Echo Sea birds, light-seeking spore moths and saltland pack animals, sharing an ecology with station residents."
       },
-      "proposal": {
-        "zh": "可按谱系与生境分别扩展，保留捕食、共生和驯养等不同关系；不把所有变异生命设成同一种性情。",
-        "en": "They may be developed by lineage and habitat, with predatory, symbiotic, or domesticated relationships rather than one universal temperament."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "spores",
@@ -529,13 +645,10 @@
         "en": "Self-evolving Spores"
       },
       "summary": {
-        "zh": "已确认存在的生命概念，其起源、进化机制、栖息地与能力边界尚未确定。",
-        "en": "An established life concept whose origin, evolutionary mechanism, habitats, and limits remain unspecified."
+        "zh": "潮湿废墟与沉没档案馆中的共生荧光菌群，能利用残余辐射与微弱电磁信号迭代，在密封胶片盒外结成隔绝潮水与盐雾的透气菌膜。盒内干爽不等于整片废墟已经安全。",
+        "en": "Symbiotic luminous colonies in damp ruins and the Drowned Archive, using residual radiation and weak electromagnetic signals to evolve. Their breathable membrane shields sealed film tins from water and salt spray; a dry tin does not make an entire ruin safe."
       },
-      "proposal": {
-        "zh": "可按具有传播、群落重组与环境适应阶段的生态系统展开。吸附污染物不等于消除放射性；尚无保护胶片或吸收电磁信号的既定能力。",
-        "en": "It may develop as an ecosystem with dispersal, community recombination, and adaptation stages. Binding pollutants does not eliminate radioactivity; protecting film or feeding on electromagnetic signals is not an established ability."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "mutants",
@@ -549,13 +662,10 @@
         "en": "Mutants"
       },
       "summary": {
-        "zh": "废土中存在的人形生命或人群设定；身体特征、社会身份和个体经历需要分别展开。",
-        "en": "An established humanoid life or population concept; physical traits, social identities, and individual histories require separate development."
+        "zh": "核辐射造成体格异变的强韧幸存者后裔；聚落中可见铁匠、搬运工和盐原向导，也常帮助放映站加固片架、抢救旧磁盘。具体角色的族群仍须单独确立。",
+        "en": "Resilient descendants of survivors with radiation-altered physiques. Blacksmiths, porters and saltland guides help reinforce shelves and recover drives. The ancestry of each named character still needs its own establishment."
       },
-      "proposal": {
-        "zh": "可作为人类谱系中的稳定变异人群发展；职业、体能和立场由个体决定，不统一指定为铁匠、搬运者或敌人。",
-        "en": "They may develop as stable variant populations within the human lineage; profession, strength, and outlook belong to individuals rather than a universal role."
-      }
+      "canonStatus": "confirmed"
     },
     {
       "id": "awakened",
@@ -569,12 +679,13 @@
         "en": "The Awakened"
       },
       "summary": {
-        "zh": "已确认存在的生命或能力概念，能力来源、谱系归属与作用范围尚未确定。",
-        "en": "An established life or ability concept; the origin, lineage, and scope of its abilities remain unspecified."
+        "zh": "感官适应核后电磁异变与旧纪元神经残留的人类分支，能感知无线电频段和磁场偏转，常协助迟灯辨认杂音、校准频段和破译受损音轨。具体能力范围、代价与恢复条件仍待个体故事展开。",
+        "en": "A human branch whose senses adapt to postwar electromagnetic changes and old-era neural remnants. They perceive radio bands and magnetic shifts, helping Chideng identify static, tune bands and interpret damaged sound. Range, costs and recovery conditions remain for individual stories."
       },
+      "canonStatus": "confirmed",
       "proposal": {
-        "zh": "建议把觉醒视为可跨谱系出现的状态，并规定消耗、恢复与感知边界；直接感知无线电或修复音轨均未确认为能力。",
-        "en": "Awakening may be treated as a state across lineages, with explicit costs, recovery, and perceptual limits; direct radio perception and audio repair are not established powers."
+        "zh": "觉醒能力的具体作用范围、代价与恢复条件仍待逐个个体展开；现有三位角色的觉醒状态未知。",
+        "en": "Range, costs and recovery conditions require individual stories; the three existing residents’ Awakened status remains unknown."
       }
     },
     {
@@ -591,7 +702,8 @@
       "summary": {
         "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。",
         "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "wayfinder",
@@ -607,7 +719,8 @@
       "summary": {
         "zh": "记录通行条件并维护路标的人；弥途将未走过的路线画成虚线。",
         "en": "Someone who records travel conditions and maintains signs; Mitu marks unwalked routes with dotted lines."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "letter_runner",
@@ -623,7 +736,8 @@
       "summary": {
         "zh": "在地点之间递送消息的人；弥途往返盐环列站。",
         "en": "Someone who carries messages between places; Mitu travels to and from the Salt Ring Stops."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "station",
@@ -637,13 +751,14 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线上的放映与影像归档据点，阿汐和迟灯在此工作。阿汐给旧片罐补写侧签，迟灯照看放映设备。迟灯把检修拆下的垫圈按尺寸串在细铁丝上，免得混用。阿汐把磨软的厚纸裁成登记簿夹页，用短棉线系在书脊，翻查来信时不容易散落。",
-        "en": "A screening and image archive on the old railway, where Axi and Chideng work. Axi renews labels on old film cans while Chideng tends the projection equipment. Chideng sorts washers from repairs on a thin wire by size so they do not get mixed up. Axi cuts worn card into logbook dividers and ties them to the spine with short cotton thread so they stay put when letters are checked."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
         "en": "It may grow into a shared image archive between communities; its architecture and local governance remain unspecified."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "salt",
@@ -663,7 +778,8 @@
       "proposal": {
         "zh": "可发展为铁路聚落与递信中转地；多座避难所、商队和理想城通路尚未确认为已通行路线。",
         "en": "It may develop as a railway community and letter relay; routes to multiple shelters, caravans, or Ideal City are not established."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "atlas",
@@ -679,7 +795,8 @@
       "summary": {
         "zh": "第一章地点与联系的记录。实线标确认信路，虚线保留传闻。",
         "en": "A record of Chapter I places and connections. Solid lines mark an established letter route; dotted lines preserve rumors."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "chronicles",
@@ -695,7 +812,8 @@
       "summary": {
         "zh": "按应用版本选录的据点变化，不是完整版本史或废土年表。",
         "en": "Selected station changes recorded by app version, rather than a complete release history or wasteland chronology."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "letter",
@@ -711,7 +829,8 @@
       "summary": {
         "zh": "记录每版实际改动的更新说明，人物动作或语录放在末尾。",
         "en": "Release notes describing actual changes, with a character moment or quote at the end."
-      }
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "archive",
@@ -725,9 +844,10 @@
         "en": "Drowned Archive"
       },
       "summary": {
-        "zh": "回声海退潮时露出的圆形屋顶。拾荒者带回过它的胶片盒，馆内还有多少层，没人说得准。",
-        "en": "A circular roof exposed at low tide. Scavengers have brought back its film cans; no one agrees how many floors remain beneath them."
-      }
+        "zh": "核爆后沉入回声海的文明纪元资料库，退潮时露出圆形屋顶。馆内冷光闪烁的自进化孢子包裹着密封胶片盒，替旧世界守住了未受潮水侵蚀的底片。 这些背景已被作者采用为正式设定，但站内实地路标与到达路线仍属传闻。",
+        "en": "A Civilization Era repository submerged after the nuclear fall, its circular roof exposed at low tide. Bioluminescent self-evolving spores wrap the sealed film cans inside, shielding old reels from the water. These background facts are adopted canon, while the station’s location evidence and access route remain hearsay."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "sea",
@@ -741,9 +861,10 @@
         "en": "Echo Sea"
       },
       "summary": {
-        "zh": "潮水没过旧城，风把废弃广播送回岸上。迟灯说，海声里偶尔会多出一个本不该存在的频道。",
-        "en": "The old city lies under tidal water. Wind carries abandoned broadcasts ashore. Chideng says an impossible extra channel sometimes slips between the waves."
-      }
+        "zh": "核爆与长潮漫过旧城形成的辐射内海，岸边栖息着循电磁波迁徙的温和变异水鸟。迟灯与路过的觉醒者都听见过，海浪里偶尔会多出一个旧纪元的清晰频段。 这些背景已被作者采用为正式设定，但站内实地路标与到达路线仍属传闻。",
+        "en": "A radiant inland sea formed where the Long Tide covered the old city, home to gentle mutated seabirds that migrate along radio waves. Both Chideng and passing Awakened listeners have heard an extra old-era frequency between the waves. These background facts are adopted canon, while the station’s location evidence and access route remain hearsay."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "beacon",
@@ -757,9 +878,10 @@
         "en": "Far Lantern Observatory"
       },
       "summary": {
-        "zh": "北脊山后的微光，只在无云的夜里出现。它是另一座有人值守的站，还是长潮留下的残像？信笺里暂时没有答案。",
-        "en": "A glimmer beyond the northern ridge, visible only on clear nights. Another staffed station, or an afterimage of the Long Tide? The letters hold no answer yet."
-      }
+        "zh": "北脊山后的高地微光，只在辐射云散去的晴夜出现。觉醒者说那是另一座仍在发报的气象与影像中继站，信笺里暂时只记下了它的方向。 这些背景已被作者采用为正式设定，但站内实地路标与到达路线仍属传闻。",
+        "en": "A highland glimmer beyond the northern ridge, visible when radiation clouds part on clear nights. The Awakened say it is an active weather and image relay station; for now, the letters record only its bearing. These background facts are adopted canon, while the station’s location evidence and access route remain hearsay."
+      },
+      "canonStatus": "confirmed"
     },
     {
       "id": "reply_fragment",
@@ -775,6 +897,75 @@
       "summary": {
         "zh": "第二章中，弥途从盐环列站带回的未署名纸条，由阿汐登记并保存在映汐放映站。确认的是纸条被带回；寄信人身份、纸上描述的旧设备情况尚未证实。迟灯写好的回条尚未送出，不据此新增信路。",
         "en": "The unsigned note Mitu brings from the Salt Ring Stops in Chapter II, registered by Axi at Yingxi Station. Its arrival is established; the sender and equipment claims are unverified. Chideng’s answer has not been sent, so it establishes no new route."
+      },
+      "canonStatus": "confirmed"
+    },
+    {
+      "id": "nuclear_long_tide",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "纪元与灾变",
+        "en": "Eras and catastrophe"
+      },
+      "name": {
+        "zh": "核爆长潮",
+        "en": "Nuclear Long Tide"
+      },
+      "summary": {
+        "zh": "核爆及其引发的地质、气候与漫长潮水的灾变序列合称，终结文明纪元并重塑废土地表；不是把核爆和潮水压成同一瞬间。",
+        "en": "The collective disaster sequence of nuclear blasts and the geological, climatic and prolonged tidal changes they trigger, ending the Civilization Era and reshaping the surface; not a single simultaneous event."
+      }
+    },
+    {
+      "id": "echo_seabirds",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "共生生态",
+        "en": "Symbiotic ecology"
+      },
+      "name": {
+        "zh": "回声海水鸟",
+        "en": "Echo Sea birds"
+      },
+      "summary": {
+        "zh": "循无线电波迁徙的温顺变异水鸟。循波导航与孢子蛾的趋光习性不同；出现一只水鸟不自动证明其出发地和可通行路线。",
+        "en": "Gentle mutated birds migrating along radio signals. Their radio guidance differs from spore moths’ attraction to light; one sighting does not establish origin or a passable route."
+      }
+    },
+    {
+      "id": "spore_moths",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "共生生态",
+        "en": "Symbiotic ecology"
+      },
+      "name": {
+        "zh": "孢子蛾",
+        "en": "Spore moths"
+      },
+      "summary": {
+        "zh": "常在灯罩边停留的趋光温顺生灵，迟灯的值夜日常中可见。名称不意味着它们就是自进化孢子，具体共生方式仍可展开。",
+        "en": "Gentle light-seeking creatures seen beside Chideng’s lamp. Their name does not make them the same organism as the spores; the exact symbiosis can unfold later."
+      }
+    },
+    {
+      "id": "salt_pack_beasts",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "共生生态",
+        "en": "Symbiotic ecology"
+      },
+      "name": {
+        "zh": "盐原驮兽",
+        "en": "Saltland pack animals"
+      },
+      "summary": {
+        "zh": "适应盐原环境的温顺变异驮兽，可伴聚落向导与商队负重出行。具体驯养制度、数量与路线没有因此定案。",
+        "en": "Gentle mutated pack animals adapted to the saltlands, accompanying guides and caravans. Their number, husbandry and precise routes remain unspecified."
       }
     }
   ],
@@ -1046,6 +1237,194 @@
       "meaning": {
         "zh": "连接端口、根目录等选项；不是新的物理信路。",
         "en": "Connection options such as port and root directory, separate from physical mail routes."
+      }
+    }
+  ],
+  "canonAdoption": {
+    "date": "2026-10-22",
+    "basis": "user-confirmed",
+    "note": {
+      "zh": "地下放映站、核爆引发长潮、共生生态与理想城贸易已正式采用。作者设定与据点调查分开：虚线表示位置或路线尚未实测，不表示城邦和物种未被写入正史。",
+      "en": "The underground station, nuclear origins of the Long Tide, symbiotic ecology and Ideal City trade are adopted canon. Authorial facts and station surveys are separate: dotted lines mark unsurveyed locations or routes, not the absence of cities or species from canon."
+    }
+  },
+  "dailyLines": [
+    {
+      "id": "diary_001",
+      "author": "axi",
+      "text": {
+        "zh": "片罐侧签补好了，盖子丢了，片名也不会跟着走。",
+        "en": "The side labels are mended. A missing lid will not take the title with it."
+      }
+    },
+    {
+      "id": "diary_002",
+      "author": "axi",
+      "text": {
+        "zh": "迟灯把垫圈串回细铁丝，给下一次检修留出桌面。",
+        "en": "Chideng threaded the washers back onto their wire, clearing the desk for the next repair."
+      }
+    },
+    {
+      "id": "diary_003",
+      "author": "axi",
+      "text": {
+        "zh": "弥途重描了盐环的旧路标，虚线处仍留着空白。",
+        "en": "Mitu retraced the Salt Ring markers and left the dotted ground blank."
+      }
+    },
+    {
+      "id": "diary_004",
+      "author": "axi",
+      "text": {
+        "zh": "新收到的纸条压在干布下，寄信人的名字先空着。",
+        "en": "The newly received note lies beneath a dry cloth; the sender stays unnamed."
+      }
+    },
+    {
+      "id": "diary_005",
+      "author": "axi",
+      "text": {
+        "zh": "片架旁留着一张回条，等真正出发时再带上。",
+        "en": "A reply waits beside the shelf until someone truly departs."
+      }
+    },
+    {
+      "id": "diary_006",
+      "author": "axi",
+      "text": {
+        "zh": "灯亮着。带回来的影像，今天也能慢慢看。",
+        "en": "The lamp is on. There is time today to watch what came back."
+      }
+    },
+    {
+      "id": "diary_007",
+      "author": "axi",
+      "text": {
+        "zh": "今天也有值得留下的影像。",
+        "en": "Today too holds images worth keeping."
+      }
+    },
+    {
+      "id": "diary_008",
+      "author": "axi",
+      "text": {
+        "zh": "灯亮着，旧故事就还有下一场。",
+        "en": "While the lamp stays on, old stories still have another screening."
+      }
+    },
+    {
+      "id": "diary_009",
+      "author": "axi",
+      "text": {
+        "zh": "路标擦干净了，带一部好片回来。",
+        "en": "The signposts are wiped clean; bring a good film back."
+      }
+    },
+    {
+      "id": "diary_010",
+      "author": "axi",
+      "text": {
+        "zh": "片架留着空位，等今天的新收获。",
+        "en": "There is open space on the shelf for today's finds."
+      }
+    },
+    {
+      "id": "diary_011",
+      "author": "axi",
+      "text": {
+        "zh": "盐环聚落的商队歇过脚，留下了几盘文明纪元的老纪录片。",
+        "en": "A caravan from the Salt Ring settlement rested here and left a few Civilization Era documentaries."
+      }
+    },
+    {
+      "id": "diary_012",
+      "author": "axi",
+      "text": {
+        "zh": "隔离门外的自进化孢子亮着微光，地下放映室今晚很干爽。",
+        "en": "Self-evolving spores glow softly outside the blast door; the underground screening room is dry tonight."
+      }
+    },
+    {
+      "id": "diary_013",
+      "author": "axi",
+      "text": {
+        "zh": "迟灯和路过的觉醒者调准了频段，回声海的杂音少了一半。",
+        "en": "Chideng tuned the band with a passing Awakened listener, cutting the Echo Sea static in half."
+      }
+    },
+    {
+      "id": "diary_014",
+      "author": "axi",
+      "text": {
+        "zh": "变种人铁匠帮忙加固了片架，再沉的旧纪元磁盘柜也放得稳。",
+        "en": "A mutant blacksmith reinforced the shelves; even the heaviest old-era drive racks sit steady now."
+      }
+    },
+    {
+      "id": "diary_015",
+      "author": "axi",
+      "text": {
+        "zh": "理想城托人捎来备用灯泡，换走了两盒修好的黑白短片。",
+        "en": "Ideal City sent spare projection bulbs in exchange for two restored black-and-white shorts."
+      }
+    },
+    {
+      "id": "diary_016",
+      "author": "axi",
+      "text": {
+        "zh": "辐射雨停了，循波的水鸟落在通风塔边，今晚适合看场长片。",
+        "en": "The fallout rain has cleared and radio-guided seabirds rest by the vent tower—a good night for a feature film."
+      }
+    },
+    {
+      "id": "diary_017",
+      "author": "axi",
+      "text": {
+        "zh": "弥途重描北脊山下的旧虚线，没走过的路仍留白。",
+        "en": "Mitu retraced the old dotted marks below the northern ridge; unwalked ground stays blank."
+      }
+    },
+    {
+      "id": "diary_018",
+      "author": "axi",
+      "text": {
+        "zh": "核火与长潮带走了旧街景，好在银幕一亮，重逢就还在原处。",
+        "en": "Nuclear fire and the Long Tide took the old streets, yet once the screen lights up, every reunion remains in place."
+      }
+    }
+  ],
+  "surfaceNotes": [
+    {
+      "id": "local_archive",
+      "author": "axi",
+      "eyebrow": {
+        "zh": "废墟档案库 · 旧纪元磁盘",
+        "en": "Ruins archive · old-era drives"
+      },
+      "title": {
+        "zh": "核火与长潮之后，留在手边的旧片匣。",
+        "en": "After fire and tide, an old film case stays close."
+      },
+      "body": {
+        "zh": "授权本机文件夹后，在这里浏览和归整影像；浏览不会移动或重命名原文件。",
+        "en": "Grant access to a local folder to browse and organize its images here. Browsing neither moves nor renames the original files."
+      }
+    },
+    {
+      "id": "history_empty",
+      "author": "chideng",
+      "eyebrow": {
+        "zh": "放映值夜记录",
+        "en": "Night screening log"
+      },
+      "title": {
+        "zh": "迟灯 · 放映值夜记录",
+        "en": "Chideng · night screening log"
+      },
+      "body": {
+        "zh": "放映机记得每一盘旧纪元片子停在哪一格，下次推门接着看。",
+        "en": "The projector remembers where each old-era film paused. Come back and continue from that frame."
       }
     }
   ]
