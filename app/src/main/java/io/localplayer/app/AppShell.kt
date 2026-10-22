@@ -51,7 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站",Icons.Rounded.Home),Sources("避难所",Icons.Rounded.Dns),History("拾荒记录",Icons.Rounded.History),Explore("探索",Icons.Rounded.Explore)}
+private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站",Icons.Rounded.Home),Sources("信源",Icons.Rounded.Dns),History("拾荒记录",Icons.Rounded.History),Explore("探索",Icons.Rounded.Explore)}
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
     SourceFeedbackLifetime(vm)
@@ -114,7 +114,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                         AppTab.entries.forEach{item->
                             val selected=tab==item
                             val scale by animateFloatAsState(if(selected)1.04f else .96f,spring(stiffness=500f),label="tab emphasis")
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(25.dp)).selectable(selected=selected,role=Role.Tab,onClick={if(item==AppTab.Sources)vm.closeSource()else vm.cancelOperation();tab=item})
+                        Column(Modifier.weight(1f).testTag("nav:${item.name}").clip(RoundedCornerShape(25.dp)).selectable(selected=selected,role=Role.Tab,onClick={if(item==AppTab.Sources)vm.closeSource()else vm.cancelOperation();tab=item})
                                 .heightIn(min=58.dp).padding(horizontal=4.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
                                 Icon(item.icon,null,tint=if(selected)Berry else Muted,modifier=Modifier.size(23.dp).graphicsLayer{scaleX=scale;scaleY=scale})
                                 Spacer(Modifier.height(3.dp))
@@ -165,7 +165,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
             }
         }
     }
-    if(clearConfirm)AlertDialog(onDismissRequest={clearConfirm=false},title={Text("清空拾荒记录？")},text={Text("将清除本机的观看记录与续播进度。避难所和密码会保留。")},confirmButton={TextButton(onClick={vm.clearHistory();clearConfirm=false}){Text("清空记录",color=MaterialTheme.colorScheme.error)}},dismissButton={TextButton(onClick={clearConfirm=false}){Text("取消")}})
+    if(clearConfirm)AlertDialog(onDismissRequest={clearConfirm=false},title={Text("清空拾荒记录？")},text={Text("将清除本机的观看记录与续播进度。信源和密码会保留。")},confirmButton={TextButton(onClick={vm.clearHistory();clearConfirm=false}){Text("清空记录",color=MaterialTheme.colorScheme.error)}},dismissButton={TextButton(onClick={clearConfirm=false}){Text("取消")}})
 }
 
 internal fun historyDay(timestamp:Long):String{

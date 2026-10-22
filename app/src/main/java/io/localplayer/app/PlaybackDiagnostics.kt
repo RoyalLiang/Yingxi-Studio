@@ -55,7 +55,11 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("openCalls",metrics.openCalls).put("openTimeMs",metrics.openTimeMs)
         .put("firstFrameMs",metrics.firstFrameMs?:JSONObject.NULL).put("rebuffers",metrics.rebufferCount)
         .put("decoder",metrics.decoder?.takeIf{it.matches(Regex("[A-Za-z0-9._+-]{1,160}"))}?:JSONObject.NULL)
-        .put("decoderInitMs",metrics.decoderInitMs).put("videoWidth",player?.videoSize?.width?:0)
+        .put("decoderInitMs",metrics.decoderInitMs)
+        .put("videoInputBuffers",metrics.videoInputBuffers?:JSONObject.NULL).put("videoRenderedBuffers",metrics.videoRenderedBuffers?:JSONObject.NULL)
+        .put("videoSkippedInputs",metrics.videoSkippedInputs?:JSONObject.NULL).put("videoRendererEnabled",metrics.videoEnabled)
+        .put("videoCodecErrors",metrics.videoCodecErrors).put("videoDecoderReleases",metrics.videoDecoderReleases)
+        .put("videoWidth",player?.videoSize?.width?:0)
         .put("videoHeight",player?.videoSize?.height?:0).put("playerError",player?.playerError?.errorCodeName?:JSONObject.NULL)
         .toString(2)
 }

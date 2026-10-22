@@ -66,7 +66,7 @@ class ShelterExperienceRegressionTest {
                 val files=LocalFilesViewModel(app);owner.put("local",files)
                 ui.activity.setContent{PlayerTheme{AppShell(vm,files,{},{},{})}}
             }
-            ui.onNodeWithText("避难所").performClick()
+            ui.onNodeWithTag("nav:Sources").performClick()
             ui.runOnIdle{vm.open(source)}
             ui.waitUntil(5000){vm.source!=null&&!vm.busy}
             ui.onNodeWithTag("shelter-poster-wall").assertIsDisplayed()

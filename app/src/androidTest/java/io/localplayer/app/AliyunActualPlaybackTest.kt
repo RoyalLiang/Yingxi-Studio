@@ -35,6 +35,8 @@ class AliyunActualPlaybackTest {
     @Test fun avcFromResume()=play(false,2000)
     @Test fun main10FromBeginning()=play(true,0)
     @Test fun main10FromResume()=play(true,2000)
+    @Test fun main10MkvFromBeginningWithSlowHeaders()=play(true,0,true)
+    @Test fun main10MkvFromResumeWithSlowHeaders()=play(true,2000,true)
     private fun surface(view:View):SurfaceView?{
         if(view is SurfaceView)return view
         if(view is ViewGroup)for(i in 0 until view.childCount)surface(view.getChildAt(i))?.let{return it}
@@ -48,9 +50,9 @@ class AliyunActualPlaybackTest {
         assertTrue("Decoded picture should contain real colors",pixels.toSet().size>24)
         return pixels.fold(17L){hash,pixel->hash*31+pixel}
     }
-    private fun play(hevc:Boolean,start:Long){
+    private fun play(hevc:Boolean,start:Long,matroska:Boolean=false){
         val app=ui.activity.application
-        val sample=File(app.cacheDir,if(hevc)"hevc-main10-1080p.mp4" else "continuity-avc1080.mp4")
+        val sample=File(app.cacheDir,if(matroska)"hevc-main10-1080p.mkv" else if(hevc)"hevc-main10-1080p.mp4" else "continuity-avc1080.mp4")
         assertTrue(sample.isFile);val data=sample.readBytes()
         val held=HeldCertificate.Builder().addSubjectAlternativeName("localhost").addSubjectAlternativeName("127.0.0.1").build()
         val serverTls=HandshakeCertificates.Builder().heldCertificate(held).build()
@@ -65,8 +67,9 @@ class AliyunActualPlaybackTest {
                     assertNull(request.getHeader("Authorization"));rangeQueries.incrementAndGet()
                     val range=Regex("bytes=([0-9]+)-").matchEntire(request.getHeader("Range").orEmpty())?:return MockResponse().setResponseCode(400)
                     val position=range.groupValues[1].toInt()
+                    if(matroska)println("ALIYUN_MKV_RANGE position=$position")
                     return MockResponse().setResponseCode(206).addHeader("Content-Range","bytes $position-${data.lastIndex}/${data.size}")
-                        .setHeadersDelay(150,TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(data,position,data.size-position))
+                        .setHeadersDelay(if(matroska)3000 else 150,TimeUnit.MILLISECONDS).setBody(okio.Buffer().write(data,position,data.size-position))
                 }
             }
             apiServer.dispatcher=object:Dispatcher(){
@@ -100,7 +103,7 @@ class AliyunActualPlaybackTest {
                 val then=main{player.currentPosition}
                 ui.waitUntil(10000){main{player.currentPosition>=then+500||player.playerError!=null}}
                 main{assertNull(player.playerError)};assertNotEquals(first,picture(output!!))
-                println("ALIYUN_ACTUAL hevc=$hevc start=$start playingMs=${android.os.SystemClock.elapsedRealtime()-began} files=${fileQueries.get()} urls=${urlQueries.get()} ranges=${rangeQueries.get()}")
+                println("ALIYUN_ACTUAL hevc=$hevc mkv=$matroska start=$start validatedAtMs=${android.os.SystemClock.elapsedRealtime()-began} files=${fileQueries.get()} urls=${urlQueries.get()} ranges=${rangeQueries.get()}")
                 val seek=if(start==0L)4000L else 1000L
                 main{player.seekTo(seek)}
                 ui.waitUntil(15000){main{player.playerError!=null||(player.playbackState==Player.STATE_READY&&player.isPlaying&&player.currentPosition in (seek+250)..(seek+1800))}}
@@ -108,6 +111,7 @@ class AliyunActualPlaybackTest {
                 assertEquals("Same playback session reuses file metadata",1,fileQueries.get())
                 assertEquals("Same playback session reuses the signed location",1,urlQueries.get())
                 val report=main{JSONObject(playbackDiagnostic(player))}
+                assertTrue(report.getInt("videoInputBuffers")>0);assertTrue(report.getInt("videoRenderedBuffers")>0)
                 assertEquals("ALIYUN",report.getString("source"));assertTrue(report.getLong("rangeRequests")>0)
                 assertTrue(report.getLong("sourceReadBytes")>0)
                 println("ALIYUN_ACTUAL_SEEK hevc=$hevc start=$start files=${fileQueries.get()} urls=${urlQueries.get()} ranges=${rangeQueries.get()} diagnostics=$report")

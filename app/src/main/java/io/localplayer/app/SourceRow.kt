@@ -85,7 +85,7 @@ import kotlin.math.roundToInt
                     Text(source.label, Modifier.testTag("source-title:${source.id}"), fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(5.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        if (selected) Icon(Icons.Rounded.Check, "已选择避难所", Modifier.size(14.dp), tint = Berry)
+                        if (selected) Icon(Icons.Rounded.Check, "已选择信源", Modifier.size(14.dp), tint = Berry)
                         if (pinned) Icon(Icons.Rounded.PushPin, "已置顶", Modifier.size(12.dp), tint = Berry)
                         if (favorite) Icon(Icons.Rounded.Star, "已标记路标", Modifier.size(12.dp), tint = Berry)
                         Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", fontSize = 12.sp, color = Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)

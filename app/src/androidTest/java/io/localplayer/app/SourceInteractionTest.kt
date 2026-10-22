@@ -61,7 +61,7 @@ class SourceInteractionTest {
         val source=unknown.copy(trustedKey=key,trustedAuthority=unknown.authority)
         mount(source)
         // Keep the saved row above the floating navigation touch area.
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasText(source.label))
         ui.onNodeWithText(source.label).performClick()
         ui.runOnIdle{assertTrue("Saved source click must start opening its directory",vm.openingSource?.id==source.id||vm.source?.id==source.id)}
@@ -74,14 +74,14 @@ class SourceInteractionTest {
     @Test fun discoveryRejectsCellularAndStopsOutsideHome(){
         mount()
         ui.runOnIdle{vm.discover();if(!vm.scanning)assertTrue(vm.discoveryMessage.contains("Wi-Fi"))}
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.runOnIdle{assertFalse("discovery must stop outside Home",vm.scanning)}
         ui.onNodeWithText("附近服务").assertDoesNotExist()
         capture("sources-empty")
     }
     @Test fun expandedConnectionSheetKeepsTopWhenProtocolChanges(){
         mount()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("add-source").performClick()
         ui.onNodeWithTag("connection-form").performTouchInput{swipeUp()}
         ui.onNodeWithTag("connection-form").performScrollToIndex(0)
@@ -101,7 +101,7 @@ class SourceInteractionTest {
         val source=Source(label="配置入口验证",protocol=Protocol.SFTP,host="10.0.2.2",port=TestFixtures.sftpPort,root="/",username=TestFixtures.username)
         mount(source)
         ui.onNodeWithText("添加第一个避难所").assertDoesNotExist()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithContentDescription("${source.stationKind}操作 ${source.label}").performClick()
         ui.onNodeWithText("${source.stationKind}设置").performClick()
         ui.onNodeWithText("连接与账户配置").performClick()
@@ -115,7 +115,7 @@ class SourceInteractionTest {
         val store=SourceStore(context)
         sources.forEach{store.save(it,TestFixtures.password,true);saved+=it.id}
         mount()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         for(source in sources.take(3)){
             ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
             ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
@@ -139,7 +139,7 @@ class SourceInteractionTest {
     @Test fun swipeDeleteRequiresConfirmationAndKeepsServerFiles(){
         val source=Source(label="删除确认验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeLeft()}
         assertTrue(SourceStore(context).hasPassword(source.id))
@@ -158,7 +158,7 @@ class SourceInteractionTest {
     @Test fun privateAccessCancellationNeverOpensSource(){
         val source=Source(label="一次性系统验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         capture("swipe-right")
@@ -177,11 +177,11 @@ class SourceInteractionTest {
         val source=Source(label="临时认证验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         SourceStore(context).save(source,"",false);saved+=source.id
         mount()
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithText(source.label).performClick()
         ui.waitUntil(5_000){vm.access!=null}
         ui.onNodeWithText("核验通行凭据").assertIsDisplayed()
-        ui.onNodeWithText("连接避难所").assertDoesNotExist()
+        ui.onNodeWithText("登记信源").assertDoesNotExist()
         ui.runOnIdle{assertNull(vm.draft);vm.updateAccess(password=TestFixtures.password);vm.connectAccess()}
         ui.waitUntil(15_000){vm.source?.id==source.id||vm.error!=null}
         ui.runOnIdle{assertNull(vm.error);assertEquals(source.id,vm.source?.id);assertNull(vm.access)}
@@ -212,7 +212,7 @@ class SourceInteractionTest {
         require(pin.matches(Regex("[0-9]{4,8}")))
         val source=Source(label="系统锁屏验证",protocol=Protocol.SMB,host="10.0.2.2",port=TestFixtures.smbPort,root="media",username=TestFixtures.username)
         mount(source)
-        ui.onNodeWithText("避难所").performClick()
+        ui.onNodeWithTag("nav:Sources").performClick()
         ui.onNodeWithTag("source-bookmarks").performScrollToNode(hasTestTag("source-row:${source.id}"))
         ui.onNodeWithTag("source-row:${source.id}").performTouchInput{swipeRight()}
         ui.onNodeWithText("封存目录").performClick()

@@ -24,7 +24,7 @@ class IndependentSourcesRegressionTest {
  ui.onNodeWithTag("add-tower").assertDoesNotExist()
  ui.onNodeWithTag("source-category-outpost").assertDoesNotExist()
  ui.onNodeWithTag("add-source").performClick()
- ui.onNodeWithTag("connection-title").assertTextEquals("连接避难所")
+ ui.onNodeWithTag("connection-title").assertTextEquals("登记信源")
  ui.onNodeWithTag("source-category-outpost").assertIsSelected()
  capture("outpost")
  ui.onNodeWithTag("connection-protocol-selector").performClick()

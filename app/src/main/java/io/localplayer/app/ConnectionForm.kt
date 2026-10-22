@@ -91,7 +91,7 @@ import io.localplayer.core.Protocol
             Column(Modifier.fillMaxSize().drawWithContent { scene.record { this@drawWithContent.drawContent() }; drawLayer(scene) }) {
                 Column(Modifier.padding(horizontal = 20.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically){
-                        Text(if(adding) "连接避难所" else if(external) "接入外部信号塔" else "连接幸存者据点", modifier=Modifier.weight(1f).testTag("connection-title"), fontSize=26.sp,fontWeight=FontWeight.Bold)
+                        Text(if(adding) "登记信源" else if(external) "接入信号塔" else "连接幸存者据点", modifier=Modifier.weight(1f).testTag("connection-title"), fontSize=26.sp,fontWeight=FontWeight.Bold)
                         IconButton(onClick=vm::dismissDraft,modifier=Modifier.testTag("connection-close")){Icon(Icons.Rounded.Close,"关闭")}
                 }
                 Spacer(Modifier.height(16.dp))
@@ -201,7 +201,7 @@ import io.localplayer.core.Protocol
             }
         }
         if (vm.busy) item { TextButton(onClick = { vm.cancelOperation() }, modifier = Modifier.fillMaxWidth()) { Text("取消连接") } }
-        if (vm.sources.any { it.id == d.source.id }) item { TextButton(onClick = { vm.deleteDraft() }, modifier = Modifier.fillMaxWidth()) { Text("移除此避难所", color = MaterialTheme.colorScheme.error) } }
+        if (vm.sources.any { it.id == d.source.id }) item { TextButton(onClick = { vm.deleteDraft() }, modifier = Modifier.fillMaxWidth()) { Text("移除此信源", color = MaterialTheme.colorScheme.error) } }
     }
 }
 

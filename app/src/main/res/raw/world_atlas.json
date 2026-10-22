@@ -239,6 +239,10 @@
         {
           "zh": "同一只片匣，纸条夹在一起。别翻一页，就重抄一遍。",
           "en": "Keep the slips for one film case together. Turning a page should not mean copying them all again."
+        },
+        {
+          "zh": "路牌写清来处，细账夹进簿里。找片匣的人，不必先读完一页告示。",
+          "en": "Put the way in plain sight and keep the fine print in the ledger. No one should need a page of notices to find a film case."
         }
       ],
       "personality": {
@@ -505,6 +509,13 @@
       "text": {
         "zh": "阿汐将同一片匣的登记纸与检修纸夹好，迟灯翻查时不用再往登记台跑一趟。",
         "en": "Axi clips each film case’s registration and repair slips together, saving Chideng another trip to the desk."
+      }
+    },
+    {
+      "version": "0.2.0-alpha.41",
+      "text": {
+        "zh": "阿汐收起片架旁重复的附记，将来处写在路牌上；迟灯把细账夹进登记簿，翻查时仍能找到。",
+        "en": "Axi takes down repeated notes beside the film rack and marks the way on its sign. Chideng keeps the details in the ledger for later reference."
       }
     }
   ],
@@ -1129,8 +1140,8 @@
         "en": "View registered sources"
       },
       "meaning": {
-        "zh": "打开远程连接目录，包含幸存者据点和外部信号塔。",
-        "en": "Open registered remote connections, including outposts and external relays."
+        "zh": "打开已登记的远程信源，包含幸存者据点和信号塔。",
+        "en": "Open registered remote sources, including survivor outposts and signal towers."
       }
     },
     {
@@ -1228,7 +1239,7 @@
         "en": "Source register"
       },
       "meaning": {
-        "zh": "分册与连接、目录路标的管理入口；分册字段仍标明分册名称和未归册，不因此新增信号技术或世界制度。",
+        "zh": "菜单中的远程媒体来源入口，登记并浏览幸存者据点（SMB／SFTP）和信号塔（WebDAV／网盘）。",
         "en": "Manage sections and connection or directory markers. Section fields remain explicit; the name adds no signal technology or fictional institution."
       }
     },

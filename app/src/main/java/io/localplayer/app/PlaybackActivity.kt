@@ -214,7 +214,7 @@ class PlaybackActivity:ComponentActivity(){
         if(owns(c))return // Rotation or foreground return must keep the current episode.
         val target=PlaybackRequests.get(intent.getStringExtra("play-intent"))
         if(target==null){
-            android.widget.Toast.makeText(this,"播放队列已失效，请从避难所重新打开",android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this,"播放队列已失效，请从信源重新打开",android.widget.Toast.LENGTH_LONG).show()
             finish();return
         }
         if(SealedMedia.protects(target.media)){

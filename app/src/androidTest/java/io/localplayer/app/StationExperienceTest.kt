@@ -116,7 +116,7 @@ class StationExperienceTest {
             ui.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("station-gear-sound"));capture("atmosphere")
             ui.runOnIdle{ui.activity.onBackPressedDispatcher.onBackPressed()}
             ui.runOnIdle{player.draft=Draft(Source(label="西区仓库",protocol=Protocol.WEBDAV,host="media.example.com",root="/dav/"))}
-            ui.onNodeWithTag("connection-title").assertTextEquals("连接避难所").assertIsDisplayed()
+            ui.onNodeWithTag("connection-title").assertTextEquals("登记信源").assertIsDisplayed()
             ui.onNodeWithTag("source-category-tower").assertIsSelected();ui.onNodeWithText("网盘连接").assertDoesNotExist();capture("source")
             ui.runOnIdle{player.dismissDraft()}
             ui.onNodeWithContentDescription("打开视频").performClick()

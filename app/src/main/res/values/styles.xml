@@ -8,7 +8,7 @@
         <item name="android:colorAccent">#B91E4B</item>
     </style>
     <style name="AppStartingTheme" parent="AppTheme">
-        <item name="android:windowSplashScreenBackground">@color/app_background</item>
+        <item name="android:windowSplashScreenBackground">#F3EFE6</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/launcher_background</item>
     </style>

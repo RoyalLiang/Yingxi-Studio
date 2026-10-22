@@ -15,8 +15,8 @@ data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""
     val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV&&source.host.isNotBlank())source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
 data class SourceAccess(val source:Source,val password:String="",val remember:Boolean=false,val path:String="")
 private data class ReplayRequest(val entry:HistoryEntry,val fromStart:Boolean,val token:HistoryToken)
-private class ReplaySourceChanged:java.io.IOException("避难所身份已变更，请从避难所重新选择影片")
-private class ReplayFileMissing:java.io.IOException("原文件不存在或不可读取，请在避难所中重新选择")
+private class ReplaySourceChanged:java.io.IOException("信源身份已变更，请从信源重新选择影片")
+private class ReplayFileMissing:java.io.IOException("原文件不存在或不可读取，请在信源中重新选择")
 private fun cloudFailureMessage(e:Exception):String = when(e) {
     is AliyunApiFailure,is AliyunUnauthorized,is ReplaySourceChanged,is ReplayFileMissing -> e.message ?: "阿里云盘读取失败，请重试"
     else -> "连接或读取失败，请核对网络、账户和目录权限（${e.javaClass.simpleName}）"
@@ -51,7 +51,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     var scanning by mutableStateOf(false);private set
     var source by mutableStateOf<Source?>(null);private set
     var path by mutableStateOf("");private set
-    private var currentFolderName="避难所根目录"
+    private var currentFolderName="信源根目录"
     private var directoryEntries by mutableStateOf<List<Entry>>(emptyList())
     internal var privateBrowse by mutableStateOf(false);private set
     val entries:List<Entry> get(){val current=source?:return emptyList();val root=SourceRoot(if(rootSelectionId!=null)""else current.initialPath);return if(!root.contains(path))emptyList()else directoryEntries.filter{root.contains(it.path)&&SealedMedia.visible(current,it.path,privateBrowse)}}
@@ -138,8 +138,8 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
             {if(discoveryAllowed&&epoch==discoveryEpoch){discoveryMessage=it;scanning=false}}).also{it.start()}
     }
     fun togglePin(saved:Source){
-        if(!store.togglePinned(saved.id)){error="最多置顶 3 个避难所，请先取消一个置顶";return}
-        pinnedIds=store.pinnedIds();sources=store.load();notifySuccess(if(saved.id in pinnedIds)"已置顶避难所"else"已取消置顶")
+        if(!store.togglePinned(saved.id)){error="最多置顶 3 个信源，请先取消一个置顶";return}
+        pinnedIds=store.pinnedIds();sources=store.load();notifySuccess(if(saved.id in pinnedIds)"已置顶信源"else"已取消置顶")
     }
     fun removeSource(saved:Source){
         if(selectedSourceId==saved.id)selectedSourceId=null
@@ -149,7 +149,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         if(draft?.source?.id==saved.id)dismissDraft()
         if(access?.source?.id==saved.id)dismissAccess()
         if(privateRequest?.source?.id==saved.id)privateRequest=null
-        StationInventory(getApplication()).removeSource(saved.id);organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除避难所")
+        StationInventory(getApplication()).removeSource(saved.id);organization.removeSource(saved.id);organizationRevision++;store.delete(saved.id);pinnedIds=store.pinnedIds();sources=store.load();notifySuccess("已移除信源")
     }
     fun privateAccess(saved:Source){sealRemote(saved,Entry(startingFolderName(saved),saved.initialPath,true,0))}
     internal fun requestPrivate(label:String="封存柜",saved:Source?=null,verified:()->Unit={}){
@@ -211,7 +211,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         source=null;credentials=null;path="";directoryEntries=emptyList()
         viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
-                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在避难所的配置按钮重新授权";return@launch}
+                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在信源的配置按钮重新授权";return@launch}
             if(request!=generation)return@launch
             if(pass!=null||saved.username.isBlank())load(saved,Credentials(pass ?: ""),safeLocation,false,false)
             else{openingSource=null;access=SourceAccess(saved,path=safeLocation)}
@@ -284,7 +284,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
         val registering=save&&sources.none{it.id==s.id}
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
-        val folderName=if(newPath.isEmpty())"避难所根目录"else
+        val folderName=if(newPath.isEmpty())"信源根目录"else
             entries.firstOrNull{source?.id==s.id&&it.directory&&it.path==newPath}?.name
                 ?: if(newPath==s.initialPath)store.startingFolderName(s)
                 else if(s.protocol==Protocol.ALIYUN)AliyunCloud.folderName(s.id,newPath.substringAfterLast('/'))else newPath.substringAfterLast('/')
@@ -300,7 +300,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;directoryEntries=result;draft=null;access=null;sources=store.load()
                 StationInventory(getApplication()).reconcileSource(s)
                 StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),posterPathHint=posterHint(s,e)) })
-                if(registering)notifyRegistration() else if(save)notifySuccess("避难所已保存")
+                if(registering)notifyRegistration() else if(save)notifySuccess("信源已保存")
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {
@@ -393,19 +393,19 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         val ref=entry.media
         if(ref.localUri!=null){playLocal(Uri.parse(ref.localUri),fromStart,parentUri=ref.localParentUri?.let(Uri::parse),privatePlayback=allowPrivate);return}
         val saved=sources.firstOrNull{it.id==ref.sourceId}
-        if(saved==null){error="这个避难所已移除，请重新添加后选择影片";return}
-        if(ref.location!=null&&ref.location!=mediaLocation(saved)){error="避难所身份已变更，请从避难所重新选择影片";return}
+        if(saved==null){error="这个信源已移除，请重新添加后选择影片";return}
+        if(ref.location!=null&&ref.location!=mediaLocation(saved)){error="信源身份已变更，请从信源重新选择影片";return}
         stopDiscovery();cancelOperation();draft=null;access=null;pendingReplay=ReplayRequest(entry,fromStart,historyStore.token(ref.key))
         val request=generation;preparingKey=ref.key
         val memoryPassword=credentials?.password?.takeIf{source?.id==saved.id}
         job=viewModelScope.launch{try{
             val pass=withContext(Dispatchers.IO){memoryPassword ?: store.password(saved.id)}
-                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在避难所的配置按钮重新授权";return@launch}
+                if(saved.protocol==Protocol.ALIYUN && pass==null){openingSource=null;preparingKey=null;error="阿里云盘授权已失效，请在信源的配置按钮重新授权";return@launch}
             if(request!=generation)return@launch
             if(pass!=null||saved.username.isBlank())prepareReplay(saved,Credentials(pass ?: ""))
             else {preparingKey=null;access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}
         }catch(e:CancellationException){throw e}
-        catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在避难所配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
+        catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在信源配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")}}}
     }
     fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList(),parentUri:Uri?=null,privatePlayback:Boolean=false){
         cancelOperation();pendingReplay=null;val request=generation;preparingKey=uri.toString()
@@ -439,7 +439,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)error="本机文件无法读取，请通过“打开本机视频”重新选择"}finally{if(request==generation)preparingKey=null}}
     }
     fun dismissDraft(){discoveryPanelOpen=false;stopDiscovery();shareChoices=null;cancelOperation();pendingReplay=null;trust=null;draft=null;error=null}
-    fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{StationInventory(getApplication()).removeSource(it);store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除避难所")}
+    fun deleteDraft(){discoveryPanelOpen=false;stopDiscovery();draft?.source?.id?.let{organization.removeSource(it);organizationRevision++};cancelOperation();trust=null;pendingReplay=null;draft?.source?.id?.let{StationInventory(getApplication()).removeSource(it);store.delete(it)};draft=null;sources=store.load();pinnedIds=store.pinnedIds();notifySuccess("已移除信源")}
     fun putBookmark(item:SourceBookmark){
         error=null
         val before=organization.bookmarks().firstOrNull{it.key==item.key}
@@ -456,7 +456,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     fun startingFolderName(saved:Source)=store.startingFolderName(saved)
     fun updateSourcePresentation(saved:Source,label:String,initialPath:String=saved.initialPath,folderName:String=startingFolderName(saved),announce:Boolean=true):Boolean {
         return runCatching{
-            val current=store.load().firstOrNull{it.id==saved.id} ?: throw IllegalArgumentException("这个避难所已移除")
+            val current=store.load().firstOrNull{it.id==saved.id} ?: throw IllegalArgumentException("这个信源已移除")
             val clean=Paths.clean(initialPath)
             store.updatePresentation(current.id,label,clean,folderName)
             organization.moveSourceEntry(current.id,current.initialPath,clean,label.trim());organizationRevision++

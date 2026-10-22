@@ -72,7 +72,7 @@ class FileNavigationTest {
         }
         try{
             ui.waitUntil(20000){vm.source!=null&&!vm.busy}
-            ui.onNodeWithText("避难所").performClick()
+            ui.onNodeWithTag("nav:Sources").performClick()
             ui.onNodeWithTag("source-list").assertIsDisplayed()
             ui.onNode(hasText("Navigation fixture") and hasAnyAncestor(hasTestTag("source-list")),useUnmergedTree=true).performClick()
             ui.waitUntil(20000){vm.source!=null&&!vm.busy}
