@@ -97,22 +97,22 @@ class RoomEntryRegressionTest {
         assertTrue(layouts.single().getLineRight(0)<=layouts.single().size.width+1f)
         assertEquals(13.sp,layouts.single().layoutInput.style.fontSize)
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithTag("station-wayfinding").assertIsDisplayed()
+        ui.onNodeWithTag("add-outpost").assertIsDisplayed();ui.onNodeWithTag("add-tower").assertIsDisplayed()
         capture("shelters-large")
-        ui.onNodeWithContentDescription("添加避难所").performClick()
-        ui.onNodeWithText("弥途 · 避难所路标").assertIsDisplayed()
+        ui.onNodeWithTag("add-outpost").performClick()
+        ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点");ui.onNodeWithText("弥途 · 避难所路标").assertDoesNotExist()
         ui.onNodeWithText("连接来源").assertDoesNotExist()
         capture("connection-large")
     }
 
     @Test fun shelterRouteUsesTheWorldbookTerms() {
         ui.onNodeWithText("避难所").performClick()
-        ui.onNodeWithTag("station-wayfinding").assertIsDisplayed()
+        ui.onNodeWithTag("add-outpost").assertIsDisplayed();ui.onNodeWithTag("add-tower").assertIsDisplayed()
         ui.onNodeWithText("点击右上角新建",substring=true).assertDoesNotExist()
         capture("shelters")
-        ui.onNodeWithContentDescription("添加避难所").performClick()
+        ui.onNodeWithTag("add-outpost").performClick()
         ui.onNodeWithTag("connection-title").assertIsDisplayed()
-        ui.onNodeWithText("弥途 · 避难所路标").assertIsDisplayed()
+        ui.onNodeWithTag("connection-title").assertTextEquals("连接幸存者据点");ui.onNodeWithText("弥途 · 避难所路标").assertDoesNotExist()
         capture("connection")
     }
 

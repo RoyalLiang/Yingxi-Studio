@@ -62,7 +62,7 @@ class SourceManagementTest {
     @Test fun favoriteAndUnfavoriteHaveDistinctFeedback() {
         val source = mount()
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = true)) }
-        ui.onNodeWithText("已收藏").assertIsDisplayed()
+        ui.onNodeWithText("已标记路标").assertIsDisplayed()
         ui.runOnIdle { assertTrue(vm.organization.bookmarks().first { it.sourceId == source.id }.favorite) }
         ui.runOnIdle { vm.putBookmark(SourceBookmark(source.id, "", source.label, favorite = false)) }
         ui.onNodeWithText("已取消路标标记").assertIsDisplayed()
