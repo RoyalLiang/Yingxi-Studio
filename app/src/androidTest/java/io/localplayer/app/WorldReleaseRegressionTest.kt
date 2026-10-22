@@ -26,7 +26,7 @@ class WorldReleaseRegressionTest {
     }
     @Test fun chidengArrivalNoteIsReadableInTheArchive() {
         val person=StationWorld.load(ui.activity).people.first{it.id=="chideng"}
-        assertEquals("片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。",person.quotes.last().zh)
+        val daily=person.quotes.single{it.zh=="片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。"}
         for(language in listOf("zh","en")) {
             ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides
@@ -37,7 +37,7 @@ class WorldReleaseRegressionTest {
             ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-person:chideng"))
             ui.onNodeWithTag("world-person:chideng").performClick().assertIsSelected()
             ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-quote"))
-            val quote=ui.onNodeWithTag("world-quote");val expected=person.quotes.last().inLanguage(language)
+            val quote=ui.onNodeWithTag("world-quote");val expected=daily.inLanguage(language)
             var found=false
             repeat(person.quotes.size){
                 if(quote.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString().contains(expected))found=true
