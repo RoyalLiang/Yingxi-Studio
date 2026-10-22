@@ -47,7 +47,7 @@ internal class NextEpisodePrefetch(private val context:Context):java.io.Closeabl
             finally {active.compareAndSet(lease,null);lease.close()}
         }
     }
-    fun cancel(){active.getAndSet(null)?.close();future?.cancel(true);future=null}
+    fun cancel(){future?.cancel(true);future=null;active.getAndSet(null)?.let(PlaybackRegistry::closeAsync)}
     fun transition(){cancel();attempted=null}
     override fun close(){cancel();worker.shutdownNow()}
 }

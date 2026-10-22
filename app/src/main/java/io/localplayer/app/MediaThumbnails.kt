@@ -95,7 +95,7 @@ internal object MediaThumbnails {
                     // Never open an authentication UI or bypass SFTP trust to obtain artwork.
                     val password = store.password(saved.id)
                     if (saved.username.isNotBlank() && password == null) return@withContext null
-                    PlaybackLease(saved, Credentials(password ?: ""), path)
+                    PlaybackLease(saved, Credentials(password ?: ""), path, prefetch=false)
                 }
                 if (media.sourceId != preview.source.id || (media.location != null && media.location != mediaLocation(preview.source))) throw IOException("Media source changed")
                 cancellation.own(preview)
