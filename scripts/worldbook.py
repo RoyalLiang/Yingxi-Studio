@@ -88,6 +88,16 @@ def validate(root):
             if not isinstance(pair.get('id'),str) or not pair['id'].strip() or pair['id'] in pair_ids:raise ValueError('Duplicate or invalid practice pair identity')
             pair_ids.add(pair['id'])
             for key in ['title','clue','label','hint']:text(pair[key])
+    signals=world.get('tuningSignals')
+    if not isinstance(signals,list) or len(signals)!=6:raise ValueError('Six tuning signals required')
+    signal_ids=set();diary_ids={item['id'] for item in world['dailyLines']}
+    for item in signals:
+        if not isinstance(item.get('id'),str) or not item['id'].strip() or item['id'] in signal_ids:raise ValueError('Duplicate or invalid tuning identity')
+        signal_ids.add(item['id']);text(item['title'])
+        if type(item.get('revision')) is not int or item['revision']<1:raise ValueError('Invalid tuning revision')
+        if item.get('line') not in diary_ids:raise ValueError('Unknown tuning note')
+        if not item.get('references') or not set(item['references'])<=term_ids:raise ValueError('Unknown tuning reference')
+        if type(item.get('target')) is not int or not 10<=item['target']<=90 or type(item.get('start')) is not int or not 0<=item['start']<=100 or abs(item['start']-item['target'])<=12:raise ValueError('Invalid tuning marks')
     return world
 
 def render_glossary(world):

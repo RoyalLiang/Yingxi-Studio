@@ -6,6 +6,20 @@ from pathlib import Path
 from worldbook import validate, render_glossary
 
 class WorldbookTests(unittest.TestCase):
+    def test_tuning_content_rejects_invalid_marks_missing_notes_and_duplicate_ids(self):
+        for change,message in [
+            (lambda w:w['tuningSignals'].pop(),'Six tuning'),
+            (lambda w:w['tuningSignals'][0].update(revision=False),'revision'),
+            (lambda w:w['tuningSignals'][0].update(line='unknown'),'note'),
+            (lambda w:w['tuningSignals'][0].update(target=105),'marks'),
+            (lambda w:w['tuningSignals'][0].update(start=68),'marks'),
+            (lambda w:w['tuningSignals'][0].update(references=['missing']),'reference'),
+            (lambda w:w['tuningSignals'][0]['title'].update(en=''),'Chinese.*English'),
+            (lambda w:w['tuningSignals'][1].update(id='signal_tuning_01'),'tuning identity')]:
+            with self.subTest(message=message):
+                atlas=copy.deepcopy(self.atlas);change(atlas)
+                with self.assertRaisesRegex(ValueError,message):self.check(atlas)
+
     def test_practice_rounds_reject_ambiguous_or_stale_content(self):
         for change,message in [
             (lambda w:w['practiceRounds'].pop(),'Six practice'),
