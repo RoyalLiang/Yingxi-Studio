@@ -62,7 +62,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     }
 }
 
-@Composable internal fun StationWorldPage(embedded:Boolean=false,back:()->Unit) {
+@Composable internal fun StationWorldPage(embedded:Boolean=false,openPractice:(()->Unit)?=null,back:()->Unit) {
     val context=LocalContext.current
     val world=remember(context){StationWorld.load(context)}
     val lang=LocalConfiguration.current.locales[0].language
@@ -132,7 +132,14 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }}
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
-        WorldOverview(world,lang)
+                if(openPractice!=null) Surface(onClick=openPractice,color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("practice-entry")) {
+                    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Text(if(lang=="zh")"旧片匣归位"else"Old case sorting",fontFamily=FontFamily.Serif,fontSize=22.sp,lineHeight=30.sp,color=Ink)
+                        Text(if(lang=="zh")"三张纸签，慢慢理。"else"Three labels. Take your time.",fontSize=14.sp,lineHeight=22.sp,color=Muted)
+                        Text(if(lang=="zh")"帮阿汐理片匣 →"else"Help Axi sort the cases →",fontSize=14.sp,lineHeight=22.sp,color=Berry)
+                    }
+                }
+                WorldOverview(world,lang)
             WorldMap(world,placeId,lang){placeId=it}
             Text(if(lang=="zh")"废土图谱 · 实线已核，虚线位置或路线待核" else "Wasteland atlas · Solid: surveyed; dotted: location or route unverified",fontSize=11.sp,lineHeight=18.sp,color=Muted)
             Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {

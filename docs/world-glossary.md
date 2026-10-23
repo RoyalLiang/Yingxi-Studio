@@ -67,6 +67,7 @@
 | endpoint | 据点路标／中继路标 | Outpost address / relay address | 连接表单分节；地址、协议和主机IP保持准确。 | Connection-form headings; addresses, protocols and host IP remain explicit. |
 | credentials | 通行凭据 | Connection credentials | 连接账户表单分节；用户名与密码字段不隐喻化。 | The connection account section; username and password remain literal. |
 | advanced | 线路设置 | Connection options | 连接端口、根目录等选项；不是新的物理信路。 | Connection options such as port and root directory, separate from physical mail routes. |
+| case_sorting | 旧片匣归位 | Old case sorting | 探索中的离线纸签配对练习；只整理虚构片匣，不修改影片、不发放物资、不推进章节。 | An offline paper-label matching practice in Explore. It uses fictional cases, changes no films, grants no supplies and advances no chapters. |
 
 ## 采用层级
 
