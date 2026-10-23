@@ -578,6 +578,13 @@
         "zh": "阿汐把六盘练习片匣摆进探索页。纸签可以点选或长按拖放；离开再回来，桌面还留在刚才的样子。",
         "en": "Axi set six trays of practice cases in Explore. Tap labels or hold and drag them; leave and return to find the desk as you left it."
       }
+    },
+    {
+      "version": "0.2.0-alpha.49",
+      "text": {
+        "zh": "迟灯把调谐练习摆在片匣旁。旋钮和步进键都能调准纸上的信号，短笺也能直接翻开；离开时声音停下，刻度留下。",
+        "en": "Chideng set a tuning practice beside the cases. The dial and step buttons can align its paper signal, while the notes remain open to read directly. Leave, and the sound stops; the dial position stays."
+      }
     }
   ],
   "boundary": {
@@ -1358,6 +1365,17 @@
         "zh": "探索中的离线纸签配对练习；只整理虚构片匣，不修改影片、不发放物资、不推进章节。",
         "en": "An offline paper-label matching practice in Explore. It uses fictional cases, changes no films, grants no supplies and advances no chapters."
       }
+    },
+    {
+      "id": "signal_tuning",
+      "name": {
+        "zh": "调频寻声",
+        "en": "Tune for a trace"
+      },
+      "meaning": {
+        "zh": "探索中的离线调谐练习。旋钮与步进键调整生成的图形信号；随包短笺可以直接阅读，不扫描设备或接收真实无线电。",
+        "en": "An offline tuning practice in Explore. The dial and step buttons adjust generated signal graphics. Bundled notes can be read directly; no devices are scanned and no real radio is received."
+      }
     }
   ],
   "canonAdoption": {
@@ -1551,6 +1569,14 @@
       "text": {
         "zh": "我在练习片匣的角上画了三个小点。纸签贴对一张，就盖住一个。没有奖品，只有桌面一点点腾出来的地方。",
         "en": "I drew three small dots on a practice case. Each label in its place covers one. No prizes, just a little more room on the desk."
+      }
+    },
+    {
+      "id": "diary_024",
+      "author": "chideng",
+      "text": {
+        "zh": "我把旋钮旁的刻线补深了一点。听不见也没关系，纸上的两条线靠在一起，手就知道该停了。",
+        "en": "I darkened the marks beside the dial. You do not have to hear a thing: when the two lines on paper meet, your hand knows where to stop."
       }
     }
   ],
@@ -2043,6 +2069,92 @@
             "en": "Closing the case and returning the pencil finish the task."
           }
         }
+      ]
+    }
+  ],
+  "tuningSignals": [
+    {
+      "id": "signal_tuning_01",
+      "revision": 1,
+      "title": {
+        "zh": "灯罩边的字",
+        "en": "Words beside the lamp"
+      },
+      "line": "diary_019",
+      "start": 14,
+      "target": 68,
+      "references": [
+        "station"
+      ]
+    },
+    {
+      "id": "signal_tuning_02",
+      "revision": 1,
+      "title": {
+        "zh": "来处与留白",
+        "en": "Origins and blank spaces"
+      },
+      "line": "diary_020",
+      "start": 84,
+      "target": 32,
+      "references": [
+        "station"
+      ]
+    },
+    {
+      "id": "signal_tuning_03",
+      "revision": 1,
+      "title": {
+        "zh": "片罐的侧签",
+        "en": "The label on the case"
+      },
+      "line": "diary_001",
+      "start": 22,
+      "target": 76,
+      "references": [
+        "station"
+      ]
+    },
+    {
+      "id": "signal_tuning_04",
+      "revision": 1,
+      "title": {
+        "zh": "守夜的一格灯",
+        "en": "A notch of night light"
+      },
+      "line": "diary_021",
+      "start": 78,
+      "target": 24,
+      "references": [
+        "station"
+      ]
+    },
+    {
+      "id": "signal_tuning_05",
+      "revision": 1,
+      "title": {
+        "zh": "旧虚线",
+        "en": "The old dotted line"
+      },
+      "line": "diary_017",
+      "start": 12,
+      "target": 54,
+      "references": [
+        "station"
+      ]
+    },
+    {
+      "id": "signal_tuning_06",
+      "revision": 1,
+      "title": {
+        "zh": "盐环的纸路标",
+        "en": "Salt-ring paper markers"
+      },
+      "line": "diary_003",
+      "start": 86,
+      "target": 46,
+      "references": [
+        "station"
       ]
     }
   ]

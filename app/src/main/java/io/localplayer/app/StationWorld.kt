@@ -62,13 +62,13 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     }
 }
 
-@Composable internal fun StationWorldPage(embedded:Boolean=false,openPractice:(()->Unit)?=null,back:()->Unit) {
+@Composable internal fun StationWorldPage(embedded:Boolean=false,openPractice:(()->Unit)?=null,openTuning:(()->Unit)?=null,initialPersonId:String="axi",back:()->Unit) {
     val context=LocalContext.current
     val world=remember(context){StationWorld.load(context)}
     val lang=LocalConfiguration.current.locales[0].language
     fun WorldText.say()=inLanguage(lang)
     var placeId by rememberSaveable{mutableStateOf("station")}
-    var personId by rememberSaveable{mutableStateOf("axi")}
+    var personId by rememberSaveable{mutableStateOf(initialPersonId.takeIf{id->world.people.any{it.id==id}}?:"axi")}
     var quote by rememberSaveable{mutableIntStateOf(0)}
     val worldScroll=rememberScrollState()
     val readerScope=rememberCoroutineScope()
@@ -132,11 +132,11 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }}
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
-                if(openPractice!=null) Surface(onClick=openPractice,color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth().testTag("practice-entry")) {
-                    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                        Text(if(lang=="zh")"旧片匣归位"else"Old case sorting",fontFamily=FontFamily.Serif,fontSize=22.sp,lineHeight=30.sp,color=Ink)
-                        Text(if(lang=="zh")"三张纸签，慢慢理。"else"Three labels. Take your time.",fontSize=14.sp,lineHeight=22.sp,color=Muted)
-                        Text(if(lang=="zh")"帮阿汐理片匣 →"else"Help Axi sort the cases →",fontSize=14.sp,lineHeight=22.sp,color=Berry)
+                if(openPractice!=null||openTuning!=null) Surface(color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()) {
+                    Column {
+                        openPractice?.let { open->ExplorationPracticeEntry(if(lang=="zh")"旧片匣归位"else"Old case sorting",if(lang=="zh")"帮阿汐理片匣 →"else"Help Axi sort the cases →","practice-entry",open) }
+                        if(openPractice!=null&&openTuning!=null)HorizontalDivider(Modifier.padding(horizontal=18.dp),color=Muted.copy(alpha=.14f))
+                        openTuning?.let { open->ExplorationPracticeEntry(if(lang=="zh")"调频寻声"else"Tune for a trace",if(lang=="zh")"陪迟灯调一段频 →"else"Turn the dial with Chideng →","tuning-entry",open) }
                     }
                 }
                 WorldOverview(world,lang)
@@ -148,6 +148,15 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             }
             }
             Spacer(Modifier.height(28.dp))
+        }
+    }
+}
+
+@Composable private fun ExplorationPracticeEntry(title:String,action:String,tag:String,open:()->Unit) {
+    Surface(onClick=open,color=androidx.compose.ui.graphics.Color.Transparent,modifier=Modifier.fillMaxWidth().testTag(tag)) {
+        Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text(title,fontFamily=FontFamily.Serif,fontSize=21.sp,lineHeight=29.sp,color=Ink)
+            Text(action,fontSize=14.sp,lineHeight=22.sp,color=Berry)
         }
     }
 }
