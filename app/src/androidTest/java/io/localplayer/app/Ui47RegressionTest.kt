@@ -26,7 +26,7 @@ import java.util.Locale
 class Ui47RegressionTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
 
-    @Test fun formatIsWhiteAtUpperLeftWithoutSourceSizeOrBackground() {
+    @Test fun formatIsWhiteAtLowerRightWithoutSourceSizeOrBackground() {
         val media=MediaRef("format47","片匣.mkv","不应覆盖海报的信源",sizeBytes=2L*1024*1024*1024)
         val ground=Color(0xFF285143)
         for(scale in listOf(1f,1.8f)) {
@@ -41,8 +41,8 @@ class Ui47RegressionTest {
             ui.onNodeWithText("2.0 GB").assertDoesNotExist()
             val bounds=ui.onNodeWithTag("poster-labels:${media.key}").getUnclippedBoundsInRoot()
             val poster=ui.onNodeWithTag("format-fixture").getUnclippedBoundsInRoot()
-            assertEquals(8f,bounds.left.value-poster.left.value,.5f)
-            assertEquals(8f,bounds.top.value-poster.top.value,.5f)
+            assertEquals(8f,poster.right.value-bounds.right.value,.5f)
+            assertEquals(8f,poster.bottom.value-bounds.bottom.value,.5f)
             val pixels=ui.onNodeWithTag("format-fixture").captureToImage().toPixelMap()
             var white=0
             for(y in 0 until pixels.height)for(x in 0 until pixels.width) {

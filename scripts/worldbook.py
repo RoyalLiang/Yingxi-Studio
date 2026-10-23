@@ -54,7 +54,7 @@ def validate(root):
             identities.add(item['id'])
             if item['author'] not in people:raise ValueError('Unknown corpus author')
             for field in (['text'] if key=='dailyLines' else ['eyebrow','title','body']):text(item[field])
-    if {item['id'] for item in world['surfaceNotes']}!={'local_archive','history_empty'}:raise ValueError('Missing surface note')
+    if {item['id'] for item in world['surfaceNotes']}!={'local_archive','history_empty','first_light'}:raise ValueError('Missing surface note')
     if not isinstance(world.get('chapters'),list) or not world['chapters']:raise ValueError('Chapters must be a nonempty list')
     chapter_ids=set();letter_ids=set()
     for chapter in world['chapters']:

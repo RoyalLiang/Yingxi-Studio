@@ -2,7 +2,6 @@ package io.localplayer.app
 
 import android.net.Uri
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,9 +31,7 @@ internal fun posterVideoFormat(media:MediaRef):String? {
 
 @Composable internal fun BoxScope.PosterLabels(media:MediaRef,directory:Boolean=false) {
     if(!directory&&posterVideoFormat(media)!=null)PosterFormatText(media,
-        Modifier.align(Alignment.BottomEnd).padding(8.dp)
-            .background(Color.Black.copy(alpha=.72f),RoundedCornerShape(4.dp))
-            .padding(horizontal=5.dp,vertical=2.dp))
+        Modifier.align(Alignment.BottomEnd).padding(8.dp))
 }
 
 @Composable internal fun MediaPoster(media:MediaRef,modifier:Modifier=Modifier) {

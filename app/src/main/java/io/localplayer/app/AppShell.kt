@@ -60,6 +60,8 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
     var practiceOpen by rememberSaveable{mutableStateOf(false)}
     val readingContext = androidx.compose.ui.platform.LocalContext.current
+    val stationPreferences=remember(readingContext){StationPreferences(readingContext)}
+    var firstDiscovery by rememberSaveable{mutableStateOf(false)}
     var readingOpen by rememberSaveable{mutableStateOf(false)}
     var tuningOpen by rememberSaveable{mutableStateOf(false)}
     var tuningPerson by rememberSaveable{mutableStateOf<String?>(null)}
@@ -68,6 +70,10 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     var cabinetOpen by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(SealedMedia.unlocked){vm.closeSealed();localFiles.closeSealed()}
     val states=rememberSaveableStateHolder()
+    val verifyCabinet={vm.stopDiscovery();vm.cancelOperation();vm.requestPrivate(verified={cabinetOpen=true})}
+    if(firstDiscovery)StationFirstDiscovery(onDismiss={firstDiscovery=false},onContinue={
+        stationPreferences.cabinetDiscoverySeen=true;firstDiscovery=false;verifyCabinet()
+    })
     if(readingOpen){RouteReadingPage{readingOpen=false};return}
     if(tuningOpen){
         val person=tuningPerson
@@ -104,7 +110,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed={vm.stopDiscovery();vm.cancelOperation();vm.requestPrivate(verified={cabinetOpen=true})})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed={if(stationPreferences.cabinetDiscoverySeen)verifyCabinet()else firstDiscovery=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                     AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true},openReading={place->
