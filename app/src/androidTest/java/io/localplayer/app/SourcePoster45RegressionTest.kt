@@ -33,6 +33,7 @@ class SourcePoster45RegressionTest {
             }
         }
         val owner=ViewModelStore();val prefs=EnrichmentPreferences(app);val previous=prefs.posters
+        val station=StationPreferences(app);val discoveryBefore=station.cabinetDiscoverySeen;station.cabinetDiscoverySeen=true
         SourceStore(app).save(source,"",true)
         try {
             prefs.posters=false
@@ -76,7 +77,7 @@ class SourcePoster45RegressionTest {
             ui.runOnIdle{vm.privateRequest?.let{vm.cancelPrivateAccess(it.id)}}
             ui.onNodeWithTag("home-sealed-entry").assertIsDisplayed()
         } finally {
-            ui.runOnUiThread{owner.clear()};SourceStore(app).delete(source.id);SourceOrganization(app).removeSource(source.id);prefs.posters=previous
+            ui.runOnUiThread{owner.clear()};SourceStore(app).delete(source.id);SourceOrganization(app).removeSource(source.id);prefs.posters=previous;station.cabinetDiscoverySeen=discoveryBefore
         }
     }
 

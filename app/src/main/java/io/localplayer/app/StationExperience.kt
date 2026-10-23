@@ -37,6 +37,7 @@ internal class StationPreferences(context:Context,name:String="station-experienc
     init { if(!p.contains("first-day"))p.edit().putString("first-day",runCatching{java.time.Instant.ofEpochMilli(context.packageManager.getPackageInfo(context.packageName,0).firstInstallTime).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()}.getOrDefault(LocalDate.now().toString())).apply() }
     val day:Long get()=runCatching{ChronoUnit.DAYS.between(LocalDate.parse(p.getString("first-day",null)),LocalDate.now()).coerceAtLeast(0)+1}.getOrDefault(1)
     var greetings:Boolean get()=p.getBoolean("greetings",true);set(v){p.edit().putBoolean("greetings",v).apply()}
+    var cabinetDiscoverySeen:Boolean get()=p.getBoolean("cabinet-first-light-seen",false);set(v){p.edit().putBoolean("cabinet-first-light-seen",v).apply()}
     var gearSound:Boolean get()=p.getBoolean("gear-sound",false);set(v){p.edit().putBoolean("gear-sound",v).apply()}
     fun claimGreeting():Boolean {
         val today=LocalDate.now().toString()
