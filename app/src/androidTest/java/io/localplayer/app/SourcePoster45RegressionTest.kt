@@ -62,11 +62,19 @@ class SourcePoster45RegressionTest {
             capture("source-directory")
             ui.runOnIdle{vm.closeSource()}
             ui.onNodeWithTag("nav:History").performClick()
-            ui.onNodeWithTag("open-sealed-cabinet").assertHasClickAction().assertIsDisplayed()
-            capture("history-cabinet-entry")
-            ui.onNodeWithTag("open-sealed-cabinet").performClick()
-            ui.onNodeWithTag("sealed-cabinet").assertExists()
-            ui.onNodeWithTag("sealed-unlock").assertExists()
+            ui.onNodeWithTag("open-sealed-cabinet").assertDoesNotExist()
+            ui.onNodeWithTag("history-title").assertTextEquals("拾荒路线图")
+            capture("history-single-list")
+            ui.onNodeWithTag("nav:Home").performClick()
+            capture("home-hidden-cabinet-entry")
+            ui.onNodeWithTag("home-sealed-entry").assertHasClickAction().performClick()
+            ui.runOnIdle{
+                assertFalse(SealedMedia.unlocked)
+                assertTrue(vm.privateRequest!=null||vm.error?.contains("锁屏密码")==true)
+            }
+            ui.onNodeWithTag("sealed-cabinet").assertDoesNotExist()
+            ui.runOnIdle{vm.privateRequest?.let{vm.cancelPrivateAccess(it.id)}}
+            ui.onNodeWithTag("home-sealed-entry").assertIsDisplayed()
         } finally {
             ui.runOnUiThread{owner.clear()};SourceStore(app).delete(source.id);SourceOrganization(app).removeSource(source.id);prefs.posters=previous
         }
@@ -126,6 +134,7 @@ class SourcePoster45RegressionTest {
     }
 
     private fun capture(name:String) {
+        ui.mainClock.advanceTimeBy(500);ui.waitForIdle()
         val bitmap=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         java.io.File(ui.activity.cacheDir,"poster45-$name.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         bitmap.recycle()

@@ -2,9 +2,11 @@ package io.localplayer.app
 
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -21,10 +23,18 @@ internal fun posterVideoFormat(media:MediaRef):String? {
 }
 
 /** Only a real video extension is overlaid; directories and unknown formats stay unmarked. */
-@Composable internal fun PosterLabels(media:MediaRef,directory:Boolean=false) {
-    val format=if(directory)null else posterVideoFormat(media)
-    if(format!=null)Text(format,Modifier.padding(8.dp).testTag("poster-labels:${media.key}"),
-        color=Color.White,fontSize=11.sp,lineHeight=15.sp,fontWeight=FontWeight.Medium,maxLines=1)
+@Composable internal fun PosterFormatText(media:MediaRef,modifier:Modifier=Modifier) {
+    posterVideoFormat(media)?.let { format ->
+        Text(format,modifier.testTag("poster-labels:${media.key}"),color=Color.White,
+            fontSize=11.sp,lineHeight=16.sp,fontWeight=FontWeight.Medium,maxLines=1)
+    }
+}
+
+@Composable internal fun BoxScope.PosterLabels(media:MediaRef,directory:Boolean=false) {
+    if(!directory&&posterVideoFormat(media)!=null)PosterFormatText(media,
+        Modifier.align(Alignment.BottomEnd).padding(8.dp)
+            .background(Color.Black.copy(alpha=.72f),RoundedCornerShape(4.dp))
+            .padding(horizontal=5.dp,vertical=2.dp))
 }
 
 @Composable internal fun MediaPoster(media:MediaRef,modifier:Modifier=Modifier) {

@@ -73,6 +73,24 @@ class MediaEnrichmentTest {
         ui.waitUntil(10000){deliveries.get()==2&&vm.preparingKey==null}
         assertEquals(2,lists.get());assertNull(vm.error);assertEquals(media.key,vm.selectedHistoryKey)
     }
+    @Test fun posterFormatAndTimeStaySeparateAtNarrowLargeText() {
+        val media=MediaRef("large-format-"+UUID.randomUUID(),"大字号影集.mkv","本机")
+        val entry=HistoryEntry(media,9_000_000,90_000_000,1,false)
+        ui.activity.runOnUiThread{ui.activity.setContent{
+            val density=androidx.compose.ui.platform.LocalDensity.current
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,1.8f)) {
+                PlayerTheme{Box(Modifier.width(220.dp)){RecentFilm(entry,false,false,false,{},{},{})}}
+            }
+        }}
+        val label=ui.onNodeWithTag("poster-labels:"+media.key,true).assertTextEquals("MKV").fetchSemanticsNode().boundsInRoot
+        val status=ui.onNodeWithText(time(entry.positionMs)+" / "+time(entry.durationMs),useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        val poster=ui.onNodeWithTag("film-poster:"+media.key,true).fetchSemanticsNode().boundsInRoot
+        assertEquals(status.height,label.height,1f)
+        assertTrue(label.left>=status.right&&label.right<=poster.right&&label.top>poster.center.y)
+        val bitmap=ui.onNodeWithTag("home-film:"+media.key).captureToImage().asAndroidBitmap()
+        File(context.cacheDir,"format-narrow-large.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+    }
+
     @Test fun recentSelectionHasSemanticsAndDoesNotShiftCardBounds(){
         val media=MediaRef("selection-"+UUID.randomUUID(),"测试影片.mp4","本机")
         var selected by mutableStateOf(false)
@@ -87,6 +105,11 @@ class MediaEnrichmentTest {
         val title=ui.onNodeWithText(io.localplayer.core.mediaDisplayTitle(media.title),useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         val status=ui.onNodeWithText("00:02 / 02:00",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
         assertTrue("Playback status must sit inside the poster, above its title",status.bottom<title.top)
+        val format=ui.onNodeWithTag("poster-labels:"+media.key,useUnmergedTree=true).assertTextEquals("MP4").fetchSemanticsNode().boundsInRoot
+        val poster=ui.onNodeWithTag("film-poster:"+media.key,useUnmergedTree=true).fetchSemanticsNode().boundsInRoot
+        assertEquals("Format and time share the same text size",status.height,format.height,1f)
+        assertTrue("Format is at bottom right, clear of time",format.left>=status.right&&format.right<=poster.right&&format.top>poster.center.y)
+
         val unselected=node.captureToImage().asAndroidBitmap()
         node.performClick().assertIsSelected()
         ui.mainClock.advanceTimeBy(500) // Let the touch ripple finish before comparing the selected state.

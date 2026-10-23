@@ -1,9 +1,9 @@
 {
   "version": {
-    "versionName": "0.2.0-alpha.50",
-    "versionCode": 52
+    "versionName": "0.2.0-alpha.51",
+    "versionCode": 53
   },
-  "atlasSha256": "50e3d8471f19c0e30fc69cba35f0ef10458ae82abfbdeb122ec36081a0901f38",
+  "atlasSha256": "dcf6ae459e78e5a8a0b37e7b8497beea2f271ec0685b712413f2b0fb455c154f",
   "counts": {
     "places": 6,
     "surveyedPlaces": 2,
@@ -25,14 +25,14 @@
     "proposalExtensions": 4,
     "dailyNotes": 25,
     "surfaceNotes": 2,
-    "chronicles": 29,
+    "chronicles": 30,
     "chapters": 2,
     "letters": 4,
     "applicationNames": 20
   },
   "repository": {
-    "releaseNoteFiles": 47,
+    "releaseNoteFiles": 48,
     "scavengerLetterFiles": 33,
-    "attributedLetterFiles": 27
+    "attributedLetterFiles": 28
   }
 }

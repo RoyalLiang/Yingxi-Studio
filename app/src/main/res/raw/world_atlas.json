@@ -593,6 +593,14 @@
         "zh": "弥途在探索桌上摆开两张纸签：路标对读可以逐条判断、查看原文，离开后接着读；地图的虚线仍由实地证据说了算。",
         "en": "Mitu lays two slips on the exploration desk. Compare their claims, read the originals and return to your place; dotted routes still wait for field evidence."
       }
+    },
+    {
+      "id": "chronicle_051",
+      "version": "0.2.0-alpha.51",
+      "text": {
+        "zh": "迟灯把票根按日期夹好，阿汐将片罐格式写到侧签下角。拾荒路线图沿用熟悉的记录页；首页站名后藏着封存柜的校验入口。",
+        "en": "Chideng files tickets by date, and Axi moves each reel’s format to the lower corner of its label. The scavenging route keeps the familiar log; the station name on the home page leads to cabinet identity verification."
+      }
     }
   ],
   "boundary": {
@@ -875,8 +883,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures. Chideng flattens the evening’s tickets with a brass ruler; Axi notes paused frames on their backs. Filed by date, these slips are not evidence of travel beyond the station."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
@@ -1256,12 +1264,12 @@
     {
       "id": "history",
       "name": {
-        "zh": "拾荒记录／最近拾荒",
-        "en": "Scavenging log / recent scavenging"
+        "zh": "拾荒记录／拾荒路线图／最近拾荒",
+        "en": "Scavenging log / scavenging route / recent scavenging"
       },
       "meaning": {
-        "zh": "借用拾荒称谓记录本机真实观看与续播进度；不是今日拾获、文件发现或世界纪年。",
-        "en": "A scavenging metaphor for actual viewing history and resume progress, distinct from today’s finds, file discovery and story chronology."
+        "zh": "借用拾荒称谓记录本机真实观看与续播进度；拾荒路线图沿用日期记录列表，不代表地理路线、今日拾获或世界纪年。",
+        "en": "A scavenging metaphor for actual viewing history and resume progress. The scavenging route keeps the dated log layout; it is not a geographic route, today’s finds or story chronology."
       }
     },
     {
@@ -1636,8 +1644,8 @@
         "en": "Night screening log"
       },
       "body": {
-        "zh": "放映机记得每一盘旧纪元片子停在哪一格，下次推门接着看。",
-        "en": "The projector remembers where each old-era film paused. Come back and continue from that frame."
+        "zh": "迟灯把同一晚的票根压在一条铜尺下，阿汐在背面记下停片的那一格。纸签按日期收好，下一次来，不必重新找开头。",
+        "en": "Chideng holds one evening’s tickets beneath a brass ruler; Axi notes the paused frame on their backs. Sorted by date, the slips keep the next visit from starting at the beginning."
       }
     }
   ],

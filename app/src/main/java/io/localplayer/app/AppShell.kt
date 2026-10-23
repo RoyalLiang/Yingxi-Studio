@@ -104,9 +104,9 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed={vm.stopDiscovery();vm.cancelOperation();vm.requestPrivate(verified={cabinetOpen=true})})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
-                    AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources}){cabinetOpen=true}
+                    AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                     AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true},openReading={place->
                         vm.stopDiscovery();vm.cancelOperation()
                         if(place!=null){val store=RouteReadingStore(readingContext);store.save(store.restore(RouteRecords.load(readingContext),place).first)}
@@ -163,33 +163,19 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     }
 }
 
-@Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onSealed:()->Unit={}){
+@Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit){
     var clearConfirm by rememberSaveable{mutableStateOf(false)}
-    var routeView by rememberSaveable{mutableStateOf(false)}
     Column(Modifier.fillMaxSize()){
         Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically){
-            Column(Modifier.weight(1f)){Text("拾荒记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"观看记录 · ${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
+            Text("拾荒路线图",Modifier.weight(1f).testTag("history-title"),fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold)
             IconButton(onClick={clearConfirm=true}){Icon(Icons.Rounded.DeleteSweep,"清空拾荒记录",tint=Muted)}
-        }
-        Surface(onClick=onSealed,color=GroupedSurface,shape=RoundedCornerShape(16.dp),
-            modifier=Modifier.padding(start=24.dp,end=24.dp,bottom=12.dp).fillMaxWidth().testTag("open-sealed-cabinet")) {
-            Row(Modifier.heightIn(min=56.dp).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Rounded.Inventory2,null,tint=Berry,modifier=Modifier.size(22.dp))
-                Text("封存柜",Modifier.weight(1f),fontSize=15.sp,fontWeight=FontWeight.Medium)
-                Icon(Icons.Rounded.ChevronRight,null,tint=Muted,modifier=Modifier.size(20.dp))
-            }
-        }
-        if(vm.history.isNotEmpty())SingleChoiceSegmentedButtonRow(Modifier.padding(start=24.dp,end=24.dp,bottom=12.dp).fillMaxWidth().testTag("history-view-options")){
-            listOf(false to "记录",true to "路线图").forEachIndexed{index,(value,label)->
-                SegmentedButton(selected=routeView==value,onClick={routeView=value},shape=SegmentedButtonDefaults.itemShape(index,2),modifier=Modifier.testTag(if(value)"history-view-route"else"history-view-list")){Text(label)}
-            }
         }
         if(vm.history.isEmpty())Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(start=24.dp,end=24.dp,top=16.dp,bottom=112.dp),horizontalAlignment=Alignment.CenterHorizontally){
             HistoryWorldNote(Modifier.padding(bottom=20.dp).testTag("history-keeper-note"))
             Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有拾荒记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
             Spacer(Modifier.height(10.dp));Text("实际播放影片后，会自动记住进度。",fontSize=14.sp,color=Muted)
             Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("查看已登记信源")}
-        }else if(routeView)ScavengerRoute(vm,Modifier.weight(1f)) else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
+        }else LazyColumn(Modifier.testTag("history-list"),contentPadding=PaddingValues(bottom=112.dp)){
             vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
                 item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
                 items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)},{vm.sealMedia(e.media)})}
