@@ -38,15 +38,18 @@ import java.util.Locale
     val context=LocalContext.current
     val prefs=remember(context){PlaybackPreferences(context)}
     var tracks by remember(controller){mutableStateOf(controller.currentTracks)}
+    var currentItem by remember(controller){mutableStateOf(controller.currentMediaItem)}
     var parameters by remember(controller){mutableStateOf(controller.trackSelectionParameters)}
     DisposableEffect(controller){
         val listener=object:Player.Listener{
             override fun onTracksChanged(value:Tracks){tracks=value}
+            override fun onMediaItemTransition(item:MediaItem?,reason:Int){currentItem=item}
+            override fun onTimelineChanged(timeline:Timeline,reason:Int){currentItem=controller.currentMediaItem}
             override fun onTrackSelectionParametersChanged(value:TrackSelectionParameters){parameters=value}
         }
         controller.addListener(listener);onDispose{controller.removeListener(listener)}
     }
-    MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFFFFA1BC),surface=Color(0xFF202126),onSurface=Paper,onPrimary=Color(0xFF53102A),secondaryContainer=Color(0xFF67273B),onSecondaryContainer=Paper)){
+    MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFFFFA1BC),surface=Color(0xFF202126),onSurface=PlayerInk,onPrimary=Color(0xFF53102A),secondaryContainer=Color(0xFF67273B),onSecondaryContainer=PlayerInk)){
         Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
             val view=androidx.compose.ui.platform.LocalView.current
             SideEffect {
@@ -62,12 +65,13 @@ import java.util.Locale
                     interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss))
                 val panelWidth=minOf(maxWidth-24.dp,if(maxWidth>maxHeight)380.dp else 336.dp).coerceAtLeast(1.dp)
                 Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel").pointerInput(Unit) { detectTapGestures(onTap = {}) },
-                    shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=Paper) {
+                    shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=PlayerInk) {
             LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text("音轨与字幕",Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
-                    IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭音轨与字幕")}
+                    Text("播放选项",Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
+                    IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭播放选项")}
                 } }
+                item{CloudQualityChoices(controller,currentItem)}
                 item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val audio=tracks.groups.filter{it.type==C.TRACK_TYPE_AUDIO}
                 val audioAutomatic=parameters.overrides.keys.none{it.type==C.TRACK_TYPE_AUDIO}
@@ -114,7 +118,7 @@ import java.util.Locale
 @Composable fun TrackChoice(label:String,selected:Boolean,enabled:Boolean=true,choose:()->Unit){
     Row(Modifier.fillMaxWidth().background(if(selected)Color(0xFF422C37)else Color(0xFF292A31),RoundedCornerShape(14.dp))
         .selectable(selected=selected,enabled=enabled,role=Role.RadioButton,onClick=choose).heightIn(min=52.dp).padding(horizontal=16.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
-        Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(enabled)Paper else Color(0xFF9C9CA5))
+        Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(enabled)PlayerInk else Color(0xFF9C9CA5))
         if(selected)Icon(Icons.Rounded.Check,null,tint=Color(0xFFFFB4C8),modifier=Modifier.size(20.dp))
         if(!enabled)Text("不支持",fontSize=12.sp,color=Color(0xFF9C9CA5))
     }

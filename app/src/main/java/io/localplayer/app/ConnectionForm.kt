@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import androidx.compose.ui.graphics.luminance
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -65,12 +67,13 @@ import io.localplayer.core.Protocol
     ) {
         BackHandler(enabled = nested) { currentBack() }
         val sheetView = LocalView.current
-        val updateSystemBars=remember(sheetView){Runnable{
+        val lightBars=MaterialTheme.colorScheme.background.luminance()>.5f
+        val updateSystemBars=remember(sheetView,lightBars){Runnable{
             if(sheetView.isAttachedToWindow){
                 (sheetView.parent as? DialogWindowProvider)?.window?.let{window->
                     WindowCompat.getInsetsController(window,sheetView).apply{
-                        isAppearanceLightStatusBars=true
-                        isAppearanceLightNavigationBars=true
+                        isAppearanceLightStatusBars=lightBars
+                        isAppearanceLightNavigationBars=lightBars
                     }
                 }
             }

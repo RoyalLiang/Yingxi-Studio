@@ -236,7 +236,7 @@ internal object OnlineSubtitles {
                         catch(e:CancellationException){throw e}catch(_:Exception){cancellation.check();null}
                     if(sidecar!=null)return@withContext sidecar
                     if(cached!=null)return@withContext cached
-                    val file=if(uri.scheme=="localplayer"){
+                    val file=if(uri.isPlayerNetworkUri()){
                         val lease=PlaybackRegistry.preview(uri).also(cancellation::own);lease.open().also(cancellation::own)
                     }else{
                         val descriptor=context.contentResolver.openFileDescriptor(uri,"r")?:throw java.io.IOException("影片无法读取")

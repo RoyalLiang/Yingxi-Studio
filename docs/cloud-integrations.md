@@ -86,4 +86,14 @@ python3 scripts/cloud_config.py --config deploy/cloud-integrations.local.json --
 
 新范围遵守服务端明确的 206、Content-Range、长度、编码及可用 ETag；出错最多重试两次，续取缺失后缀，缺字节不跳过。签名 URL 与授权头不写日志，API 令牌不送往 CDN。只按接口返回的 expiration 或签名中的 Expires 判断到期，提前 30 秒为新范围取址，403 仍最多刷新一次；不假定固定 15–30 分钟时效，也不伪装浏览器或改写签名限速参数。
 
-三路不保证带宽增长：它可能缓解单连接限制，不能据受控测试断言真实账户、应用级配额或线路已提速。当前仍读原始文件；没有引入转码、多清晰度接口或自动降低画质。硬解优先与解码器回退沿用现有实现，不能把 HDR/Dolby Vision 检测等同于已具备任意 HDR 到 SDR 转换能力。
+三路不保证带宽增长：它可能缓解单连接限制，不能据受控测试断言真实账户、应用级配额或线路已提速。alpha.43 的原画通道仍读原始文件，不自行转码或降低画质；alpha.46 的可选平台清晰度见下节。硬解优先与解码器回退沿用现有实现，不能把 HDR/Dolby Vision 检测等同于已具备任意 HDR 到 SDR 转换能力。
+
+## Android 平台清晰度（alpha.46）
+
+阿里云盘沿用个人 OAuth 授权，通过[官方 Android SDK 的视频 Scope](https://github.com/alibaba/aliyunpan-android-sdk/blob/main/opensdk/src/main/java/com/alicloud/databox/opensdk/scope/AliyunpanVideoScope.kt)所列 `adrive/v1.0/openFile/getVideoPreviewPlayInfo` 读取完整播放档位，不调用 PDS 租户的 `/v2/file` 增值接口。用户在播放选项中主动查看档位；原画继续作为默认，选择只影响本集。
+
+只展示平台已完成且具有 HTTPS 完整播放 URL 的 LD/SD/HD/FHD/QHD 档位，不使用 `preview_url` 短预览，也不猜测分辨率、码率或账户权益。平台返回真实 `master_url` 时由 Media3 根据播放列表的带宽声明与吞吐自适应。平台只有多个完整档位时，自动档先选平台 HD（没有 HD 则选最高可用档），在初次缓冲持续 8 秒或已有画面后再次缓冲持续 3 秒时逐档降低；两次降档至少间隔 15 秒，不自动来回升档。只使用实际返回的档位，不猜测其码率或拼造 master。接口权限、会员权益、转码完成状态及当前账户是否可用均以平台实际返回为准。个人 OAuth 不代表绕过平台配额。
+
+平台 HLS 与原画分段缓存分开读取，OAuth 只发往 API，CDN 请求使用返回的 HTTPS 地址，不附带账户授权头。清晰度切换沿用队列、历史标识、位置、倍速和播放意图。CDN 返回 401/403 时重新读取完整播放源，每集每分钟最多自动恢复两次；不把新签名拼进旧片段地址，不无限重试。播放读入统计使用实际字节与耗时，公开错误不回显签名链接。
+
+合成 HTTPS/HLS 测试用于核对客户端行为；不能据此宣称真实阿里云账户拥有某种清晰度、权益或实测速度。

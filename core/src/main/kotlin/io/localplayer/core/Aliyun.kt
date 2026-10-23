@@ -41,7 +41,7 @@ class AliyunToken(val access: String, val refresh: String?, val expiresAt: Long)
 class AliyunUnauthorized : IOException("阿里云盘授权已失效，请重新授权")
 enum class AliyunOperation(val title: String) {
     AUTHORIZE("创建授权链接"), TOKEN("换取授权令牌"), ACCOUNT("读取账户"),
-    DIRECTORY("读取目录"), FILE("读取文件"), DOWNLOAD("解析播放链接"), OTHER("访问网盘")
+    DIRECTORY("读取目录"), FILE("读取文件"), DOWNLOAD("解析播放链接"), VIDEO("读取播放清晰度"), OTHER("访问网盘")
 }
 /** The only provider details allowed to cross the UI error boundary. */
 class AliyunApiFailure(operation: AliyunOperation, status: Int, code: String? = null, requestId: String? = null) :
@@ -94,6 +94,7 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
             "/adrive/v1.0/openFile/list" -> AliyunOperation.DIRECTORY
             "/adrive/v1.0/openFile/get" -> AliyunOperation.FILE
             "/adrive/v1.0/openFile/getDownloadUrl" -> AliyunOperation.DOWNLOAD
+            "/adrive/v1.0/openFile/getVideoPreviewPlayInfo" -> AliyunOperation.VIDEO
             else -> AliyunOperation.OTHER
         }
         val details = runCatching {
@@ -158,6 +159,8 @@ class AliyunApi internal constructor(private val base: HttpUrl, private val clie
         return items
     }
     fun file(token: String, drive: String, id: String, c: Cancellation) = item(post("adrive/v1.0/openFile/get", json("drive_id" to drive, "file_id" to id), token, c))
+    fun videoInfo(token:String,drive:String,id:String,c:Cancellation):AliyunVideoInfo = parseAliyunVideoInfo(
+        post("adrive/v1.0/openFile/getVideoPreviewPlayInfo",json("drive_id" to drive,"file_id" to id,"category" to "live_transcoding").apply{addProperty("url_expire_sec",900)},token,c))
     fun download(token: String, drive: String, id: String, c: Cancellation): String = downloadLocation(token,drive,id,c).url
     internal fun downloadLocation(token:String,drive:String,id:String,c:Cancellation):AliyunDownloadLocation {
         val response=post("adrive/v1.0/openFile/getDownloadUrl",json("drive_id" to drive,"file_id" to id),token,c)

@@ -46,9 +46,11 @@ class WebDavPlaybackTest {
             try {
                 // Exercise the real form, including the explicit cleartext choice.
                 ui.onNodeWithTag("nav:Sources").performClick()
-                ui.onNodeWithContentDescription("添加避难所").performClick()
+                ui.onNodeWithContentDescription("登记信源").performClick()
+                ui.onNodeWithTag("source-category-tower").performClick()
+                ui.onNodeWithTag("connection-protocol-selector").performClick()
                 ui.onNodeWithText("WebDAV").performClick()
-                ui.onNodeWithTag("manual-webdav").performClick()
+
                 ui.onNode(hasText("WebDAV 地址") and hasSetTextAction()).assertIsDisplayed()
                 // Fill form state without opening an IME that can recycle LazyColumn nodes.
                 ui.runOnIdle {
@@ -62,13 +64,13 @@ class WebDavPlaybackTest {
                 ui.onNodeWithTag("allow-http").performClick()
                 ui.onNodeWithTag("connection-form").performScrollToNode(hasText("连接并浏览"))
                 ui.onNodeWithText("连接并浏览").performClick()
-                ui.waitUntil(15000){ui.onAllNodesWithText(server.names.first()).fetchSemanticsNodes().isNotEmpty()}
+                ui.waitUntil(15000){ui.onAllNodesWithText(mediaDisplayTitle(server.names.first())).fetchSemanticsNodes().isNotEmpty()}
                 val saved=store.load().single{it.label==source.label}
                 assertEquals(server.password,store.password(saved.id));assertFalse(saved.secure)
                 // Connect the observer before the UI controller owns the video surface.
                 val future=main{MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync()}
                 val player=future.get(15,TimeUnit.SECONDS);controller=player
-                ui.onNodeWithText(server.names.first()).performClick()
+                ui.onNodeWithText(mediaDisplayTitle(server.names.first())).performClick()
                 await(detail={main{"state=${player.playbackState}, playing=${player.isPlaying}, ready=${player.playWhenReady}, suppressed=${player.playbackSuppressionReason}, items=${player.mediaItemCount}, title=${player.currentMediaItem?.mediaMetadata?.title}, duration=${player.duration}, video=${player.videoSize.width}x${player.videoSize.height}, error=${player.playerError?.cause}, rangeRequests=${server.positions.size}"}}){main{player.isPlaying&&player.videoSize.width>0&&player.duration>90000}}
                 await{PlaybackMetrics.snapshot().firstFrameMs!=null}
                 println("DAV first frame: ${PlaybackMetrics.snapshot().firstFrameMs} ms")
@@ -82,7 +84,7 @@ class WebDavPlaybackTest {
                         assertNotNull(kotlinx.coroutines.withTimeout(12000){preview.get(uri,60000)})
                     }
                     }finally{PlaybackRegistry.remove(uri)}
-                    assertEquals("Seek previews reuse one file probe",1,server.previewProbes.get()-probesBefore)
+                    assertEquals("Seek previews add no separate one-byte metadata probes",0,server.previewProbes.get()-probesBefore)
                 }finally{preview.close()}
                 ui.onNodeWithContentDescription("播放设置").performClick()
                 val panel=ui.onNodeWithTag("audio-subtitle-panel").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
@@ -100,7 +102,7 @@ class WebDavPlaybackTest {
                     File(context.getExternalFilesDir(null),"audio-subtitle-panel.png").outputStream().use{display.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
                 }finally{display.recycle()}
                 ui.onNodeWithText("播放速度").assertDoesNotExist()
-                ui.onNodeWithContentDescription("关闭音轨与字幕").performClick()
+                ui.onNodeWithContentDescription("关闭播放选项").performClick()
                 ui.onNodeWithTag("playback-speed").performClick()
                 ui.onNodeWithTag("speed-option-1.0",useUnmergedTree=true).performClick()
                 assertEquals(2,main{player.mediaItemCount})

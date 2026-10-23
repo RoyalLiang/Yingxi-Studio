@@ -43,22 +43,34 @@ import androidx.compose.ui.window.DialogWindowProvider
 
 // finesse · register=product · shell=phone-library · palette=warm-paper+berry · material=refractive-glass · motion=fade · density=4
 // Native Android surfaces inspired by Apple HIG. No Apple platform assets or APIs.
-val Paper = Color(0xFFF3EFE6)
-val Ink = Color(0xFF2B302D)
-val Muted = Color(0xFF65685F)
-val Berry = Color(0xFFB91E4B)
-val GroupedSurface = Color(0xFFFCF9F2)
-val Hairline = Color(0xFF868B7B).copy(alpha = .15f)
+val Paper:Color @Composable get()=MaterialTheme.colorScheme.background
+val Ink:Color @Composable get()=MaterialTheme.colorScheme.onSurface
+val Muted:Color @Composable get()=MaterialTheme.colorScheme.onSurfaceVariant
+val Berry:Color @Composable get()=MaterialTheme.colorScheme.primary
+val GroupedSurface:Color @Composable get()=MaterialTheme.colorScheme.surface
+val Hairline:Color @Composable get()=MaterialTheme.colorScheme.outline
 
 @Composable
 fun PlayerTheme(content: @Composable () -> Unit) {
+    val dark=libraryDarkMode()
+    val view=LocalView.current
+    SideEffect {
+        val activity=generateSequence(view.context){(it as? android.content.ContextWrapper)?.baseContext}.filterIsInstance<android.app.Activity>().firstOrNull()
+        activity?.window?.let{window->
+            androidx.core.view.WindowCompat.getInsetsController(window,view).apply{isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark}
+        }
+    }
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Berry, onPrimary = Color.White,
-            primaryContainer = Color(0xFFF9E6EC), onPrimaryContainer = Color(0xFF721831),
-            background = Paper, surface = GroupedSurface, onSurface = Ink, onBackground = Ink,
-            secondary = Muted, secondaryContainer = Color(0xFFE6E4D9), onSecondaryContainer = Ink,
-            surfaceVariant = Color(0xFFEDE9DF), onSurfaceVariant = Muted, outline = Hairline,
+        colorScheme = if(dark)darkColorScheme(
+            primary=Color(0xFFFFA1BC),onPrimary=Color(0xFF53102A),primaryContainer=Color(0xFF67273B),onPrimaryContainer=Color(0xFFFFD9E3),
+            background=Color(0xFF191C1A),surface=Color(0xFF232824),onSurface=Color(0xFFE8E8DF),onBackground=Color(0xFFE8E8DF),
+            secondary=Color(0xFFBBC0B4),secondaryContainer=Color(0xFF383F37),onSecondaryContainer=Color(0xFFE3E7DA),
+            surfaceVariant=Color(0xFF30372F),onSurfaceVariant=Color(0xFFBBC0B4),outline=Color(0xFF8D9788).copy(alpha=.30f)
+        ) else lightColorScheme(
+            primary=Color(0xFFB91E4B),onPrimary=Color.White,primaryContainer=Color(0xFFF9E6EC),onPrimaryContainer=Color(0xFF721831),
+            background=Color(0xFFF3EFE6),surface=Color(0xFFFCF9F2),onSurface=Color(0xFF2B302D),onBackground=Color(0xFF2B302D),
+            secondary=Color(0xFF65685F),secondaryContainer=Color(0xFFE6E4D9),onSecondaryContainer=Color(0xFF2B302D),
+            surfaceVariant=Color(0xFFEDE9DF),onSurfaceVariant=Color(0xFF65685F),outline=Color(0xFF868B7B).copy(alpha=.15f)
         ),
         typography = Typography(
             headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp),
@@ -69,7 +81,7 @@ fun PlayerTheme(content: @Composable () -> Unit) {
             labelLarge = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
         ),
         shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(18.dp), large = RoundedCornerShape(26.dp), extraLarge = RoundedCornerShape(32.dp)),
-        content = content,
+        content = { CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) { content() } },
     )
 }
 
@@ -77,7 +89,7 @@ internal val LocalGlassBackdrop = staticCompositionLocalOf<GraphicsLayer?> { nul
 
 /** The sampled scene excludes the glass itself, preventing recursive capture. */
 @Composable
-fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = false, radius: Int = 26, content: @Composable BoxScope.() -> Unit) {
+fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = MaterialTheme.colorScheme.background.luminance()<.2f, radius: Int = 26, content: @Composable BoxScope.() -> Unit) {
     val scene = LocalGlassBackdrop.current
     val blurred = rememberGraphicsLayer()
     val lens = remember { RuntimeShader("""
@@ -96,7 +108,8 @@ fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = false, radius: I
     }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     val wash = remember(dark) { Brush.linearGradient(if(dark)listOf(Color.White.copy(alpha=.07f),Color.Transparent)else listOf(Color.White.copy(alpha=.46f),Color.White.copy(alpha=.04f))) }
-    val rim = remember(dark) { Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark).3f else .96f),Color.White.copy(alpha=if(dark).08f else .24f),Hairline)) }
+    val hairline=Hairline
+    val rim = remember(dark,hairline) { Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark).3f else .96f),Color.White.copy(alpha=if(dark).08f else .24f),hairline)) }
     val shape = RoundedCornerShape(radius.dp)
     Box(modifier
         .onGloballyPositioned { offset = it.positionInRoot() }
@@ -151,7 +164,7 @@ fun SheetGlassEffect() {
 }
 
 @Composable
-fun ChoicePill(label: String, selected: Boolean, modifier: Modifier = Modifier, dark: Boolean = false, onClick: () -> Unit) {
+fun ChoicePill(label: String, selected: Boolean, modifier: Modifier = Modifier, dark: Boolean = MaterialTheme.colorScheme.background.luminance()<.2f, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()

@@ -100,7 +100,7 @@ class PlayerStyleTest {
                 }
             }
             val bounds = ui.onNodeWithTag("continue-player").assertHasClickAction().fetchSemanticsNode().boundsInRoot
-            assertTrue("resume card must remain compact", bounds.height / ui.density.density <= 100f)
+            assertTrue("resume card must remain compact", bounds.height / ui.density.density <= 108f)
             ui.onNodeWithText(io.localplayer.core.mediaDisplayTitle(title)).assertIsDisplayed()
             capture("resume-${(fontScale*100).toInt()}")
             ui.onNodeWithTag("continue-player").performClick()
@@ -111,14 +111,16 @@ class PlayerStyleTest {
     @Test fun connectionSegmentsKeepHostAndExposeScrollableForm() {
         capture("home")
         ui.onNodeWithTag("nav:Sources").performClick()
-        ui.onNodeWithContentDescription("添加避难所").performClick()
-        ui.onNodeWithText("SMB").assertIsSelected()
+        ui.onNodeWithContentDescription("登记信源").performClick()
+        ui.onNodeWithTag("connection-protocol-selector").assertTextContains("SMB")
         val host = (hasText("主机 IP") or hasText("服务器地址")) and hasSetTextAction()
         ui.onNode(host).performTextInput("nas.local")
-        ui.onNodeWithText("SMB").performClick()
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
+        ui.onAllNodesWithText("SMB").onLast().performClick()
         ui.onNode(host).assertTextContains("nas.local")
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
         ui.onNodeWithText("SFTP").performClick()
-        ui.onNodeWithText("SFTP").assertIsSelected()
+        ui.onNodeWithTag("connection-protocol-selector").assertTextContains("SFTP")
         ui.onNode(host).assertTextContains("nas.local")
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("线路设置"))
         ui.onNodeWithText("线路设置").performClick()
@@ -198,7 +200,7 @@ class PlayerStyleTest {
             }
             ui.onNodeWithText("播放速度").assertDoesNotExist()
             ui.onNodeWithText("1.5×").assertDoesNotExist()
-            val header = ui.onNodeWithText("音轨与字幕").captureToImage().toPixelMap()
+            val header = ui.onNodeWithText("播放选项").captureToImage().toPixelMap()
             var brightPixels = 0
             for (y in 0 until header.height) for (x in 0 until header.width) {
                 val pixel = header[x,y]

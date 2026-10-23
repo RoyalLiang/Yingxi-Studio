@@ -55,7 +55,7 @@ class MainActivity:ComponentActivity(){
     override fun onStart(){super.onStart();openingPlayer=false}
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        // The library uses a light palette even when Android is in dark mode.
+        // PlayerTheme applies the persisted library appearance to system-bar icons.
         enableEdgeToEdge(statusBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT),
             navigationBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT))
         configureLaunchTransition(savedInstanceState==null)

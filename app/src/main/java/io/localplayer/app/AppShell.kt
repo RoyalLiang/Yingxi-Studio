@@ -148,6 +148,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
 
 @Composable private fun HistoryScreen(vm:LibraryViewModel,openLocal:()->Unit,onSources:()->Unit,onSealed:()->Unit={}){
     var clearConfirm by rememberSaveable{mutableStateOf(false)}
+    var routeView by rememberSaveable{mutableStateOf(false)}
     Column(Modifier.fillMaxSize()){
         Row(Modifier.fillMaxWidth().padding(start=24.dp,end=16.dp,top=20.dp,bottom=20.dp),verticalAlignment=Alignment.CenterVertically){
             Column(Modifier.weight(1f)){Text("拾荒记录",fontSize=32.sp,letterSpacing=(-.7).sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(8.dp));Text(if(vm.history.isEmpty())"每个观影时刻，都有迹可循。"else"观看记录 · ${vm.history.size} 部影片 · 仅保存在本机",fontSize=14.sp,color=Muted)}
@@ -161,12 +162,17 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                 Icon(Icons.Rounded.ChevronRight,null,tint=Muted,modifier=Modifier.size(20.dp))
             }
         }
+        if(vm.history.isNotEmpty())SingleChoiceSegmentedButtonRow(Modifier.padding(start=24.dp,end=24.dp,bottom=12.dp).fillMaxWidth().testTag("history-view-options")){
+            listOf(false to "记录",true to "路线图").forEachIndexed{index,(value,label)->
+                SegmentedButton(selected=routeView==value,onClick={routeView=value},shape=SegmentedButtonDefaults.itemShape(index,2),modifier=Modifier.testTag(if(value)"history-view-route"else"history-view-list")){Text(label)}
+            }
+        }
         if(vm.history.isEmpty())Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(start=24.dp,end=24.dp,top=16.dp,bottom=112.dp),horizontalAlignment=Alignment.CenterHorizontally){
             HistoryWorldNote(Modifier.padding(bottom=20.dp).testTag("history-keeper-note"))
             Icon(Icons.Rounded.History,null,Modifier.size(44.dp),tint=Muted);Spacer(Modifier.height(20.dp));Text("还没有拾荒记录",fontSize=20.sp,fontWeight=FontWeight.Medium)
             Spacer(Modifier.height(10.dp));Text("实际播放影片后，会自动记住进度。",fontSize=14.sp,color=Muted)
             Spacer(Modifier.height(24.dp));Button(onClick=openLocal,shape=RoundedCornerShape(16.dp)){Text("打开本机视频")};TextButton(onClick=onSources){Text("查看已登记信源")}
-        }else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
+        }else if(routeView)ScavengerRoute(vm,Modifier.weight(1f)) else LazyColumn(contentPadding=PaddingValues(bottom=112.dp)){
             vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
                 item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
                 items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)},{vm.sealMedia(e.media)})}
@@ -184,7 +190,6 @@ internal fun historyDay(timestamp:Long):String{
 }
 
 @Composable private fun HistoryRow(entry:HistoryEntry,onPlay:()->Unit,onRestart:()->Unit,onRemove:()->Unit,onSeal:(()->Unit)?=null){
-    var menu by remember{mutableStateOf(false)}
     Surface(onClick=onPlay,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=4.dp).testTag("history-row:${entry.media.key}"),
         color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
         Column{
@@ -195,15 +200,8 @@ internal fun historyDay(timestamp:Long):String{
                     Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
                 Icon(Icons.Rounded.PlayArrow,null,tint=Berry,modifier=Modifier.size(24.dp))
-                Box{IconButton(onClick={menu=true}){Icon(Icons.Rounded.MoreHoriz,"记录操作 ${mediaDisplayTitle(entry.media.title)}",tint=Muted,modifier=Modifier.size(20.dp))}
-                    DropdownMenu(expanded=menu,onDismissRequest={menu=false}){
-                        DropdownMenuItem(text={Text("从头播放")},onClick={menu=false;onRestart()})
-                        if(onSeal!=null)DropdownMenuItem(text={Text(sealActionLabel(false))},onClick={menu=false;onSeal()})
-                DropdownMenuItem(text={Text("移除此记录")},onClick={menu=false;onRemove()})
-                    }
-                }
-            }
-            LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry.copy(alpha=if(entry.completed).35f else 1f),trackColor=Berry.copy(alpha=.06f),drawStopIndicator={})
+                HistoryActionMenu(entry,onRestart,onRemove,onSeal)
         }
-    }
+        LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(2.dp),color=Berry.copy(alpha=if(entry.completed).35f else 1f),trackColor=Berry.copy(alpha=.06f),drawStopIndicator={})
+    }}
 }
