@@ -61,7 +61,7 @@ class PlaybackFixTest {
                     PlaybackOptions(player,{}, {})
                 }
             }}}
-            ui.onNodeWithText("音轨与字幕").assertIsDisplayed()
+            ui.onNodeWithText("播放选项").assertIsDisplayed()
             ui.onNodeWithText("播放速度").assertDoesNotExist()
             ui.onNodeWithText("1.5×").assertDoesNotExist()
             ui.onNodeWithTag("playback-settings-list").performScrollToNode(hasText("关闭字幕"))
@@ -97,7 +97,7 @@ class PlaybackFixTest {
             ui.onNodeWithTag("directory-actions").assertDoesNotExist()
             ui.onNodeWithTag("source-menu:"+source.id).assertIsDisplayed().performClick()
             ui.onNodeWithText("路标").assertIsDisplayed()
-            ui.onNodeWithText("信源").assertIsDisplayed()
+            ui.onNodeWithText("${source.stationKind}设置").assertIsDisplayed()
 
         }finally{instrumentation.runOnMainSync{owner.clear()}}
     }

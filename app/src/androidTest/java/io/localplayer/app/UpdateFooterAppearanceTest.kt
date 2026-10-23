@@ -13,16 +13,18 @@ import java.io.File
 class UpdateFooterAppearanceTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     @Test fun footerSharesPageColorAndCheckButtonStaysFilledAndFixed(){
+        var pageColor=androidx.compose.ui.graphics.Color.Unspecified
+        var accent=androidx.compose.ui.graphics.Color.Unspecified
         ui.runOnUiThread{
             val vm=SettingsViewModel(ui.activity.application)
-            ui.activity.setContent{PlayerTheme{VersionSettingsPage(vm,true,{},{},{})}}
+            ui.activity.setContent{PlayerTheme{pageColor=Paper;accent=Berry;VersionSettingsPage(vm,true,{},{},{})}}
         }
         val footer=ui.onNodeWithTag("update-footer").captureToImage().toPixelMap()
-        assertEquals("Footer must use the page background",Paper.toArgb(),footer[4,4].toArgb())
-        assertEquals("No separate separator band",Paper.toArgb(),footer[footer.width/2,0].toArgb())
+        assertEquals("Footer must use the page background",pageColor.toArgb(),footer[4,4].toArgb())
+        assertEquals("No separate separator band",pageColor.toArgb(),footer[footer.width/2,0].toArgb())
         val button=ui.onNodeWithTag("check-updates").assertIsDisplayed()
         val pixels=button.captureToImage().toPixelMap()
-        assertEquals("Check button must retain its filled accent",Berry.toArgb(),pixels[pixels.width/4,pixels.height/3].toArgb())
+        assertEquals("Check button must retain its filled accent",accent.toArgb(),pixels[pixels.width/4,pixels.height/3].toArgb())
         val before=button.fetchSemanticsNode().boundsInRoot
         ui.onNodeWithTag("current-letter-scroll").performTouchInput{swipeUp()}
         assertEquals(before,button.fetchSemanticsNode().boundsInRoot)

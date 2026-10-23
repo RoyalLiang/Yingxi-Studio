@@ -89,7 +89,7 @@ internal object MediaThumbnails {
             if (local != null) {
                 retriever.setDataSource(context, local)
             } else {
-                preview = if (activeUri?.scheme == "localplayer") PlaybackRegistry.preview(activeUri) else {
+                preview = if (activeUri?.isPlayerNetworkUri() == true) PlaybackRegistry.preview(activeUri) else {
                     val saved = source ?: return@withContext null
                     val path = media.path ?: return@withContext null
                     // Never open an authentication UI or bypass SFTP trust to obtain artwork.

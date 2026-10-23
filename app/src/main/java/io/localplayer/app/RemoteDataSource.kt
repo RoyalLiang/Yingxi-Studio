@@ -22,11 +22,12 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
-class PlaybackLease(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=AppConnectors(),private val prefetch:Boolean=true) : java.io.Closeable {
+class PlaybackLease internal constructor(val source: Source, val credentials: Credentials, val path: String, private val connector:Connector=AppConnectors(),private val prefetch:Boolean=true,internal val adaptive:CloudAdaptiveState=CloudAdaptiveState()) : java.io.Closeable {
     private val cancellation=Cancellation()
     private var session: RemoteSession?=null
     private var closed=false
     val resumeKey get()="${source.id}:$path"
+    internal fun freshTransport()=PlaybackLease(source,credentials,path,connector,prefetch,adaptive)
     @Synchronized fun open(position:Long=0): RemoteFile {
         if(closed) throw IOException("播放已结束")
         val connected=session ?: connector.connect(source,credentials,cancellation).also { session=it }
@@ -63,10 +64,10 @@ object PlaybackRegistry {
     // Preserve the opaque registration for previous/next, but close its old transport.
     // Replacement is atomic: a rapid jump back gets a fresh lease, never one closing later.
     fun releaseConnection(uri:Uri?){
-        if(uri?.scheme!="localplayer")return
+        if(uri?.isPlayerNetworkUri()!=true)return
         var previous:PlaybackLease?=null
         leases.computeIfPresent(uri.authority!!){_,lease->
-            previous=lease;PlaybackLease(lease.source,lease.credentials,lease.path)
+            previous=lease;lease.freshTransport()
         }
         previous?.let{lease->closer.execute{lease.close()}}
     }

@@ -20,6 +20,8 @@ class PlaybackService:MediaSessionService(){
  private var privateObserver:(()->Unit)?=null
  private var videoRecovery:VideoDecoderRecovery?=null
     private var nextEpisode:NextEpisodePrefetch?=null
+    private var cloudRecovery:CloudStreamRecovery?=null
+    private var cloudAdaptive:CloudAdaptiveController?=null
     private lateinit var store:SourceStore
     private lateinit var history:HistoryStore
     private var requestIds=setOf<String>()
@@ -36,11 +38,13 @@ class PlaybackService:MediaSessionService(){
         val renderers=playbackRenderers(this)
  val player=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
-            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,RemoteDataSource.Factory()),PlaybackExtractors(this)))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,PlaybackNetworkFactory()),PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(player,renderers)
         nextEpisode=NextEpisodePrefetch(this)
+        cloudRecovery=CloudStreamRecovery(player)
+        cloudAdaptive=CloudAdaptiveController(player)
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
             if(protected){player.pause();player.stop();player.clearMediaItems()}
@@ -66,7 +70,7 @@ class PlaybackService:MediaSessionService(){
             override fun onMediaItemTransition(item:MediaItem?,reason:Int){
                 nextEpisode?.transition()
                 val next=item?.localConfiguration?.uri
-                player.setWakeMode(if(next?.scheme=="localplayer")C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
+                player.setWakeMode(if(next?.isPlayerNetworkUri()==true)C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
                 if(current!=next){
                     OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next
                     player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverrides()
@@ -145,7 +149,7 @@ class PlaybackService:MediaSessionService(){
     override fun onDestroy(){
         privateObserver?.invoke();privateObserver=null
         val owned=requestIds
-        OnlineSubtitles.cancel();nextEpisode?.close();nextEpisode=null;persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
+        OnlineSubtitles.cancel();nextEpisode?.close();nextEpisode=null;cloudRecovery?.close();cloudRecovery=null;cloudAdaptive?.close();cloudAdaptive=null;persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.
         // This service only releases requests actually adopted by its timeline.
         PlaybackRequests.retainActive(emptySet());owned.forEach(PlaybackRequests::remove)

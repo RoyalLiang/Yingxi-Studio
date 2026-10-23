@@ -289,7 +289,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                                 }
                             }
                         }
-                        TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("音字幕", color = PlayerInk) }
+                        TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("选项", color = PlayerInk) }
                         PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() })
                         TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
                         PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
@@ -302,7 +302,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 .padding(end=10.dp).width(railWidth).heightIn(max=(configuration.screenHeightDp.dp-184.dp).coerceAtLeast(120.dp))
                 .clip(RoundedCornerShape(18.dp)).background(Color(0x66171C20)).verticalScroll(rememberScrollState()).testTag("portrait-playback-rail")){
                 PlayerRailAction(Icons.Rounded.Speed,speedLabel(speed),"播放速度"){speedOpen=true}
-                PlayerRailAction(Icons.Rounded.Subtitles,"音字幕","播放设置"){settings=true}
+                PlayerRailAction(Icons.Rounded.Subtitles,"选项","播放设置"){settings=true}
                 PlayerRailAction(Icons.Rounded.PlaylistPlay,"选集","选集 ${index+1}/${items.size}",items.isNotEmpty()){queue=true}
                 PlayerRailAction(if(fill)Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio,"全屏",if(fill)"保留原比例"else"铺满屏幕"){fill=!fill}
                 PlayerRailAction(Icons.Rounded.ScreenRotation,"旋转","横竖屏切换"){rotate()}

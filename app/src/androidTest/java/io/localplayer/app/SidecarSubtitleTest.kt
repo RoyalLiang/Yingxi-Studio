@@ -39,7 +39,9 @@ class SidecarSubtitleTest {
             instrumentation.runOnMainSync{files.folders.firstOrNull{it.tree==tree}?.let(files::remove)}
         }
     }
-    @Test fun sidecarUsesIndependentConnectionAndPreservesPrimaryLease() {
+ @Test fun sidecarUsesIndependentConnectionAndPreservesPrimaryLease()=networkSidecar(false)
+ @Test fun platformQualitySidecarUsesOriginalContextAndPreservesPrimaryLease()=networkSidecar(true)
+ private fun networkSidecar(platformQuality:Boolean) {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val source=Source(label="Subtitle fixture",protocol=Protocol.WEBDAV,host="example.invalid",root="/",secure=true)
         val uri=PlaybackRegistry.add(source,Credentials("synthetic"),"Films/Film.mkv","Film.mkv")
@@ -60,7 +62,11 @@ class SidecarSubtitleTest {
         val cancellation=Cancellation()
         var result:java.io.File?=null
         try {
-            result=SidecarSubtitles.find(context,MediaRef("${source.id}:Films/Film.mkv","Film.mkv",source.label,source.id,"Films/Film.mkv"),uri,cancellation,ShooterSubtitles(),false,connector)
+ val current=if(platformQuality)uri.buildUpon().scheme(CLOUD_STREAM_SCHEME).appendQueryParameter("quality","HD").build()else uri
+ assertTrue(current.isPlayerNetworkUri())
+ val preview=PlaybackRegistry.preview(current)
+ try{assertEquals(primary.source,preview.source);assertEquals(primary.path,preview.path);assertNotSame(primary,preview)}finally{preview.close()}
+ result=SidecarSubtitles.find(context,MediaRef("${source.id}:Films/Film.mkv","Film.mkv",source.label,source.id,"Films/Film.mkv"),current,cancellation,ShooterSubtitles(),false,connector)
             assertNotNull(result);assertTrue(result!!.readText().contains("同目录字幕"))
             assertEquals("Films/Film.chs.srt",requested);assertTrue(closed)
             assertSame(primary,PlaybackRegistry.get(uri));cancellation.check()

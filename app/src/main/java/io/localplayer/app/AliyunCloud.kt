@@ -90,7 +90,7 @@ internal object AliyunCloud {
     private fun encode(token: AliyunToken) = JSONObject().put("access", token.access).put("refresh", token.refresh).put("expiresAt", token.expiresAt).toString()
     private fun decode(value: String): AliyunToken = try { JSONObject(value).let { AliyunToken(it.getString("access"), it.optString("refresh").takeIf { text -> text.isNotBlank() && text != "null" }, it.getLong("expiresAt")) } }
         catch (_: Exception) { throw AliyunUnauthorized() }
-    fun connector(source: Source, parallelism:Int?=null): Connector = AliyunConnector(api, object : AliyunAccess {
+    private fun access(source:Source):AliyunAccess = object : AliyunAccess {
         override fun <T> authorized(cancellation: Cancellation, action: (String) -> T): T {
             fun token(force: Boolean): AliyunToken = cancellation.withLock(accountLock) {
                 val encoded = store.password(source.id) ?: throw AliyunUnauthorized()
@@ -106,7 +106,13 @@ internal object AliyunCloud {
             val current = token(false)
             return try { action(current.access) } catch (_: AliyunUnauthorized) { action(token(true).access) }
         }
-    }, readOptions={CloudReadPreferences(context).options().let{if(parallelism==null)it else it.copy(workers=parallelism)}}) { id, name -> rememberFolderName(source.id,id,name) }
+    }
+    fun connector(source:Source,parallelism:Int?=null):Connector = AliyunConnector(api,access(source),readOptions={CloudReadPreferences(context).options().let{if(parallelism==null)it else it.copy(workers=parallelism)}}){id,name->rememberFolderName(source.id,id,name)}
+    internal fun videoInfo(source:Source,path:String,cancellation:Cancellation):AliyunVideoInfo {
+        require(source.protocol==Protocol.ALIYUN)
+        val id=Paths.clean(path).substringAfterLast('/').takeIf{it.isNotBlank()}?:throw java.io.IOException("未找到影片标识")
+        return access(source).authorized(cancellation){api.videoInfo(it,source.domain,id,cancellation)}
+    }
 }
 
 internal class AppConnectors : Connector {

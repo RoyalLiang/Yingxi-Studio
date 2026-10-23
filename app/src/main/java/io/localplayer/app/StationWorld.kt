@@ -162,17 +162,18 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     val mapHeight=maxOf(340.dp,nodeHeight*3.8f+64.dp)
     BoxWithConstraints(Modifier.fillMaxWidth().height(mapHeight).clip(RoundedCornerShape(24.dp)).background(GroupedSurface).testTag("world-map")){
         val width=maxWidth;val height=maxHeight
+        val mapMuted=Muted;val mapAccent=Berry
         Canvas(Modifier.fillMaxSize()) {
             // Faint survey grid; solid routes are known, dotted routes remain story leads.
-            for(i in 1..6)drawLine(Muted.copy(alpha=.06f),Offset(size.width*i/7,0f),Offset(size.width*i/7,size.height),1.dp.toPx())
-            for(i in 1..5)drawLine(Muted.copy(alpha=.06f),Offset(0f,size.height*i/6),Offset(size.width,size.height*i/6),1.dp.toPx())
+            for(i in 1..6)drawLine(mapMuted.copy(alpha=.06f),Offset(size.width*i/7,0f),Offset(size.width*i/7,size.height),1.dp.toPx())
+            for(i in 1..5)drawLine(mapMuted.copy(alpha=.06f),Offset(0f,size.height*i/6),Offset(size.width,size.height*i/6),1.dp.toPx())
             world.edges.forEach { edge ->
                 val from=world.places.first{it.id==edge.from};val to=world.places.first{it.id==edge.to}
-                drawLine(if(edge.known)Berry.copy(alpha=.5f) else Muted.copy(alpha=.35f),Offset((width*from.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*from.y+nodeHeight/2).toPx()),Offset((width*to.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*to.y+nodeHeight/2).toPx()),1.2.dp.toPx(),pathEffect=if(edge.known)null else PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(),5.dp.toPx())))
+                drawLine(if(edge.known)mapAccent.copy(alpha=.5f) else mapMuted.copy(alpha=.35f),Offset((width*from.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*from.y+nodeHeight/2).toPx()),Offset((width*to.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)).toPx()+56.dp.toPx(),((height-nodeHeight)*to.y+nodeHeight/2).toPx()),1.2.dp.toPx(),pathEffect=if(edge.known)null else PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(),5.dp.toPx())))
             }
         }
         world.places.forEach { place ->
-            Surface(onClick={select(place.id)},color=if(place.id==selectedId)Berry else Paper,contentColor=if(place.id==selectedId)Color.White else Ink,
+            Surface(onClick={select(place.id)},color=if(place.id==selectedId)Berry else Paper,contentColor=if(place.id==selectedId)MaterialTheme.colorScheme.onPrimary else Ink,
                 shape=RoundedCornerShape(14.dp),modifier=Modifier.offset(x=(width*place.x-56.dp).coerceIn(6.dp,(width-118.dp).coerceAtLeast(6.dp)),y=(height-nodeHeight)*place.y).width(112.dp).height(nodeHeight)
                     .testTag("world-node:${place.id}").semantics{selected=place.id==selectedId;contentDescription=place.name.inLanguage(language)}) {
                 Box(Modifier.fillMaxSize().padding(horizontal=5.dp,vertical=8.dp),contentAlignment=Alignment.Center) {

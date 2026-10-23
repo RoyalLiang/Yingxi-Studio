@@ -11,7 +11,7 @@ import java.io.IOException
 internal object SidecarSubtitles {
     private const val LIMIT=4*1024*1024
     fun find(context:Context,media:MediaRef,uri:Uri,c:Cancellation,provider:ShooterSubtitles,bilingual:Boolean,connector:Connector=AppConnectors()):File? {
-        val content:Pair<String,ByteArray>?=if(uri.scheme=="localplayer") {
+        val content:Pair<String,ByteArray>?=if(uri.isPlayerNetworkUri()) {
             val lease=PlaybackRegistry.get(uri)
             connector.connect(lease.source,lease.credentials,c).use { session->
                 val entries=session.list(lease.path.substringBeforeLast('/',"")).filter{!it.directory}.take(2000)

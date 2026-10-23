@@ -162,7 +162,7 @@ private class AndroidPreviewDecoder(private val context: Context, private val ur
     private val retriever = MediaMetadataRetriever()
     private val closed = AtomicBoolean(false)
     private var prepared = false
-    private val data = if (uri.scheme == "localplayer") RemotePreviewData(PlaybackRegistry.preview(uri)) else null
+    private val data = if (uri.isPlayerNetworkUri()) RemotePreviewData(PlaybackRegistry.preview(uri)) else null
     override fun frame(timeMs: Long): Bitmap? {
         check(!closed.get())
         if (!prepared) {
