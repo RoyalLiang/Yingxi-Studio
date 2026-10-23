@@ -59,6 +59,8 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     var settingsOpen by rememberSaveable{mutableStateOf(false)}
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
     var practiceOpen by rememberSaveable{mutableStateOf(false)}
+    val readingContext = androidx.compose.ui.platform.LocalContext.current
+    var readingOpen by rememberSaveable{mutableStateOf(false)}
     var tuningOpen by rememberSaveable{mutableStateOf(false)}
     var tuningPerson by rememberSaveable{mutableStateOf<String?>(null)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
@@ -66,6 +68,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     var cabinetOpen by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(SealedMedia.unlocked){vm.closeSealed();localFiles.closeSealed()}
     val states=rememberSaveableStateHolder()
+    if(readingOpen){RouteReadingPage{readingOpen=false};return}
     if(tuningOpen){
         val person=tuningPerson
         if(person!=null){BackHandler{tuningPerson=null};StationWorldPage(initialPersonId=person){tuningPerson=null}}
@@ -104,7 +107,11 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources}){cabinetOpen=true}
-                    AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true}){tab=AppTab.Home}
+                    AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true},openReading={place->
+                        vm.stopDiscovery();vm.cancelOperation()
+                        if(place!=null){val store=RouteReadingStore(readingContext);store.save(store.restore(RouteRecords.load(readingContext),place).first)}
+                        readingOpen=true
+                    }){tab=AppTab.Home}
                 }}
             }
         }

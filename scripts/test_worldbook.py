@@ -6,6 +6,25 @@ from pathlib import Path
 from worldbook import validate, render_glossary
 
 class WorldbookTests(unittest.TestCase):
+    def test_rejects_invalid_reading_records_and_unadopted_proposals(self):
+        for change,message in [
+            (lambda w:w['readingRounds'].pop(),'Six reading'),
+            (lambda w:w['readingRounds'][0].update(revision=False),'revision'),
+            (lambda w:w['readingRounds'][0].update(place='missing'),'place'),
+            (lambda w:w['readingRounds'][1].update(place='station'),'place'),
+            (lambda w:w['readingRounds'][0]['records'].pop(),'Two reading'),
+            (lambda w:w['readingRounds'][0]['records'][0].update(term='missing'),'source'),
+            (lambda w:w['readingRounds'][0]['records'][0].update(field='other'),'source'),
+            (lambda w:w['readingRounds'][0]['records'][0].update(verdict='Confirmed'),'proposal'),
+            (lambda w:w['readingRounds'][0]['records'][1].update(verdict='invalid'),'verdict'),
+            (lambda w:w['readingRounds'][0]['records'][0]['claim'].update(en=''),'Chinese.*English'),
+            (lambda w:w['readingRounds'][0]['records'][1].update(id='record_01a'),'identity'),
+            (lambda w:w['readingRounds'][1].update(id='route_reading_01'),'identity'),
+        ]:
+            with self.subTest(message=message):
+                atlas=copy.deepcopy(self.atlas);change(atlas)
+                with self.assertRaisesRegex(ValueError,message):self.check(atlas)
+
     def test_tuning_content_rejects_invalid_marks_missing_notes_and_duplicate_ids(self):
         for change,message in [
             (lambda w:w['tuningSignals'].pop(),'Six tuning'),

@@ -585,6 +585,14 @@
         "zh": "迟灯把调谐练习摆在片匣旁。旋钮和步进键都能调准纸上的信号，短笺也能直接翻开；离开时声音停下，刻度留下。",
         "en": "Chideng set a tuning practice beside the cases. The dial and step buttons can align its paper signal, while the notes remain open to read directly. Leave, and the sound stops; the dial position stays."
       }
+    },
+    {
+      "id": "chronicle_050",
+      "version": "0.2.0-alpha.50",
+      "text": {
+        "zh": "弥途在探索桌上摆开两张纸签：路标对读可以逐条判断、查看原文，离开后接着读；地图的虚线仍由实地证据说了算。",
+        "en": "Mitu lays two slips on the exploration desk. Compare their claims, read the originals and return to your place; dotted routes still wait for field evidence."
+      }
     }
   ],
   "boundary": {
@@ -1376,6 +1384,17 @@
         "zh": "探索中的离线调谐练习。旋钮与步进键调整生成的图形信号；随包短笺可以直接阅读，不扫描设备或接收真实无线电。",
         "en": "An offline tuning practice in Explore. The dial and step buttons adjust generated signal graphics. Bundled notes can be read directly; no devices are scanned and no real radio is received."
       }
+    },
+    {
+      "id": "route_reading",
+      "name": {
+        "zh": "路标对读",
+        "en": "Read the waymarks"
+      },
+      "meaning": {
+        "zh": "离线对照随包记录，辨认已有依据与仍待核实的说法；练习不改变地图证据或章节。",
+        "en": "An offline comparison of bundled records and claims. Practice does not change map evidence or chapters."
+      }
     }
   ],
   "canonAdoption": {
@@ -1577,6 +1596,14 @@
       "text": {
         "zh": "我把旋钮旁的刻线补深了一点。听不见也没关系，纸上的两条线靠在一起，手就知道该停了。",
         "en": "I darkened the marks beside the dial. You do not have to hear a thing: when the two lines on paper meet, your hand knows where to stop."
+      }
+    },
+    {
+      "id": "diary_025",
+      "author": "mitu",
+      "text": {
+        "zh": "我把两张纸签压在同一块木板上，免得风替我翻页。没走过的地方，铅笔先留着；纸上对过一遍，鞋底还得再走一遍。",
+        "en": "I pin two slips to the same board so the wind cannot turn a page for me. I keep the pencil mark where I have not walked; matching paper still leaves the journey to my boots."
       }
     }
   ],
@@ -2155,6 +2182,242 @@
       "target": 46,
       "references": [
         "station"
+      ]
+    }
+  ],
+  "readingRounds": [
+    {
+      "id": "route_reading_01",
+      "revision": 1,
+      "place": "station",
+      "title": {
+        "zh": "先有核爆，后有长潮",
+        "en": "The blast before the tide"
+      },
+      "records": [
+        {
+          "id": "record_01a",
+          "claim": {
+            "zh": "长潮的确切起止年月已经写定。",
+            "en": "The exact beginning and end dates of the Long Tide are settled."
+          },
+          "verdict": "Pending",
+          "term": "long_tide",
+          "field": "proposal",
+          "reason": {
+            "zh": "精确年月与退潮过程仍留白；提案不是已经发生的年表。",
+            "en": "Exact dates and regional retreats remain open. A proposal is not an established timeline."
+          }
+        },
+        {
+          "id": "record_01b",
+          "claim": {
+            "zh": "核爆毁灭文明纪元，并引发后续长潮。",
+            "en": "Nuclear destruction ends the Civilization Era and triggers the later Long Tide."
+          },
+          "verdict": "Confirmed",
+          "term": "nuclear_break",
+          "field": "summary",
+          "reason": {
+            "zh": "原文明确了先后与因果，也提醒核爆和长潮不是同一瞬间。",
+            "en": "The record establishes this order and cause, while keeping the blast and tide distinct."
+          }
+        }
+      ]
+    },
+    {
+      "id": "route_reading_02",
+      "revision": 1,
+      "place": "salt",
+      "title": {
+        "zh": "信送到了，路呢？",
+        "en": "A letter arrives. What about the road?"
+      },
+      "records": [
+        {
+          "id": "record_02a",
+          "claim": {
+            "zh": "弥途往返盐环列站递送消息。",
+            "en": "Mitu carries messages to and from the Salt Ring Stops."
+          },
+          "verdict": "Confirmed",
+          "term": "letter_runner",
+          "field": "summary",
+          "reason": {
+            "zh": "这是弥途已有的递信日常，与图谱中的往返信路相符。",
+            "en": "This is Mitu’s established work, consistent with the atlas letter route."
+          }
+        },
+        {
+          "id": "record_02b",
+          "claim": {
+            "zh": "盐环到理想城已有可供循行的实测路线。",
+            "en": "A surveyed route from Salt Ring to Ideal City is ready to follow."
+          },
+          "verdict": "Pending",
+          "term": "salt",
+          "field": "proposal",
+          "reason": {
+            "zh": "原文仍将相关通路留作提案。消息能转递，不等于道路已实地核验。",
+            "en": "The record keeps these routes open as proposals. Relayed messages do not establish a surveyed road."
+          }
+        }
+      ]
+    },
+    {
+      "id": "route_reading_03",
+      "revision": 1,
+      "place": "archive",
+      "title": {
+        "zh": "干燥的片盒，未知的入口",
+        "en": "Dry film tins, an unknown entrance"
+      },
+      "records": [
+        {
+          "id": "record_03a",
+          "claim": {
+            "zh": "自进化孢子能利用残余辐射与微弱电磁信号。",
+            "en": "Self-evolving spores can use residual radiation and faint electromagnetic signals."
+          },
+          "verdict": "Confirmed",
+          "term": "spores",
+          "field": "summary",
+          "reason": {
+            "zh": "这一机制已纳入正式设定；保护片盒不等于整片废墟安全。",
+            "en": "This mechanism is adopted canon. Protected film tins do not make the whole ruin safe."
+          }
+        },
+        {
+          "id": "record_03b",
+          "claim": {
+            "zh": "站内已有通往沉没档案馆的可靠路标。",
+            "en": "The station has verified waymarks leading to the Drowned Archive."
+          },
+          "verdict": "Pending",
+          "term": "archive",
+          "field": "summary",
+          "reason": {
+            "zh": "档案馆的背景已被采用，但站内实地路标与到达路线仍属传闻。",
+            "en": "The archive’s background is adopted, but the station’s waymarks and access route remain hearsay."
+          }
+        }
+      ]
+    },
+    {
+      "id": "route_reading_04",
+      "revision": 1,
+      "place": "sea",
+      "title": {
+        "zh": "一只水鸟带来的线索",
+        "en": "A clue on a bird’s wing"
+      },
+      "records": [
+        {
+          "id": "record_04a",
+          "claim": {
+            "zh": "看见一只水鸟，就能证实它的出发地和可通行路线。",
+            "en": "One bird sighting establishes its origin and a passable route."
+          },
+          "verdict": "Pending",
+          "term": "echo_seabirds",
+          "field": "summary",
+          "reason": {
+            "zh": "词条明确保留了这条边界：目击不是出发地或道路的证明。",
+            "en": "The term explicitly keeps this boundary: a sighting does not establish origin or access."
+          }
+        },
+        {
+          "id": "record_04b",
+          "claim": {
+            "zh": "回声海水鸟循无线电波迁徙，与孢子蛾的趋光不同。",
+            "en": "Echo Sea birds follow radio signals; spore moths are drawn to light."
+          },
+          "verdict": "Confirmed",
+          "term": "echo_seabirds",
+          "field": "summary",
+          "reason": {
+            "zh": "原文区分了循波与趋光两种习性；不能把它们混为同一机制。",
+            "en": "The source distinguishes radio guidance from attraction to light; they are different habits."
+          }
+        }
+      ]
+    },
+    {
+      "id": "route_reading_05",
+      "revision": 1,
+      "place": "beacon",
+      "title": {
+        "zh": "方向之后，还缺什么",
+        "en": "What is missing beyond a direction?"
+      },
+      "records": [
+        {
+          "id": "record_05a",
+          "claim": {
+            "zh": "第二章纸条所述设备已经经过站内现场核验。",
+            "en": "The equipment described in the Chapter II note has been verified in the field."
+          },
+          "verdict": "Pending",
+          "term": "reply_fragment",
+          "field": "summary",
+          "reason": {
+            "zh": "回信残页抵达是已知事实，寄信人与设备说法仍待核；迟灯的答复也尚未寄出。",
+            "en": "The note’s arrival is established. Its sender and equipment claims remain unverified, and Chideng’s reply has not been sent."
+          }
+        },
+        {
+          "id": "record_05b",
+          "claim": {
+            "zh": "迟灯已经被确认为觉醒者。",
+            "en": "Chideng is established as one of the Awakened."
+          },
+          "verdict": "Pending",
+          "term": "awakened",
+          "field": "proposal",
+          "reason": {
+            "zh": "既有三位角色的觉醒状态仍然未知；职业和听见信号都不能替代人物设定。",
+            "en": "The three residents’ Awakened status remains unknown. A role or hearing a signal does not settle someone’s identity."
+          }
+        }
+      ]
+    },
+    {
+      "id": "route_reading_06",
+      "revision": 1,
+      "place": "ideal",
+      "title": {
+        "zh": "一座城，两种证据",
+        "en": "One city, two kinds of evidence"
+      },
+      "records": [
+        {
+          "id": "record_06a",
+          "claim": {
+            "zh": "理想城的能源塔、净水工程和商队贸易已纳入正式设定。",
+            "en": "Ideal City’s energy towers, waterworks and caravan trade are adopted canon."
+          },
+          "verdict": "Confirmed",
+          "term": "ideal_city",
+          "field": "summary",
+          "reason": {
+            "zh": "这些背景已被采用；原文同时保留了城址与路线的站内证据边界。",
+            "en": "These background facts are adopted. The same source preserves the station’s uncertainty about location and access."
+          }
+        },
+        {
+          "id": "record_06b",
+          "claim": {
+            "zh": "地点存在，就等于站内已经走通前往那里的路线。",
+            "en": "A place’s existence means the station has already travelled a route to it."
+          },
+          "verdict": "Pending",
+          "term": "ideal_city",
+          "field": "summary",
+          "reason": {
+            "zh": "作者确认地点存在，与角色掌握可循行路线，是两回事。理想城的路线仍未核实。",
+            "en": "Adopted existence and a route the residents can follow are separate. Access to Ideal City remains unverified."
+          }
+        }
       ]
     }
   ]

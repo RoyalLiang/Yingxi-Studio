@@ -98,6 +98,25 @@ def validate(root):
         if item.get('line') not in diary_ids:raise ValueError('Unknown tuning note')
         if not item.get('references') or not set(item['references'])<=term_ids:raise ValueError('Unknown tuning reference')
         if type(item.get('target')) is not int or not 10<=item['target']<=90 or type(item.get('start')) is not int or not 0<=item['start']<=100 or abs(item['start']-item['target'])<=12:raise ValueError('Invalid tuning marks')
+    readings=world.get('readingRounds')
+    if not isinstance(readings,list) or len(readings)!=6:raise ValueError('Six reading rounds required')
+    reading_ids=set();record_ids=set();reading_places=set()
+    terms={item['id']:item for item in lexicon}
+    for item in readings:
+        if not isinstance(item.get('id'),str) or not item['id'].strip() or item['id'] in reading_ids:raise ValueError('Invalid reading round identity')
+        reading_ids.add(item['id']);text(item['title'])
+        if type(item.get('revision')) is not int or item['revision']<1:raise ValueError('Invalid reading revision')
+        if item.get('place') not in places or item['place'] in reading_places:raise ValueError('Invalid reading place')
+        reading_places.add(item['place'])
+        records=item.get('records')
+        if not isinstance(records,list) or len(records)!=2:raise ValueError('Two reading records required')
+        for record in records:
+            if not isinstance(record.get('id'),str) or not record['id'].strip() or record['id'] in record_ids:raise ValueError('Invalid reading record identity')
+            record_ids.add(record['id']);text(record['claim']);text(record['reason'])
+            if record.get('verdict') not in {'Confirmed','Pending'}:raise ValueError('Invalid reading verdict')
+            term=terms.get(record.get('term'))
+            if term is None or record.get('field') not in {'summary','proposal'} or record['field'] not in term:raise ValueError('Unknown reading source')
+            if record['field']=='proposal' and record['verdict']!='Pending':raise ValueError('Reading proposal must remain pending')
     return world
 
 def render_glossary(world):

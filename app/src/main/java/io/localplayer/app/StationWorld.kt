@@ -62,7 +62,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
     }
 }
 
-@Composable internal fun StationWorldPage(embedded:Boolean=false,openPractice:(()->Unit)?=null,openTuning:(()->Unit)?=null,initialPersonId:String="axi",back:()->Unit) {
+@Composable internal fun StationWorldPage(embedded:Boolean=false,openPractice:(()->Unit)?=null,openTuning:(()->Unit)?=null,openReading:((String?)->Unit)?=null,initialPersonId:String="axi",back:()->Unit) {
     val context=LocalContext.current
     val world=remember(context){StationWorld.load(context)}
     val lang=LocalConfiguration.current.locales[0].language
@@ -132,11 +132,15 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }}
             Text(if(lang=="zh")"沿着旧路标，看看长潮留下了什么。" else "Follow the old markers through the Long Tide.",fontFamily=FontFamily.Serif,fontSize=28.sp,lineHeight=37.sp,color=Ink)
             Text(world.premise.say(),fontSize=15.sp,lineHeight=25.sp,color=Muted)
-                if(openPractice!=null||openTuning!=null) Surface(color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()) {
+                if(openPractice!=null||openTuning!=null||openReading!=null) Surface(color=GroupedSurface,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()) {
                     Column {
                         openPractice?.let { open->ExplorationPracticeEntry(if(lang=="zh")"旧片匣归位"else"Old case sorting",if(lang=="zh")"帮阿汐理片匣 →"else"Help Axi sort the cases →","practice-entry",open) }
                         if(openPractice!=null&&openTuning!=null)HorizontalDivider(Modifier.padding(horizontal=18.dp),color=Muted.copy(alpha=.14f))
                         openTuning?.let { open->ExplorationPracticeEntry(if(lang=="zh")"调频寻声"else"Tune for a trace",if(lang=="zh")"陪迟灯调一段频 →"else"Turn the dial with Chideng →","tuning-entry",open) }
+                    if(openReading!=null){
+                        if(openPractice!=null||openTuning!=null)HorizontalDivider(Modifier.padding(horizontal=18.dp),color=Muted.copy(alpha=.14f))
+                        ExplorationPracticeEntry(if(lang=="zh")"路标对读"else"Read the waymarks",if(lang=="zh")"和弥途对读纸签 →"else"Compare slips with Mitu →","reading-entry"){openReading(null)}
+                    }
                     }
                 }
                 WorldOverview(world,lang)
@@ -145,6 +149,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             Column(Modifier.fillMaxWidth().testTag("world-place-detail"),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                 Text(place.name.say()+" · "+place.kind.say(),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
                 Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
+                if(embedded&&openReading!=null)TextButton(onClick={openReading(placeId)},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("reading-place")){Text(if(lang=="zh")"从此处开始对读"else"Compare records from here")}
             }
             }
             Spacer(Modifier.height(28.dp))
