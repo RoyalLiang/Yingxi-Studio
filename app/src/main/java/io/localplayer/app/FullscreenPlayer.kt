@@ -85,7 +85,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var queue by remember { mutableStateOf(false) }
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val portrait=configuration.screenWidthDp<configuration.screenHeightDp
-    val railWidth=(58.dp*androidx.compose.ui.platform.LocalDensity.current.fontScale).coerceIn(64.dp,100.dp)
+    var moreOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(portrait) { moreOpen = false }
     var speedOpen by remember { mutableStateOf(false) }
     var items by remember { mutableStateOf(emptyList<MediaItem>()) }
     var index by remember { mutableIntStateOf(0) }
@@ -113,7 +114,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var thumbBounds by remember { mutableStateOf(Rect.Zero) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
-    var fill by rememberSaveable { mutableStateOf(true) }
+    var fill by rememberSaveable(portrait) { mutableStateOf(!portrait) }
     val previews = remember(controller) { PreviewFrames(context.applicationContext) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
@@ -171,9 +172,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
         }
     }
-    LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; dragging = false; previews.releaseReader() } else visible = true }
-    LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, interaction) {
-        if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !speedOpen))) { delay(3000); visible = false }
+    LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; moreOpen = false; dragging = false; previews.releaseReader() } else visible = true }
+    LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, moreOpen, interaction) {
+        if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !speedOpen && !moreOpen))) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
     LaunchedEffect(currentUri) { frame = null;previews.releaseReader() }
@@ -186,13 +187,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             if(next.timeMs==target.coerceAtLeast(0)/1000*1000)frame=next.bitmap
         }
     }
-    BackHandler(enabled = queue || speedOpen || settings) { queue = false; speedOpen = false; settings = false }
+    BackHandler(enabled = queue || speedOpen || moreOpen || settings) { queue = false; speedOpen = false; moreOpen = false; settings = false }
     Box(Modifier.fillMaxSize().onGloballyPositioned { playerBounds=it.boundsInRoot() }.background(Color(0xFF101113)).pointerInput(Unit) {
         awaitPointerEventScope { while(true) { val event=awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial);if(event.changes.any{it.pressed&&!it.previousPressed})interaction++ } }
     }) {
         AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true) }.also(videoView) },
             update = { it.player = controller; it.resizeMode = if (fill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT },
-            onRelease = { it.player = null }, modifier = Modifier.fillMaxSize())
+            onRelease = { it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit"))
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { visible = !visible }
@@ -249,27 +250,41 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     .background(Color.White.copy(alpha=.13f)).semantics { contentDescription="视频清晰度 $definition，${videoWidth}×${videoHeight}" }
                     .padding(horizontal=9.dp,vertical=5.dp).testTag("video-definition"),color=PlayerInk,fontSize=11.sp)
             }
+                    if(portrait)Box {
+                        PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
+                        MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
+                            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                                DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
+                                if(smallWindow != null)DropdownMenuItem(text = { Text("画中画") }, leadingIcon = { Icon(Icons.Rounded.PictureInPictureAlt, null) }, enabled = videoAvailable, onClick = { moreOpen = false; smallWindow() })
+                                DropdownMenuItem(text = { Text("锁定方向与控件") }, leadingIcon = { Icon(Icons.Rounded.LockOpen, null) }, onClick = { moreOpen = false; locked = true; visible = false; lock(true) })
+                            }
+                        }
+                    }
                     if(!portrait)PlayerIcon(Icons.Rounded.Headphones, "后台播放", background)
                     if (!portrait && smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     if(!portrait)PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
                 }
                 if (!speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
-                    if(!portrait)PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
-                    IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(72.dp).background(Color(0x8C101113), CircleShape)) {
+                    PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
+                    IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(if(portrait)64.dp else 72.dp).background(Color(0x8C101113), CircleShape)) {
                         Icon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", tint = PlayerInk, modifier = Modifier.size(38.dp))
                     }
-                    if(!portrait)PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
+                    PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
                     if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { controller?.seekToNextMediaItem() }, index < items.lastIndex)
                 }
             }
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6101113))))
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = 24.dp, vertical = 8.dp)) {
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = if(portrait)16.dp else 24.dp, vertical = 8.dp)) {
                 val shown = if (dragging) target else position
                 PlayerTimeline(shown,duration,buffered,dragging,seekable,
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
-                Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
+                if(portrait)PortraitPlaybackToolbar(
+                    position=shown,duration=duration,speed=speed,fill=fill,hasQueue=items.isNotEmpty(),buffering=buffering&&controller!=null,playRequested=playRequested,onPlay={if(playRequested)controller?.pause()else controller?.play()},
+                    onSpeed={speedOpen=true},onSettings={settings=true},onQueue={queue=true},
+                    onScale={fill=!fill},onRotate=rotate
+                ) else Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
                     if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})
                     Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     if(!portrait)FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -295,20 +310,6 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
                     }
                 }
-            }
-        }
-        if(!compact&&portrait&&visible&&!locked&&!queue&&!settings){
-            Column(Modifier.align(Alignment.CenterEnd).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(end=10.dp).width(railWidth).heightIn(max=(configuration.screenHeightDp.dp-184.dp).coerceAtLeast(120.dp))
-                .clip(RoundedCornerShape(18.dp)).background(Color(0x66171C20)).verticalScroll(rememberScrollState()).testTag("portrait-playback-rail")){
-                PlayerRailAction(Icons.Rounded.Speed,speedLabel(speed),"播放速度"){speedOpen=true}
-                PlayerRailAction(Icons.Rounded.Subtitles,"选项","播放设置"){settings=true}
-                PlayerRailAction(Icons.Rounded.PlaylistPlay,"选集","选集 ${index+1}/${items.size}",items.isNotEmpty()){queue=true}
-                PlayerRailAction(if(fill)Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio,"全屏",if(fill)"保留原比例"else"铺满屏幕"){fill=!fill}
-                PlayerRailAction(Icons.Rounded.ScreenRotation,"旋转","横竖屏切换"){rotate()}
-                if(smallWindow!=null)PlayerRailAction(Icons.Rounded.PictureInPictureAlt,"画中画",enabled=videoAvailable){smallWindow()}
-                PlayerRailAction(Icons.Rounded.Headphones,"后台","后台播放"){background()}
-                PlayerRailAction(Icons.Rounded.LockOpen,"锁定","锁定方向与控件"){locked=true;visible=false;lock(true)}
             }
         }
         if (!compact && dragging && thumbBounds!=Rect.Zero) frame?.let { bitmap ->
@@ -339,8 +340,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     }
 }
 
-@Composable private fun PlayerIcon(icon: ImageVector, label: String, action: () -> Unit, enabled: Boolean = true) {
-    IconButton(onClick = action, enabled = enabled, modifier = Modifier.size(48.dp)) { Icon(icon, label, tint = if (enabled) PlayerInk else Color(0xFF777C81), modifier = Modifier.size(25.dp)) }
+@Composable internal fun PlayerIcon(icon: ImageVector, label: String, action: () -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier) {
+    IconButton(onClick = action, enabled = enabled, modifier = modifier.size(48.dp)) { Icon(icon, label, tint = if (enabled) PlayerInk else Color(0xFF777C81), modifier = Modifier.size(25.dp)) }
 }
 internal fun playbackTime(ms: Long): String {
     val sec = ms.coerceAtLeast(0) / 1000

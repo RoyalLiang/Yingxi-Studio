@@ -18,43 +18,24 @@ import java.util.Locale
 class StationFirstDiscoveryTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
 
-    @Test fun lightRevealsNoteThenSubsequentVisitsRequestIdentityWithoutRepeating() {
+    @Test fun cabinetHoldGoesStraightToDeviceVerificationOnFirstAndLaterVisits(){
         val context=ui.activity
         val prefs=StationPreferences(context);val previous=prefs.cabinetDiscoverySeen
         val owner=ViewModelStore()
         lateinit var vm:LibraryViewModel
-        try {
+        try{
             prefs.cabinetDiscoverySeen=false
-            ui.runOnUiThread {
+            ui.runOnUiThread{
                 vm=LibraryViewModel(context.application);owner.put("library",vm)
                 val files=LocalFilesViewModel(context.application);owner.put("files",files)
                 context.setContent{PlayerTheme{
                     val density=LocalDensity.current
-                    val config=Configuration(LocalConfiguration.current).apply{setLocale(Locale.SIMPLIFIED_CHINESE)}
-                    CompositionLocalProvider(LocalConfiguration provides config,LocalDensity provides Density(density.density,1.8f)){
-                        AppShell(vm,files,{},{},{})
-                    }
+                    CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f)){AppShell(vm,files,{},{},{})}
                 }}
             }
-            ui.onNodeWithTag("home-sealed-entry").performClick()
-            ui.onNodeWithTag("station-first-discovery").assertIsDisplayed()
-            ui.runOnIdle{assertNull(vm.privateRequest);assertFalse(prefs.cabinetDiscoverySeen)}
-            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
-            ui.onNodeWithTag("station-first-discovery").assertDoesNotExist()
-            assertFalse(prefs.cabinetDiscoverySeen)
-            ui.onNodeWithTag("home-sealed-entry").performClick()
-            ui.onNodeWithTag("station-film-light").performScrollTo().performTouchInput{
-                swipe(Offset(width*.15f,height*.5f),Offset(width*.5f,height*.5f),500)
-            }
-            ui.onNodeWithTag("station-discovery-note").performScrollTo().assertIsDisplayed()
-            ui.onNodeWithText("路过也好，回来也好。片架旁总有一盏灯，给你留着。").assertExists()
+            ui.onNodeWithTag("home-sealed-entry").performTouchInput{click()}
             ui.runOnIdle{assertNull(vm.privateRequest)}
-            ui.onNodeWithTag("station-discovery-continue").performScrollTo().performClick()
-            ui.onNodeWithTag("station-first-discovery").assertDoesNotExist()
-            assertTrue(StationPreferences(context).cabinetDiscoverySeen)
-            ui.onNodeWithTag("sealed-cabinet").assertDoesNotExist()
-            ui.runOnIdle{vm.privateRequest?.let{vm.cancelPrivateAccess(it.id)}}
-            ui.onNodeWithTag("home-sealed-entry").performClick()
+            ui.onNodeWithTag("home-sealed-entry").performTouchInput{longClick(durationMillis=3100)}
             ui.onNodeWithTag("station-first-discovery").assertDoesNotExist()
             ui.onNodeWithTag("sealed-cabinet").assertDoesNotExist()
             ui.runOnIdle{assertTrue(vm.privateRequest!=null||vm.error?.contains("锁屏密码")==true)}

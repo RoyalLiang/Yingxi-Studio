@@ -7,6 +7,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,8 +67,7 @@ import kotlin.math.abs
                         val stationName="映汐放映站"
                         if(onStation!=null&&eyebrow.startsWith(stationName)) {
                             FlowRow {
-                                Text(stationName,Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically)
-                                    .clickable(role=Role.Button,onClick=onStation).testTag("home-sealed-entry"),color=lamp,fontSize=12.sp,lineHeight=18.sp)
+                                StationCabinetName(stationName,lamp,onStation)
                                 Text(eyebrow.removePrefix(stationName),Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically),color=lamp,fontSize=12.sp,lineHeight=18.sp)
                             }
                         } else Text(eyebrow,color=lamp,fontSize=12.sp,lineHeight=18.sp)
@@ -89,5 +97,20 @@ import kotlin.math.abs
                 }
             }
         }
+    }
+}
+
+/** Only this name uses a three-second hold; other app long presses keep Android timing. */
+@Composable private fun StationCabinetName(name:String,color:Color,onOpen:()->Unit){
+    val original=LocalViewConfiguration.current
+    val holdConfiguration=remember(original){object:ViewConfiguration by original{override val longPressTimeoutMillis=3000L}}
+    val open by rememberUpdatedState(onOpen)
+    val haptic=LocalHapticFeedback.current
+    CompositionLocalProvider(LocalViewConfiguration provides holdConfiguration){
+        Text(name,Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically)
+            .semantics{onLongClick(label="长按3秒，验证进入封存柜"){open();true}}
+            .focusable()
+            .pointerInput(Unit){detectTapGestures(onLongPress={haptic.performHapticFeedback(HapticFeedbackType.LongPress);open()})}
+            .testTag("home-sealed-entry"),color=color,fontSize=12.sp,lineHeight=18.sp)
     }
 }
