@@ -194,7 +194,7 @@ internal fun historyDay(timestamp:Long):String{
         color=GroupedSurface,shape=RoundedCornerShape(20.dp)){
         Column{
             Row(Modifier.padding(start=10.dp,end=4.dp,top=9.dp,bottom=9.dp),verticalAlignment=Alignment.CenterVertically){
-                MediaPoster(entry.media,Modifier.width(96.dp).height(if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)96.dp else 56.dp),compact=true)
+                MediaPoster(entry.media,Modifier.width(96.dp).height(if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f)96.dp else 56.dp))
                 Column(Modifier.weight(1f).padding(horizontal=12.dp)){
                     Text(mediaDisplayTitle(entry.media.title),fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp));Text("${if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs)}",fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)

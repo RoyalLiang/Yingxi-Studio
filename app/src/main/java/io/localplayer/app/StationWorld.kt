@@ -126,6 +126,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                     }
                 }
             }
+            WorldChronicles(world,lang)
             }
             if(embedded) {
             StationChapterReader(world,lang){readerScope.launch { worldScroll.animateScrollTo(0) }}
@@ -138,14 +139,22 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
                 Text(place.name.say()+" · "+place.kind.say(),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
                 Text(place.description.say(),fontFamily=FontFamily.Serif,fontSize=15.sp,lineHeight=26.sp,color=Ink)
             }
-            HorizontalDivider(color=Muted.copy(alpha=.16f))
-            Text(if(lang=="zh")"据点大事记" else "Station chronicles",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink)
-            world.chronicles.asReversed().forEach { entry -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
-                Text(entry.text.say(),fontSize=14.sp,lineHeight=24.sp,color=Ink)
-            } }
             }
             Spacer(Modifier.height(28.dp))
+        }
+    }
+}
+
+@Composable private fun WorldChronicles(world:StationWorld,lang:String) {
+    Column(Modifier.fillMaxWidth().testTag("world-chronicles"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        HorizontalDivider(color=Muted.copy(alpha=.16f))
+        Text(if(lang=="zh")"据点大事记"else"Station chronicles",fontSize=20.sp,fontFamily=FontFamily.Serif,color=Ink,
+            modifier=Modifier.testTag("world-chronicles-title"))
+        world.chronicles.asReversed().forEach { entry ->
+            Column(Modifier.testTag("world-chronicle:${entry.version}"),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(entry.version,fontSize=12.sp,color=Berry,fontWeight=FontWeight.Medium)
+                Text(entry.text.inLanguage(lang),fontSize=14.sp,lineHeight=24.sp,color=Ink)
+            }
         }
     }
 }

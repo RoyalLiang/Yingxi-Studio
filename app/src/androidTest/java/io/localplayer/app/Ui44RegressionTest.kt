@@ -66,7 +66,7 @@ class Ui44RegressionTest {
         }
     }
 
-    @Test fun findCardsHaveEqualTitleAreasAndSourceLabelsOnPosters() {
+    @Test fun findCardsHaveEqualTitleAreasAndOnlyFormatOnPosters() {
         val a=StationFinding(MediaRef("fixture-short","短片.mp4","private-source-label"),0)
         val b=StationFinding(MediaRef("fixture-long","A very long film title that needs two lines.mp4","private-source-label"),0)
         ui.runOnUiThread{ui.activity.setContent{PlayerTheme{Row(Modifier.width(393.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)){
@@ -76,7 +76,8 @@ class Ui44RegressionTest {
         val one=ui.onNodeWithTag("found-title:${a.media.key}",true).getUnclippedBoundsInRoot()
         val two=ui.onNodeWithTag("found-title:${b.media.key}",true).getUnclippedBoundsInRoot()
         assertEquals(one.top.value,two.top.value,.5f);assertEquals(one.bottom.value,two.bottom.value,.5f)
-        ui.onAllNodesWithText("private-source-label",useUnmergedTree=true).assertCountEquals(2)
+        ui.onAllNodesWithText("private-source-label",useUnmergedTree=true).assertCountEquals(0)
+        ui.onAllNodesWithText("MP4",useUnmergedTree=true).assertCountEquals(2)
         capture("finds")
     }
 

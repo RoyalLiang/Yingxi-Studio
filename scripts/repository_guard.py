@@ -14,6 +14,7 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.m
 EXACT.add("app/src/main/res/raw/world_atlas.json")
 EXACT.add("assets/artwork.json")
 EXACT.add("docs/wasteland-copy-audit-2026-10-22.md")
+EXACT.add("docs/explore-play-proposal.md")
 EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name in ("axi","chideng","mitu"))
 
 def allowed(name):

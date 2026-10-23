@@ -56,8 +56,9 @@ class SourcePoster45RegressionTest {
             sidecars.forEach{ui.onNodeWithText(it.name).assertDoesNotExist()}
             ui.onNodeWithTag("shelter-info:${video.path}",true).assertDoesNotExist()
             val label="poster-labels:${source.id}:${video.path}"
-            ui.onNode(hasText("MKV · 2.0 GB") and hasAnyAncestor(hasTestTag(label)),useUnmergedTree=true).assertExists()
-            ui.onNode(hasText(source.label) and hasAnyAncestor(hasTestTag(label)),useUnmergedTree=true).assertExists()
+            ui.onNodeWithTag(label,true).assertTextEquals("MKV")
+            ui.onNode(hasText(source.label) and hasAnyAncestor(hasTestTag(label)),useUnmergedTree=true).assertDoesNotExist()
+            ui.onNodeWithText("2.0 GB").assertDoesNotExist()
             capture("source-directory")
             ui.runOnIdle{vm.closeSource()}
             ui.onNodeWithTag("nav:History").performClick()

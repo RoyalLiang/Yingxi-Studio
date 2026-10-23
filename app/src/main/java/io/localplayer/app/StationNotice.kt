@@ -49,7 +49,7 @@ import kotlin.math.abs
                 x+=gap
             }
         }
-        Column(Modifier.padding(start=20.dp,end=20.dp,top=18.dp,bottom=25.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.padding(start=20.dp,end=20.dp,top=18.dp,bottom=if(onArchives!=null)12.dp else 25.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -68,15 +68,16 @@ import kotlin.math.abs
             }
             Text(body,color=Color(0xFFD7DED2),fontSize=if(onArchives!=null)16.sp else 14.sp,lineHeight=if(onArchives!=null)25.sp else 22.sp,modifier=if(onArchives!=null)Modifier.testTag("home-admin-quote")else Modifier)
             if(onArchives!=null) {
-                HorizontalDivider(color=lamp.copy(alpha=.16f))
-                Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clip(RoundedCornerShape(12.dp))
-                    .clickable(onClickLabel="打开档案室",role=Role.Button,onClick=onArchives).testTag("home-archives"),
-                    verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Rounded.MenuBook,null,tint=lamp,modifier=Modifier.size(20.dp))
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                        Text("档案室",color=Color(0xFFF9F2E4),fontSize=14.sp,fontWeight=FontWeight.Medium)
+                Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    HorizontalDivider(color=lamp.copy(alpha=.16f))
+                    Row(Modifier.fillMaxWidth()
+                        .clickable(onClickLabel="打开档案室",role=Role.Button,onClick=onArchives)
+                        .padding(vertical=2.dp).testTag("home-archives"),
+                        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Rounded.MenuBook,null,tint=lamp,modifier=Modifier.size(18.dp))
+                        Text("档案室",Modifier.weight(1f),color=Color(0xFFF9F2E4),fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium)
+                        Icon(Icons.Rounded.ChevronRight,null,Modifier.size(18.dp),tint=lamp)
                     }
-                    Icon(Icons.Rounded.ChevronRight,null,Modifier.size(19.dp),tint=lamp)
                 }
             }
         }
