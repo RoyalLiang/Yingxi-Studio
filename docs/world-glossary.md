@@ -23,7 +23,7 @@
 | image_scavenger | 影像拾荒者 | Image Scavenger | 职业 | 正式设定 | 已知记录 | 搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 | — |
 | wayfinder | 路标师 | Wayfinder | 职业 | 正式设定 | 已知记录 | 记录通行条件并维护路标的人；弥途将未走过的路线画成虚线。 | — |
 | letter_runner | 递信人 | Letter Runner | 职业 | 正式设定 | 已知记录 | 在地点之间递送消息的人；弥途往返盐环列站。 | — |
-| station | 映汐放映站 | Yingxi Station | 据点 | 正式设定 | 已知记录 | 旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 | 可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。 |
+| station | 映汐放映站 | Yingxi Station | 据点 | 正式设定 | 已知记录 | 旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。 | 可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。 |
 | salt | 盐环列站 | Salt Ring Stops | 据点 | 正式设定 | 已知记录 | 盐壳包住停运车厢的已知地点，弥途在这里维护通行路标。 | 可发展为铁路聚落与递信中转地；多座避难所、商队和理想城通路尚未确认为已通行路线。 |
 | atlas | 废土图谱 | Wasteland Atlas | 叙事载体 | 正式设定 | 已知记录 | 第一章地点与联系的记录。实线标确认信路，虚线保留传闻。 | — |
 | chronicles | 据点大事记 | Station Chronicles | 叙事载体 | 正式设定 | 已知记录 | 档案室内按应用版本选录的据点变化，不是完整版本史或废土年表。 | — |
@@ -57,7 +57,7 @@
 | verify_credentials | 核验通行凭据 | Verify connection credentials | 核对连接账户密码；不替代系统身份认证或服务器指纹核验。 | Check connection credentials; separate from system authentication and host-key verification. |
 | read_quote | 轻触信纸，读下一句 | Tap paper for another line | 轮换人物文字语录，不播放朗读。 | Cycle written character quotes without speech playback. |
 | home | 放映站 | Station | 首页导航。 | Home navigation. |
-| history | 拾荒记录／最近拾荒 | Scavenging log / recent scavenging | 借用拾荒称谓记录本机真实观看与续播进度；不是今日拾获、文件发现或世界纪年。 | A scavenging metaphor for actual viewing history and resume progress, distinct from today’s finds, file discovery and story chronology. |
+| history | 拾荒记录／拾荒路线图／最近拾荒 | Scavenging log / scavenging route / recent scavenging | 借用拾荒称谓记录本机真实观看与续播进度；拾荒路线图沿用日期记录列表，不代表地理路线、今日拾获或世界纪年。 | A scavenging metaphor for actual viewing history and resume progress. The scavenging route keeps the dated log layout; it is not a geographic route, today’s finds or story chronology. |
 | resume | 继续放映 | Resume screening | 从实际保存的位置续播。 | Resume from the saved playback position. |
 | settings | 站务 | Station affairs | 应用全局设置；播放器内部保留播放设置。 | Global app settings; player controls retain playback settings. |
 | version | 信笺 | Letters | 查看真实版本与更新信笺，下载和安装操作保留原名。 | Actual versions and release letters; download and install actions retain explicit labels. |

@@ -82,18 +82,18 @@ class Phase2ExperienceTest {
                 }
             }
             ui.onNodeWithTag("nav:History").performClick()
-            ui.onNodeWithTag("history-view-route").performClick()
-            ui.onNodeWithTag("scavenger-route").assertIsDisplayed()
-            ui.onNodeWithText("拾荒者路线图").assertIsDisplayed()
-            ui.onNodeWithTag("route-entry:${sealedRef.key}").assertDoesNotExist()
-            ui.onNodeWithTag("scavenger-route").performScrollToNode(hasTestTag("route-entry:${public.key}"))
-            ui.onNodeWithTag("route-entry:${public.key}").assertIsDisplayed()
+            ui.onNodeWithTag("history-title").assertTextEquals("拾荒路线图")
+            ui.onNodeWithTag("history-view-options").assertDoesNotExist()
+            ui.onNodeWithTag("scavenger-route").assertDoesNotExist()
+            ui.onNodeWithTag("open-sealed-cabinet").assertDoesNotExist()
+            ui.onNodeWithTag("history-row:${sealedRef.key}").assertDoesNotExist()
+            ui.onNodeWithTag("history-list").performScrollToNode(hasTestTag("history-row:${public.key}"))
+            ui.onNodeWithTag("history-row:${public.key}").assertIsDisplayed()
             capture("night-route-large")
             ui.onNodeWithContentDescription("记录操作 ${io.localplayer.core.mediaDisplayTitle(public.title)}").performClick()
             ui.onNodeWithText("移除此记录").performClick()
-            ui.onNodeWithTag("route-entry:${public.key}").assertDoesNotExist()
+            ui.onNodeWithTag("history-row:${public.key}").assertDoesNotExist()
             ui.runOnIdle{assertTrue(vm.history.any{it.media.key==second.key});assertFalse(vm.history.any{it.media.key==sealedRef.key})}
-            ui.onNodeWithTag("history-view-list").performClick()
             ui.onNodeWithTag("history-row:${second.key}").assertExists()
         }finally{
             ui.runOnIdle{owner.clear();SealedMedia.unlock();SealedMedia.unseal(sealedRef.key);SealedMedia.lock();prefs.mode=old}

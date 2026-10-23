@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}) {
+@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}, onSealed: () -> Unit = {}) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val context = androidx.compose.ui.platform.LocalContext.current
     val station = remember(context) { StationPreferences(context) }
@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.sp
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", diary.text.inLanguage(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
-                    modifier=Modifier.testTag("station-diary"),onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
+                    modifier=Modifier.testTag("station-diary"),onStation=onSealed,onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
             }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -144,7 +144,6 @@ import androidx.compose.ui.unit.sp
             Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp))
                 .border(2.dp,if(selected)Berry else Color.Transparent,RoundedCornerShape(16.dp)).testTag("film-poster:${entry.media.key}")) {
                 MediaThumbnail(entry.media, Modifier.fillMaxSize())
-                PosterLabels(entry.media)
                 PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
 
@@ -176,8 +175,11 @@ import androidx.compose.ui.unit.sp
     Column(modifier.fillMaxWidth().background(Brush.verticalGradient(
         0f to Color.Transparent,.4f to Color.Black.copy(alpha=.76f),1f to Color.Black.copy(alpha=.88f)))
         .padding(start=10.dp,end=10.dp,top=20.dp,bottom=9.dp).testTag("film-status:${entry.media.key}")) {
-        Text(if(entry.completed)"已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}",
-            color=Color.White,fontSize=11.sp,lineHeight=16.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text(if(entry.completed)"已看完" else "${time(entry.positionMs)} / ${time(entry.durationMs)}",
+                modifier=Modifier.weight(1f),color=Color.White,fontSize=11.sp,lineHeight=16.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            PosterFormatText(entry.media)
+        }
         Spacer(Modifier.height(6.dp))
         LinearProgressIndicator(progress={entry.progress},modifier=Modifier.fillMaxWidth().height(3.dp),
             color=Color(0xFFFFB5C8),trackColor=Color.White.copy(alpha=.35f),drawStopIndicator={})
