@@ -109,7 +109,7 @@ dependencies {
     implementation("androidx.media3:media3-session:1.11.1")
     implementation("androidx.media3:media3-ui:1.11.1")
     implementation("io.github.anilbeesetti:nextlib-media3ext:1.11.1-0.16.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.slf4j:slf4j-nop:2.0.16")
     implementation("org.bouncycastle:bcprov-jdk18on:1.80.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
