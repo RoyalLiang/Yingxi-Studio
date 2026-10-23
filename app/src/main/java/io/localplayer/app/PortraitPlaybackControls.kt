@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -17,17 +17,33 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-@Composable internal fun PlayerRailAction(icon:ImageVector,label:String,description:String=label,enabled:Boolean=true,click:()->Unit){
-    Surface(onClick=click,enabled=enabled,color=Color.Transparent,shape=RoundedCornerShape(12.dp),modifier=Modifier.fillMaxWidth().heightIn(min=58.dp).semantics{contentDescription=description}){
-        Column(Modifier.padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(3.dp)){
-            Icon(icon,null,Modifier.size(24.dp),tint=Color.White.copy(alpha=if(enabled)1f else .4f))
-            Text(label,color=Color.White.copy(alpha=if(enabled)1f else .4f),fontSize=12.sp,lineHeight=16.sp,maxLines=1,softWrap=false,overflow=TextOverflow.Clip)
+/** Native portrait controls: one quiet row, with full touch targets and no labels over the film. */
+@Composable internal fun PortraitPlaybackToolbar(
+    position:Long,duration:Long,speed:Float,fill:Boolean,hasQueue:Boolean,buffering:Boolean,playRequested:Boolean,onPlay:()->Unit,
+    onSpeed:()->Unit,onSettings:()->Unit,onQueue:()->Unit,onScale:()->Unit,onRotate:()->Unit
+){
+    Column(Modifier.fillMaxWidth().testTag("portrait-playback-controls")){
+        Row(Modifier.fillMaxWidth().padding(horizontal=8.dp).testTag("playback-time"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+            Text(playbackTime(position),color=PlayerInk,fontSize=12.sp,fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
+            if(buffering)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",onPlay)
+            Text(playbackTime(duration),color=PlayerInk.copy(alpha=.65f),fontSize=12.sp,fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth().testTag("playback-toolbar"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+            TextButton(onClick=onSpeed,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("playback-speed").semantics{contentDescription="播放速度"}){
+                Text(speedLabel(speed),color=PlayerInk,fontSize=14.sp,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
+            }
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Subtitles,"播放设置",onSettings)}
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.PlaylistPlay,"选集",onQueue,hasQueue)}
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(if(fill)Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio,"画面比例",onScale,modifier=Modifier.semantics{stateDescription=if(fill)"铺满屏幕，等比裁切"else"完整画面，保留原比例"})}
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.ScreenRotation,"旋转屏幕",onRotate)}
         }
     }
 }

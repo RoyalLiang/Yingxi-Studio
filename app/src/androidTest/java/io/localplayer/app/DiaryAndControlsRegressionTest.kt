@@ -29,9 +29,9 @@ class DiaryAndControlsRegressionTest {
         }
         try{
             ui.onAllNodesWithTag("home-archives").assertCountEquals(1)
-            ui.onNode(hasTestTag("home-admin-avatar") and hasAnyAncestor(hasTestTag("station-diary"))).assertExists()
-            ui.onNode(hasTestTag("home-admin-quote") and hasAnyAncestor(hasTestTag("station-diary"))).assertExists()
-            val avatar=ui.onNodeWithTag("home-admin-avatar").getUnclippedBoundsInRoot()
+            ui.onNode(hasTestTag("home-admin-avatar") and hasAnyAncestor(hasTestTag("station-diary")),useUnmergedTree=true).assertExists()
+            ui.onNode(hasTestTag("home-admin-quote") and hasAnyAncestor(hasTestTag("station-diary")),useUnmergedTree=true).assertExists()
+            val avatar=ui.onNodeWithTag("home-admin-avatar",useUnmergedTree=true).getUnclippedBoundsInRoot()
             val quote=ui.onNodeWithTag("home-admin-quote").getUnclippedBoundsInRoot()
             assertTrue("Avatar is above the full-width quote",avatar.bottom<=quote.top)
             File(ui.activity.cacheDir,"repair33-diary.png").outputStream().use{ui.onNodeWithTag("station-diary").captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
@@ -39,15 +39,16 @@ class DiaryAndControlsRegressionTest {
         }finally{ui.runOnIdle{models.clear()}}
     }
 
-    @Test fun portraitActionsUseOneRightRailAndSpeedPanelHasMargins() {
+    @Test fun portraitActionsUseBottomRowAndSpeedPanelHasMargins() {
         val preferences=PlaybackPreferences(ui.activity);val oldSpeed=preferences.speed
         ui.runOnIdle{ui.activity.setContent{PlayerTheme{FullscreenPlayer(null,"布局回归",null,{},{},{},{},false,{},{} ,{})}}}
         try{
-            ui.onNodeWithTag("portrait-playback-rail").assertExists()
+            ui.onNodeWithTag("portrait-playback-rail").assertDoesNotExist()
+            ui.onNodeWithTag("portrait-playback-controls").assertIsDisplayed()
             ui.onNodeWithTag("playback-actions").assertDoesNotExist()
-            val rail=ui.onNodeWithTag("portrait-playback-rail").getUnclippedBoundsInRoot()
             val root=ui.onRoot().getUnclippedBoundsInRoot()
-            assertTrue("Rail stays on the right",rail.left.value>(root.right-root.left).value*.6f)
+            val toolbar=ui.onNodeWithTag("portrait-playback-controls").getUnclippedBoundsInRoot()
+            assertTrue("controls below the center",toolbar.top.value>(root.bottom-root.top).value*.6f)
             ui.onNodeWithContentDescription("播放速度").performClick()
             val panel=ui.onNodeWithTag("playback-speed-panel").getUnclippedBoundsInRoot()
             assertTrue("Panel is narrower than the screen",(panel.right-panel.left).value<(root.right-root.left).value-20f)

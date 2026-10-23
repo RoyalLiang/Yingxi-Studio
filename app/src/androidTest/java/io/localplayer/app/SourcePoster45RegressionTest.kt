@@ -68,7 +68,7 @@ class SourcePoster45RegressionTest {
             capture("history-single-list")
             ui.onNodeWithTag("nav:Home").performClick()
             capture("home-hidden-cabinet-entry")
-            ui.onNodeWithTag("home-sealed-entry").assertHasClickAction().performClick()
+            ui.onNodeWithTag("home-sealed-entry").performTouchInput{longClick(durationMillis=3100)}
             ui.runOnIdle{
                 assertFalse(SealedMedia.unlocked)
                 assertTrue(vm.privateRequest!=null||vm.error?.contains("锁屏密码")==true)

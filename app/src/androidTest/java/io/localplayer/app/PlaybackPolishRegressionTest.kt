@@ -68,16 +68,16 @@ class PlaybackPolishRegressionTest {
         }
     }
 
-    @Test fun portraitLargeTextKeepsEveryActionInsideTheToolbar() {
+    @Test fun bottomControlsStayWithinToolbarAtLargeText() {
+        player(1.6f)
         ui.runOnUiThread { ui.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
         ui.waitUntil(5000) { ui.activity.resources.configuration.orientation==Configuration.ORIENTATION_PORTRAIT }
-        player(1.5f)
         val toolbar=ui.onNodeWithTag("playback-toolbar").fetchSemanticsNode().boundsInRoot
         listOf(ui.onNodeWithTag("playback-speed"),ui.onNodeWithContentDescription("播放设置"),
-            ui.onNodeWithContentDescription("画面比例"),ui.onNodeWithText("选集 1/0"),ui.onNodeWithContentDescription("旋转屏幕")).forEach { node ->
+            ui.onNodeWithContentDescription("画面比例"),ui.onNodeWithContentDescription("选集"),ui.onNodeWithContentDescription("旋转屏幕")).forEach { node ->
             val bounds=node.assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-            assertTrue(bounds.right<=toolbar.right+2&&bounds.left>=toolbar.left)
-            assertTrue(bounds.bottom<=toolbar.bottom+2)
+            assertTrue(bounds.right<=toolbar.right+2&&bounds.left>=toolbar.left-2)
+            assertTrue(bounds.bottom<=toolbar.bottom+2&&bounds.top>=toolbar.top-2)
         }
         capture("portrait-large")
     }
