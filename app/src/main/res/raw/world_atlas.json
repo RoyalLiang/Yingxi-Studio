@@ -571,6 +571,13 @@
         "zh": "阿汐把散开的旧事收回档案架，只在纸脊记一枚片号。片匣封面留给画面，札记下的小门也收起多余的空隙；探索桌上的新玩法仍是一张待采用的草图。",
         "en": "Axi returns the loose records to the archive shelf, leaving one case number on each spine. Pictures keep their covers, and the small archive door below the journal sheds its spare space. New exploration games remain a sketch awaiting adoption."
       }
+    },
+    {
+      "version": "0.2.0-alpha.48",
+      "text": {
+        "zh": "阿汐把六盘练习片匣摆进探索页。纸签可以点选或长按拖放；离开再回来，桌面还留在刚才的样子。",
+        "en": "Axi set six trays of practice cases in Explore. Tap labels or hold and drag them; leave and return to find the desk as you left it."
+      }
     }
   ],
   "boundary": {
@@ -1340,6 +1347,17 @@
         "zh": "连接端口、根目录等选项；不是新的物理信路。",
         "en": "Connection options such as port and root directory, separate from physical mail routes."
       }
+    },
+    {
+      "id": "case_sorting",
+      "name": {
+        "zh": "旧片匣归位",
+        "en": "Old case sorting"
+      },
+      "meaning": {
+        "zh": "探索中的离线纸签配对练习；只整理虚构片匣，不修改影片、不发放物资、不推进章节。",
+        "en": "An offline paper-label matching practice in Explore. It uses fictional cases, changes no films, grants no supplies and advances no chapters."
+      }
     }
   ],
   "canonAdoption": {
@@ -1526,6 +1544,14 @@
         "zh": "我把散开的旧事夹回档案架，只在纸脊上添一个小小的片号。封面留给画面，想找来处的人，翻开里面那一页就好。",
         "en": "I return the loose station records to the archive shelf and add a small case number to each paper spine. The cover belongs to the picture; anyone looking for its origin can turn to the page inside."
       }
+    },
+    {
+      "id": "diary_023",
+      "author": "axi",
+      "text": {
+        "zh": "我在练习片匣的角上画了三个小点。纸签贴对一张，就盖住一个。没有奖品，只有桌面一点点腾出来的地方。",
+        "en": "I drew three small dots on a practice case. Each label in its place covers one. No prizes, just a little more room on the desk."
+      }
     }
   ],
   "surfaceNotes": [
@@ -1560,6 +1586,464 @@
         "zh": "放映机记得每一盘旧纪元片子停在哪一格，下次推门接着看。",
         "en": "The projector remembers where each old-era film paused. Come back and continue from that frame."
       }
+    }
+  ],
+  "practiceRounds": [
+    {
+      "id": "case_sorting_01",
+      "revision": 1,
+      "title": {
+        "zh": "三张工作台",
+        "en": "Three worktables"
+      },
+      "note": {
+        "zh": "三张台面总算各有各的活。我的片号可别再塞进灯罩里。",
+        "en": "Three desks, three jobs. Keep my case numbers out of the lampshade."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "阿汐的登记台",
+            "en": "Axi’s registry"
+          },
+          "clue": {
+            "zh": "留给整理影像和纸签的人。",
+            "en": "For the keeper of images and paper labels."
+          },
+          "label": {
+            "zh": "这张纸记着片号，旁边画了半只片匣。",
+            "en": "A case number sits beside a half-drawn film case."
+          },
+          "hint": {
+            "zh": "片号与纸签都归阿汐整理。",
+            "en": "Axi keeps case numbers and paper labels."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "迟灯的修理台",
+            "en": "Chideng’s bench"
+          },
+          "clue": {
+            "zh": "留给照看旧设备的人。",
+            "en": "For the keeper of old equipment."
+          },
+          "label": {
+            "zh": "灯泡接触不良，等修好再点亮。",
+            "en": "A loose bulb contact needs repair before lighting."
+          },
+          "hint": {
+            "zh": "谁照看灯与旧设备？",
+            "en": "Who looks after lamps and old equipment?"
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "弥途的信袋",
+            "en": "Mitu’s mailbag"
+          },
+          "clue": {
+            "zh": "留给往返列站送信的人。",
+            "en": "For the letter runner between stations."
+          },
+          "label": {
+            "zh": "信封已经封口，只差交到递信人手上。",
+            "en": "The envelope is sealed and ready for the runner."
+          },
+          "hint": {
+            "zh": "封好的信交给递信人弥途。",
+            "en": "Sealed letters go to Mitu, the letter runner."
+          }
+        }
+      ]
+    },
+    {
+      "id": "case_sorting_02",
+      "revision": 1,
+      "title": {
+        "zh": "片匣的三面",
+        "en": "Three sides of a case"
+      },
+      "note": {
+        "zh": "封面能看见了，片号也找得着。长话留在里面慢慢说。",
+        "en": "The cover can breathe and the number is easy to find. Longer stories can wait inside."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "封面",
+            "en": "Front cover"
+          },
+          "clue": {
+            "zh": "让人一眼认出画面的那一面。",
+            "en": "The side that shows an image at a glance."
+          },
+          "label": {
+            "zh": "一张完整的手绘画面，四周留着空白。",
+            "en": "A complete hand-drawn image with room around its edges."
+          },
+          "hint": {
+            "zh": "完整画面放在封面，留出呼吸的地方。",
+            "en": "The full image belongs on the front cover."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "书脊",
+            "en": "Spine"
+          },
+          "clue": {
+            "zh": "片匣挨着站好时，还能读到的窄边。",
+            "en": "The narrow edge visible when cases stand together."
+          },
+          "label": {
+            "zh": "窄窄一条纸，只写着片号。",
+            "en": "A narrow strip bearing only a case number."
+          },
+          "hint": {
+            "zh": "窄纸签贴在书脊，方便找片。",
+            "en": "A narrow number label fits the spine."
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "内页",
+            "en": "Inside leaf"
+          },
+          "clue": {
+            "zh": "翻开之后再慢慢读的地方。",
+            "en": "The place to read after opening the case."
+          },
+          "label": {
+            "zh": "一段很长的来处记录，末尾还有两行补记。",
+            "en": "A long provenance note with two extra lines at the end."
+          },
+          "hint": {
+            "zh": "长记录放进内页，不盖住封面。",
+            "en": "Long notes belong inside, clear of the cover."
+          }
+        }
+      ]
+    },
+    {
+      "id": "case_sorting_03",
+      "revision": 1,
+      "title": {
+        "zh": "纸签分一分",
+        "en": "Sort the paper labels"
+      },
+      "note": {
+        "zh": "这一盘只分纸签，不替任何真实影片盖章。桌面倒是清楚多了。",
+        "en": "These are practice labels, not stamps on real films. The desk is clearer, though."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "待整理",
+            "en": "To sort"
+          },
+          "clue": {
+            "zh": "完整但还没有找到位置。",
+            "en": "Whole, but still without a place."
+          },
+          "label": {
+            "zh": "纸面完整，字也清楚；桌上还没给它留位置。",
+            "en": "The paper is whole and legible, but has no place on the desk."
+          },
+          "hint": {
+            "zh": "完整又未归位，放进待整理。",
+            "en": "Whole but unplaced means “To sort”."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "待补字",
+            "en": "To reletter"
+          },
+          "clue": {
+            "zh": "纸面能用，字迹需要重新誊写。",
+            "en": "Usable paper whose lettering needs copying."
+          },
+          "label": {
+            "zh": "纸张平整，片号却被擦得只剩半个。",
+            "en": "The paper lies flat, but half its number has rubbed away."
+          },
+          "hint": {
+            "zh": "缺的是字，先放进待补字。",
+            "en": "The missing part is the lettering."
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "已归档",
+            "en": "Filed"
+          },
+          "clue": {
+            "zh": "片号与位置已经核对。",
+            "en": "Number and position have been checked."
+          },
+          "label": {
+            "zh": "片号对得上，位置也登记了，边角还留着确认的小点。",
+            "en": "Number and position match the register; a small check-dot marks the corner."
+          },
+          "hint": {
+            "zh": "核对完号码与位置，才算已归档。",
+            "en": "Both number and position have already been checked."
+          }
+        }
+      ]
+    },
+    {
+      "id": "case_sorting_04",
+      "revision": 1,
+      "title": {
+        "zh": "收好小工具",
+        "en": "Put the small tools away"
+      },
+      "note": {
+        "zh": "小工具都有落脚处，明早就少一场翻箱倒柜。",
+        "en": "Every small tool has a place. Tomorrow starts with less rummaging."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "灯架旁",
+            "en": "By the lamp stand"
+          },
+          "clue": {
+            "zh": "放置照明用的小物件。",
+            "en": "For the small things used in lighting."
+          },
+          "label": {
+            "zh": "一只擦干净的备用灯泡。",
+            "en": "A spare bulb, wiped clean."
+          },
+          "hint": {
+            "zh": "灯泡留在灯架旁，取用方便。",
+            "en": "Keep the spare bulb beside the lamp stand."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "修理格",
+            "en": "Repair compartment"
+          },
+          "clue": {
+            "zh": "放置处理旧设备的工具。",
+            "en": "For tools used on old equipment."
+          },
+          "label": {
+            "zh": "一把用来拧紧螺丝的小螺丝刀。",
+            "en": "A small screwdriver for tightening loose screws."
+          },
+          "hint": {
+            "zh": "拧螺丝的工具归修理格。",
+            "en": "A screwdriver belongs with repair tools."
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "纸签格",
+            "en": "Label compartment"
+          },
+          "clue": {
+            "zh": "放置书写与标记的小物件。",
+            "en": "For writing and marking supplies."
+          },
+          "label": {
+            "zh": "一支削好的铅笔，旁边夹着空白纸签。",
+            "en": "A sharpened pencil clipped to blank labels."
+          },
+          "hint": {
+            "zh": "铅笔与空白纸签放在一起。",
+            "en": "Keep the pencil with the blank labels."
+          }
+        }
+      ]
+    },
+    {
+      "id": "case_sorting_05",
+      "revision": 1,
+      "title": {
+        "zh": "纸边的小毛病",
+        "en": "Small paper troubles"
+      },
+      "note": {
+        "zh": "纸签也得喘口气。湿的先晾，卷的慢理，缺的重新写。",
+        "en": "Labels need a little care: dry the damp, flatten the curled, rewrite the torn."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "先晾干",
+            "en": "Dry first"
+          },
+          "clue": {
+            "zh": "湿纸先别急着压进匣里。",
+            "en": "Damp paper needs time before it enters a case."
+          },
+          "label": {
+            "zh": "纸边还带着水痕，摸上去微微发软。",
+            "en": "Water marks linger at the edge; the paper still feels soft."
+          },
+          "hint": {
+            "zh": "有水痕、还发软，先晾干。",
+            "en": "Still damp and soft: dry it first."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "轻轻压平",
+            "en": "Press flat gently"
+          },
+          "clue": {
+            "zh": "干燥的卷边可以慢慢理平。",
+            "en": "Dry curled edges can be flattened gently."
+          },
+          "label": {
+            "zh": "纸已经干了，只是角上向外翘。",
+            "en": "The paper is dry, but one corner curls outward."
+          },
+          "hint": {
+            "zh": "干纸卷边，适合轻轻压平。",
+            "en": "A dry curled corner can be pressed flat."
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "另写纸签",
+            "en": "Write a fresh label"
+          },
+          "clue": {
+            "zh": "缺失的纸面需要一张新签。",
+            "en": "Missing paper calls for a new label."
+          },
+          "label": {
+            "zh": "纸签缺了一大角，片号无处写全。",
+            "en": "A large corner is missing; the full number no longer fits."
+          },
+          "hint": {
+            "zh": "纸面缺失，另写一张新签。",
+            "en": "Missing paper needs a fresh label."
+          }
+        }
+      ]
+    },
+    {
+      "id": "case_sorting_06",
+      "revision": 1,
+      "title": {
+        "zh": "收桌前的三步",
+        "en": "Three steps before closing"
+      },
+      "note": {
+        "zh": "六盘都理过了。别赶时间，片架会等你，灯也还亮着。",
+        "en": "Six trays sorted. No need to hurry: the shelf can wait, and the lamp is still on."
+      },
+      "references": [
+        "station",
+        "image_scavenger",
+        "letter_runner"
+      ],
+      "pairs": [
+        {
+          "id": "pair_1",
+          "title": {
+            "zh": "打开时",
+            "en": "When opening"
+          },
+          "clue": {
+            "zh": "先确认手里拿的是什么。",
+            "en": "First check what is in your hands."
+          },
+          "label": {
+            "zh": "翻开练习片匣，先读书脊上的片号。",
+            "en": "Open the practice case and read the number on its spine."
+          },
+          "hint": {
+            "zh": "刚打开时，先读片号。",
+            "en": "Read the number as you open the case."
+          }
+        },
+        {
+          "id": "pair_2",
+          "title": {
+            "zh": "整理时",
+            "en": "While sorting"
+          },
+          "clue": {
+            "zh": "一边查看，一边核对纸面记录。",
+            "en": "Check the paper record while working."
+          },
+          "label": {
+            "zh": "把内页记录与纸签逐项对照。",
+            "en": "Compare the inside note with each paper label."
+          },
+          "hint": {
+            "zh": "逐项核对是整理时的工作。",
+            "en": "Comparing the records is the sorting step."
+          }
+        },
+        {
+          "id": "pair_3",
+          "title": {
+            "zh": "收起时",
+            "en": "When closing"
+          },
+          "clue": {
+            "zh": "事情做完，再把桌面留整齐。",
+            "en": "Finish the work, then leave the desk tidy."
+          },
+          "label": {
+            "zh": "合上练习片匣，把铅笔放回纸签格。",
+            "en": "Close the practice case and return the pencil to the label compartment."
+          },
+          "hint": {
+            "zh": "合匣、归还铅笔，都是收桌前的最后一步。",
+            "en": "Closing the case and returning the pencil finish the task."
+          }
+        }
+      ]
     }
   ]
 }

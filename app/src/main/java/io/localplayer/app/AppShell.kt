@@ -58,11 +58,13 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     var localOpen by rememberSaveable{mutableStateOf(false)}
     var settingsOpen by rememberSaveable{mutableStateOf(false)}
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
+    var practiceOpen by rememberSaveable{mutableStateOf(false)}
     val openLocal={vm.stopDiscovery();vm.cancelOperation();localFiles.refresh();localOpen=true}
     var tab by rememberSaveable{mutableStateOf(AppTab.Home)}
     var cabinetOpen by rememberSaveable{mutableStateOf(false)}
     LaunchedEffect(SealedMedia.unlocked){vm.closeSealed();localFiles.closeSealed()}
     val states=rememberSaveableStateHolder()
+    if(practiceOpen){CaseSortingPage{practiceOpen=false};return}
     if(cabinetOpen){
         SealedCabinet(vm,{cabinetOpen=false}){item->
             if(item.directory&&item.tree!=null){localFiles.openSealed(item);localOpen=true;cabinetOpen=false}
@@ -94,7 +96,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true})
                     AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources}){cabinetOpen=true}
-                    AppTab.Explore->StationWorldPage(embedded=true){tab=AppTab.Home}
+                    AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true}){tab=AppTab.Home}
                 }}
             }
         }

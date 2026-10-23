@@ -6,6 +6,18 @@ from pathlib import Path
 from worldbook import validate, render_glossary
 
 class WorldbookTests(unittest.TestCase):
+    def test_practice_rounds_reject_ambiguous_or_stale_content(self):
+        for change,message in [
+            (lambda w:w['practiceRounds'].pop(),'Six practice'),
+            (lambda w:w['practiceRounds'][0].update(revision=0),'revision'),
+            (lambda w:w['practiceRounds'][0].update(references=['missing']),'reference'),
+            (lambda w:w['practiceRounds'][0]['pairs'][0]['hint'].update(en=''),'Chinese.*English'),
+            (lambda w:w['practiceRounds'][0]['pairs'][1].update(id='pair_1'),'pair identity'),
+            (lambda w:w['practiceRounds'][1].update(id='case_sorting_01'),'round identity')]:
+            with self.subTest(message=message):
+                atlas=copy.deepcopy(self.atlas);change(atlas)
+                with self.assertRaisesRegex(ValueError,message):self.check(atlas)
+
     def test_rejects_empty_chapter_catalog(self):
         for invalid in [[],None,{}]:
             with self.subTest(invalid=invalid):

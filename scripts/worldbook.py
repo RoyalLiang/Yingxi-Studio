@@ -72,6 +72,22 @@ def validate(root):
         if item['id'] in app_ids:raise ValueError('Duplicate application name identity')
         app_ids.add(item['id']);text(item['name']);text(item['meaning'])
 
+    rounds=world.get('practiceRounds')
+    if not isinstance(rounds,list) or len(rounds)!=6:raise ValueError('Six practice rounds required')
+    round_ids=set()
+    for item in rounds:
+        if not isinstance(item.get('id'),str) or not item['id'].strip() or item['id'] in round_ids:raise ValueError('Duplicate or invalid practice round identity')
+        round_ids.add(item['id'])
+        if type(item.get('revision')) is not int or item['revision']<1:raise ValueError('Invalid practice revision')
+        text(item['title']);text(item['note'])
+        if not item.get('references') or not set(item['references'])<=term_ids:raise ValueError('Unknown practice reference')
+        pairs=item.get('pairs')
+        if not isinstance(pairs,list) or len(pairs)!=3:raise ValueError('Three practice pairs required')
+        pair_ids=set()
+        for pair in pairs:
+            if not isinstance(pair.get('id'),str) or not pair['id'].strip() or pair['id'] in pair_ids:raise ValueError('Duplicate or invalid practice pair identity')
+            pair_ids.add(pair['id'])
+            for key in ['title','clue','label','hint']:text(pair[key])
     return world
 
 def render_glossary(world):
