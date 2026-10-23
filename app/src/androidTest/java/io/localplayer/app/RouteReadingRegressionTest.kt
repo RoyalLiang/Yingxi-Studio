@@ -136,6 +136,9 @@ class RouteReadingRegressionTest {
                 if (round == rounds.first() && record == round.records.first()) capture("large-source-$language")
                 ui.onNodeWithTag("reading-original-back").performClick()
                 choose(record.id, record.verdict)
+                val confirmed = ui.onNodeWithTag("reading-choice:${record.id}:Confirmed").fetchSemanticsNode().boundsInRoot
+                val pending = ui.onNodeWithTag("reading-choice:${record.id}:Pending").fetchSemanticsNode().boundsInRoot
+                assertTrue("Large type choices must stack", pending.top >= confirmed.bottom)
                 if (round == rounds.first() && record == round.records.first()) capture("large-choice-$language")
             }
             ui.onNodeWithTag("reading-complete").performScrollTo().assertIsDisplayed()

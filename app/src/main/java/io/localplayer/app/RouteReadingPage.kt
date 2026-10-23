@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontFamily
@@ -26,9 +27,11 @@ import io.localplayer.core.RecordVerdict
 import io.localplayer.core.RouteReading
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun RouteReadingPage(back: () -> Unit) {
     val context = LocalContext.current
     val language = LocalConfiguration.current.locales[0].language
+    val stackedChoices = LocalDensity.current.fontScale > 1.2f || LocalConfiguration.current.screenWidthDp < 360
     fun words(zh: String, en: String) = if (language == "zh") zh else en
     fun WorldText.say() = inLanguage(language)
     val rounds = remember(context) { RouteRecords.load(context) }
@@ -64,7 +67,8 @@ import kotlinx.coroutines.launch
                         Text(words("纸签${if (index == 0) "一" else "二"}", "Slip ${index + 1}"), fontSize = 12.sp, color = Muted)
                         Text(record.claim.say(), fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 29.sp,
                             color = Ink, modifier = Modifier.testTag("reading-claim:${record.id}"))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = if (stackedChoices) 1 else 2) {
                             RecordVerdict.entries.forEach { verdict ->
                                 val selected = progress.choices[record.id] == verdict
                                 OutlinedButton(onClick = {
