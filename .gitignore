@@ -22,6 +22,7 @@
 /docs/*
 !/docs/releasing.md
 !/docs/file-navigation.md
+!/docs/explore-play-proposal.md
 !/docs/player-controls.md
 !/docs/network-settings.md
 !/docs/apple-platform-plan.md

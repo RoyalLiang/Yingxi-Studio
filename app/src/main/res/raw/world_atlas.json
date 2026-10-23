@@ -564,6 +564,13 @@
         "zh": "迟灯压低灯罩，阿汐依本机记录排好看过的片匣。拾荒足迹与地图上的待核路线各留一页；可用的清晰度由信源交回，原画仍留在手边。",
         "en": "Chideng lowers the lampshade while Axi orders the watched cases from local records. Viewing footprints and unverified map routes keep separate pages; the source supplies its available picture choices, with the original still at hand."
       }
+    },
+    {
+      "version": "0.2.0-alpha.47",
+      "text": {
+        "zh": "阿汐把散开的旧事收回档案架，只在纸脊记一枚片号。片匣封面留给画面，札记下的小门也收起多余的空隙；探索桌上的新玩法仍是一张待采用的草图。",
+        "en": "Axi returns the loose records to the archive shelf, leaving one case number on each spine. Pictures keep their covers, and the small archive door below the journal sheds its spare space. New exploration games remain a sketch awaiting adoption."
+      }
     }
   ],
   "boundary": {
@@ -846,8 +853,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes."
+        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。",
+        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
@@ -905,8 +912,8 @@
         "en": "Station Chronicles"
       },
       "summary": {
-        "zh": "按应用版本选录的据点变化，不是完整版本史或废土年表。",
-        "en": "Selected station changes recorded by app version, rather than a complete release history or wasteland chronology."
+        "zh": "档案室内按应用版本选录的据点变化，不是完整版本史或废土年表。",
+        "en": "Selected station changes kept in the archives by app version, not a complete release history or wasteland chronology."
       },
       "canonStatus": "confirmed"
     },
@@ -1510,6 +1517,14 @@
       "text": {
         "zh": "夜里我把灯罩压低一格，检修纸看得清，旁人的眼睛也能歇一会儿。走到哪一格，就记哪一格。",
         "en": "At night I lower the lampshade one notch. The repair sheet stays legible and passing eyes can rest. I mark only the steps actually taken."
+      }
+    },
+    {
+      "id": "diary_022",
+      "author": "axi",
+      "text": {
+        "zh": "我把散开的旧事夹回档案架，只在纸脊上添一个小小的片号。封面留给画面，想找来处的人，翻开里面那一页就好。",
+        "en": "I return the loose station records to the archive shelf and add a small case number to each paper spine. The cover belongs to the picture; anyone looking for its origin can turn to the page inside."
       }
     }
   ],

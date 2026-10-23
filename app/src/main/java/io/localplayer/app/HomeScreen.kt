@@ -115,7 +115,7 @@ import androidx.compose.ui.unit.sp
         Column {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 val largeText = LocalDensity.current.fontScale > 1.4f
-                MediaPoster(entry.media, Modifier.width(if (largeText) 76.dp else 96.dp).aspectRatio(if(largeText)1f else 1.6f),compact=true)
+                MediaPoster(entry.media, Modifier.width(if (largeText) 76.dp else 96.dp).aspectRatio(if(largeText)1f else 1.6f))
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(mediaDisplayTitle(entry.media.title), fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(5.dp))
@@ -147,8 +147,7 @@ import androidx.compose.ui.unit.sp
                 PosterLabels(entry.media)
                 PosterPlaybackStatus(entry,Modifier.align(Alignment.BottomCenter))
                 if (preparing) CircularProgressIndicator(Modifier.align(Alignment.Center).size(24.dp), color = Berry, strokeWidth = 2.dp)
-                Box(Modifier.fillMaxWidth().height(64.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
-                    androidx.compose.ui.graphics.Color.Black.copy(alpha=.65f),androidx.compose.ui.graphics.Color.Black.copy(alpha=.5f),androidx.compose.ui.graphics.Color.Transparent))))
+
                 Box(Modifier.align(Alignment.TopEnd)) {
                     IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.MoreHoriz, "记录操作 ${mediaDisplayTitle(entry.media.title)}", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(19.dp).offset(x=6.dp,y=(-10).dp))

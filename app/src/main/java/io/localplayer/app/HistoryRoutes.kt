@@ -43,7 +43,7 @@ import java.util.Locale
                                 HistoryActionMenu(entry,{vm.resume(entry,true)},{vm.removeHistory(entry)},{vm.sealMedia(entry.media)})
                             }
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                                MediaPoster(entry.media,Modifier.size(80.dp),compact=true)
+                                MediaPoster(entry.media,Modifier.size(80.dp))
                                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
                                     Text(mediaDisplayTitle(entry.media.title),fontSize=16.sp,lineHeight=22.sp,fontWeight=FontWeight.Medium,color=Ink,maxLines=3,overflow=TextOverflow.Ellipsis)
                                     Text(if(entry.completed)"已看完"else time(entry.positionMs)+" / "+time(entry.durationMs),fontSize=12.sp,lineHeight=17.sp,color=Muted,maxLines=2)

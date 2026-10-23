@@ -75,7 +75,7 @@ internal fun sealActionLabel(directory:Boolean)=if(directory)"封存片架（私
                                 Box(Modifier.fillMaxWidth().height(posterHeight).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(GroupedSurface)) {
                                     if(item.directory)Icon(Icons.Rounded.FolderOpen,null,Modifier.align(Alignment.Center).size(32.dp),tint=Berry.copy(alpha=.5f))
                                     else MediaThumbnail(item.media,Modifier.fillMaxSize())
-                                    PosterLabels(item.media,directory=item.directory,reserveMenu=false)
+                                    PosterLabels(item.media,directory=item.directory)
                                 }
                                 Text(if(item.directory)item.media.title else mediaDisplayTitle(item.media.title),fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis)
                                 TextButton(onClick={SealedMedia.unseal(item.id)},modifier=Modifier.heightIn(min=48.dp)){Text("放回片架")}
