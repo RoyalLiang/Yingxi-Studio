@@ -12,6 +12,7 @@ object PlaybackMetrics {
   val bytes:Long,val readCalls:Long,val readTimeMs:Long,val openCalls:Long=0,
   val openTimeMs:Long=0,val maxReadMs:Long=0,val decoder:String?=null,val decoderInitMs:Long=0,val videoInputBuffers:Int?=null,val videoRenderedBuffers:Int?=null,
         val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0,val videoSkippedOutputs:Int?=null)
+ private var sdr=false
  private var started=0L
  private var firstFrame:Long?=null
  private var played=false
@@ -32,12 +33,16 @@ object PlaybackMetrics {
     private var videoCodecErrors=0
     private var videoDecoderReleases=0
  @Synchronized fun reset(){
+  sdr=false
   PlaybackIoProbe.reset()
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0
         videoCounters=null;videoEnabled=false;videoCodecErrors=0;videoDecoderReleases=0
  }
+ @Synchronized fun sdrStarted(){sdr=true;decoder="mpv.hevc.libplacebo.sdr-bt709";videoEnabled=true;videoCounters=null;firstFrame=null}
+ @Synchronized fun sdrFrame(){if(firstFrame==null)firstFrame=SystemClock.elapsedRealtime()-started}
+ @Synchronized fun sdrOutput(frames:Int){if(sdr){videoEnabled=true;dropped=frames}}
  @Synchronized fun read(count:Int,nanos:Long){bytes+=count;reads++;readNanos+=nanos;maxReadNanos=maxOf(maxReadNanos,nanos)}
  @Synchronized fun opened(nanos:Long){opens++;openNanos+=nanos}
  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
