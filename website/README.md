@@ -60,7 +60,7 @@ npm run deploy:production
 部署任务使用 GitHub 的 `website` environment；该环境只允许 `main` 分支。配置：
 
 - Secret `CLOUDFLARE_ACCOUNT_ID`：目标账号ID。
-- Secret `CLOUDFLARE_API_TOKEN`：限定目标账号、具备 Cloudflare Pages Edit / Pages Write 的专用令牌。该权限按账号覆盖 Pages 项目；工作流固定使用 `yingxi-station`。本次拟设有效期至 2027-10-24，需在到期前更新 environment secret；令牌撤销或到期会让部署任务失败，既有线上版本继续提供访问。
+- Secret `CLOUDFLARE_API_TOKEN`：限定目标账号、具备 Cloudflare Pages Edit / Pages Write 的专用令牌。该权限按账号覆盖 Pages 项目；工作流固定使用 `yingxi-station`。按用户确认，此专用令牌不设到期时间；需要轮换时先替换 environment secret 并验证新部署，再撤销旧令牌。令牌撤销会让后续部署任务失败，既有线上版本继续提供访问。
 - 可选 Variable `CLOUDFLARE_PAGES_PROJECT_NAME`：实际项目名。
 
 令牌在 Cloudflare 与 GitHub 的秘密管理界面配置，不提交到源码、不放在网页内，也不通过聊天传递。本地账号登录不替代 CI 专用令牌。[Cloudflare 持续集成说明](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)。
