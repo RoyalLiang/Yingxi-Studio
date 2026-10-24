@@ -608,6 +608,13 @@
         "zh": "迟灯把片窗边的旧绒条抚平，阿汐给完整的画面留出空处。常用开关收在片窗下沿；柜前的站名要多停留三秒，再核验来人的身份。",
         "en": "Chideng smooths the old felt beside the projection window; Axi leaves room for the whole frame. The usual switches settle below it. A three-second hold on the station name leads to the cabinet’s identity check."
       }
+    },
+    {
+      "version": "0.2.0-alpha.53",
+      "text": {
+        "zh": "阿汐折好分册的纸脊，迟灯替片窗留出合适的朝向。柜前的映汐二字停留两秒，再请设备核验；片罐的原位，仍由旧索引记着。",
+        "en": "Axi refolds the volume spines; Chideng gives each picture its proper window. Hold the Yingxi name by the cabinet for two seconds, then let the device verify entry. The old index still keeps each tin in place."
+      }
     }
   ],
   "boundary": {
@@ -839,8 +846,8 @@
         "en": "Image Scavenger"
       },
       "summary": {
-        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 阿汐把待寄的片罐记录夹在登记簿折页里，棉线绕在折页空白处，只收拢纸张，不充当路线已核的标记。",
-        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Axi keeps tin records awaiting dispatch inside a folded logbook page; the cotton tie rests on the blank margin and gathers paper and does not mark a verified route."
+        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。",
+        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles."
       },
       "canonStatus": "confirmed"
     },
@@ -1630,19 +1637,19 @@
       }
     },
     {
-      "id": "diary_dispatch_fold_20261023",
-      "author": "axi",
-      "text": {
-        "zh": "我把待寄的片罐记录夹进登记簿折页，棉线绕两圈就够，结留在没写字的纸边。打好结，只是纸不会散；还得等弥途带回路上的消息。",
-        "en": "I tucked the tin records awaiting dispatch into a folded logbook page. Two turns of cotton thread keep them together, with the knot on an unwritten margin. A knot only holds paper; news of the road must wait for Mitu to return."
-      }
-    },
-    {
       "id": "diary_station_notice_corner_20261023",
       "author": "axi",
       "text": {
         "zh": "我把写好的片单压在空片罐盖下，只压住没写字的一角。迟灯在盖沿包了一圈旧布，移开时纸角不会被带起。灯照到哪一行，来的人就从哪一行读；想看片子，先把纸放下也行。",
         "en": "I hold the film list under an empty tin lid, covering only an unwritten corner. Chideng wrapped a strip of old cloth around the rim so lifting it would not catch the paper. Visitors read whichever line the lamp reaches; anyone ready for a film can put the page down first."
+      }
+    },
+    {
+      "id": "diary_028",
+      "author": "axi",
+      "text": {
+        "zh": "我把松开的分册纸脊重新折好，迟灯用铜尺压住边沿。册名写在纸上，片罐还放在原来的格子里；要换一行索引，不必搬动整架影像。",
+        "en": "I refolded the loose paper spine while Chideng held its edge beneath a brass ruler. The volume name stays on paper; the film tins stay in their old slots. Changing an index line need not move a shelf of images."
       }
     }
   ],

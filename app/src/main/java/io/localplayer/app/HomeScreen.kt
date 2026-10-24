@@ -52,7 +52,8 @@ import androidx.compose.ui.unit.sp
             item(span = { GridItemSpan(maxLineSpan) }) {
                 FlowRow(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.padding(top=4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("映汐", modifier = Modifier.alignByBaseline(), fontSize = brandSize, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, maxLines = 1)
+
+                    StationCabinetName("映汐",Ink,onSealed,Modifier.alignByBaseline(),brandSize)
                         Text("放映站", modifier = Modifier.alignByBaseline().testTag("home-brand-caption"), fontSize = 13.sp, color = Muted, letterSpacing = 3.sp, maxLines = 1)
                     }
                     Row {
@@ -63,7 +64,7 @@ import androidx.compose.ui.unit.sp
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", diary.text.inLanguage(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
-                    modifier=Modifier.testTag("station-diary"),onStation=onSealed,onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
+                    modifier=Modifier.testTag("station-diary"),onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
             }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {

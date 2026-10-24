@@ -65,6 +65,22 @@ class PlaybackDirectionRegressionTest {
             } finally {main{c.release()}}
         } finally {main{activity.finish()}}
     }
+    @Test fun reusedPlayerWindowAcceptsNewPortraitPreflightBeforeStreamDimensions(){
+        fun pending(name:String):PlayTarget{
+            val uri=Uri.fromFile(File(context.cacheDir,name))
+            return PlayTarget(uri,name,0,MediaRef("reentry-$name",name,"Local",localUri=uri.toString()))
+        }
+        val first=pending("missing-landscape-reentry.mp4");val next=pending("missing-portrait-reentry.mp4")
+        main{ui.activity.startActivity(PlaybackActivity.intent(ui.activity,first,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE))}
+        ui.waitUntil(10000){playback()!=null};val original=playback()!!
+        try{
+            direction(Configuration.ORIENTATION_LANDSCAPE)
+            main{ui.activity.startActivity(PlaybackActivity.intent(ui.activity,next,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT))}
+            ui.waitUntil(5000){main{original.intent.getStringExtra("play-intent")==next.playId}}
+            main{assertSame(original,playback());assertEquals(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,original.requestedOrientation)}
+            direction(Configuration.ORIENTATION_PORTRAIT)
+        }finally{main{original.finish()};PlaybackRequests.remove(first.playId);PlaybackRequests.remove(next.playId)}
+    }
     private fun shell(command:String) {
         val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         instrumentation.uiAutomation.executeShellCommand(command).use{fd->java.io.FileInputStream(fd.fileDescriptor).use{it.readBytes()}}

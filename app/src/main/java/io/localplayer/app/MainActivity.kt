@@ -74,7 +74,16 @@ class MainActivity:ComponentActivity(){
             val nearby=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted ->model.refreshDiscoveryPermission();if(granted){if(model.discoveryPanelOpen)model.discover()}else model.error="未授予附近设备访问权限，本机文件仍可打开"}
         LaunchedEffect(model){model.plays.collect{target ->
             if(openingPlayer||!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))target.release()
-            else {openingPlayer=true;runCatching{startActivity(PlaybackActivity.intent(this@MainActivity,target),android.app.ActivityOptions.makeCustomAnimation(this@MainActivity,R.anim.player_enter,R.anim.player_exit).toBundle())}.onFailure{PlaybackRequests.remove(target.playId);openingPlayer=false;model.error="无法打开播放器"}}
+            else {
+                    openingPlayer=true
+                    try{
+                        val direction=PlaybackOrientationProbe.resolve(this@MainActivity,target)
+                        if(!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)||(SealedMedia.protects(target.media)&&!SealedMedia.unlocked)){
+                            target.release();openingPlayer=false
+                        }else startActivity(PlaybackActivity.intent(this@MainActivity,target,direction),android.app.ActivityOptions.makeCustomAnimation(this@MainActivity,R.anim.player_enter,R.anim.player_exit).toBundle())
+                    }catch(e:kotlinx.coroutines.CancellationException){target.release();openingPlayer=false;throw e}
+                    catch(_:Exception){PlaybackRequests.remove(target.playId);target.release();openingPlayer=false;model.error="无法打开播放器"}
+                }
         }}
             AppShell(model,localFiles,{openFile.launch(arrayOf("video/*"))},{openFolder.launch(null)},{nearby.launch(Manifest.permission.NEARBY_WIFI_DEVICES)})
         }
@@ -93,7 +102,7 @@ class MainActivity:ComponentActivity(){
         Row(Modifier.fillMaxWidth().padding(start=8.dp,end=12.dp,top=14.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(vm.path.isEmpty()||!selecting&&vm.path==current.initialPath)"返回信源"else"上一级",tint=Berry)}
             Column(Modifier.weight(1f).padding(horizontal=8.dp)){
-                Text(current.label,Modifier.testTag("source-browser-title"),fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(current.label,Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically).testTag("source-browser-title"),fontSize=23.sp,lineHeight=30.sp,letterSpacing=(-.5).sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
             if(selecting)TextButton(onClick={vm.closeSource()}){Text("取消")}
             else SourceActions(vm,current,vm.currentDirectoryBookmark()?:SourceBookmark(current.id,current.initialPath,current.label))
@@ -125,7 +134,7 @@ class MainActivity:ComponentActivity(){
             }
         }
         if(!selecting && vm.openingSource==null && shown.isNotEmpty()) {
-            ShelterDirectory(vm,current,selectedEntry){entry->selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path)else vm.play(entry)}
+            ShelterDirectory(vm,current,selectedEntry){entry->selectedEntry=entry.path;if(entry.directory)vm.browse(entry.path,playMovie=true)else vm.play(entry)}
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=112.dp)){
             if(shown.isEmpty()&&!vm.busy&&vm.openingSource==null)item{Text(if(selecting)"此处没有子文件夹，可以使用当前目录。"else"这个目录暂无可播放影像",Modifier.padding(32.dp),color=Muted)}
             if(vm.openingSource==null)items(shown,key={it.path}){entry->MediaRow(if(entry.directory)entry.name else if(entry.isVideo)mediaDisplayTitle(entry.name)else entry.name,if(entry.directory)"文件夹"else"${formatSize(entry.size)}${if(entry.isVideo)" · 全屏播放"else" · 格式可能不支持"}",

@@ -336,7 +336,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
         if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption)
-        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
+        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackDiagnosticCopy(controller); TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
     }
 }
 

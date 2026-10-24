@@ -92,9 +92,9 @@ class PlaybackActivity:ComponentActivity(){
     }
     companion object {
         private const val ACTION_CLOSE_PIP="io.localplayer.app.CLOSE_PIP"
-        fun intent(context:Context,target:PlayTarget):Intent {
+        fun intent(context:Context,target:PlayTarget,initialOrientation:Int?=null):Intent {
             PlaybackRequests.put(target.copy(historyToken=target.historyToken ?: HistoryStore(context).token(target.media.key)))
-            return Intent(context,PlaybackActivity::class.java).putExtra("play-intent",target.playId)
+            return Intent(context,PlaybackActivity::class.java).putExtra("play-intent",target.playId).putExtra("initial-orientation",initialOrientation?:ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
         }
     }
     override fun onCreate(savedInstanceState:Bundle?){
@@ -109,10 +109,10 @@ class PlaybackActivity:ComponentActivity(){
         directionMediaId=savedInstanceState?.getString("direction-media")
         manualDirection=savedInstanceState?.getInt("direction-manual",-1)?.takeIf{it>=0}
         directionLocked=savedInstanceState?.getBoolean("direction-locked")?:false
-        // The manifest orients the starting window before a controller or network metadata exists.
+        // Apply the preflight hint before composing; unknown metadata keeps the inherited direction.
         requestedOrientation=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
-            manualDirection?:savedInstanceState?.getInt("direction-auto",ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
-            ?:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            manualDirection?:savedInstanceState?.getInt("direction-auto",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+            ?:intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
         resumeAfterPicker=savedInstanceState?.getBoolean("caption-resume") ?: false;enableEdgeToEdge();window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);immersive()
         val title=PlaybackRequests.get(intent.getStringExtra("play-intent"))?.title ?: "视频"
         captionMediaId=savedInstanceState?.getString("caption-media")
@@ -286,7 +286,7 @@ class PlaybackActivity:ComponentActivity(){
         if(changed){
             pendingCaption=null;captionReady=false;captionUri=null;captionMediaId=null;resumeAfterPicker=false
             directionMediaId=null;manualDirection=null
-            if(!directionLocked)requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            if(!directionLocked)requestedOrientation=intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
         }
         playerController?.let{loadInitial(it)}
         updatePictureInPicture()
@@ -333,8 +333,9 @@ class PlaybackActivity:ComponentActivity(){
         if(!foreground||compact||captionPickerOpen||isFinishing||!owns(c))return
         val id=c.currentMediaItem?.mediaId?:return
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
+        videoOrientation(c.videoSize)?.let{orientation->presentedMedia?.let{PlaybackOrientationProbe.remember(it,orientation)}}
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
-            manualDirection?:videoOrientation(c.videoSize)?:ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            manualDirection?:videoOrientation(c.videoSize)?:return
         if(requestedOrientation!=desired)requestedOrientation=desired
     }
     private fun rotate(){

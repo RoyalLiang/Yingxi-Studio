@@ -40,7 +40,7 @@ internal fun localArchiveIdentity(entry:LocalEntry,files:LocalFilesViewModel)=
         Row(Modifier.fillMaxWidth().padding(horizontal=20.dp),verticalAlignment=Alignment.CenterVertically){Text("${files.entries.size} 个项目",Modifier.weight(1f),fontSize=13.sp,color=Muted);TextButton(onClick={files.refresh()}){Text("刷新")}}
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             if(filter=="全部")items(files.entries.filter{it.directory||!it.video},key={it.uri.toString()}){entry->
-                MediaRow(entry.name,if(entry.directory)"文件夹"else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.Description,selected=false,seal=if(entry.directory)({player.sealLocal(entry,files)})else null){if(entry.directory)files.enter(entry)else files.error="请选择视频文件"}
+                MediaRow(entry.name,if(entry.directory)"文件夹"else"非视频文件",if(entry.directory)Icons.Rounded.Folder else Icons.Rounded.Description,selected=false,seal=if(entry.directory)({player.sealLocal(entry,files)})else null){if(entry.directory)files.enter(entry){movie,siblings->player.playLocal(movie.uri,siblings=siblings,privatePlayback=files.privateBrowse)}else files.error="请选择视频文件"}
             }
             if(shown.isEmpty()&&files.entries.none{it.directory}&&!files.busy)item{Text("这个分类还没有影片",Modifier.padding(24.dp),color=Muted)}
             groups.forEach { (group,pairs)->

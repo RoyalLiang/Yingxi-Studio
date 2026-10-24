@@ -31,10 +31,10 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
     val state=when(player?.playbackState){Player.STATE_BUFFERING->"BUFFERING";Player.STATE_READY->"READY";Player.STATE_ENDED->"ENDED";Player.STATE_IDLE->"IDLE";else->"SESSION_CONNECTING"}
     val scheme=player?.currentMediaItem?.localConfiguration?.uri?.scheme
     val kind=if(scheme=="file"||scheme=="content")"LOCAL" else io.protocol
-    val selected=player?.currentTracks?.groups?.firstNotNullOfOrNull{group->
-        if(group.type!=androidx.media3.common.C.TRACK_TYPE_VIDEO)null
-        else (0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let{group.getTrackFormat(it)}
-    }
+    val videoGroups=player?.currentTracks?.groups.orEmpty().filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
+    val selected=videoGroups.firstNotNullOfOrNull{group->
+        (0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let{group.getTrackFormat(it)}
+    }?:videoGroups.firstOrNull{it.length>0}?.getTrackFormat(0)
     val mime=selected?.sampleMimeType?.takeIf{it in setOf("video/avc","video/hevc","video/dolby-vision","video/av01","video/x-vnd.on2.vp9","video/x-vnd.on2.vp8","video/mp4v-es","video/mpeg2","video/3gpp") }
     return JSONObject().put("report","yingxi-playback-v1")
         .put("httpPhase",active?.stage?.name?:if(transports.isEmpty())JSONObject.NULL else "IDLE")
@@ -59,6 +59,8 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("playbackSpeed",player?.playbackParameters?.speed?:1f)
         .put("encodedFrameRate",selected?.frameRate?.takeIf{it.isFinite()&&it>0}?:JSONObject.NULL)
         .put("videoSkippedOutputs",metrics.videoSkippedOutputs?:JSONObject.NULL)
+        .put("videoCodecs",diagnosticCodec(selected?.codecs)?:JSONObject.NULL)
+        .put("nativeDolbyVisionDecoders",nativeDolbyVisionDecoders())
         .put("videoMime",mime?:JSONObject.NULL).put("encodedWidth",selected?.width?:0).put("encodedHeight",selected?.height?:0)
         .put("openCalls",metrics.openCalls).put("openTimeMs",metrics.openTimeMs)
         .put("firstFrameMs",metrics.firstFrameMs?:JSONObject.NULL).put("rebuffers",metrics.rebufferCount)
@@ -114,11 +116,8 @@ internal fun playbackWaitSummary():String {
 
 /** Only composed during buffering. Sampling stops with the overlay; it never controls playback. */
 @Composable internal fun PlaybackWaitDiagnostics(player:Player?,thresholdMs:Long=12_000) {
-    val context=LocalContext.current
     var elapsed by remember{mutableLongStateOf(0)}
     var summary by remember{mutableStateOf(playbackWaitSummary())}
-    var copied by remember{mutableStateOf(false)}
-    var copyFailed by remember{mutableStateOf(false)}
     LaunchedEffect(Unit){
         val started=SystemClock.elapsedRealtime()
         while(true){elapsed=SystemClock.elapsedRealtime()-started;summary=playbackWaitSummary();delay(1000)}
@@ -126,9 +125,17 @@ internal fun playbackWaitSummary():String {
     if(elapsed>=thresholdMs){
         Text(summary,Modifier.widthIn(max=280.dp).testTag("playback-wait-details"),color=PlayerInk.copy(alpha=.78f),
             fontSize=13.sp,textAlign=TextAlign.Center)
-        TextButton(onClick={
+        PlaybackDiagnosticCopy(player,elapsed)
+    }
+}
+
+@Composable internal fun PlaybackDiagnosticCopy(player:Player?,waitMs:Long?=null){
+    val context=LocalContext.current
+    var copied by remember{mutableStateOf(false)}
+    var copyFailed by remember{mutableStateOf(false)}
+    TextButton(onClick={
             val result=runCatching{
-                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",playbackDiagnostic(player,elapsed)))
+                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",playbackDiagnostic(player,waitMs)))
             }
             copied=result.isSuccess;copyFailed=result.isFailure
             if(result.isFailure)Toast.makeText(context,"未能复制，请重试",Toast.LENGTH_SHORT).show()
@@ -137,4 +144,20 @@ internal fun playbackWaitSummary():String {
             Text(if(copyFailed)"重试复制检修记录" else if(copied)"已复制检修记录" else "复制检修记录")
         }
     }
+
+/** Accept codec identifiers only; never copy arbitrary format strings or exception messages. */
+internal fun diagnosticCodec(value:String?):String?=value?.takeIf{it.length<=80&&it.split(',').all{codec->
+    Regex("(?i)(dvhe|dvh1|hvc1|hev1|avc1|avc3|av01|vp09)(\\.[0-9a-flh]{1,8}){1,5}").matches(codec.trim())
+}}
+
+private fun nativeDolbyVisionDecoders():org.json.JSONArray {
+    val result=org.json.JSONArray()
+    runCatching{android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
+        .filter{!it.isEncoder&&it.supportedTypes.any{mime->mime.equals("video/dolby-vision",true)}}.take(16).forEach{codec->
+            if(!codec.name.matches(Regex("[A-Za-z0-9._+-]{1,160}")))return@forEach
+            val caps=codec.getCapabilitiesForType("video/dolby-vision")
+            val profiles=org.json.JSONArray();caps.profileLevels.take(32).forEach{profiles.put(org.json.JSONObject().put("profile",it.profile).put("level",it.level))}
+            result.put(org.json.JSONObject().put("name",codec.name).put("profileLevels",profiles))
+        }}
+    return result
 }
