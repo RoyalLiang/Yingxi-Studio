@@ -863,8 +863,8 @@
         "en": "Wayfinder"
       },
       "summary": {
-        "zh": "记录通行条件并维护路标的人；弥途将未走过的路线画成虚线。",
-        "en": "Someone who records travel conditions and maintains signs; Mitu marks unwalked routes with dotted lines."
+        "zh": "记录通行条件并维护路标的人；弥途将未走过的路线画成虚线。 弥途把理想城的商队口信记在图纸边上，不将转述接入实线。",
+        "en": "Someone who records travel conditions and maintains signs; Mitu marks unwalked routes with dotted lines. Mitu keeps the caravan message from Ideal City in the map margin, leaving hearsay off the solid route."
       },
       "canonStatus": "confirmed"
     },
@@ -1658,6 +1658,14 @@
       "text": {
         "zh": "我把盖沿旧布的接缝翻到内侧，线头夹进两层布里。阿汐用指腹顺着盖沿摸了一圈，才把片单的空白角压回去；纸上的片名，一笔也没擦。",
         "en": "I turn the cloth seam to the inside of the tin lid and tuck the thread ends between its layers. Axi runs a fingertip around the rim before setting it back on the film list's blank corner; none of the titles loses a mark."
+      }
+    },
+    {
+      "id": "diary_world_route_margin_20261024",
+      "author": "mitu",
+      "text": {
+        "zh": "我把商队带来的理想城口信写在图纸边上，没往实线上添一笔。阿汐问我走过没有，我摇头；纸边留得宽些，容得下听来的话，也容得下还没走过的路。",
+        "en": "I put the caravan's message from Ideal City in the map's margin, adding nothing to the solid route. When Axi asks whether I have walked there, I shake my head. The wide margin holds what we have heard and leaves room for ground we have not crossed."
       }
     }
   ],

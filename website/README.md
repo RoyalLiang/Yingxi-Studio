@@ -68,6 +68,7 @@ npm run deploy:production
 ## 内容与维护
 
 - `public/index.html`：播放器介绍、废土世界、下载与常见问题。
+- `public/world/index.html`：完整世界档案，含纪元、六处地点、生命谱系、住民、故事边界与全部词条节录。由 `tools/sync-world.py` 从随包图谱生成；站内未知路线保持虚线。
 - `public/assets/screenshots.json`：界面素材对应的应用版本、正式APK校验和及图片/录屏摘要。
 - `public/assets/letters.json`：按稳定ID导出的中英住民短笺。
 - `public/privacy/`：官网浏览隐私说明，尚非完整应用隐私政策。
@@ -79,6 +80,7 @@ npm run deploy:production
 
 ```sh
 python3 -B website/tools/sync-letters.py
+python3 -B website/tools/sync-world.py
 node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 ```
 

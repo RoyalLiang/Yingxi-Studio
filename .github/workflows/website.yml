@@ -36,6 +36,7 @@ jobs:
         run: |
           python3 -B scripts/repository_guard.py --git
           python3 -B scripts/worldbook.py
+          python3 -B website/tools/sync-world.py --check
           python3 -B -m unittest discover -s scripts -p test_repository_guard.py
           node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
       - name: Archive checked website
