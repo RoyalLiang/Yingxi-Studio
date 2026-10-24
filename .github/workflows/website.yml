@@ -47,7 +47,7 @@ jobs:
           retention-days: 14
 
   deploy:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: check
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -60,7 +60,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
       WRANGLER_SEND_METRICS: 'false'
-      DEPLOY_TARGET: ${{ inputs.target }}
+      DEPLOY_TARGET: ${{ github.event_name == 'push' && 'production' || inputs.target }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -70,12 +70,31 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: website/package-lock.json
+      - name: Check that production still matches main
+        id: current
+        run: |
+          if [ "$DEPLOY_TARGET" = production ]; then
+            latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+            if [ -z "$latest" ]; then
+              echo '::error::Could not resolve the current main commit.'
+              exit 1
+            fi
+            if [ "$latest" != "$GITHUB_SHA" ]; then
+              echo 'publish=false' >> "$GITHUB_OUTPUT"
+              echo 'Skipped production deployment: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+          echo 'publish=true' >> "$GITHUB_OUTPUT"
       - name: Check configured deployment identity
+        if: steps.current.outputs.publish == 'true'
         run: |
           node -e "if(!process.env.CLOUDFLARE_ACCOUNT_ID||!process.env.CLOUDFLARE_API_TOKEN){console.error('Set CLOUDFLARE_ACCOUNT_ID and a Pages-edit CLOUDFLARE_API_TOKEN in the website environment.');process.exit(1)}"
       - name: Install pinned Cloudflare CLI
+        if: steps.current.outputs.publish == 'true'
         working-directory: website
         run: npm ci --no-audit --no-fund
       - name: Deploy the checked commit
+        if: steps.current.outputs.publish == 'true'
         working-directory: website
         run: npm run deploy -- --target "$DEPLOY_TARGET"

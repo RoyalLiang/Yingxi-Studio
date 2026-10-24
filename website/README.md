@@ -53,15 +53,17 @@ npm run deploy:production
 
 ## 仓库工作流
 
-`.github/workflows/website.yml` 在官网变更的 Push / PR 上核对源码、锚点、住民原文与媒体摘要，并保存静态产物。部署由 `workflow_dispatch` 明确选择 `preview` 或 `production`，不会因 PR 自动发布。
+`.github/workflows/website.yml` 在官网变更的 Push / PR 上核对源码、锚点、住民原文与媒体摘要，并保存静态产物。更新 `website/**` 或此工作流并推送到 `main` 后，校验通过即自动发布到 `https://yingxi-station.pages.dev`。PR 仅校验，不读取部署凭据；其他分支不会发布正式站点。
 
-部署任务使用 GitHub 的 `website` environment。配置：
+仍可从 `main` 手动运行 `workflow_dispatch`，选择 `preview` 或 `production`。发布任务串行执行且不取消正在进行的上传；正式上传前重新核对远端 `main`，过时提交会跳过，避免排队任务把官网回退到旧版。
+
+部署任务使用 GitHub 的 `website` environment；该环境只允许 `main` 分支。配置：
 
 - Secret `CLOUDFLARE_ACCOUNT_ID`：目标账号ID。
-- Secret `CLOUDFLARE_API_TOKEN`：限定目标账号、具备 Cloudflare Pages Edit 的令牌。
+- Secret `CLOUDFLARE_API_TOKEN`：限定目标账号、具备 Cloudflare Pages Edit / Pages Write 的专用令牌。该权限按账号覆盖 Pages 项目；工作流固定使用 `yingxi-station`。本次拟设有效期至 2027-10-24，需在到期前更新 environment secret；令牌撤销或到期会让部署任务失败，既有线上版本继续提供访问。
 - 可选 Variable `CLOUDFLARE_PAGES_PROJECT_NAME`：实际项目名。
 
-令牌在 Cloudflare 与 GitHub 的秘密管理界面配置，不提交到源码、不放在网页内，也不通过聊天传递。账号登录成功不等于这些CI秘密已配置。[Cloudflare 持续集成说明](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)。
+令牌在 Cloudflare 与 GitHub 的秘密管理界面配置，不提交到源码、不放在网页内，也不通过聊天传递。本地账号登录不替代 CI 专用令牌。[Cloudflare 持续集成说明](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)。
 
 ## 内容与维护
 
