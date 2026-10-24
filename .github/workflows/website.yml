@@ -74,14 +74,10 @@ jobs:
         id: current
         run: |
           if [ "$DEPLOY_TARGET" = production ]; then
-            latest="$(git ls-remote origin refs/heads/main | cut -f1)"
-            if [ -z "$latest" ]; then
-              echo '::error::Could not resolve the current main commit.'
-              exit 1
-            fi
-            if [ "$latest" != "$GITHUB_SHA" ]; then
+            git fetch --no-tags --depth=1 origin main
+            if ! git diff --quiet HEAD FETCH_HEAD -- website/ .github/workflows/website.yml; then
               echo 'publish=false' >> "$GITHUB_OUTPUT"
-              echo 'Skipped production deployment: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
+              echo 'Skipped production deployment: main has newer website content or workflow configuration.' >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
           fi

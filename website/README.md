@@ -55,7 +55,7 @@ npm run deploy:production
 
 `.github/workflows/website.yml` 在官网变更的 Push / PR 上核对源码、锚点、住民原文与媒体摘要，并保存静态产物。更新 `website/**` 或此工作流并推送到 `main` 后，校验通过即自动发布到 `https://yingxi-station.pages.dev`。PR 仅校验，不读取部署凭据；其他分支不会发布正式站点。
 
-仍可从 `main` 手动运行 `workflow_dispatch`，选择 `preview` 或 `production`。发布任务串行执行且不取消正在进行的上传；正式上传前重新核对远端 `main`，过时提交会跳过，避免排队任务把官网回退到旧版。
+仍可从 `main` 手动运行 `workflow_dispatch`，选择 `preview` 或 `production`。发布任务串行执行且不取消正在进行的上传；正式上传前重新核对远端 `main` 的官网源码与发布配置，已有更新的官网内容时会跳过旧任务；仅 Android 等无关文件变化不阻断官网发布。
 
 部署任务使用 GitHub 的 `website` environment；该环境只允许 `main` 分支。配置：
 
