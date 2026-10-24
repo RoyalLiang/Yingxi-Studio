@@ -32,6 +32,8 @@ const letters=JSON.parse(fs.readFileSync(path.join(root,'assets/letters.json'),'
 for(const key of ['axi','chideng','mitu'])if(!letters[key]?.letter||!letters[key]?.record)errors.push(`Missing canonical letter: ${key}`);
 const atlasArg=process.argv.indexOf('--atlas');
 if(atlasArg!==-1){const atlas=JSON.parse(fs.readFileSync(process.argv[atlasArg+1],'utf8'));for(const [key,letter] of Object.entries(letters)){const record=atlas.dailyLines.find(line=>line.id===letter.record&&line.author===key);if(record?.text.zh!==letter.letter||record?.text.en!==letter.english)errors.push(`Atlas letter differs: ${key}`);}}
+const world=fs.readFileSync(path.join(root,'world/index.html'),'utf8');
+for(const id of ['eras','atlas','life','residents','boundaries','glossary','place-station','place-salt','place-archive','place-sea','place-beacon','place-ideal','resident-axi','resident-chideng','resident-mitu'])if(!world.includes(`id="${id}"`))errors.push(`Missing world archive section: ${id}`);
 const captures=JSON.parse(fs.readFileSync(path.join(root,'assets/screenshots.json'),'utf8'));
 for(const asset of captures.assets){const file=path.join(root,'assets',asset.file);if(!fs.existsSync(file))errors.push(`Missing capture ${asset.file}`);else if(createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==asset.sha256)errors.push(`Capture checksum differs: ${asset.file}`);}
 if(!fs.readFileSync(path.join(root,'index.html'),'utf8').includes(captures.release.tag))errors.push('Download version differs from screenshot release');

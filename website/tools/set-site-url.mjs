@@ -9,7 +9,7 @@ const parsed=new URL(process.argv[urlFlag+1]);
 if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.port||parsed.search||parsed.hash||parsed.pathname!=='/')throw Error('Use a plain HTTPS origin without path, query, credentials or port');
 const origin=parsed.origin;
 const escape=value=>value.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
-const pages=[['index.html','/','映汐，个人本地播放器。打开自己的片库，在影片之外遇见废土世界。'],['support/index.html','/support/','映汐安装、媒体来源连接、播放操作与问题反馈。'],['privacy/index.html','/privacy/','浏览映汐官网时的信息处理说明。']];
+const pages=[['index.html','/','映汐，个人本地播放器。打开自己的片库，在影片之外遇见废土世界。'],['world/index.html','/world/','核爆长潮之后的纪元、聚居、生命谱系与放映站住民。'],['support/index.html','/support/','映汐安装、媒体来源连接、播放操作与问题反馈。'],['privacy/index.html','/privacy/','浏览映汐官网时的信息处理说明。']];
 for(const [name,route,description] of pages){
  const file=path.join(root,name);let html=fs.readFileSync(file,'utf8');
  html=html.replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi,'').replace(/<meta\b[^>]*property=["']og:[^"']+["'][^>]*>/gi,'');
