@@ -49,3 +49,5 @@
 @media(max-width:359px){.book-hero h1{font-size:39px}}
 
 .book-map .map-hit{fill:transparent;stroke:none}
+
+@media(max-width:359px){.book-map text{font-size:48px}}
