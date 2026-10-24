@@ -21,6 +21,9 @@ def allowed(name):
     p = Path(name)
     if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", ".build", "DerivedData", "xcuserdata", "__pycache__"} for part in p.parts): return False
     if name in EXACT: return True
+    if name in {"website/README.md", "website/DESIGN.md", "website/package.json", "website/package-lock.json", "website/wrangler.jsonc", "website/public/_headers"}: return True
+    if name.startswith("website/public/") and p.suffix in {".html", ".css", ".js", ".json", ".webp", ".woff2", ".txt", ".webm", ".xml"}: return True
+    if name.startswith("website/tools/") and p.suffix in {".mjs", ".py"}: return True
     if p.parent == Path("releases") and p.suffix == ".md": return True
     return ((name.startswith("ios/") and p.suffix in {".swift", ".plist", ".pbxproj", ".xcscheme", ".json", ".md", ".png"}) or
         (name.startswith(("app/src/main/java/", "app/src/androidTest/java/", "core/src/main/kotlin/", "core/src/test/kotlin/")) and p.suffix == ".kt")
@@ -43,7 +46,7 @@ def inspect(name, data):
     errors = []
     if not allowed(name): errors.append("not in source publication allowlist")
     if data.startswith(bytes.fromhex("00051607")): errors.append("AppleDouble metadata")
-    if Path(name).suffix not in {".png", ".webp", ".jar"}:
+    if Path(name).suffix not in {".png", ".webp", ".jar", ".woff2", ".webm"}:
         for label, pattern in PATTERNS.items():
             if pattern.search(data): errors.append(label)
         for ip in re.findall(rb"(?<![0-9])(?:10\.[0-9]+\.[0-9]+\.[0-9]+|192\.168\.[0-9]+\.[0-9]+|172\.(?:1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+)(?![0-9])", data):
