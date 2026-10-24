@@ -30,8 +30,8 @@ for edge in atlas['edges']:
 markers = []
 for key, item in places.items():
     x, y = points[key]
-    markers.append(f'<a href="#place-{key}" aria-label="阅读{esc(item["name"]["zh"])}"><rect class="map-hit" x="{x-110}" y="{y-30}" width="220" height="125"/><circle class="{"known-place" if item["known"] else "unknown-place"}" cx="{x}" cy="{y}" r="11"/><text x="{x}" y="{y+36}" text-anchor="middle">{esc(item["name"]["zh"])}</text></a>')
-map_svg = '<svg viewBox="0 0 900 500" role="group" aria-label="放映站与盐环列站为实测往返信路，其余四处保留虚线线索">' + ''.join(paths + markers) + '</svg>'
+    markers.append(f'<a href="#place-{key}" aria-label="阅读{esc(item["name"]["zh"])}"><rect class="map-hit" x="{x-110}" y="{y-50}" width="220" height="160"/><circle class="{"known-place" if item["known"] else "unknown-place"}" cx="{x}" cy="{y}" r="11"/><text x="{x}" y="{y+36}" text-anchor="middle">{esc(item["name"]["zh"])}</text></a>')
+map_svg = '<svg viewBox="0 0 900 550" role="group" aria-label="放映站与盐环列站为实测往返信路，其余四处保留虚线线索">' + ''.join(paths + markers) + '</svg>'
 place_html = ''.join(f'<article class="book-place" id="place-{key}"><p class="book-status">{"站内已知 · 信路已核" if item["known"] else "世界设定已采用 · 站内位置或路线待核"}</p><h3>{esc(item["name"]["zh"])}</h3><p>{esc(item["description"]["zh"])}</p></article>' for key, item in places.items())
 resident_html = ''.join(f'<article class="book-resident" id="resident-{p["id"]}"><img src="../assets/{p["id"]}.webp" width="1254" height="1254" alt="{esc(p["name"]["zh"])}的原创肖像" loading="lazy"><div><p class="book-status">{esc(p["role"]["zh"])}</p><h3>{esc(p["name"]["zh"])}</h3><p>{esc(p["description"]["zh"])}</p></div></article>' for p in atlas['characters'])
 glossary = ''.join(f'<details id="glossary-{item["id"]}"><summary>{esc(item["name"]["zh"])}<span aria-hidden="true">＋</span></summary><p>{esc(summary(item, 2))}</p></details>' for item in atlas['lexicon'])
