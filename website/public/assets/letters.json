@@ -2,16 +2,16 @@
   "axi": {
     "name": "阿汐",
     "role": "影像拾荒者 · 据点管理员",
-    "letter": "我把写好的片单压在空片罐盖下，只压住没写字的一角。迟灯在盖沿包了一圈旧布，移开时纸角不会被带起。灯照到哪一行，来的人就从哪一行读；想看片子，先把纸放下也行。",
-    "english": "I hold the film list under an empty tin lid, covering only an unwritten corner. Chideng wrapped a strip of old cloth around the rim so lifting it would not catch the paper. Visitors read whichever line the lamp reaches; anyone ready for a film can put the page down first.",
-    "record": "diary_station_notice_corner_20261023"
+    "letter": "我把松开的分册纸脊重新折好，迟灯用铜尺压住边沿。册名写在纸上，片罐还放在原来的格子里；要换一行索引，不必搬动整架影像。",
+    "english": "I refolded the loose paper spine while Chideng held its edge beneath a brass ruler. The volume name stays on paper; the film tins stay in their old slots. Changing an index line need not move a shelf of images.",
+    "record": "diary_028"
   },
   "chideng": {
     "name": "迟灯",
     "role": "放映站守夜人 · 旧设备修理师",
-    "letter": "我把片窗两侧的旧绒条抚平，毛边朝外收好。边框不该挤进故事里；阿汐试映时，我只在灯下看那一道齐整的边。",
-    "english": "I smooth the old felt strips beside the projection window and tuck their frayed edges outward. A frame should leave the story room; while Axi tests the reel, I watch the even border beneath the lamp.",
-    "record": "diary_026"
+    "letter": "我把盖沿旧布的接缝翻到内侧，线头夹进两层布里。阿汐用指腹顺着盖沿摸了一圈，才把片单的空白角压回去；纸上的片名，一笔也没擦。",
+    "english": "I turn the cloth seam to the inside of the tin lid and tuck the thread ends between its layers. Axi runs a fingertip around the rim before setting it back on the film list's blank corner; none of the titles loses a mark.",
+    "record": "diary_station_lid_seam_20261024"
   },
   "mitu": {
     "name": "弥途",
