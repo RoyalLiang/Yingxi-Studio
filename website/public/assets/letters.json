@@ -1,0 +1,23 @@
+{
+  "axi": {
+    "name": "阿汐",
+    "role": "影像拾荒者 · 据点管理员",
+    "letter": "我把写好的片单压在空片罐盖下，只压住没写字的一角。迟灯在盖沿包了一圈旧布，移开时纸角不会被带起。灯照到哪一行，来的人就从哪一行读；想看片子，先把纸放下也行。",
+    "english": "I hold the film list under an empty tin lid, covering only an unwritten corner. Chideng wrapped a strip of old cloth around the rim so lifting it would not catch the paper. Visitors read whichever line the lamp reaches; anyone ready for a film can put the page down first.",
+    "record": "diary_station_notice_corner_20261023"
+  },
+  "chideng": {
+    "name": "迟灯",
+    "role": "放映站守夜人 · 旧设备修理师",
+    "letter": "我把片窗两侧的旧绒条抚平，毛边朝外收好。边框不该挤进故事里；阿汐试映时，我只在灯下看那一道齐整的边。",
+    "english": "I smooth the old felt strips beside the projection window and tuck their frayed edges outward. A frame should leave the story room; while Axi tests the reel, I watch the even border beneath the lamp.",
+    "record": "diary_026"
+  },
+  "mitu": {
+    "name": "弥途",
+    "role": "盐环路标师 · 往返列站的递信人",
+    "letter": "我把两张纸签压在同一块木板上，免得风替我翻页。没走过的地方，铅笔先留着；纸上对过一遍，鞋底还得再走一遍。",
+    "english": "I pin two slips to the same board so the wind cannot turn a page for me. I keep the pencil mark where I have not walked; matching paper still leaves the journey to my boots.",
+    "record": "diary_025"
+  }
+}

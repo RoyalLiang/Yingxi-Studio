@@ -1,0 +1,81 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/website.yml']
+  pull_request:
+    paths: ['website/**', '.github/workflows/website.yml']
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Cloudflare deployment target
+        type: choice
+        options: [preview, production]
+        default: preview
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      COPYFILE_DISABLE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@0249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Check static source and canonical content
+        run: |
+          python3 -B scripts/repository_guard.py --git
+          python3 -B scripts/worldbook.py
+          python3 -B -m unittest discover -s scripts -p test_repository_guard.py
+          node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
+      - name: Archive checked website
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: yingxi-website-${{ github.sha }}
+          path: website/public/
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: website
+    concurrency:
+      group: yingxi-website-deploy
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      WRANGLER_SEND_METRICS: 'false'
+      DEPLOY_TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@0249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Check configured deployment identity
+        run: |
+          node -e "if(!process.env.CLOUDFLARE_ACCOUNT_ID||!process.env.CLOUDFLARE_API_TOKEN){console.error('Set CLOUDFLARE_ACCOUNT_ID and a Pages-edit CLOUDFLARE_API_TOKEN in the website environment.');process.exit(1)}"
+      - name: Install pinned Cloudflare CLI
+        working-directory: website
+        run: npm ci --no-audit --no-fund
+      - name: Deploy the checked commit
+        working-directory: website
+        run: npm run deploy -- --target "$DEPLOY_TARGET"

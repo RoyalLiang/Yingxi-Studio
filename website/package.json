@@ -1,0 +1,16 @@
+{
+  "name": "yingxi-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node tools/serve.mjs",
+    "check": "node tools/check.mjs",
+    "deploy": "node tools/deploy.mjs",
+    "deploy:preview": "node tools/deploy.mjs --target preview",
+    "deploy:production": "node tools/deploy.mjs --target production"
+  },
+  "devDependencies": {
+    "wrangler": "4.152.0"
+  }
+}

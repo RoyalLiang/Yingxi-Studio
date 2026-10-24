@@ -16,6 +16,15 @@
 !/core/
 !/scripts/
 !/assets/
+!/website/
+/website/*
+!/website/public/
+!/website/tools/
+!/website/package.json
+!/website/package-lock.json
+!/website/wrangler.jsonc
+!/website/README.md
+!/website/DESIGN.md
 !/third_party/
 !/.github/
 !/docs/
