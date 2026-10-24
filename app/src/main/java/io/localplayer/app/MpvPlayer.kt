@@ -169,7 +169,10 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             val width=m.get("video-out-params/w")?.toIntOrNull()?:0
             val height=m.get("video-out-params/h")?.toIntOrNull()?:0
             if(width>0&&height>0){
-                video=VideoSize(width,height)
+                val displayWidth=m.get("video-out-params/dw")?.toIntOrNull()?.takeIf{it>0}?:width
+                val displayHeight=m.get("video-out-params/dh")?.toIntOrNull()?.takeIf{it>0}?:height
+                val rotation=m.get("video-out-params/rotate")?.toIntOrNull()?:0
+                video=if(Math.floorMod(rotation,180)==90)VideoSize(displayHeight,displayWidth) else VideoSize(displayWidth,displayHeight)
                 tracks=readTracks(m,width,height)
                 val frame=m.get("video-frame-info/picture-type")
                 if(!frame.isNullOrBlank()&&m.get("vo-configured")=="yes"&&!firstFrame){firstFrame=true;firstFrameEvent=true;PlaybackMetrics.sdrFrame()}
