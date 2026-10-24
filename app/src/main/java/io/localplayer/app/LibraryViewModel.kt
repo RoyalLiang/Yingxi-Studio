@@ -275,13 +275,13 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }
     }
     fun rejectKey(){trust=null;error="已拒绝该服务器，未发送密码认证"}
-    fun browse(newPath:String){
+    fun browse(newPath:String,playMovie:Boolean=false){
         val s=source ?: return;val c=credentials ?: return
         if(rootSelectionId==null&&!SourceRoot(s.initialPath).contains(newPath)){error="已到达设置的根目录";return}
         if(!SealedMedia.visible(s,newPath,privateBrowse)){error="请从封存柜验证身份后查看";return}
-        load(s,c,Paths.clean(newPath),false,false)
+        load(s,c,Paths.clean(newPath),false,false,playMovie)
     }
-    private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean){
+    private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean,playMovie:Boolean=false){
         val registering=save&&sources.none{it.id==s.id}
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
         val folderName=if(newPath.isEmpty())"信源根目录"else
@@ -301,6 +301,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 StationInventory(getApplication()).reconcileSource(s)
                 StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),posterPathHint=posterHint(s,e)) })
                 if(registering)notifyRegistration() else if(save)notifySuccess("信源已保存")
+                if(playMovie)io.localplayer.core.singleMovieEntry(folderName,entries)?.let{play(it)}
             }catch(e:CancellationException){throw e}
             catch(e:HostKeyRequired){if(id==generation){trust=e;if(draft==null)access=SourceAccess(s,c.password,store.hasPassword(s.id),newPath)}}
             catch(e:Exception){if(id==generation)error=when {

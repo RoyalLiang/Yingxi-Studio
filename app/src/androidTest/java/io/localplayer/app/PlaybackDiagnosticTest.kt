@@ -47,6 +47,12 @@ class PlaybackDiagnosticTest {
         assertNull(PlaybackIoProbe.snapshot().sinceProgressMs)
     }
 
+    @Test fun codecDiagnosticAcceptsDv5ButRejectsAddressesAndFreeText(){
+        assertEquals("dvhe.05.06",diagnosticCodec("dvhe.05.06"))
+        assertEquals("hvc1.2.4.L153.B0",diagnosticCodec("hvc1.2.4.L153.B0"))
+        assertNull(diagnosticCodec(android.net.Uri.Builder().scheme("smb").encodedAuthority("user:password@private.invalid").appendPath("film.mkv").build().toString()))
+        assertNull(diagnosticCodec("dvhe.05.06,private-film-title"))
+    }
     @Test fun copiedReportDoesNotContainUriTitleOrRawFailure(){
         PlaybackMetrics.reset()
         val operation=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,"SMB")

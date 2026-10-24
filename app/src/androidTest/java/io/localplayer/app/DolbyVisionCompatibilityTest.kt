@@ -19,6 +19,15 @@ class DolbyVisionCompatibilityTest {
     private val instrumentation get()=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
     private val context get()=instrumentation.targetContext
 
+    @Test fun profile5Level6RetainsNativeDolbySignalWithoutFalseHdr10Fallback(){
+        val format=Format.Builder().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.05.06").build()
+        val parsed=androidx.media3.exoplayer.mediacodec.MediaCodecUtil.getCodecProfileAndLevel(format)!!
+        assertEquals(android.media.MediaCodecInfo.CodecProfileLevel.DolbyVisionProfileDvheStn,parsed.first)
+        assertEquals(android.media.MediaCodecInfo.CodecProfileLevel.DolbyVisionLevelUhd24,parsed.second)
+        assertSame(format,dolbyVisionBaseFormat(format,false))
+        assertSame(format,dolbyVisionBaseFormat(format,true))
+    }
+
     @Test fun initializationFallbackConfiguresHevcWithoutADolbyProfile() {
         val attempted=java.util.Collections.synchronizedList(mutableListOf<android.media.MediaFormat>())
         val adapter=androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Factory { configuration ->

@@ -106,7 +106,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
                     AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed=verifyCabinet)
-                    AppTab.Sources->LibraryScreen(vm,openLocal,requestNearby)
+                    AppTab.Sources->CompositionLocalProvider(LocalGlassBackdrop provides scene){LibraryScreen(vm,openLocal,requestNearby)}
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                     AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true},openReading={place->
                         vm.stopDiscovery();vm.cancelOperation()

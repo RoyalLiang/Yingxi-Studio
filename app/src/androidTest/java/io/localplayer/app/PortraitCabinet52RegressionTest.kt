@@ -90,23 +90,64 @@ class PortraitCabinet52RegressionTest{
             File(ui.activity.cacheDir,"portrait52-real-vertical.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         }finally{ui.runOnUiThread{c.stop();c.clearMediaItems();c.release()}}
     }
-    @Test fun cabinetRequiresContinuousThreeSecondsAndFiresOnlyOnce(){
+    @Test fun cabinetRequiresContinuousTwoSecondsAndFiresOnlyOnce(){
         val owner=ViewModelStore();var opens=0
         try{
             ui.runOnUiThread{
                 val vm=LibraryViewModel(ui.activity.application);owner.put("home",vm)
                 ui.activity.setContent{PlayerTheme{HomeScreen(vm,{},{},{},{},onSealed={opens++})}}
             }
-            val name=ui.onNodeWithTag("home-sealed-entry")
+            val name=ui.onNodeWithTag("home-sealed-entry").assertTextEquals("映汐")
             name.performTouchInput{click()};ui.runOnIdle{assertEquals(0,opens)}
-            name.performTouchInput{down(center);advanceEventTime(2900);up()};ui.runOnIdle{assertEquals(0,opens)}
+            name.performTouchInput{down(center);advanceEventTime(1900);up()};ui.runOnIdle{assertEquals(0,opens)}
             name.performTouchInput{down(center);advanceEventTime(1000);cancel()};ui.runOnIdle{assertEquals(0,opens)}
             name.performTouchInput{swipe(center,Offset(center.x,center.y+200),500)};ui.runOnIdle{assertEquals(0,opens)}
-            name.performTouchInput{longClick(durationMillis=3100)};ui.runOnIdle{assertEquals(1,opens)}
-            name.performTouchInput{longClick(durationMillis=6100)};ui.runOnIdle{assertEquals(2,opens)}
+            name.performTouchInput{longClick(durationMillis=2100)};ui.runOnIdle{assertEquals(1,opens)}
+            name.performTouchInput{longClick(durationMillis=4100)};ui.runOnIdle{assertEquals(2,opens)}
         }finally{ui.runOnUiThread{owner.clear()}}
     }
     // Original synthetic clips keep this rendering check independent of adb-injected files.
+    @Test fun playbackWindowDoesNotForceLandscapeBeforeMetadata(){
+        val info=ui.activity.packageManager.getActivityInfo(android.content.ComponentName(ui.activity,PlaybackActivity::class.java),0)
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,info.screenOrientation)
+    }
+
+    @Test fun metadataPreflightIdentifiesPortraitAndLandscapeBeforeLaunch(){
+        for(vertical in listOf(true,false)){
+            val file=visualClip(vertical);val uri=android.net.Uri.fromFile(file)
+            val ref=MediaRef("preflight-$vertical",file.name,"本机文件",localUri=uri.toString(),sizeBytes=file.length())
+            val target=PlayTarget(uri,file.name,0,ref)
+            val orientation=kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(ui.activity,target)}
+            assertEquals(if(vertical)ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,orientation)
+            assertEquals(orientation,PlaybackActivity.intent(ui.activity,target,orientation).getIntExtra("initial-orientation",-1))
+            PlaybackRequests.remove(target.playId)
+        }
+        val uri=android.net.Uri.fromFile(File(ui.activity.cacheDir,"missing-orientation.mp4"))
+        val target=PlayTarget(uri,"Missing",0,MediaRef("missing-preflight","Missing","Local",localUri=uri.toString()))
+        assertNull(kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(ui.activity,target)})
+    }
+
+    @Test fun networkPreflightUsesIndependentLeaseAndTimesOutWithoutBlockingPlayback(){
+        val app=ui.activity.application;val file=visualClip(true)
+        for(delayMs in listOf(0L,2500L)){
+            DavFixture(file,2,delayMs).use{server->
+                val source=io.localplayer.core.Source(label="方向预检",protocol=io.localplayer.core.Protocol.WEBDAV,host="127.0.0.1",port=server.port,root="/dav",username=server.username,secure=false)
+                val path=server.names.first();val uri=PlaybackRegistry.add(source,io.localplayer.core.Credentials(server.password),path,"方向预检")
+                val ref=MediaRef("preflight-network-$delayMs",path,source.label,source.id,path,sizeBytes=file.length(),location=mediaLocation(source))
+                try{
+                    val started=android.os.SystemClock.elapsedRealtime()
+                    val direction=kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(app,PlayTarget(uri,path,0,ref))}
+                    if(delayMs==0L){
+                        assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,direction)
+                        val data=RemoteDataSource();try{data.open(androidx.media3.datasource.DataSpec.Builder().setUri(uri).build());val bytes=ByteArray(16);assertEquals(16,data.read(bytes,0,16));assertArrayEquals(file.readBytes().copyOf(16),bytes)}finally{data.close()}
+                    }else{
+                        assertNull(direction);assertTrue(android.os.SystemClock.elapsedRealtime()-started<2400)
+                    }
+                }finally{PlaybackRegistry.remove(uri)}
+            }
+        }
+    }
+
     private fun visualClip(vertical:Boolean)=File(ui.activity.cacheDir,if(vertical)"portrait52-vertical.mp4"else"portrait52-landscape.mp4").apply{
         writeBytes(android.util.Base64.decode(if(vertical)VERTICAL_CLIP else LANDSCAPE_CLIP,android.util.Base64.DEFAULT))
     }

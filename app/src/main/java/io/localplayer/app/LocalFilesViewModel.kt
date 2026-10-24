@@ -81,9 +81,9 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
         val uri=DocumentsContract.buildDocumentUriUsingTree(folder.tree,DocumentsContract.getTreeDocumentId(folder.tree))
         load(folder,listOf(LocalDirectory(uri,folder.name)))
     }
-    fun enter(entry:LocalEntry){
+    fun enter(entry:LocalEntry,onMovie:((LocalEntry,List<LocalEntry>)->Unit)?=null){
         val folder=active?:return
-        if(entry.directory&&entry in entries)load(folder,trail+LocalDirectory(entry.uri,entry.name))
+        if(entry.directory&&entry in entries)load(folder,trail+LocalDirectory(entry.uri,entry.name),onMovie)
     }
     internal fun openSealed(item:SealedItem){
         if(!SealedMedia.unlocked)return
@@ -101,7 +101,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     fun root(){privateBrowse=false;cancel();active=null;trail=emptyList();directoryEntries=emptyList();error=null;refreshFolders()}
     fun refresh(){val folder=active;if(folder==null)refreshFolders()else load(folder,trail)}
     fun cancel(){generation++;signal?.cancel();signal=null;job?.cancel();job=null;busy=false}
-    private fun load(folder:LocalFolder,target:List<LocalDirectory>){
+    private fun load(folder:LocalFolder,target:List<LocalDirectory>,onMovie:((LocalEntry,List<LocalEntry>)->Unit)?=null){
         cancel();val id=++generation;val cancellation=CancellationSignal();signal=cancellation;busy=true;error=null
         job=viewModelScope.launch{
             try{
@@ -123,6 +123,12 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                 }
                 if(id==generation&&folder in folders){active=folder;trail=target;directoryEntries=result
                     registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris)})
+                }
+                if(id==generation&&folder in folders&&onMovie!=null){
+                    val visible=entries
+                    val videoUris=visible.filter{it.video}.map{it.uri.toString()}.toSet()
+                val movie=io.localplayer.core.singleMovieEntry(target.last().name,visible.map{io.localplayer.core.Entry(it.name,it.uri.toString(),it.directory,it.size)}){it.path in videoUris}
+                    visible.firstOrNull{it.uri.toString()==movie?.path}?.let{onMovie(it,visible)}
                 }
             }catch(e:CancellationException){throw e}
             catch(e:Exception){if(id==generation)error="无法打开文件夹，请检查授权或文件是否仍存在（${e.javaClass.simpleName}）"}

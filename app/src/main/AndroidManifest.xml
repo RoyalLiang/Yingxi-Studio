@@ -19,7 +19,7 @@
             <intent-filter><action android:name="android.intent.action.VIEW" /></intent-filter>
             <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="ypauth53a4ba437a8146819b5ebf05235e2762" /></intent-filter>
         </activity>
-        <activity android:name=".PlaybackActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:launchMode="singleTask" android:supportsPictureInPicture="true" android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation" />
+        <activity android:name=".PlaybackActivity" android:exported="false" android:screenOrientation="unspecified" android:launchMode="singleTask" android:supportsPictureInPicture="true" android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation" />
         <activity android:name=".UpdateInstallActivity" android:exported="false" android:excludeFromRecents="true" android:configChanges="screenSize|orientation" />
         <receiver android:name=".UpdateInstallReceiver" android:exported="false" />
         <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true" android:theme="@style/AppStartingTheme">

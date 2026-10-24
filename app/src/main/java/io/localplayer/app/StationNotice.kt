@@ -40,7 +40,7 @@ import kotlin.math.abs
 
 // Existing paper, lamp and pine palette; a single quiet entrance sweep settles at rest.
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun StationNotice(eyebrow:String,title:String,body:String,modifier:Modifier=Modifier,onArchives:(()->Unit)?=null,person:WorldPerson?=null,onRefresh:(()->Unit)?=null,onStation:(()->Unit)?=null) {
+@Composable internal fun StationNotice(eyebrow:String,title:String,body:String,modifier:Modifier=Modifier,onArchives:(()->Unit)?=null,person:WorldPerson?=null,onRefresh:(()->Unit)?=null) {
     val lamp=Color(0xFFE6C78C)
     val motionEnabled=ValueAnimator.areAnimatorsEnabled()
     val light=remember { Animatable(if(motionEnabled) 0f else 1f) }
@@ -64,15 +64,10 @@ import kotlin.math.abs
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Rounded.LocalMovies,null,tint=lamp,modifier=Modifier.size(16.dp))
-                        val stationName="映汐放映站"
-                        if(onStation!=null&&eyebrow.startsWith(stationName)) {
-                            FlowRow {
-                                StationCabinetName(stationName,lamp,onStation)
-                                Text(eyebrow.removePrefix(stationName),Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically),color=lamp,fontSize=12.sp,lineHeight=18.sp)
-                            }
-                        } else Text(eyebrow,color=lamp,fontSize=12.sp,lineHeight=18.sp)
-                    }
-                    Text(title,color=Color(0xFFF9F2E4),fontSize=18.sp,lineHeight=26.sp,fontWeight=FontWeight.SemiBold)
+
+                Text(eyebrow,color=lamp,fontSize=12.sp,lineHeight=18.sp)
+            }
+            Text(title,color=Color(0xFFF9F2E4),fontSize=18.sp,lineHeight=26.sp,fontWeight=FontWeight.SemiBold)
                 }
                 if(onArchives!=null) {
                     val portrait=person?.portrait?:"scavenger"
@@ -100,17 +95,18 @@ import kotlin.math.abs
     }
 }
 
-/** Only this name uses a three-second hold; other app long presses keep Android timing. */
-@Composable private fun StationCabinetName(name:String,color:Color,onOpen:()->Unit){
+/** Hidden cabinet entry on the home masthead; authentication still owns access. */
+@Composable
+internal fun StationCabinetName(name:String,color:Color,onOpen:()->Unit,modifier:Modifier=Modifier,fontSize:androidx.compose.ui.unit.TextUnit=32.sp){
     val original=LocalViewConfiguration.current
-    val holdConfiguration=remember(original){object:ViewConfiguration by original{override val longPressTimeoutMillis=3000L}}
+    val holdConfiguration=remember(original){object:ViewConfiguration by original { override val longPressTimeoutMillis:Long=2000L }}
     val open by rememberUpdatedState(onOpen)
     val haptic=LocalHapticFeedback.current
     CompositionLocalProvider(LocalViewConfiguration provides holdConfiguration){
-        Text(name,Modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically)
-            .semantics{onLongClick(label="长按3秒，验证进入封存柜"){open();true}}
+        Text(name,modifier.heightIn(min=48.dp).wrapContentHeight(Alignment.CenterVertically)
+            .semantics{onLongClick(label="长按2秒，验证进入封存柜"){open();true}}
             .focusable()
             .pointerInput(Unit){detectTapGestures(onLongPress={haptic.performHapticFeedback(HapticFeedbackType.LongPress);open()})}
-            .testTag("home-sealed-entry"),color=color,fontSize=12.sp,lineHeight=18.sp)
+            .testTag("home-sealed-entry"),color=color,fontSize=fontSize,lineHeight=40.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.7).sp,maxLines=1)
     }
 }
