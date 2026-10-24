@@ -76,7 +76,14 @@ class Dv5SdrPlaybackTest {
             main{assertNull(engine.playerError);engine.pause()}
             pixels(surface,"restarted")
             assertEquals("gpu-next",main{MpvRuntime.load(context).get("current-vo")})
-            println("DV5_OPENING_SEEK_EXTERNAL_SUBTITLE_AND_RESTART_PASS")
+            val rotated=File(context.cacheDir,"dv5-profile5-rotated.mp4")
+            if(rotated.isFile){
+                main{engine.setMediaItem(MediaItem.fromUri(Uri.fromFile(rotated)));engine.prepare()}
+                ui.waitUntil(20000){main{engine.playerError!=null||(engine.playbackState==Player.STATE_READY&&engine.videoSize.width==1080&&engine.videoSize.height==1920)}}
+                main{assertNull(engine.playerError)}
+                pixels(surface,"rotated")
+            }
+            println("DV5_OPENING_SEEK_EXTERNAL_SUBTITLE_RESTART_AND_ROTATION_PASS")
         }finally{unblock.countDown();main{engine.release();(surface.parent as? ViewGroup)?.removeView(surface)}}
     }
     @Test fun sessionFallbackShowsRealFramesAndKeepsSeekPauseSpeedAndSurface(){

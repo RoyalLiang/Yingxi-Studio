@@ -11,7 +11,7 @@ work.mkdir(parents=True,exist_ok=True)
 workspace=work/'workspace';workspace.mkdir(exist_ok=True)
 if workspace.resolve()==project or project in workspace.resolve().parents:
     raise SystemExit('Use a build staging directory outside the source project')
-for name in ['settings.gradle.kts','build.gradle.kts','gradle.properties','version.json','releases','gradlew','gradlew.bat','gradle','core','app','third_party']:
+for name in ['settings.gradle.kts','build.gradle.kts','gradle.properties','version.json','releases','gradlew','gradlew.bat','gradle','core','app','third_party','scripts']:
     source=project/name
     target=workspace/name
     if target.is_symlink():raise SystemExit('Unexpected symlink in managed build staging: '+str(target))
@@ -28,7 +28,7 @@ for name in ['settings.gradle.kts','build.gradle.kts','gradle.properties','versi
                 else:shutil.rmtree(old)
         elif target.exists():shutil.rmtree(target)
         shutil.copytree(source,target,dirs_exist_ok=True,copy_function=shutil.copyfile,
-            ignore=shutil.ignore_patterns('build','.gradle','._*','.DS_Store','__MACOSX'))
+            ignore=shutil.ignore_patterns('build','.gradle','__pycache__','*.pyc','._*','.DS_Store','__MACOSX'))
     else:shutil.copyfile(source,target)
 env={**os.environ,'COPYFILE_DISABLE':'1','PYTHONDONTWRITEBYTECODE':'1','GRADLE_USER_HOME':os.environ.get('GRADLE_USER_HOME',str(work/'gradle-cache'))}
 if env.get('PLAYER_FIXTURE_CONFIG'):
