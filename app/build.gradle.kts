@@ -57,6 +57,38 @@ val generateNotices by tasks.registering {
         output.resolve("dependencies.json").writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(inventory)))
     }
 }
+// A separate DEX owns MPV's native namespace; NextLib keeps its own FFmpeg ABI.
+val mpvGenerated = layout.buildDirectory.dir("generated/mpv")
+val prepareMpv by tasks.registering(Exec::class) {
+    inputs.files(rootProject.file("scripts/prepare_mpv.py"), rootProject.file("third_party/mpv-runtime.json"))
+    outputs.dir(mpvGenerated.map { it.dir("jniLibs") })
+    outputs.file(mpvGenerated.map { it.file("assets/mpv-native.json") })
+    commandLine("python3", rootProject.file("scripts/prepare_mpv.py"), "--manifest", rootProject.file("third_party/mpv-runtime.json"), "--cache", gradle.gradleUserHomeDir.resolve("caches/yingxi-mpv"), "--output", mpvGenerated.get().asFile)
+}
+val compileMpvBridge by tasks.registering(JavaCompile::class) {
+    source(rootProject.file("third_party/mpv-bridge/MPVLib.java"))
+    classpath = files(android.sdkDirectory.resolve("platforms/android-36/android.jar"))
+    destinationDirectory.set(layout.buildDirectory.dir("mpv-bridge/classes"))
+    sourceCompatibility = "8"; targetCompatibility = "8"
+}
+val mpvBridgeJar by tasks.registering(Jar::class) {
+    from(compileMpvBridge); archiveFileName.set("bridge-classes.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("mpv-bridge"))
+}
+val dexMpvBridge by tasks.registering(Exec::class) {
+    dependsOn(mpvBridgeJar)
+    inputs.file(mpvBridgeJar.flatMap { it.archiveFile })
+    outputs.files(mpvGenerated.map { it.file("assets/mpv-bridge.jar") }, mpvGenerated.map { it.file("assets/mpv-bridge.sha256") })
+    doFirst {
+        mpvGenerated.get().dir("assets").asFile.mkdirs()
+        commandLine(android.sdkDirectory.resolve("build-tools/${android.buildToolsVersion}/d8"), "--min-api", "26", "--lib", android.sdkDirectory.resolve("platforms/android-36/android.jar"), "--output", mpvGenerated.get().file("assets/mpv-bridge.jar").asFile, mpvBridgeJar.get().archiveFile.get().asFile)
+    }
+    doLast {
+        val jar = mpvGenerated.get().file("assets/mpv-bridge.jar").asFile
+        mpvGenerated.get().file("assets/mpv-bridge.sha256").asFile.writeText(MessageDigest.getInstance("SHA-256").digest(jar.readBytes()).joinToString("") { "%02x".format(it) })
+    }
+}
+
 android {
     namespace = "io.localplayer.app"
     compileSdk = 36
@@ -87,10 +119,14 @@ android {
     testBuildType = providers.gradleProperty("yingxiTestBuildType").getOrElse("debug")
     buildFeatures { compose = true; buildConfig = true }
     sourceSets.getByName("main").assets.srcDir(generatedNotices)
+    sourceSets.getByName("main").assets.srcDir(mpvGenerated.map { it.dir("assets") })
+    sourceSets.getByName("main").jniLibs.srcDir(mpvGenerated.map { it.dir("jniLibs") })
+    packaging.jniLibs.useLegacyPackaging = true
+    packaging.jniLibs.keepDebugSymbols += "**/libyingxi_mpv_*.so"
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     packaging { resources.excludes += setOf("META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF") }
 }
-tasks.named("preBuild").configure { dependsOn(generateNotices) }
+tasks.named("preBuild").configure { dependsOn(generateNotices, prepareMpv, dexMpvBridge) }
 val verifyReleaseSigning by tasks.registering {
     doLast { check(hasReleaseSigning || localOptimizedTest) { "Signed alpha release requires YINGXI_KEYSTORE_PATH, YINGXI_KEYSTORE_PASSWORD, YINGXI_KEY_ALIAS and YINGXI_KEY_PASSWORD" } }
 }

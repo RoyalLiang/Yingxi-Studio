@@ -1,0 +1,16 @@
+MPV SDR compatibility runtime (mpv-android 2026-09-17)
+Copyright the mpv, mpv-android, FFmpeg and libplacebo contributors.
+Distributed under GPL-3.0-or-later with the GPL-3.0 Yingxi application.
+The original shared libraries are unmodified. Their APK entry names are prefixed
+for packaging, then restored inside an isolated native linker namespace.
+The separate Java JNI bridge is distributed as source in third_party/mpv-bridge.
+
+Exact source revisions, official immutable APK digest, dependency list and build
+recipe are recorded in mpv-runtime.json. The official build scripts pin sources
+for FFmpeg, libplacebo, libass, dav1d, libxml2, fontconfig, freetype, fribidi,
+harfbuzz, libunibreak, Lua, curl and mbedtls. Their upstream license notices and
+corresponding sources are available in the pinned source/build recipe.
+https://github.com/mpv-android/mpv-android/tree/fdf74f6830c47dbaa8a22ac79726e8303f1db5af
+https://github.com/mpv-player/mpv/tree/0b7ed670f7c353dd3dd4f8ae0fc788a181a15aa6
+https://github.com/haasn/libplacebo/tree/3330a515d62139259c26239014f286e233bd3a5c
+https://github.com/FFmpeg/FFmpeg/tree/094a2f8a2a5e7fa64736e067de224ce28fdf5979

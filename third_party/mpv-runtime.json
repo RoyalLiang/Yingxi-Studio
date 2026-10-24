@@ -1,0 +1,39 @@
+{
+  "version": "2026-09-17",
+  "binary": "https://github.com/mpv-android/mpv-android/releases/download/2026-09-17/app-default-universal-release.apk",
+  "sha256": "c3b505e45b919b767b9867e7f0d16fd823d77bc7c9a6e6b181b80ea60c018a70",
+  "source": "https://github.com/mpv-android/mpv-android/tree/fdf74f6830c47dbaa8a22ac79726e8303f1db5af",
+  "recipe": "https://github.com/mpv-android/mpv-android/tree/fdf74f6830c47dbaa8a22ac79726e8303f1db5af/buildscripts",
+  "license": "GPL-3.0-or-later",
+  "mpv": "0b7ed670f7c353dd3dd4f8ae0fc788a181a15aa6",
+  "libplacebo": "3330a515d62139259c26239014f286e233bd3a5c",
+  "ffmpeg": "094a2f8a2a5e7fa64736e067de224ce28fdf5979",
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "libraries": [
+    "libavcodec.so",
+    "libavdevice.so",
+    "libavfilter.so",
+    "libavformat.so",
+    "libavutil.so",
+    "libc++_shared.so",
+    "libmpv.so",
+    "libplayer.so",
+    "libswresample.so",
+    "libswscale.so"
+  ],
+  "validationFixture": {
+    "source": "https://chromium.googlesource.com/chromium/src/+/refs/heads/main/media/test/data/glass-blowing2-dolby-vision-profile-5-frag.mp4?format=TEXT",
+    "sha256": "d21fc3938a813b6ce25efe890074b23d966a5828c9a3d33de7e8591a25dd2036",
+    "profile": 5,
+    "level": 5,
+    "width": 1920,
+    "height": 1080,
+    "redistributed": false,
+    "testPreparation": "Decode base64; remux without video transcoding with AAC audio and -strict unofficial; repeat to 16 seconds; seed app cache/dv5-profile5.mp4. This is not the user original 4K level-6 file."
+  }
+}

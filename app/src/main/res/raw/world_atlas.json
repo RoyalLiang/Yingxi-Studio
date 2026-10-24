@@ -615,6 +615,13 @@
         "zh": "阿汐折好分册的纸脊，迟灯替片窗留出合适的朝向。柜前的映汐二字停留两秒，再请设备核验；片罐的原位，仍由旧索引记着。",
         "en": "Axi refolds the volume spines; Chideng gives each picture its proper window. Hold the Yingxi name by the cabinet for two seconds, then let the device verify entry. The old index still keeps each tin in place."
       }
+    },
+    {
+      "version": "0.2.0-alpha.54",
+      "text": {
+        "zh": "迟灯夹好片窗边的留白票根，阿汐核看纸签上的颜色。遇到设备读不懂的杜比片页，放映机接上一条 SDR 兼容光路，原片仍留在原处。",
+        "en": "Chideng clips an unprinted ticket beside the window while Axi checks the paper labels. For Dolby frames the device cannot decode, the projector takes an SDR compatibility path; the original stays in place."
+      }
     }
   ],
   "boundary": {
@@ -846,8 +853,8 @@
         "en": "Image Scavenger"
       },
       "summary": {
-        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。",
-        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles."
+        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。",
+        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record."
       },
       "canonStatus": "confirmed"
     },
@@ -1666,6 +1673,14 @@
       "text": {
         "zh": "我把商队带来的理想城口信写在图纸边上，没往实线上添一笔。阿汐问我走过没有，我摇头；纸边留得宽些，容得下听来的话，也容得下还没走过的路。",
         "en": "I put the caravan's message from Ideal City in the map's margin, adding nothing to the solid route. When Axi asks whether I have walked there, I shake my head. The wide margin holds what we have heard and leaves room for ground we have not crossed."
+      }
+    },
+    {
+      "id": "diary_029",
+      "author": "axi",
+      "text": {
+        "zh": "迟灯在片窗边夹了一条没有字的旧票根，我用它对照纸签的颜色。试完就把票根收回铜尺下面，原片罐上的标记一笔也没改。",
+        "en": "Chideng clipped an unprinted old ticket beside the projection window. I used it to compare the colours on the paper labels, then tucked it back beneath the brass ruler. We left every mark on the original film tin untouched."
       }
     }
   ],

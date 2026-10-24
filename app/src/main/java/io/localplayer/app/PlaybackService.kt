@@ -36,20 +36,21 @@ class PlaybackService:MediaSessionService(){
         super.onCreate();store=SourceStore(this);history=HistoryStore(this)
         val prefs=PlaybackPreferences(this)
         val renderers=playbackRenderers(this)
- val player=ExoPlayer.Builder(this,renderers)
+ val nativePlayer=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
             .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,PlaybackNetworkFactory()),PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
-        videoRecovery=VideoDecoderRecovery(player,renderers)
+        videoRecovery=VideoDecoderRecovery(nativePlayer,renderers)
         nextEpisode=NextEpisodePrefetch(this)
-        cloudRecovery=CloudStreamRecovery(player)
-        cloudAdaptive=CloudAdaptiveController(player)
+        cloudRecovery=CloudStreamRecovery(nativePlayer)
+        cloudAdaptive=CloudAdaptiveController(nativePlayer)
+        val player=CompatibilityPlayer(this,nativePlayer)
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
             if(protected){player.pause();player.stop();player.clearMediaItems()}
         }
- player.addAnalyticsListener(PlaybackMetrics.listener())
+ nativePlayer.addAnalyticsListener(PlaybackMetrics.listener())
         player.setPlaybackSpeed(prefs.speed)
         player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
             .setPreferredAudioLanguage(prefs.effectiveAudioLanguage).setPreferredTextLanguage(prefs.textLanguage)
@@ -70,7 +71,7 @@ class PlaybackService:MediaSessionService(){
             override fun onMediaItemTransition(item:MediaItem?,reason:Int){
                 nextEpisode?.transition()
                 val next=item?.localConfiguration?.uri
-                player.setWakeMode(if(next?.isPlayerNetworkUri()==true)C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
+                nativePlayer.setWakeMode(if(next?.isPlayerNetworkUri()==true)C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
                 if(current!=next){
                     OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next
                     player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverrides()
@@ -131,7 +132,7 @@ class PlaybackService:MediaSessionService(){
     private fun persist(){
         val player=session?.player ?: return
         val item=player.currentMediaItem ?: return
-        if(player.playerError!=null)return
+        if(player.playerError!=null||unsupportedVideo(player.currentTracks))return
         val duration=player.duration.takeIf{it!=C.TIME_UNSET&&it>0} ?: 0
         if(duration>0)durations[item.mediaId]=duration
         if(duration<=0&&player.currentPosition<=0)return

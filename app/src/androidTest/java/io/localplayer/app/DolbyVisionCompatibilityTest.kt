@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Before
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -18,6 +19,14 @@ import java.util.concurrent.TimeUnit
 class DolbyVisionCompatibilityTest {
     private val instrumentation get()=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
     private val context get()=instrumentation.targetContext
+
+    @Before fun stageSuppliedConfigurationFixture(){
+        // adb run-as cannot write scoped external storage on every Android image.
+        // The test process can copy an explicitly supplied private-cache fixture.
+        val supplied=File(context.cacheDir,"dv-profile7.mp4")
+        val target=File(context.getExternalFilesDir(null),"dv-profile7.mp4")
+        if(supplied.isFile&&!target.isFile)supplied.copyTo(target)
+    }
 
     @Test fun profile5Level6RetainsNativeDolbySignalWithoutFalseHdr10Fallback(){
         val format=Format.Builder().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.05.06").build()

@@ -134,7 +134,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         throw new AssertionError("Media clock did not start advancing: state="+controller.getPlaybackState()+" title="+(controller.getMetadata()==null?null:controller.getMetadata().getDescription().getTitle()));
     }
     private void playback(String source,String clip) throws Exception {
-        launch();click("避难所");clickNode(scrollTo(source),source);
+        launch();click("信源");clickNode(scrollTo(source),source);
         AccessibilityNodeInfo target=scrollTo(clip);
         ActivityMonitor monitor=addMonitor("io.localplayer.app.PlaybackActivity",null,false);
         clickNode(target,clip);
@@ -166,7 +166,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
             if(image.getPixel(4,button.centerY())!=0xFFF3EFE6)throw new AssertionError("Footer background mismatch");
             image.recycle();passed.put("Production R8 rules: launch, settings and fixed footer");
             if(args!=null&&"media".equals(args.getString("mode"))){
-                for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:new String[]{"r8-avc","r8-hevc"})playback(source,clip);
+                for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:args.getString("clip")==null?new String[]{"r8-avc","r8-hevc"}:new String[]{args.getString("clip")})playback(source,clip);
             }
             result.putString("passed",passed.toString());finish(Activity.RESULT_OK,result);
         }catch(Throwable error){
