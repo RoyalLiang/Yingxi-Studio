@@ -21,12 +21,14 @@ class CloudPlaybackSettingsTest {
     @Test fun controlsStayReachableOnNarrowScreenWithLargeTextAndClearRealCache() {
         val prefs=CloudReadPreferences(ui.activity);val before=prefs.workers;val cached=prefs.cacheEnabled;val next=prefs.nextEpisode
         val cache=CloudReadPreferences.cache(ui.activity)
+        val original=java.io.File(ui.activity.filesDir,"cache-clear-original56.mp4").apply{writeText("synthetic-original-kept")}
+        val poster=java.io.File(ui.activity.cacheDir,"media-posters-v1/cache-clear56.jpg").apply{parentFile!!.mkdirs();writeBytes(ByteArray(4096))}
         try {
             cache.clear();cache.put("synthetic-ui-fixture",0,ByteArray(1024*1024))
             ui.runOnUiThread{ui.activity.setContent{PlayerTheme{
                 val density=LocalDensity.current
                 CompositionLocalProvider(LocalDensity provides Density(density.density,1.8f)){
-                    Column(Modifier.width(320.dp).fillMaxHeight().verticalScroll(rememberScrollState()).testTag("cloud-settings-scroll")){CloudPlaybackSettings()}
+                    Column(Modifier.width(320.dp).fillMaxHeight().verticalScroll(rememberScrollState()).testTag("cloud-settings-scroll")){CloudPlaybackSettings();StorageUsageSettings()}
                 }
             }}}
             ui.onNodeWithTag("cloud-workers-3").performScrollTo().performClick().assertIsSelected()
@@ -34,10 +36,11 @@ class CloudPlaybackSettingsTest {
             ui.onNodeWithTag("cloud-segment-cache").performScrollTo().performClick()
             assertEquals(!cached,CloudReadPreferences(ui.activity).cacheEnabled)
             if(cached)ui.onNodeWithTag("cloud-next-prefetch").assertIsNotEnabled()
-            ui.onNodeWithTag("cloud-cache-clear").performScrollTo().performClick()
+            ui.onNodeWithTag("media-cache-clear").performScrollTo().performClick()
             ui.waitUntil(5000){cache.bytes()==0L}
-            ui.onNodeWithText("已释放",substring=true).performScrollTo().assertIsDisplayed()
-        }finally{prefs.workers=before;prefs.cacheEnabled=cached;prefs.nextEpisode=next;cache.clear()}
+            ui.onNodeWithText("已回收缓存").assertIsDisplayed()
+            assertFalse(poster.exists());assertEquals("synthetic-original-kept",original.readText())
+        }finally{prefs.workers=before;prefs.cacheEnabled=cached;prefs.nextEpisode=next;cache.clear();original.delete();poster.delete()}
     }
     @Test fun manualSingleConnectionAndCacheOffAreRestorableFallbacks() {
         val prefs=CloudReadPreferences(ui.activity);val previous=prefs.workers;val cache=prefs.cacheEnabled

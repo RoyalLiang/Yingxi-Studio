@@ -52,13 +52,22 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun CloudQualityChoices(player:Player,item:MediaItem?,loadInfo:(PlaybackLease,Cancellation)->AliyunVideoInfo={target,cancellation->AliyunCloud.videoInfo(target.source,target.path,cancellation)}) {
     val target=cloudQualityContext(item)?:return
-    val scope=rememberCoroutineScope()
-    val cancellation=remember(item?.mediaId){Cancellation()}
-    var info by remember(item?.mediaId){mutableStateOf<AliyunVideoInfo?>(null)}
-    var loading by remember{mutableStateOf(false)}
+    var revision by remember(item?.mediaId){mutableIntStateOf(0)}
+    val cancellation=remember(item?.mediaId,target.source,target.path,revision){Cancellation()}
+    var info by remember(item?.mediaId,target.source,target.path){mutableStateOf<AliyunVideoInfo?>(null)}
+    var loading by remember(item?.mediaId){mutableStateOf(true)}
     var failure by remember(item?.mediaId){mutableStateOf<String?>(null)}
     val selected=playbackQuality(item)
-    DisposableEffect(cancellation){onDispose{cancellation.close()}}
+    DisposableEffect(cancellation){onDispose{EnrichmentDeadlines.timer.execute{cancellation.close()}}}
+    LaunchedEffect(item?.mediaId,target.source,target.path,revision) {
+        loading=true;failure=null
+        try {
+            info=withContext(Dispatchers.IO){loadInfo(target,cancellation)}
+            if(info?.variants.isNullOrEmpty()&&info?.masterUrl==null)failure="平台暂无可用清晰度，可继续原画播放。"
+        } catch(e:kotlinx.coroutines.CancellationException){throw e}
+        catch(_:Exception){failure="暂时无法读取平台清晰度，可继续原画播放。"}
+        finally{loading=false}
+    }
     Column(Modifier.fillMaxWidth().testTag("cloud-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
         Text("云盘画质 · 本集",fontSize=17.sp)
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
@@ -68,17 +77,7 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
             }
         }
         if(selected!="original"&&info==null)Text("当前：${if(selected=="auto")"自动"else selected}",fontSize=13.sp,color=PlayerInk)
-        TextButton(enabled=!loading,onClick={
-            loading=true;failure=null
-            scope.launch{
-                try {
-                    info=withContext(Dispatchers.IO){loadInfo(target,cancellation)}
-                    if(info?.variants.isNullOrEmpty()&&info?.masterUrl==null)failure="平台暂无可用清晰度，可继续原画播放。"
-                }catch(e:kotlinx.coroutines.CancellationException){throw e}
-                catch(_:Exception){failure="暂时无法读取平台清晰度，可继续原画播放。"}
-                finally{loading=false}
-            }
-        },modifier=Modifier.testTag("load-cloud-quality")){Text(if(loading)"读取中…"else"查看平台清晰度")}
+        TextButton(enabled=!loading,onClick={revision++},modifier=Modifier.testTag("load-cloud-quality")){Text(if(loading)"正在读取片源档位…"else"刷新平台清晰度")}
         failure?.let{Text(it,fontSize=13.sp,lineHeight=19.sp,color=PlayerInk)}
     }
 }
@@ -112,4 +111,35 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
     }
     init{player.addListener(listener)}
     override fun close(){handler.removeCallbacksAndMessages(null);player.removeListener(listener)}
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters) {
+    if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item);return}
+    val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
+    val adaptive=groups.filter{it.isAdaptiveSupported&&it.length>1}
+    Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("画面档位",fontSize=17.sp)
+        val format=groups.firstOrNull{it.isSelected}?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
+        if(adaptive.isEmpty()) {
+            Text(format?.let{videoQualityLabel(it)}?:"正在读取画面规格…",fontSize=14.sp,color=PlayerInk)
+            Text("此片源只提供原片，暂无其他码率档位。",fontSize=12.sp,color=PlayerInk.copy(alpha=.65f))
+        } else {
+            val automatic=parameters.overrides.keys.none{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
+            FilterChip(selected=automatic,onClick={player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()},label={Text("自动")},modifier=Modifier.testTag("video-quality-auto"))
+            adaptive.forEachIndexed{g,group->
+                (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
+                    FilterChip(selected=!automatic&&group.isTrackSelected(i),onClick={
+                        player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build()
+                    },label={Text(videoQualityLabel(group.getTrackFormat(i)))},modifier=Modifier.testTag("video-quality-$g-$i"))
+                }
+            }
+        }
+    }
+}
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun videoQualityLabel(format:androidx.media3.common.Format):String {
+    val size=if(format.width>0&&format.height>0)"${format.width}×${format.height}"else"原片"
+    val rate=format.averageBitrate.takeIf{it>0}?:format.peakBitrate.takeIf{it>0}
+    return size+(rate?.let{String.format(java.util.Locale.ROOT," · %.1f Mbps",it/1_000_000.0)}?:"")
 }

@@ -144,7 +144,6 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
         Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
         Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;if(!it)OnlineSubtitles.cancel()})}
         Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it})}
-        TextButton(onClick={MediaPosters.clear(context);MediaThumbnails.changes.value++;StorageUsage.revision++}){Text("清理海报缓存")}
     }}
 }
 
@@ -154,4 +153,27 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
         uncheckedThumbColor=androidx.compose.ui.graphics.Color.White,uncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7),uncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent,
         disabledCheckedThumbColor=androidx.compose.ui.graphics.Color.White.copy(alpha=.7f),disabledCheckedTrackColor=Berry.copy(alpha=.35f),disabledCheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent,
         disabledUncheckedThumbColor=androidx.compose.ui.graphics.Color.White.copy(alpha=.7f),disabledUncheckedTrackColor=androidx.compose.ui.graphics.Color(0xFFD3D4D7).copy(alpha=.5f),disabledUncheckedBorderColor=androidx.compose.ui.graphics.Color.Transparent))
+}
+
+@Composable internal fun StationChoiceSetting(title:String,values:List<Pair<String,String>>,selected:String,tag:String,select:(String)->Unit) {
+    var expanded by remember{mutableStateOf(false)}
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val compact=maxWidth<300.dp||androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(title,Modifier.weight(1f),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            if(compact)Box {
+                OutlinedButton(onClick={expanded=true},shape=RoundedCornerShape(14.dp),modifier=Modifier.heightIn(min=48.dp).testTag("$tag-selector")) {
+                    Text(values.first{it.first==selected}.second,maxLines=1)
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,Modifier.size(18.dp))
+                }
+                DropdownMenu(expanded,onDismissRequest={expanded=false}) {
+                    values.forEach{(value,label)->DropdownMenuItem(text={Text(label)},onClick={select(value);expanded=false},modifier=Modifier.testTag("$tag-$value"))}
+                }
+            } else SingleChoiceSegmentedButtonRow(Modifier.testTag("$tag-options")) {
+                values.forEachIndexed{index,(value,label)->
+                    SegmentedButton(selected=selected==value,onClick={select(value)},shape=SegmentedButtonDefaults.itemShape(index,values.size),icon={},modifier=Modifier.testTag("$tag-$value")){Text(label,maxLines=1)}
+                }
+            }
+        }
+    }
 }

@@ -74,7 +74,7 @@ import java.util.Locale
                     Text("播放选项",Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
                     IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭播放选项")}
                 } }
-                item{CloudQualityChoices(controller,currentItem)}
+                item{PlaybackQualityChoices(controller,currentItem,tracks,parameters)}
                 item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val audio=tracks.groups.filter{it.type==C.TRACK_TYPE_AUDIO}
                 val externalAudio=currentItem?.let{SidecarAudio.from(it)}.orEmpty()

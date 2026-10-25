@@ -38,12 +38,9 @@ internal class AppearancePreferences(context:Context) {
     val prefs=remember(context){AppearancePreferences(context)}
     var mode by remember{mutableStateOf(prefs.mode)}
     Surface(color=GroupedSurface,shape=RoundedCornerShape(22.dp),modifier=Modifier.fillMaxWidth().testTag("night-watch-settings")){
-        Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-            Text("守夜人模式",fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                LibraryAppearance.entries.forEach{value->
-                    FilterChip(selected=mode==value,onClick={mode=value;prefs.mode=value},label={Text(value.label)},modifier=Modifier.testTag("appearance-${value.name.lowercase()}"))
-                }
+        Box(Modifier.padding(14.dp)) {
+            StationChoiceSetting("守夜人模式",LibraryAppearance.entries.map{it.name.lowercase() to if(it==LibraryAppearance.SYSTEM)"跟随"else it.label},mode.name.lowercase(),"appearance") {
+                mode=LibraryAppearance.valueOf(it.uppercase());prefs.mode=mode
             }
         }
     }

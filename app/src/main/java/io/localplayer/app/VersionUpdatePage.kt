@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.sp
     Scaffold(
         modifier=Modifier.fillMaxSize().testTag("settings-page"),containerColor=Paper,
         contentWindowInsets=WindowInsets.safeDrawing,
-        bottomBar={UpdateFooter(vm,install,download){letter="available"}}
+        bottomBar={UpdateFooter(vm,install,download)}
     ) { contentPadding ->
     Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -124,28 +124,22 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit,available:()->Unit) {
+@Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit) {
     var details by remember{mutableStateOf(false)}
-    if(details)AlertDialog(onDismissRequest={details=false},title={Text("更新提示")},text={Text(vm.message.orEmpty(),Modifier.heightIn(max=300.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick={details=false}){Text("关闭")}})
+    if(details)AlertDialog(onDismissRequest={details=false},shape=RoundedCornerShape(28.dp),containerColor=Paper,
+        title={Text("更新提示")},text={Text(vm.message.orEmpty(),Modifier.heightIn(max=300.dp).verticalScroll(rememberScrollState()))},
+        confirmButton={TextButton(onClick={details=false;vm.check()}){Text("重新检查")}},dismissButton={TextButton(onClick={details=false}){Text("关闭")}})
     Column(Modifier.fillMaxWidth().background(Paper).testTag("update-footer")) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom))) {
-        Column(Modifier.padding(horizontal=24.dp,vertical=12.dp).testTag("update-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            vm.release?.let{release->TextButton(onClick=available,contentPadding=PaddingValues(0.dp)){
-                Text("可用更新 ",color=Berry,fontSize=14.sp);Text(release.version.name,color=Berry,fontSize=14.sp,modifier=Modifier.testTag("available-version"))}}
-            vm.message?.let{Text(it,fontSize=12.sp,lineHeight=18.sp,color=if(vm.error)MaterialTheme.colorScheme.error else Muted,modifier=Modifier.testTag("update-status").clickable(enabled=vm.error){details=true},maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)}
-            if(vm.busy) {
-                vm.progress?.let{LinearProgressIndicator(progress={it},modifier=Modifier.fillMaxWidth())}?:LinearProgressIndicator(Modifier.fillMaxWidth())
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-                    Text(if(vm.progress==null)"正在检查更新"else"正在下载 ${(vm.progress!!*100).toInt()}%",Modifier.weight(1f),fontSize=13.sp,color=Muted)
-                    TextButton(onClick=vm::cancel){Text(if(vm.progress==null)"取消"else"暂停")}
-                }
-            } else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                Button(onClick=vm::check,colors=ButtonDefaults.buttonColors(containerColor=Berry,contentColor=GroupedSurface),border=androidx.compose.foundation.BorderStroke(1.dp,GroupedSurface.copy(alpha=.2f)),elevation=ButtonDefaults.buttonElevation(defaultElevation=2.dp,pressedElevation=4.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)){Text("检查更新",maxLines=1)}
-                if(vm.release!=null)Button(onClick={if(vm.ready!=null)install()else download()},contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("download-update"),shape=RoundedCornerShape(16.dp)){
-                    Text(if(vm.ready!=null)"安装更新"else if((vm.progress?:0f)>0f)"继续下载"else"下载更新",maxLines=1)}
+        Row(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom)).padding(horizontal=24.dp,vertical=12.dp).testTag("update-actions"),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            Button(enabled=!vm.busy||vm.progress==null,onClick={when{vm.busy->vm.cancel();vm.error->details=true;else->vm.check()}},colors=ButtonDefaults.buttonColors(containerColor=Berry,contentColor=GroupedSurface),
+                modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("check-updates"),shape=RoundedCornerShape(16.dp)) {
+                if(vm.busy&&vm.progress==null){CircularProgressIndicator(Modifier.size(18.dp),color=GroupedSurface,strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
+                Text(when{vm.busy&&vm.progress==null->"正在检查…";vm.error->"查看更新提示";vm.release==null&&vm.message=="当前没有可用更新"->"已是最新版本";else->"检查更新"},modifier=Modifier.testTag("update-status"),maxLines=1)
+            }
+            if(vm.release!=null)Button(onClick={when{vm.busy->vm.cancel();vm.ready!=null->install();else->download()}},contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.weight(1f).heightIn(min=50.dp).testTag("download-update"),shape=RoundedCornerShape(16.dp)) {
+                Text(if(vm.busy)"暂停 · ${((vm.progress?:0f)*100).toInt()}%"else if(vm.ready!=null)"安装更新"else if((vm.progress?:0f)>0f)"继续下载"else"下载更新",maxLines=1)
             }
         }
-    }
     }
 }
 

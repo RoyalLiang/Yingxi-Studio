@@ -111,7 +111,7 @@ class PlaybackDiagnosticTest {
             PlayerTheme{
                 CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density,2f)){
                     Box(Modifier.width(320.dp).height(300.dp).background(Color(0xFF101113))){
-                        StationBuffering(show.value,false){PlaybackWaitDiagnostics(null,threshold.longValue)}
+                        WaitReportFixture(show.value,threshold.longValue)
                     }
                 }
             }
@@ -119,13 +119,22 @@ class PlaybackDiagnosticTest {
         try{
             ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
             ui.runOnIdle{threshold.longValue=0}
+            ui.onNodeWithText("上报播放问题").performScrollTo().performClick()
             ui.onNodeWithTag("playback-diagnostic-copy").performScrollTo().assertIsDisplayed().performClick()
             ui.onNodeWithText("已复制检修记录").assertExists()
             var clipboard="";ui.runOnUiThread{clipboard=ui.activity.getSystemService(ClipboardManager::class.java).primaryClip?.getItemAt(0)?.text.toString()}
             assertEquals("SESSION_CONNECTING",JSONObject(clipboard).getString("state"))
-            val image=ui.onRoot().captureToImage().asAndroidBitmap()
+            val image=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             File(ui.activity.cacheDir,"diagnostic-wait.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+            ui.onNodeWithTag("report-preview").performScrollTo().performClick()
+            val snapshot=ui.onNodeWithTag("report-payload").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].first().text
+            ui.onNodeWithTag("report-consent").performScrollTo().performClick().assertIsOn()
+            android.os.SystemClock.sleep(2100)
+            ui.onNodeWithTag("report-consent").assertIsOn()
+            ui.onNodeWithTag("report-payload").assertTextEquals(snapshot)
             ui.runOnIdle{show.value=false}
+            ui.onNodeWithTag("report-continue").performScrollTo().assertIsEnabled()
+            ui.onNodeWithContentDescription("关闭问题上报").performScrollTo().performClick()
             ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
         }finally{PlaybackIoProbe.end(pending)}
     }
@@ -143,13 +152,14 @@ class PlaybackDiagnosticTest {
             ui.runOnUiThread{ui.activity.setContent{
                 PlayerTheme{CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density,2f)){
                     Box(Modifier.width(320.dp).height(300.dp).background(Color(0xFF101113))){
-                        StationBuffering(true,false){PlaybackWaitDiagnostics(null,0)}
+                        WaitReportFixture(true,0)
                     }
                 }}
             }}
             ui.onNodeWithContentDescription("原片传输中，正在缓冲").assertExists()
             ui.onNodeWithText("可核对账户的下载高速流量配额",substring=true).assertExists()
             ui.waitUntil(5000){ui.onAllNodesWithText("平均读取",substring=true).fetchSemanticsNodes().isNotEmpty()}
+            ui.onNodeWithText("上报播放问题").performScrollTo().performClick()
             ui.onNodeWithTag("playback-diagnostic-copy").performScrollTo().assertIsDisplayed().performClick()
             var copied="";ui.runOnUiThread{copied=ui.activity.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()}
             val json=JSONObject(copied)
@@ -157,9 +167,15 @@ class PlaybackDiagnosticTest {
             assertEquals(1048576L,json.getLong("signedTrafficLimitBitsPerSecond"))
             assertTrue(json.getLong("sourceBodyAverageBytesPerSecond") in 1..128000)
             assertEquals("BODY",json.getString("httpPhase"))
-            val image=ui.onRoot().captureToImage().asAndroidBitmap()
+            val image=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             File(ui.activity.cacheDir,"aliyun-slow-wait-2x.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         } finally { release.countDown();reading.get(3,TimeUnit.SECONDS);worker.shutdownNow();PlaybackIoProbe.end(pending);PlaybackMetrics.reset() }
+    }
+
+    @androidx.compose.runtime.Composable private fun WaitReportFixture(show:Boolean,threshold:Long){
+        val wait=androidx.compose.runtime.remember{androidx.compose.runtime.mutableStateOf<Long?>(null)}
+        StationBuffering(show,false){PlaybackWaitDiagnostics(threshold){wait.value=it}}
+        wait.value?.let{PlaybackReportDialog(null,it){wait.value=null}}
     }
 
 }

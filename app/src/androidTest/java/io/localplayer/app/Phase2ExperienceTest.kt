@@ -122,7 +122,7 @@ class Phase2ExperienceTest {
         assertFalse(state.canStepDown())
     }
 
-    @Test fun qualityDiscoveryIsExplicitOriginalStaysSelectedAndAutoNeedsRealAlternatives(){
+    @Test fun qualityDiscoveryLoadsOnOpenOriginalStaysSelectedAndAutoNeedsRealAlternatives(){
         val source=io.localplayer.core.Source(label="画质夹具",protocol=io.localplayer.core.Protocol.ALIYUN,host="fixture.invalid",domain="fixture")
         val uri=PlaybackRegistry.add(source,io.localplayer.core.Credentials(""),"video","video.mp4")
         val item=androidx.media3.common.MediaItem.Builder().setUri(uri).setMediaId(uri.toString()).build()
@@ -138,9 +138,8 @@ class Phase2ExperienceTest {
                 }}}
             }
             ui.onNodeWithTag("cloud-quality-original").assertIsSelected()
-            assertEquals(0,calls.get())
-            ui.onNodeWithTag("load-cloud-quality").performClick()
             ui.waitUntil(5000){ui.onAllNodesWithTag("cloud-quality-FHD").fetchSemanticsNodes().isNotEmpty()}
+            assertEquals(1,calls.get())
             ui.onNodeWithTag("cloud-quality-auto").assertDoesNotExist()
             ui.onNodeWithTag("load-cloud-quality").performClick()
             ui.waitUntil(5000){ui.onAllNodesWithTag("cloud-quality-auto").fetchSemanticsNodes().isNotEmpty()}

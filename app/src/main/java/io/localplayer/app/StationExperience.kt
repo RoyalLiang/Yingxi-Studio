@@ -190,26 +190,8 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     var rememberManual by remember{mutableStateOf(prefs.rememberManual)}
     Surface(modifier=Modifier.fillMaxWidth(),color=GroupedSurface,shape=RoundedCornerShape(22.dp)) {
         Column(Modifier.padding(14.dp)) {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val options:@Composable ()->Unit={
-                    SingleChoiceSegmentedButtonRow(Modifier.testTag("audio-language-options")) {
-                        listOf(null to "跟随","en" to "英文","zh" to "中文").forEachIndexed { index,(value,label)->
-                            SegmentedButton(selected=language==value,onClick={language=value;prefs.audioLanguage=value},
-                                shape=SegmentedButtonDefaults.itemShape(index,3),icon={},
-                                modifier=Modifier.testTag("audio-language-${value?:"follow"}")) {Text(label,maxLines=1)}
-                        }
-                    }
-                }
-                // Keep the choices in the row at normal size; wrap only for accessibility.
-                if(maxWidth>=300.dp&&androidx.compose.ui.platform.LocalDensity.current.fontScale<=1.3f) {
-                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                        Text("音轨偏好",Modifier.weight(1f),color=Ink)
-                        options()
-                    }
-                } else Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    Text("音轨偏好",color=Ink)
-                    options()
-                }
+            StationChoiceSetting("听音频段",listOf("follow" to "跟随","en" to "英文","zh" to "中文"),language?:"follow","audio-language") {
+                language=it.takeUnless{value->value=="follow"};prefs.audioLanguage=language
             }
             Row(verticalAlignment=Alignment.CenterVertically){Text("记住手动选择",Modifier.weight(1f));SettingsSwitch(rememberManual,{rememberManual=it;prefs.rememberManual=it})}
         }

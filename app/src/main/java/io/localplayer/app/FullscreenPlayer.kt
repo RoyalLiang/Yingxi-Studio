@@ -83,6 +83,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var locked by rememberSaveable { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
     var diagnosticsOpen by remember { mutableStateOf(false) }
+    var diagnosticsWait by remember { mutableStateOf<Long?>(null) }
     var queue by remember { mutableStateOf(false) }
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val portrait=configuration.screenWidthDp<configuration.screenHeightDp
@@ -263,7 +264,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration){ if(!locked&&!settings&&!queue&&!dragging&&!speedOpen)PlaybackWaitDiagnostics(controller) }
+        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration){ if(!locked&&!settings&&!queue&&!dragging&&!speedOpen)PlaybackWaitDiagnostics{wait->diagnosticsWait=wait;diagnosticsOpen=true} }
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {
             if (!dragging) {
@@ -281,14 +282,14 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
                             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
-                                DropdownMenuItem(text = { Text("播放检修") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreOpen = false; diagnosticsOpen = true })
+                                DropdownMenuItem(text = { Text("上报播放问题") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreOpen = false; diagnosticsWait = null; diagnosticsOpen = true })
                                 DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
                                 if(smallWindow != null)DropdownMenuItem(text = { Text("画中画") }, leadingIcon = { Icon(Icons.Rounded.PictureInPictureAlt, null) }, enabled = videoAvailable, onClick = { moreOpen = false; smallWindow() })
                                 DropdownMenuItem(text = { Text("锁定方向与控件") }, leadingIcon = { Icon(Icons.Rounded.LockOpen, null) }, onClick = { moreOpen = false; locked = true; visible = false; lock(true) })
                             }
                         }
                     }
-                    if(!portrait)PlayerIcon(Icons.Rounded.Info, "播放检修", { diagnosticsOpen = true })
+                    if(!portrait)PlayerIcon(Icons.Rounded.Info, "上报播放问题", { diagnosticsWait = null; diagnosticsOpen = true })
                     if(!portrait)PlayerIcon(Icons.Rounded.Headphones, "后台播放", background)
                     if (!portrait && smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     if(!portrait)PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
@@ -364,14 +365,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         if (!compact && locked && (visible || touchExploration)) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
-        if(diagnosticsOpen)MaterialTheme(colorScheme=darkColorScheme(surface=PlayerPanel,onSurface=PlayerInk)) {
-            AlertDialog(onDismissRequest={diagnosticsOpen=false},
-                title={Text("播放检修",Modifier.testTag("playback-diagnostics"))},
-                text={Column { Text("播放中也可复制检修信息，用于区分解码掉帧与信源读取等待。") ; PlaybackDiagnosticCopy(controller) }},
-                confirmButton={TextButton(onClick={diagnosticsOpen=false}){Text("关闭")}})
-        }
+        if(diagnosticsOpen)PlaybackReportDialog(controller,diagnosticsWait){diagnosticsOpen=false}
         if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption,externalAudio)
-        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackDiagnosticCopy(controller)
+        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackIssueAction{diagnosticsWait=null;diagnosticsOpen=true}
                 controller?.currentMediaItem?.takeIf{SidecarAudio.from(it).isNotEmpty()}?.let{item ->
                     TextButton(onClick={controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(item,emptyList()))}){Text("移除外挂音轨并重试",color=PlayerAccent)}
                 }

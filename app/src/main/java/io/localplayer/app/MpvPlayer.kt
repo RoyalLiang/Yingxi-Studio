@@ -25,6 +25,8 @@ import java.util.concurrent.Executors
 internal class MpvPlayer(private val context:Context,private val sourceFormat:Format,private val openInput:(Context,android.net.Uri)->MpvInput={c,u->MpvInput.open(c,u)}):SimpleBasePlayer(Looper.getMainLooper()) {
     private val handler=Handler(Looper.getMainLooper())
     private var runtime:MpvRuntime?=null
+    private var pollGeneration:Int?=null
+    private var sampleRevision=0
     private var fillVideo=false
     private var subtitleMarginX=25
     private var subtitleMarginY=22
@@ -200,19 +202,45 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     }
     private fun refresh(){
         val m=runtime?:return
-        val pollStart=android.os.SystemClock.elapsedRealtimeNanos()
+        if(pollGeneration!=null)return
+        val current=generation
+        val revision=sampleRevision
+        val now=android.os.SystemClock.elapsedRealtime()
+        val metadata=decodedWidth==0||now>=nextMetadataPoll
+        if(metadata)nextMetadataPoll=now+1000
+        val sourceFailure=input?.failure
+        val keys=mutableListOf("time-pos","demuxer-cache-time","paused-for-cache","eof-reached","idle-active")
+        if(metadata)keys+=listOf("duration","video-out-params","track-list","container-fps","frame-drop-count","decoder-frame-drop-count","avsync")
+        if(!firstFrame)keys+=listOf("video-frame-info/picture-type","vo-configured")
+        pollGeneration=current
+        // Synchronous mpv getters can wait on its core; keep them off the application looper.
+        worker.execute {
+            val start=android.os.SystemClock.elapsedRealtimeNanos()
+            val snapshot=runCatching {
+                sourceFailure?.let{throw java.io.IOException("远程文件读取中断",it)}
+                keys.associateWith{m.get(it)}
+            }
+            val elapsed=android.os.SystemClock.elapsedRealtimeNanos()-start
+            handler.post {
+                if(pollGeneration==current)pollGeneration=null
+                if(released||generation!=current||runtime!==m||sampleRevision!=revision)return@post
+                applySnapshot(m,snapshot,metadata,elapsed)
+            }
+        }
+    }
+    private fun applySnapshot(m:MpvRuntime,snapshot:Result<Map<String,String?>>,metadata:Boolean,readNanos:Long){
+        val applyStart=android.os.SystemClock.elapsedRealtimeNanos()
         try {
-            input?.failure?.let{throw java.io.IOException("远程文件读取中断",it)}
+            val values=snapshot.getOrThrow()
             val now=android.os.SystemClock.elapsedRealtime()
             if(!firstFrame&&openingSince>0&&now-openingSince>30000)
                 throw java.io.IOException("SDR 兼容解码未能生成画面")
-            m.get("time-pos")?.toDoubleOrNull()?.let{position=(it*1000).toLong().coerceAtLeast(0)}
-            buffered=m.get("demuxer-cache-time")?.toDoubleOrNull()?.let{(it*1000).toLong()}?:position
+            values["time-pos"]?.toDoubleOrNull()?.let{position=(it*1000).toLong().coerceAtLeast(0)}
+            buffered=values["demuxer-cache-time"]?.toDoubleOrNull()?.let{(it*1000).toLong()}?:position
             // Container/track metadata does not need a synchronous JNI roundtrip every UI tick.
-            if(decodedWidth==0||now>=nextMetadataPoll){
-                nextMetadataPoll=now+1000
-                duration=m.get("duration")?.toDoubleOrNull()?.let{(it*1000).toLong()}?:duration
-                val params=runCatching{org.json.JSONObject(m.get("video-out-params")?:"{}")}.getOrNull()
+            if(metadata){
+                duration=values["duration"]?.toDoubleOrNull()?.let{(it*1000).toLong()}?:duration
+                val params=runCatching{org.json.JSONObject(values["video-out-params"]?:"{}")}.getOrNull()
                 val width=params?.optInt("w")?:0
                 val height=params?.optInt("h")?:0
                 if(width>0&&height>0){
@@ -220,31 +248,31 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                     val dh=params?.optInt("dh")?.takeIf{it>0}?:height
                     val rotation=params?.optInt("rotate")?:0
                     video=if(Math.floorMod(rotation,180)==90)VideoSize(dh,dw)else VideoSize(dw,dh)
-                    val json=m.get("track-list")?:"[]"
+                    val json=values["track-list"]?:"[]"
                     if(json!=trackSignature||width!=decodedWidth||height!=decodedHeight){
-                        tracks=readTracks(json,width,height,rotation,params?.optDouble("par",1.0)?.toFloat()?:1f,m.get("container-fps")?.toFloatOrNull()?:sourceFormat.frameRate);trackSignature=json
+                        tracks=readTracks(json,width,height,rotation,params?.optDouble("par",1.0)?.toFloat()?:1f,values["container-fps"]?.toFloatOrNull()?:sourceFormat.frameRate);trackSignature=json
                     }
                     decodedWidth=width;decodedHeight=height
                 }
-                PlaybackMetrics.sdrOutput(m.get("frame-drop-count")?.toIntOrNull()?:0,
-                    m.get("decoder-frame-drop-count")?.toIntOrNull(),
-                    m.get("avsync")?.toDoubleOrNull()?.let{(it*1000).toLong()})
+                PlaybackMetrics.sdrOutput(values["frame-drop-count"]?.toIntOrNull()?:0,
+                    values["decoder-frame-drop-count"]?.toIntOrNull(),
+                    values["avsync"]?.toDoubleOrNull()?.let{(it*1000).toLong()})
             }
-            if(!firstFrame&&!m.get("video-frame-info/picture-type").isNullOrBlank()&&m.get("vo-configured")=="yes"){
+            if(!firstFrame&&!values["video-frame-info/picture-type"].isNullOrBlank()&&values["vo-configured"]=="yes"){
                 firstFrame=true;firstFrameEvent=true;nextMetadataPoll=0;PlaybackMetrics.sdrFrame()
             }
             if(firstFrame&&!subtitleRequested){subtitleRequested=true;items.getOrNull(index)?.let{loadAttachments(it,m,generation)}}
-            state=if(!firstFrame||m.get("paused-for-cache")=="yes")Player.STATE_BUFFERING else Player.STATE_READY
-            if(m.get("eof-reached")=="yes"){
+            state=if(!firstFrame||values["paused-for-cache"]=="yes")Player.STATE_BUFFERING else Player.STATE_READY
+            if(values["eof-reached"]=="yes"){
                 if(!firstFrame)throw java.io.IOException("SDR 兼容解码未能生成画面")
                 state=Player.STATE_ENDED;wanted=false
             }
-            if(decodedWidth==0&&m.get("idle-active")=="yes"){
+            if(decodedWidth==0&&values["idle-active"]=="yes"){
                 failure=PlaybackException("SDR 兼容解码未能打开视频画面",null,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false
             }
             syncPlay();invalidateState()
         }catch(e:Exception){failure=PlaybackException("SDR 兼容播放中断",e,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false;syncPlay();invalidateState()}
-        finally{PlaybackMetrics.sdrPoll(android.os.SystemClock.elapsedRealtimeNanos()-pollStart)}
+        finally{PlaybackMetrics.sdrPoll(readNanos,android.os.SystemClock.elapsedRealtimeNanos()-applyStart)}
     }
     private fun readTracks(json:String,width:Int,height:Int,rotation:Int=sourceFormat.rotationDegrees,pixelRatio:Float=sourceFormat.pixelWidthHeightRatio,frameRate:Float=sourceFormat.frameRate):Tracks {
         val groups=mutableListOf<Tracks.Group>()
@@ -284,7 +312,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     override fun handleSetPlaybackParameters(playbackParameters:PlaybackParameters):ListenableFuture<*>{speed=playbackParameters;runtime?.set("speed",speed.speed.toString());return done()}
     override fun handleSetVolume(volume:Float):ListenableFuture<*>{gain=volume;runtime?.set("volume",(gain*100).toString());return done()}
     override fun handleSeek(mediaItemIndex:Int,positionMs:Long,seekCommand:Int):ListenableFuture<*>{
-        if(mediaItemIndex==index){position=positionMs.coerceAtLeast(0);runtime?.command("seek",(position/1000.0).toString(),"absolute+exact");if(state==Player.STATE_ENDED)state=Player.STATE_READY}
+        if(mediaItemIndex==index){sampleRevision++;nextMetadataPoll=0;position=positionMs.coerceAtLeast(0);runtime?.command("seek",(position/1000.0).toString(),"absolute+exact");if(state==Player.STATE_ENDED)state=Player.STATE_READY}
         return done()
     }
     override fun handleSetVideoOutput(videoOutput:Any):ListenableFuture<*> {
@@ -313,7 +341,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     override fun handleStop():ListenableFuture<*>{stopRuntime();state=Player.STATE_IDLE;syncPlay();return done()}
     override fun handleRelease():ListenableFuture<*>{released=true;clearOutput();stopRuntime();wanted=false;syncPlay();runCatching{context.unregisterReceiver(noisy)};return done()}
     private fun stopRuntime(){
-        generation++;handler.removeCallbacks(poll);decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null
+        generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null
         if(attachedSurface!=null){runtime?.let{it.set("vo","null");it.detach()}}
         attachedSurface=null;firstFrame=false;firstFrameEvent=false;subtitleRequested=false
         val m=runtime;val source=input;val pending=opening;val captions=externalInputs.values.toList();externalInputs.clear();runtime=null;input=null;opening=null

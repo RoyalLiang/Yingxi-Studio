@@ -41,14 +41,14 @@ internal fun ComponentActivity.configureLaunchTransition(firstCreation:Boolean) 
             }
         }
         animator=ValueAnimator.ofFloat(0f,1f).apply{
-            duration=1600
+            duration=880
             interpolator=android.view.animation.LinearInterpolator()
             addUpdateListener{
                 val p=it.animatedValue as Float
                 routes.progress=p;routes.invalidate()
-                icon.scaleX=1f-.28f*phase(p,0f,.22f);icon.scaleY=icon.scaleX
-                icon.alpha=.25f+.75f*phase(p,.38f,.68f)
-                screen.alpha=1f-phase(p,.84f,1f)
+                icon.scaleX=.92f+.08f*phase(p,0f,.4f);icon.scaleY=icon.scaleX
+                icon.alpha=.65f+.35f*phase(p,0f,.3f)
+                screen.alpha=1f-phase(p,.76f,1f)
             }
             addListener(object:AnimatorListenerAdapter(){
                 override fun onAnimationEnd(animation:Animator){remove()}
@@ -56,7 +56,7 @@ internal fun ComponentActivity.configureLaunchTransition(firstCreation:Boolean) 
             })
         }
         screen.setOnClickListener{animator.cancel()}
-        screen.contentDescription="映汐放映站，轻触跳过开屏动画"
+        screen.contentDescription="映汐放映站，版本 ${BuildConfig.VERSION_NAME}，轻触跳过开屏动画"
         screen.importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_YES
         icon.importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
         lifecycle.addObserver(observer);animator.start()
@@ -70,6 +70,7 @@ private class SignalArrivalView(context:Context,private val icon:View):View(cont
     var progress=0f
     private val density=resources.displayMetrics.density
     private val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.rgb(185,30,75);strokeWidth=1.5f*density;style=Paint.Style.STROKE;strokeCap=Paint.Cap.ROUND;strokeJoin=Paint.Join.ROUND}
+    private val version=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.rgb(104,111,105);textAlign=Paint.Align.CENTER;typeface=android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.NORMAL)}
     private val title=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.rgb(43,48,45);textAlign=Paint.Align.CENTER;typeface=android.graphics.Typeface.create("sans-serif-medium",android.graphics.Typeface.NORMAL)}
     private val pathA=Path();private val pathB=Path();private val segment=Path()
     private val a=PathMeasure();private val b=PathMeasure()
@@ -97,7 +98,12 @@ private class SignalArrivalView(context:Context,private val icon:View):View(cont
         val ring=phase(progress,.38f,.7f)
         paint.alpha=((1-ring)*fade*120).toInt();canvas.drawCircle(cx,cy,half+(8+ring*16)*density,paint)
         title.textSize=minOf(android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,26f,resources.displayMetrics),(width-48*density)/6f)
-        title.alpha=(phase(progress,.48f,.7f)*255).toInt()
+        title.alpha=(phase(progress,.2f,.5f)*255).toInt()
         canvas.drawText("映汐放映站",cx,cy+half+48*density,title)
+        val label="v${BuildConfig.VERSION_NAME}"
+        version.textSize=android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,13f,resources.displayMetrics)
+        if(version.measureText(label)>width-48*density)version.textSize*=(width-48*density)/version.measureText(label)
+        version.alpha=title.alpha
+        canvas.drawText(label,cx,(cy+half+48*density+title.fontMetrics.descent+10*density-version.fontMetrics.ascent).coerceAtMost(height-24*density),version)
     }
 }

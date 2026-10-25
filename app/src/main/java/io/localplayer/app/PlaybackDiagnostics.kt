@@ -59,6 +59,7 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("audioDecoder",diagnosticCodec(metrics.audioDecoder)?:JSONObject.NULL).put("audioRenderedBuffers",metrics.audioRenderedBuffers?:JSONObject.NULL)
         .put("sdrDecoderDroppedFrames",metrics.sdrDecoderDroppedFrames?:JSONObject.NULL)
         .put("sdrAvSyncMs",metrics.sdrAvSyncMs?:JSONObject.NULL).put("sdrPollMs",metrics.sdrPollMs?:JSONObject.NULL)
+        .put("sdrPollMainMs",metrics.sdrPollMainMs?:JSONObject.NULL)
         .put("playbackSpeed",player?.playbackParameters?.speed?:1f)
         .put("encodedFrameRate",selected?.frameRate?.takeIf{it.isFinite()&&it>0}?:JSONObject.NULL)
         .put("videoSkippedOutputs",metrics.videoSkippedOutputs?:JSONObject.NULL)
@@ -118,7 +119,7 @@ internal fun playbackWaitSummary():String {
 }
 
 /** Only composed during buffering. Sampling stops with the overlay; it never controls playback. */
-@Composable internal fun PlaybackWaitDiagnostics(player:Player?,thresholdMs:Long=12_000) {
+@Composable internal fun PlaybackWaitDiagnostics(thresholdMs:Long=12_000,report:(Long)->Unit) {
     var elapsed by remember{mutableLongStateOf(0)}
     var summary by remember{mutableStateOf(playbackWaitSummary())}
     LaunchedEffect(Unit){
@@ -128,17 +129,17 @@ internal fun playbackWaitSummary():String {
     if(elapsed>=thresholdMs){
         Text(summary,Modifier.widthIn(max=280.dp).testTag("playback-wait-details"),color=PlayerInk.copy(alpha=.78f),
             fontSize=13.sp,textAlign=TextAlign.Center)
-        PlaybackDiagnosticCopy(player,elapsed)
+        PlaybackIssueAction{report(elapsed)}
     }
 }
 
-@Composable internal fun PlaybackDiagnosticCopy(player:Player?,waitMs:Long?=null){
+@Composable internal fun PlaybackDiagnosticCopy(player:Player?,waitMs:Long?=null,snapshot:String?=null){
     val context=LocalContext.current
     var copied by remember{mutableStateOf(false)}
     var copyFailed by remember{mutableStateOf(false)}
     TextButton(onClick={
             val result=runCatching{
-                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",playbackDiagnostic(player,waitMs)))
+                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",snapshot?:playbackDiagnostic(player,waitMs)))
             }
             copied=result.isSuccess;copyFailed=result.isFailure
             if(result.isFailure)Toast.makeText(context,"未能复制，请重试",Toast.LENGTH_SHORT).show()
