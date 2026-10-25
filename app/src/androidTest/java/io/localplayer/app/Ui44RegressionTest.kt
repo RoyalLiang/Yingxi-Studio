@@ -92,12 +92,17 @@ class Ui44RegressionTest {
                     }
                 }}}
                 for((value,label) in listOf("en" to "英文","zh" to "中文","follow" to "跟随")) {
-                    ui.onNodeWithTag("audio-language-$value").performScrollTo().performClick().assertIsSelected()
+                    if(scale==1f)ui.onNodeWithTag("audio-language-$value").performScrollTo().performClick().assertIsSelected()
+                    else{
+                        ui.onNodeWithTag("audio-language-selector").performScrollTo().performClick()
+                        ui.onNodeWithTag("audio-language-$value").performClick()
+                        ui.onNodeWithTag("audio-language-selector").assertTextContains(label)
+                    }
                     assertEquals(if(value=="follow")null else value,PlaybackPreferences(ui.activity).audioLanguage)
                     ui.onNodeWithText(label).assertExists()
                 }
                 if(scale==1f) {
-                    val label=ui.onNodeWithText("音轨偏好").getUnclippedBoundsInRoot()
+                    val label=ui.onNodeWithText("听音频段").getUnclippedBoundsInRoot()
                     val options=ui.onNodeWithTag("audio-language-options").getUnclippedBoundsInRoot()
                     assertTrue(options.left>=label.right)
                 }

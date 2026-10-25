@@ -126,7 +126,7 @@ class StationExperienceTest {
             ui.onNodeWithText("继续第 6 集 · 23:18",substring=true).assertIsDisplayed()
             capture("archive")
             ui.runOnIdle{files.root()}
-            ui.onNodeWithTag("station-local-notice").assertExists()
+            ui.onNodeWithText("我的片架").assertExists()
             ui.onNodeWithContentDescription("返回").performClick()
             ui.onNodeWithText("今日拾获").assertExists()
             capture("home")

@@ -1,8 +1,11 @@
 package io.localplayer.app
 
 import android.animation.ValueAnimator
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -42,11 +45,12 @@ import kotlin.math.abs
 @OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun StationNotice(eyebrow:String,title:String,body:String,modifier:Modifier=Modifier,onArchives:(()->Unit)?=null,person:WorldPerson?=null,onRefresh:(()->Unit)?=null) {
     val lamp=Color(0xFFE6C78C)
-    val motionEnabled=ValueAnimator.areAnimatorsEnabled()
-    val light=remember { Animatable(if(motionEnabled) 0f else 1f) }
-    LaunchedEffect(motionEnabled) {
-        if(motionEnabled) light.animateTo(1f,tween(1600,easing=LinearOutSlowInEasing)) else light.snapTo(1f)
-    }
+    var resumed by remember{mutableStateOf(false)}
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit){resumed=true;onPauseOrDispose{resumed=false}}
+    val light=if(ValueAnimator.areAnimatorsEnabled()&&resumed){
+        rememberInfiniteTransition(label="diary lamp").animateFloat(0f,1f,
+            infiniteRepeatable(tween(5200,delayMillis=1600,easing=LinearEasing),RepeatMode.Restart),label="diary sweep")
+    }else rememberUpdatedState(1f)
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF293C34))) {
         Canvas(Modifier.matchParentSize().testTag("station-film-perforation")) {
             val slot=Size(9.dp.toPx(),3.dp.toPx())

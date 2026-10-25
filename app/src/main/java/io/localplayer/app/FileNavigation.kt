@@ -55,12 +55,11 @@ data class FileCrumb(val label:String,val key:String)
     Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing)){
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=16.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick=back){Icon(Icons.AutoMirrored.Rounded.ArrowBack,if(files.active==null)"返回"else"上一级",tint=Berry)}
-            Text("废墟档案库",Modifier.weight(1f).padding(start=8.dp).testTag("local-browser-title"),fontSize=24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-            IconButton(onClick=onAddFolder){Icon(Icons.Rounded.CreateNewFolder,"添加授权文件夹",tint=Berry)}
+            Text("废墟档案库",Modifier.weight(1f).padding(start=8.dp).testTag("local-browser-title"),fontSize=if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.5f)18.sp else 24.sp,letterSpacing=(-.4).sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+            IconButton(onClick=onAddFolder){Icon(Icons.Rounded.CreateNewFolder,"添加片架（选择文件夹）",tint=Berry)}
         }
-        Text("本机影像",Modifier.padding(start=24.dp,bottom=8.dp).testTag("local-library-description"),fontSize=12.sp,color=Muted)
         if(files.active!=null && !(files.entries.none{it.directory} && files.entries.any{it.video&&localArchiveIdentity(it,files).category!="电影"})){
-            FileBreadcrumbs(listOf(FileCrumb("本机文件","local"))+files.trail.mapIndexed{i,d->FileCrumb(d.name,"local:$i")}){index->if(index==0)files.root()else files.navigate(index-1)}
+            FileBreadcrumbs(listOf(FileCrumb("片架","local"))+files.trail.mapIndexed{i,d->FileCrumb(d.name,"local:$i")}){index->if(index==0)files.root()else files.navigate(index-1)}
             HorizontalDivider(color=Hairline)
         }
         val error=files.error?:player.error
@@ -68,19 +67,15 @@ data class FileCrumb(val label:String,val key:String)
         if(files.busy)Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp);Text("正在读取文件夹…",Modifier.weight(1f).padding(start=12.dp));TextButton(onClick={files.cancel()}){Text("取消")}}
         if(files.active==null){
             LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp)){
-                item(key="station-local-notice") {
-                    LocalArchiveWorldNotice(Modifier.padding(horizontal=20.dp,vertical=8.dp).testTag("station-local-notice"))
-                }
                 item{Column(Modifier.padding(24.dp)){
-                    Text("你的文件夹",fontSize=22.sp,fontWeight=FontWeight.SemiBold)
-                    Spacer(Modifier.height(10.dp));Text("由你选择可访问的文件夹，影片留在原处。",fontSize=14.sp,color=Muted)
-                    Spacer(Modifier.height(20.dp));Button(onClick=onAddFolder){Icon(Icons.Rounded.FolderOpen,null);Spacer(Modifier.width(8.dp));Text("授权一个文件夹",maxLines=1)}
+                    Text("我的片架",fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+                    Spacer(Modifier.height(20.dp));Button(onClick=onAddFolder){Icon(Icons.Rounded.FolderOpen,null);Spacer(Modifier.width(8.dp));Text("接入本机片架",maxLines=1)}
                     TextButton(onClick=onPickFile){Text("选择单个视频",maxLines=1)}
                 }}
                 items(files.folders,key={it.tree.toString()}){folder->
                     Row(verticalAlignment=Alignment.CenterVertically){
-                        Box(Modifier.weight(1f)){MediaRow(folder.name,"已授权 · 仅按你的操作读取",Icons.Rounded.Folder){files.open(folder)}}
-                        IconButton(onClick={files.remove(folder)}){Icon(Icons.Rounded.Close,"移除文件夹 ${folder.name}",tint=Muted)}
+                        Box(Modifier.weight(1f)){MediaRow(folder.name,"本机片架",Icons.Rounded.Folder){files.open(folder)}}
+                        IconButton(onClick={files.remove(folder)}){Icon(Icons.Rounded.Close,"移除片架 ${folder.name}",tint=Muted)}
                     }
                 }
             }

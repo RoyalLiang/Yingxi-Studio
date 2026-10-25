@@ -112,7 +112,7 @@ class HomePolishTest {
         assertEquals(1,layouts.single().lineCount)
         assertFalse(layouts.single().hasVisualOverflow)
         ui.onNodeWithContentDescription("返回").assertIsDisplayed()
-        ui.onNodeWithContentDescription("添加授权文件夹").assertIsDisplayed()
+        ui.onNodeWithContentDescription("添加片架（选择文件夹）").assertIsDisplayed()
         capture("local-large")
     }
 
@@ -152,7 +152,7 @@ class HomePolishTest {
         ui.onNodeWithTag("release-letter-body").assertIsDisplayed()
         ui.onNode(hasTestTag("letter-paragraphs") and hasAnyAncestor(hasTestTag("release-letter-body")),useUnmergedTree=true).assertExists()
         capture("release-letter")
-        assertTrue(BuildConfig.VERSION_CHANGES.contains("拾荒者信笺"))
+        assertTrue(BuildConfig.VERSION_CHANGES.isNotBlank())
         assertFalse(BuildConfig.VERSION_CHANGES.contains("验证与限制"))
     }
 

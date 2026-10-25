@@ -55,8 +55,6 @@ fun SourcesCatalog(vm: LibraryViewModel) {
                 IconButton(onClick={groupDialog=true},modifier=Modifier.size(48.dp).testTag("manage-source-groups")){Icon(Icons.Rounded.FolderCopy,"整理分册",tint=Muted)}
                 FilledIconButton(onClick={vm.add()},modifier=Modifier.size(48.dp).testTag("add-source")){Icon(Icons.Rounded.Add,"登记信源")}
             }
-            Spacer(Modifier.height(6.dp))
-            Text(if(vm.sources.isEmpty())"把远处的影像接回片架。"else"已登记 ${vm.sources.size} 处 · 随时回来",fontSize=14.sp,lineHeight=21.sp,color=Muted)
         }
         if (vm.sources.isNotEmpty() || groups.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {

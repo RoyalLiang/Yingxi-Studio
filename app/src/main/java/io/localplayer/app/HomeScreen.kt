@@ -6,7 +6,9 @@ import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -92,7 +94,7 @@ import androidx.compose.ui.unit.sp
                     Text("今天新发现 ${StationInventory(context).today().size} 部 · 来自已浏览的目录",fontSize=12.sp,color=Muted)
                 } }
                 items(found,key={"found:${it.media.key}"}) { finding ->
-                    FindingCard(finding) { vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false)) }
+                    FindingCard(finding, seal={vm.sealMedia(finding.media)}) { vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false)) }
                 }
             }
             if (recent.isNotEmpty()) {
@@ -187,12 +189,32 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable internal fun FindingCard(finding:StationFinding,play:()->Unit) {
-    Surface(onClick=play,color=Color.Transparent,modifier=Modifier.fillMaxWidth().testTag("found:${finding.media.key}")) {
-        Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-            MediaPoster(finding.media,Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(16.dp)))
-            Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,lineHeight=22.sp,minLines=2,maxLines=2,
-                overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().testTag("found-title:${finding.media.key}"))
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable internal fun FindingCard(finding:StationFinding,seal:(()->Unit)?=null,play:()->Unit) {
+    var menu by remember(finding.media.key){mutableStateOf(false)}
+    val shape=RoundedCornerShape(16.dp)
+    val interactions=remember{MutableInteractionSource()}
+    val focused by interactions.collectIsFocusedAsState()
+    Column(Modifier.fillMaxWidth().testTag("found:${finding.media.key}")
+        .semantics{selected=menu}
+        .combinedClickable(interactionSource=interactions,indication=null,
+            onClickLabel="播放影片",onClick=play,onLongClickLabel="影像操作",onLongClick={menu=true}),
+        verticalArrangement=Arrangement.spacedBy(7.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(shape)
+            .border(2.dp,if(menu||focused)Berry else Color.Transparent,shape).testTag("found-poster:${finding.media.key}")) {
+            MediaPoster(finding.media,Modifier.fillMaxSize())
+            Box(Modifier.align(Alignment.TopEnd)) {
+                IconButton(onClick={menu=true},modifier=Modifier.size(48.dp)) {
+                    Icon(Icons.Rounded.MoreHoriz,"影像操作 ${mediaDisplayTitle(finding.media.title)}",
+                        Modifier.background(Color.Black.copy(alpha=.58f),CircleShape).padding(5.dp).size(20.dp),tint=Color.White)
+                }
+                DropdownMenu(menu,{menu=false},shape=RoundedCornerShape(20.dp),containerColor=GroupedSurface) {
+                    DropdownMenuItem(text={Text("播放影片")},onClick={menu=false;play()})
+                    if(seal!=null)DropdownMenuItem(text={Text(sealActionLabel(false))},onClick={menu=false;seal()})
+                }
+            }
         }
+        Text(mediaDisplayTitle(finding.media.title),fontSize=15.sp,lineHeight=22.sp,minLines=2,maxLines=2,
+            overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().testTag("found-title:${finding.media.key}"))
     }
 }

@@ -46,12 +46,13 @@ import io.localplayer.core.Protocol
     val categoryDrafts=remember(d.source.id){mutableMapOf<Boolean,Draft>()}
     categoryDrafts[external]=d
     var manualWebDav by remember(d.source.id) { mutableStateOf(d.webDavUrl.trim() !in listOf("", "https://")) }
+    var cloudProvider by remember(d.source.id) { mutableStateOf(CloudProvider.ALIYUNPAN) }
     val focus = LocalFocusManager.current
     val scene = rememberGraphicsLayer()
     // Preserve the outgoing form while Crossfade composes both protocol panels.
     val drafts = remember(d.source.id) { mutableMapOf<Protocol, Draft>() }
     drafts[d.source.protocol] = d
-    val panel = if (vm.discoveryPanelOpen) "discovery" else if (d.source.protocol == Protocol.WEBDAV && !manualWebDav) "cloud" else d.source.protocol.name
+    val panel = if (vm.discoveryPanelOpen) "discovery" else if (external && !manualWebDav) "cloud:${cloudProvider.name}" else d.source.protocol.name
     val nested by rememberUpdatedState(vm.discoveryPanelOpen)
     val back: () -> Unit = {
         focus.clearFocus()
@@ -107,9 +108,12 @@ import io.localplayer.core.Protocol
                     }
                     Spacer(Modifier.height(16.dp))
                 }
-                ConnectionProtocolSelector(external,if(external){if(manualWebDav)"WebDAV"else"阿里云盘"}else d.source.protocol.name){choice->
+                ConnectionProtocolSelector(external,if(external){if(manualWebDav)"WebDAV"else cloudProvider.title}else d.source.protocol.name){choice->
                     focus.clearFocus();vm.discoveryPanelOpen=false;vm.stopDiscovery()
-                    if(external)manualWebDav=choice=="WebDAV" else vm.switchDraftProtocol(Protocol.valueOf(choice))
+                    if(external){
+                    manualWebDav=choice=="WebDAV"
+                    if(!manualWebDav)cloudProvider=CloudProvider.entries.first{it.title==choice}
+                }else vm.switchDraftProtocol(Protocol.valueOf(choice))
                 }
                 Spacer(Modifier.height(12.dp))
                 if(!external)Surface(onClick={
@@ -132,13 +136,10 @@ import io.localplayer.core.Protocol
                 Crossfade(targetState = panel, animationSpec = tween(200), label = "source-configuration", modifier = Modifier.weight(1f)) { visible ->
                     when (visible) {
                         "discovery" -> SourceDiscoveryPanel(vm, requestNearby) { vm.discoveryPanelOpen = false; vm.stopDiscovery() }
-                        "cloud" -> LazyColumn(Modifier.fillMaxSize().testTag("connection-form"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            item { CloudProviderPicker(onConnected = vm::cloudConnected, onFailureMessage = { vm.error = it }) }
-                            item { OutlinedButton(onClick = { manualWebDav = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("manual-webdav"), shape = RoundedCornerShape(18.dp)) { Text("手动输入 WebDAV 地址") } }
-                            item { Text("OpenList、NAS 或自建服务，可通过 WebDAV 连接。", fontSize = 13.sp, lineHeight = 20.sp, color = Muted) }
-                        }
-                        else -> ConnectionFields(vm, drafts[Protocol.valueOf(visible)] ?: d, webDav = visible == Protocol.WEBDAV.name,
-                        chooseCloud = { focus.clearFocus(); manualWebDav = false })
+                        "cloud:ALIYUNPAN", "cloud:BAIDU" -> LazyColumn(Modifier.fillMaxSize().testTag("connection-form"), contentPadding = PaddingValues(20.dp)) {
+                        item { CloudProviderAccess(CloudProvider.valueOf(visible.substringAfter(':')),onConnected=vm::cloudConnected,onFailureMessage={vm.error=it}) }
+                    }
+                    else -> ConnectionFields(vm, drafts[Protocol.valueOf(visible)] ?: d, webDav = visible == Protocol.WEBDAV.name)
                     }
                 }
             }
@@ -149,11 +150,10 @@ import io.localplayer.core.Protocol
     }
 }
 
-@Composable private fun ConnectionFields(vm: LibraryViewModel, d: Draft, webDav: Boolean, chooseCloud: () -> Unit) {
+@Composable private fun ConnectionFields(vm: LibraryViewModel, d: Draft, webDav: Boolean) {
     var showPassword by remember(d.source.id) { mutableStateOf(false) }
     var advanced by remember(d.source.id, d.source.protocol) { mutableStateOf(d.source.initialPath.isNotEmpty()) }
     LazyColumn(Modifier.fillMaxSize().testTag("connection-form"), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (webDav) item { TextButton(onClick = chooseCloud) { Text("选择网盘接入") } }
 
         item { Text(if(webDav)"中继路标" else "据点路标", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Muted) }
         if (webDav) {

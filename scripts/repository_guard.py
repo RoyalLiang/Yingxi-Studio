@@ -18,6 +18,7 @@ EXACT.add("docs/wasteland-copy-audit-2026-10-22.md")
 EXACT.add("docs/explore-play-proposal.md")
 EXACT.add("docs/decoder-smoothness-validation.md")
 EXACT.add("docs/track-subtitle-preview-validation.md")
+EXACT.add("docs/station-ui-validation.md")
 EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name in ("axi","chideng","mitu"))
 
 def allowed(name):

@@ -45,6 +45,11 @@ class SourcePresentationTest {
     }
     @After fun cleanup() { ui.runOnUiThread { scope.clear() } }
 
+    private fun chooseProtocol(protocol:String){
+        ui.onNodeWithTag(if(protocol=="WebDAV")"source-category-tower"else"source-category-outpost").performClick()
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
+        ui.onNodeWithTag("connection-choice:$protocol").performClick()
+    }
     @Test fun protocolSwitchKeepsTheSameDialogWindow() {
         mount()
         ui.runOnIdle { vm.add() }
@@ -52,26 +57,28 @@ class SourcePresentationTest {
         val windows = WindowInspector.getGlobalWindowViews().toSet()
         val top = ui.onNodeWithText("登记信源").getUnclippedBoundsInRoot().top
         listOf("SFTP", "WebDAV", "SMB", "WebDAV", "SFTP").forEach { protocol ->
-            ui.onNodeWithText(protocol).performClick()
+            chooseProtocol(protocol)
             ui.waitForIdle()
             assertEquals("Protocol switching must retain the sheet window", windows, WindowInspector.getGlobalWindowViews().toSet())
             assertEquals(top.value, ui.onNodeWithText("登记信源").getUnclippedBoundsInRoot().top.value, 2f)
         }
     }
 
-    @Test fun manualWebDavReturnsToPickerWithoutReplacingWindow() {
+    @Test fun webDavSwitchesBackToChosenProviderWithoutReplacingWindow() {
         mount()
         ui.runOnIdle { vm.add() }
-        ui.onNodeWithText("WebDAV").performClick()
+        ui.onNodeWithTag("source-category-tower").performClick()
         ui.waitForIdle()
         val windows = WindowInspector.getGlobalWindowViews().toSet()
         capture("cloud")
-        ui.onNodeWithTag("manual-webdav").performClick()
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
+        ui.onNodeWithTag("connection-choice:WebDAV").performClick()
         ui.onNodeWithText("WebDAV 地址").assertIsDisplayed()
         capture("webdav")
         assertEquals(windows, WindowInspector.getGlobalWindowViews().toSet())
-        InstrumentationRegistry.getInstrumentation().uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-        ui.waitUntil(5_000) { runCatching { ui.onNodeWithTag("cloud-provider-picker").assertIsDisplayed() }.isSuccess }
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
+        ui.onNodeWithTag("connection-choice:阿里云盘").performClick()
+        ui.onNodeWithTag("cloud-provider-access").assertIsDisplayed()
         assertEquals(windows, WindowInspector.getGlobalWindowViews().toSet())
     }
 
@@ -79,8 +86,10 @@ class SourcePresentationTest {
         mount()
         ui.runOnIdle { vm.add() }
         ui.waitForIdle()
+        ui.onNodeWithTag("connection-protocol-selector").performClick()
+        ui.waitForIdle()
         ui.mainClock.autoAdvance = false
-        ui.onNodeWithText("SFTP").performClick()
+        ui.onNodeWithTag("connection-choice:SFTP").performClick()
         ui.mainClock.advanceTimeBy(100)
         ui.onNode(hasText("服务器地址") and hasSetTextAction()).assertExists()
         ui.onNode(hasText("主机 IP") and hasSetTextAction()).assertExists()
@@ -93,7 +102,7 @@ class SourcePresentationTest {
 
     @Test fun addingAndScanningAreOnlyAvailableInsideSources() {
         mount()
-        ui.onNodeWithContentDescription("添加避难所").assertDoesNotExist()
+        ui.onNodeWithContentDescription("登记信源").assertDoesNotExist()
         ui.onNodeWithText("添加第一个避难所").assertDoesNotExist()
         ui.onNodeWithText("附近服务").assertDoesNotExist()
         ui.runOnIdle { assertFalse(vm.scanning) }
@@ -101,7 +110,7 @@ class SourcePresentationTest {
         ui.onNodeWithTag("auto-discovery").assertDoesNotExist()
         ui.onNodeWithText("附近设备 · 待验证").assertDoesNotExist()
         capture("sources")
-        ui.onNodeWithContentDescription("添加避难所").performClick()
+        ui.onNodeWithContentDescription("登记信源").performClick()
         capture("smb")
         ui.onNodeWithTag("auto-scan-entry").performClick()
         ui.onNodeWithTag("source-discovery").assertIsDisplayed()
@@ -167,10 +176,10 @@ class SourcePresentationTest {
     @Test fun largeTextKeepsProtocolAndPrimaryControlsReachable() {
         mount(fontScale = 1.5f)
         ui.onNodeWithTag("nav:Sources").performClick()
-        ui.onNodeWithContentDescription("添加避难所").assertIsDisplayed().performClick()
-        ui.onNodeWithText("SFTP").assertIsDisplayed().performClick()
+        ui.onNodeWithContentDescription("登记信源").assertIsDisplayed().performClick()
+        chooseProtocol("SFTP")
         ui.onNode(hasText("主机 IP") and hasSetTextAction()).performTextInput("192.0.2.10")
-        ui.onNodeWithText("SMB").performClick()
+        chooseProtocol("SMB")
         ui.onNodeWithText("登记信源").assertIsDisplayed()
         ui.onNodeWithTag("connection-form").performScrollToNode(hasText("连接并浏览"))
         ui.onNodeWithText("连接并浏览").assertIsDisplayed()

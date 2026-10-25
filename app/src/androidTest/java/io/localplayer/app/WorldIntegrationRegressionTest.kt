@@ -84,7 +84,7 @@ class WorldIntegrationRegressionTest {
         ui.onNodeWithTag("history-keeper-note").assertExists()
         capture("history")
         ui.onNodeWithText("打开本机视频").performScrollTo().performClick()
-        ui.onNodeWithTag("station-local-notice").assertExists()
+        ui.onNodeWithText("我的片架").assertExists()
         capture("local")
         ui.runOnUiThread { ui.activity.onBackPressedDispatcher.onBackPressed() }
         ui.onNodeWithText("查看已登记信源").performScrollTo().performClick()

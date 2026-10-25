@@ -65,7 +65,7 @@ import io.localplayer.core.Source
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("${source.stationKind}设置", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                        Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘 · 只读授权" else "${source.protocol} · ${source.host}", Modifier.padding(top = 6.dp), fontSize = 13.sp, color = Muted)
+                        Text(if (source.protocol == Protocol.ALIYUN) "阿里云盘" else "${source.protocol} · ${source.host}", Modifier.padding(top = 6.dp), fontSize = 13.sp, color = Muted)
                     }
                     IconButton(onClick = vm::dismissSourceSettings) { Icon(Icons.Rounded.Close, "关闭连接设置", tint = Muted) }
                 }

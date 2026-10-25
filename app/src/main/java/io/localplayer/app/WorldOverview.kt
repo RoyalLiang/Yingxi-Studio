@@ -13,14 +13,6 @@ internal data class WorldDiaryLine(val id:String,val author:String,val text:Worl
 internal data class WorldAppName(val id:String,val name:WorldText,val meaning:WorldText)
 internal data class WorldSurfaceNote(val id:String,val author:String,val eyebrow:WorldText,val title:WorldText,val body:WorldText)
 
-@Composable internal fun LocalArchiveWorldNotice(modifier:Modifier=Modifier) {
-    val context=androidx.compose.ui.platform.LocalContext.current
-    val world=remember(context) { StationWorld.load(context) }
-    val lang=androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language
-    val note=world.surfaceNotes.first { it.id=="local_archive" }
-    StationNotice(note.eyebrow.inLanguage(lang),note.title.inLanguage(lang),note.body.inLanguage(lang),modifier)
-}
-
 @Composable internal fun HistoryWorldNote(modifier:Modifier=Modifier) {
     val context=androidx.compose.ui.platform.LocalContext.current
     val world=remember(context) { StationWorld.load(context) }
