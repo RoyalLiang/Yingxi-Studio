@@ -32,12 +32,12 @@ class PortraitCabinet52RegressionTest{
         ui.onNodeWithTag("video-scale-fit").assertExists()
         ui.onNodeWithTag("portrait-playback-rail").assertDoesNotExist()
         val toolbar=ui.onNodeWithTag("playback-toolbar").getUnclippedBoundsInRoot()
-        val nodes=listOf(ui.onNodeWithTag("playback-speed"),ui.onNodeWithContentDescription("播放设置"),ui.onNodeWithContentDescription("选集"),ui.onNodeWithContentDescription("画面比例"),ui.onNodeWithContentDescription("旋转屏幕"))
+        val nodes=listOf(ui.onNodeWithTag("playback-speed"),ui.onNodeWithTag("player-audio"),ui.onNodeWithTag("player-subtitles"),ui.onNodeWithContentDescription("选集"),ui.onNodeWithContentDescription("旋转屏幕"))
         var edge=toolbar.left
         nodes.forEach{n->val b=n.assertIsDisplayed().getUnclippedBoundsInRoot();assertTrue(b.left>=edge);assertTrue(b.right<=toolbar.right);assertTrue((b.bottom-b.top).value>=48);edge=b.right}
-        ui.onNodeWithContentDescription("画面比例").performClick()
+        ui.onNodeWithContentDescription("更多播放操作").performClick();ui.onNodeWithText("画面比例").performClick()
         ui.onNodeWithTag("video-scale-fill").assertExists()
-        ui.onNodeWithContentDescription("画面比例").performClick()
+        ui.onNodeWithContentDescription("更多播放操作").performClick();ui.onNodeWithText("画面比例").performClick()
         ui.onNodeWithTag("video-scale-fit").assertExists()
         File(ui.activity.cacheDir,"portrait52-large.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
     }

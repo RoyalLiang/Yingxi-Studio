@@ -71,6 +71,21 @@ internal class SidecarMediaSourceFactory(private val base:MediaSource.Factory,
 
 internal fun sidecarLanguage(name:String):String? {
     val text=name.lowercase(java.util.Locale.ROOT)
-    if(Regex("(?:^|[ ._-])(?:zh|chs|cht|chi|zho|国语|粤语|普通话|中文)(?:[ ._-]|$)").containsMatchIn(text))return "zh"
-    return listOf("en" to "en|eng|英语","ja" to "ja|jpn|日语","ko" to "ko|kor|韩语").firstOrNull{(_,tags)->Regex("(?:^|[ ._-])(?:$tags)(?:[ ._-]|$)").containsMatchIn(text)}?.first
+    return listOf("yue" to "yue|粤语(?:配音|音轨|版)?|粵語|广东话|廣東話|cantonese","cmn" to "cmn|国语(?:配音|音轨|版)?|國語|普通话|普通話|mandarin",
+        "zh-Hant" to "cht|zh[-_]hant|zh[-_]tw|繁体(?:中文|字幕)?|繁體|繁中","zh-Hans" to "chs|zh[-_]hans|简体(?:中文|字幕)?|簡體|简中",
+        "zh" to "zh|chi|zho|chinese|中文|汉语|漢語","en" to "en|eng|english|英语|英語|英文","ja" to "ja|jpn|japanese|日语|日語|日文",
+        "ko" to "ko|kor|korean|韩语|韓語|韩文","fr" to "fr|fre|fra|french|法语|法語","de" to "de|ger|deu|german|德语|德語",
+        "es" to "es|spa|spanish|西班牙语","it" to "it|ita|italian|意大利语","ru" to "ru|rus|russian|俄语|俄語",
+        "pt" to "pt|por|portuguese|葡萄牙语","th" to "th|tha|thai|泰语|泰語","vi" to "vi|vie|vietnamese|越南语")
+        .firstOrNull{(_,tags)->Regex("(?:^|[ ._\\-\\[\\]()])(?:$tags)(?=[ ._\\-\\[\\]()]|$)").containsMatchIn(text)}?.first
+}
+
+internal fun normalizedTrackLanguage(value:String?):String? {
+    val tag=value?.trim()?.replace('_','-')?.takeIf{Regex("[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*").matches(it)}?:return null
+    val parts=tag.split('-');val base=parts.first().lowercase(java.util.Locale.ROOT)
+    if(base in setOf("und","zxx","mis"))return null
+    val language=mapOf("eng" to "en","chi" to "zh","zho" to "zh","jpn" to "ja","kor" to "ko","fre" to "fr","fra" to "fr",
+        "ger" to "de","deu" to "de","spa" to "es","ita" to "it","rus" to "ru","por" to "pt","tha" to "th","vie" to "vi",
+        "ara" to "ar","hin" to "hi")[base]?:base
+    return java.util.Locale.forLanguageTag((listOf(language)+parts.drop(1)).joinToString("-")).toLanguageTag()
 }

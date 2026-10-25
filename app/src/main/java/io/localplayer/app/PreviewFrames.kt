@@ -32,26 +32,40 @@ internal interface PreviewDecoder : Closeable { fun prepare() {}; fun frame(time
 
 internal data class PreviewFrame(val bitmap: Bitmap, val timeMs: Long)
 
-class PreviewFrames internal constructor(private val openDecoder: (Uri) -> PreviewDecoder) : Closeable {
-    constructor(context: Context) : this({ uri -> AndroidPreviewDecoder(context, uri) })
-    private companion object { val closer = java.util.concurrent.Executors.newSingleThreadExecutor() }
+class PreviewFrames internal constructor(private val cache:LruCache<String,Bitmap> = memoryCache(),private val scope:String="",private val openDecoder:(Uri)->PreviewDecoder) : Closeable {
+    constructor(context:Context,scope:String=""):this(playbackCache,scope,{uri->AndroidPreviewDecoder(context,uri)})
+    internal companion object {
+        private val closer=java.util.concurrent.Executors.newSingleThreadExecutor()
+        private val cacheRevision=java.util.concurrent.atomic.AtomicLong()
+        internal fun memoryCache()=object:LruCache<String,Bitmap>(24*1024*1024){override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount}
+        internal val playbackCache=memoryCache()
+        internal fun clearPlaybackCache(){synchronized(playbackCache){cacheRevision.incrementAndGet();playbackCache.evictAll()}}
+    }
     private data class Session(val uri: Uri, val decoder: PreviewDecoder)
     private val mutex = Mutex()
     private val closed = AtomicBoolean(false)
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val warmGeneration = java.util.concurrent.atomic.AtomicLong()
     private val pending = java.util.concurrent.ConcurrentHashMap.newKeySet<kotlinx.coroutines.CancellableContinuation<Bitmap?>>()
-    private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
-    }
+
     // Only the worker changes session; cancellation may close the current reader to unblock I/O.
     private var session: Session? = null
     @Volatile private var active: PreviewDecoder? = null
     @Volatile private var lastFrame: Pair<Uri, PreviewFrame>? = null
+    private fun cacheKey(uri:Uri,timeMs:Long)="$scope\u0000$uri:${bucket(timeMs)}"
+    private fun evictOwnedCache(){if(cache!==playbackCache)cache.evictAll()}
     private fun bucket(timeMs: Long) = timeMs.coerceAtLeast(0) / 1000 * 1000
     internal fun cached(uri: Uri, timeMs: Long): PreviewFrame? = if(closed.get())null else
-        cache.get("$uri:${bucket(timeMs)}")?.let { PreviewFrame(it, bucket(timeMs)) }
+        cache.get(cacheKey(uri,timeMs))?.let { PreviewFrame(it, bucket(timeMs)) }
     internal fun latest(uri: Uri): PreviewFrame? = if(closed.get())null else lastFrame?.takeIf { it.first == uri }?.second
+
+    internal fun nearest(uri:Uri,timeMs:Long):PreviewFrame? {
+        if(closed.get())return null
+        val prefix="$scope\u0000$uri:"
+        return cache.snapshot().entries.mapNotNull{(key,bitmap)->
+            key.takeIf{it.startsWith(prefix)}?.removePrefix(prefix)?.toLongOrNull()?.let{PreviewFrame(bitmap,it)}
+        }.filter{kotlin.math.abs(it.timeMs-timeMs)<=2000}.minByOrNull{kotlin.math.abs(it.timeMs-timeMs)}
+    }
 
     /** Cached targets bypass a busy reader; queued misses collapse to the latest position. */
     internal fun frames(uri: Uri, positions: Flow<Long>): Flow<PreviewFrame> = flow {
@@ -122,8 +136,9 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
         cached(uri,timeMs)?.let { return it.bitmap }
         return mutex.withLock {
             if (closed.get()) return@withLock null
+            val revision=cacheRevision.get()
             val position = bucket(timeMs)
-            val key = "$uri:$position"
+            val key = cacheKey(uri,position)
             cache.get(key)?.let { return@withLock it }
             suspendCancellableCoroutine { continuation ->
                 val resource = java.util.concurrent.atomic.AtomicReference<PreviewDecoder?>(null)
@@ -146,16 +161,22 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
                             if (closed.get() || !continuation.isActive) { if(continuation.isActive)continuation.resumeWith(Result.success(null));return@submit }
                             val bitmap = decoder.frame(position)
                             if (continuation.isActive && !closed.get()) {
-                                if (bitmap != null) { cache.put(key,bitmap); lastFrame = uri to PreviewFrame(bitmap,position) }
-                                reusable = true
-                                continuation.resumeWith(Result.success(bitmap))
+                                val valid=synchronized(cache){
+                                if(cache!==playbackCache||revision==cacheRevision.get()){
+                                    if(bitmap!=null)cache.put(key,bitmap)
+                                    true
+                                }else false
+                            }
+                            if(valid&&bitmap!=null)lastFrame=uri to PreviewFrame(bitmap,position)
+                            reusable = true
+                            continuation.resumeWith(Result.success(if(valid)bitmap else null))
                             }
                         } catch (e: Exception) {
                             if (continuation.isActive) continuation.resumeWith(Result.failure(e))
                         } finally {
                             pending.remove(continuation)
                             if (!reusable || continuation.isCancelled || closed.get()) discard(decoder)
-                            if (closed.get()) { cache.evictAll(); lastFrame = null }
+                            if (closed.get()) { evictOwnedCache(); lastFrame = null }
                         }
                     }
                     submitted.set(future)
@@ -173,7 +194,7 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
         pending.toList().forEach { it.cancel() }
         active?.let { decoder -> closer.execute { runCatching { decoder.close() } } }
         worker.shutdownNow()
-        cache.evictAll(); lastFrame = null
+        evictOwnedCache(); lastFrame = null
     }
 }
 

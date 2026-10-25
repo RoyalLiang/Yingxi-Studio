@@ -76,7 +76,7 @@ internal object SealedMedia {
     }
     fun items():List<SealedItem> = if(unlocked)rows else emptyList()
     fun unlock(){check(!damaged){"封存记录无法读取，原记录已保留"};unlocked=true}
-    fun lock(){unlocked=false;changes.toList().forEach{it()}}
+    fun lock(){unlocked=false;PreviewFrames.clearPlaybackCache();changes.toList().forEach{it()}}
     fun observe(change:()->Unit):()->Unit{changes+=change;return{changes-=change}}
     fun protects(ref:MediaRef):Boolean=damaged||rows.any{it.covers(ref)}
     fun protects(source:Source,path:String)=protects(MediaRef("${source.id}:$path","",source.label,source.id,path,location=mediaLocation(source)))

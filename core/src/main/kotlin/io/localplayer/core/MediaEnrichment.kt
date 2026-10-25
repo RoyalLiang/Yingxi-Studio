@@ -225,7 +225,7 @@ class ShooterSubtitles(private val http:EnrichmentHttp=EnrichmentHttp(),private 
         val ass=text.contains("[Events]",true)
         val dialogue=text.lineSequence().filter{if(ass)it.startsWith("Dialogue:",true) else !it.contains("-->")&&!it.trim().matches(Regex("[0-9]+"))}
             .map{line->if(ass){var rest=line;repeat(9){rest=rest.substringAfter(',',"")};rest}else line}
-            .joinToString("\n").replace(Regex("<[^>]*>|\\{[^}]*}"),"")
+            .joinToString("\n").replace(Regex("<[^>]*>|\\{[^}]*\\}"),"")
         val chinese=dialogue.count{it.code in 0x3400..0x9fff}
         val latin=dialogue.count{it in 'a'..'z'||it in 'A'..'Z'}
         if(chinese<2||chinese*25<latin)return null

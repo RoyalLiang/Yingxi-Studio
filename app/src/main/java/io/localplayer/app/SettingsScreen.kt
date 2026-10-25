@@ -140,10 +140,14 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     var posters by remember{mutableStateOf(prefs.posters)}
     var subtitles by remember{mutableStateOf(prefs.subtitles)}
     var bilingual by remember{mutableStateOf(prefs.bilingual)}
+    var subtitleSource by remember{mutableStateOf(prefs.subtitleSource)}
     Surface(modifier=Modifier.fillMaxWidth().testTag("enrichment-settings"),shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
-        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;if(!it)OnlineSubtitles.cancel()})}
-        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it})}
+        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;OnlineSubtitles.preferencesChanged(context)})}
+        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it;OnlineSubtitles.preferencesChanged(context)})}
+        Spacer(Modifier.height(12.dp))
+        StationChoiceSetting("字幕来源",listOf("subhd" to "SubHD","shooter" to "射手"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
+        Text(if(subtitleSource=="subhd")"缺少内嵌与同目录字幕时，按片名、年份和集数查询 SubHD。网站要求验证或不提供直链时，可查看匹配资源。"else"缺少字幕时，向射手发送影片指纹和文件名匹配；不上传影片内容。",fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(top=8.dp))
     }}
 }
 

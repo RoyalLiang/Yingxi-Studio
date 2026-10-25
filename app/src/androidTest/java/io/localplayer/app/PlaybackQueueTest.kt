@@ -222,7 +222,7 @@ class PlaybackQueueTest {
                     }
                     instrumentation.addMonitor(monitor)
                     try{
-                        ui.onNodeWithContentDescription("播放设置").performClick()
+                        ui.onNodeWithTag("player-subtitles").performClick()
                         ui.onNodeWithTag("playback-settings-list").performScrollToNode(hasText("载入字幕文件"));ui.onNodeWithText("载入字幕文件").performClick()
                         await("caption keeps playlist"){ui.waitForIdle();main{player.currentMediaItem?.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true}}
                         assertEquals(2,main{player.mediaItemCount});main{player.play()}

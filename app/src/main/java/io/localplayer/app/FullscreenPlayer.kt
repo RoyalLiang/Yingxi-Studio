@@ -59,6 +59,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -82,6 +83,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var visible by rememberSaveable { mutableStateOf(true) }
     var locked by rememberSaveable { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
+    var trackType by remember { mutableIntStateOf(C.TRACK_TYPE_VIDEO) }
     var diagnosticsOpen by remember { mutableStateOf(false) }
     var diagnosticsWait by remember { mutableStateOf<Long?>(null) }
     var queue by remember { mutableStateOf(false) }
@@ -94,6 +96,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var index by remember { mutableIntStateOf(0) }
     var currentTitle by remember { mutableStateOf(mediaDisplayTitle(title)) }
     var currentUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var previewScope by remember { mutableStateOf("") }
     var truncated by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(1f) }
     var playing by remember { mutableStateOf(false) }
@@ -118,7 +121,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var videoHeight by remember { mutableIntStateOf(0) }
     var softwareSdr by remember { mutableStateOf(false) }
     var fill by rememberSaveable(portrait) { mutableStateOf(!portrait) }
-    val previews = remember(controller) { PreviewFrames(context.applicationContext) }
+    val previews = remember(controller,previewScope) { PreviewFrames(context.applicationContext,previewScope) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
     val layoutDirection=androidx.compose.ui.platform.LocalLayoutDirection.current
     val safeInsets=WindowInsets.safeDrawing
@@ -136,7 +139,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         controller?.sendCustomCommand(CompatibilityPlayer.VIDEO_LAYOUT,args)
     }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
-    DisposableEffect(previews) { onDispose { previews.close(); activity.window.attributes = activity.window.attributes.apply { screenBrightness = originalBrightness } } }
+    DisposableEffect(previews) { onDispose { previews.close() } }
+    DisposableEffect(activity) { onDispose { activity.window.attributes=activity.window.attributes.apply{screenBrightness=originalBrightness} } }
     DisposableEffect(lifecycle,previews) {
         val observer=androidx.lifecycle.LifecycleEventObserver{_,event->
             if(event==Lifecycle.Event.ON_STOP){dragging=false;previews.releaseReader()}
@@ -150,6 +154,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             index = controller.currentMediaItemIndex
             currentTitle = playbackItemTitle(controller.currentMediaItem,title)
             currentUri = controller.currentMediaItem?.localConfiguration?.uri
+            previewScope=controller.currentMediaItem?.mediaMetadata?.extras?.getString("play-intent")?:controller.currentMediaItem?.mediaId.orEmpty()
             truncated = controller.mediaMetadata.extras?.getBoolean("queue-truncated") == true
             speed = controller.playbackParameters.speed
             playing = controller.isPlaying
@@ -191,22 +196,22 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
         }
     }
-    LaunchedEffect(compact) { if (compact) { settings = false; queue = false; speedOpen = false; moreOpen = false; dragging = false; previews.releaseReader() } else visible = true }
+    LaunchedEffect(compact,previews) { if (compact) { settings = false; queue = false; speedOpen = false; moreOpen = false; dragging = false; previews.releaseReader() } else visible = true }
     LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, moreOpen, interaction) {
         if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !speedOpen && !moreOpen))) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
-    LaunchedEffect(currentUri) { frame = null;previews.releaseReader() }
-    LaunchedEffect(currentUri,compact,buffering) {
+    LaunchedEffect(currentUri,previews) { frame = null;previews.releaseReader() }
+    LaunchedEffect(currentUri,compact,buffering,previews) {
         val uri=currentUri
         if(uri!=null&&!compact&&!buffering){delay(300);previews.warm(uri)}
     }
     // Open the independent preview decoder only for an explicit seek gesture.
-    LaunchedEffect(dragging, currentUri, buffering) {
+    LaunchedEffect(dragging, currentUri, buffering,previews) {
         if (!dragging || currentUri == null || buffering) return@LaunchedEffect
         val uri = currentUri!!
-        previews.latest(uri)?.let { frame=it.bitmap }
-        previews.frames(uri,snapshotFlow { target }).collect { next ->
+        frame=(previews.cached(uri,target)?:previews.nearest(uri,target))?.bitmap
+        previews.frames(uri,snapshotFlow { target }.onEach{time->frame=(previews.cached(uri,time)?:previews.nearest(uri,time))?.bitmap}).collect { next ->
             if(next.timeMs==target.coerceAtLeast(0)/1000*1000)frame=next.bitmap
         }
     }
@@ -283,7 +288,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
                             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
                                 DropdownMenuItem(text = { Text("上报播放问题") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreOpen = false; diagnosticsWait = null; diagnosticsOpen = true })
-                                DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
+                                DropdownMenuItem(text={Text("画质")},leadingIcon={Icon(Icons.Rounded.Tune,null)},onClick={moreOpen=false;trackType=C.TRACK_TYPE_VIDEO;settings=true})
+                            DropdownMenuItem(text={Text("画面比例")},leadingIcon={Icon(Icons.Rounded.AspectRatio,null)},onClick={moreOpen=false;fill=!fill})
+                            DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
                                 if(smallWindow != null)DropdownMenuItem(text = { Text("画中画") }, leadingIcon = { Icon(Icons.Rounded.PictureInPictureAlt, null) }, enabled = videoAvailable, onClick = { moreOpen = false; smallWindow() })
                                 DropdownMenuItem(text = { Text("锁定方向与控件") }, leadingIcon = { Icon(Icons.Rounded.LockOpen, null) }, onClick = { moreOpen = false; locked = true; visible = false; lock(true) })
                             }
@@ -312,8 +319,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
                 if(portrait)PortraitPlaybackToolbar(
                     position=shown,duration=duration,speed=speed,fill=fill,hasQueue=items.isNotEmpty(),buffering=buffering&&controller!=null,playRequested=playRequested,onPlay={if(playRequested)controller?.pause()else controller?.play()},
-                    onSpeed={speedOpen=true},onSettings={settings=true},onQueue={queue=true},
-                    onScale={fill=!fill},onRotate=rotate
+                    onSpeed={speedOpen=true},onAudio={trackType=C.TRACK_TYPE_AUDIO;settings=true},onSubtitles={trackType=C.TRACK_TYPE_TEXT;settings=true},onQueue={queue=true},
+                    onRotate=rotate
                 ) else Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
                     if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})
                     Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
@@ -334,7 +341,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                                 }
                             }
                         }
-                        TextButton(onClick = { settings = true }, modifier=Modifier.semantics{contentDescription="播放设置"}) { Icon(Icons.Rounded.Subtitles, null, tint = PlayerInk, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("选项", color = PlayerInk) }
+                        TextButton(onClick={trackType=C.TRACK_TYPE_AUDIO;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("player-audio").semantics{contentDescription="音轨"}){
+                            Icon(Icons.Rounded.Audiotrack,null,tint=PlayerInk);Spacer(Modifier.width(4.dp));Text("音轨",color=PlayerInk,maxLines=1)
+                        }
+                        TextButton(onClick={trackType=C.TRACK_TYPE_TEXT;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("player-subtitles").semantics{contentDescription="字幕"}){
+                            Icon(Icons.Rounded.Subtitles,null,tint=PlayerInk);Spacer(Modifier.width(4.dp));Text("字幕",color=PlayerInk,maxLines=1)
+                        }
+                        PlayerIcon(Icons.Rounded.Tune,"画质",{trackType=C.TRACK_TYPE_VIDEO;settings=true})
                         PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() })
                         TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
                         PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
@@ -366,7 +379,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
         if(diagnosticsOpen)PlaybackReportDialog(controller,diagnosticsWait){diagnosticsOpen=false}
-        if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption,externalAudio)
+        if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption,externalAudio,trackType)
         (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackIssueAction{diagnosticsWait=null;diagnosticsOpen=true}
                 controller?.currentMediaItem?.takeIf{SidecarAudio.from(it).isNotEmpty()}?.let{item ->
                     TextButton(onClick={controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(item,emptyList()))}){Text("移除外挂音轨并重试",color=PlayerAccent)}

@@ -33,11 +33,11 @@ class MediaEnrichmentTest {
     private val models=ViewModelStore()
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private var oldPosters=true
-    private var oldSubtitles=true
+    private var oldSubtitles=true;private var oldSubtitleSource="subhd"
     private lateinit var oldLookup:(MediaIdentity,Cancellation)->PosterMatch?
     private lateinit var oldConnector:Connector
     @Before fun setup(){
-        val prefs=EnrichmentPreferences(context);oldPosters=prefs.posters;oldSubtitles=prefs.subtitles
+        val prefs=EnrichmentPreferences(context);oldPosters=prefs.posters;oldSubtitles=prefs.subtitles;oldSubtitleSource=prefs.subtitleSource;prefs.subtitleSource="shooter"
         prefs.posters=false;prefs.subtitles=false
         oldLookup=MediaPosters.onlineLookup;oldConnector=MediaPosters.connector
         OnlineSubtitles.cancel()
@@ -46,7 +46,7 @@ class MediaEnrichmentTest {
         scope.cancel();ui.runOnUiThread{models.clear();OnlineSubtitles.cancel()}
         MediaPosters.onlineLookup=oldLookup;MediaPosters.connector=oldConnector
         sources.forEach{SourceStore(context).delete(it.id)}
-        EnrichmentPreferences(context).apply{posters=oldPosters;subtitles=oldSubtitles}
+        EnrichmentPreferences(context).apply{posters=oldPosters;subtitles=oldSubtitles;subtitleSource=oldSubtitleSource}
     }
     @Test fun cloudHistoryCanBePreparedTwiceWithoutBrowsingSource(){
         val source=Source(id="replay-"+UUID.randomUUID(),label="云盘重播",protocol=Protocol.ALIYUN,host="openapi.alipan.com",domain="drive")

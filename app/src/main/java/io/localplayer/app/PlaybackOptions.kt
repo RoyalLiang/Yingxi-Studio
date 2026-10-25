@@ -34,7 +34,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-@Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit,onAudioExternal:()->Unit={}){
+@Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit,onAudioExternal:()->Unit={},trackType:Int?=null){
     val context=LocalContext.current
     val prefs=remember(context){PlaybackPreferences(context)}
     val media=controller.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
@@ -71,11 +71,12 @@ import java.util.Locale
                     shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=PlayerInk) {
             LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
                 item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text("播放选项",Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
+                    Text(when(trackType){C.TRACK_TYPE_AUDIO->"音轨";C.TRACK_TYPE_TEXT->"字幕";C.TRACK_TYPE_VIDEO->"画质";else->"播放选项"},Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
                     IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭播放选项")}
                 } }
-                item{PlaybackQualityChoices(controller,currentItem,tracks,parameters)}
-                item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
+                if(trackType==null||trackType==C.TRACK_TYPE_VIDEO)item{PlaybackQualityChoices(controller,currentItem,tracks,parameters)}
+                if(trackType==null||trackType==C.TRACK_TYPE_AUDIO){
+                if(trackType==null)item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val audio=tracks.groups.filter{it.type==C.TRACK_TYPE_AUDIO}
                 val externalAudio=currentItem?.let{SidecarAudio.from(it)}.orEmpty()
                 val audioAutomatic=parameters.overrides.keys.none{it.type==C.TRACK_TYPE_AUDIO}
@@ -83,43 +84,48 @@ import java.util.Locale
                 else{
                     item{TrackChoice("自动选择",audioAutomatic){prefs.rememberedAudioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(prefs.audioLanguage).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
                     audio.forEachIndexed{g,group->for(i in 0 until group.length){
-                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),group.mediaTrackGroup.id.takeIf{it.contains(':')}?.substringBefore(':')?.toIntOrNull()?.takeIf{it>0}?.let{externalAudio.getOrNull(it-1)?.name}?:"音轨 ${g+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
+                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),group.mediaTrackGroup.id.takeIf{it.contains(':')}?.substringBefore(':')?.toIntOrNull()?.takeIf{it>0}?.let{externalAudio.getOrNull(it-1)?.name}?:"音轨 ${audio.take(g).sumOf{it.length}+i+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
                             if(prefs.rememberManual)prefs.rememberedAudioLanguage=group.getTrackFormat(i).language
                             controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                         }}
                     }}
                 }
-                item{OutlinedButton(onClick={onDismiss();onlineTrackSearch(context,media,true)},enabled=onlineAllowed,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-audio")){Text("按片名搜配音音轨 · 必应网页")}}
                 item{OutlinedButton(onClick={onDismiss();onAudioExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入音轨文件")}}
                 if(currentItem?.let{SidecarAudio.from(it).isNotEmpty()}==true)item{OutlinedButton(onClick={
                     controller.currentMediaItem?.let{controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(it,emptyList()))}
                 },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("移除外挂音轨")}}
                 item{Text("外挂音轨共用影片进度、暂停和倍速；不同剪辑版本需使用对应音轨。",fontSize=12.sp,color=Color(0xFFB9B9BF))}
-                item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
-                item{Text("字幕",fontSize=17.sp,fontWeight=FontWeight.Medium)}
+                }
+                if(trackType==null||trackType==C.TRACK_TYPE_TEXT){
+                if(trackType==null)item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
+                if(trackType==null)item{Text("字幕",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val disabled=parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
                 val textAutomatic=!disabled&&parameters.overrides.keys.none{it.type==C.TRACK_TYPE_TEXT}
                 item{TrackChoice("关闭字幕",disabled){if(prefs.rememberManual)prefs.subtitlesDisabled=true;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}}
                 item{TrackChoice("自动选择",textAutomatic){if(prefs.rememberManual)prefs.subtitlesDisabled=false;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage(prefs.textLanguage).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()}}
                 val texts=tracks.groups.filter{it.type==C.TRACK_TYPE_TEXT}
                 texts.forEachIndexed{g,group->for(i in 0 until group.length){
-                    item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${g+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
+                    item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${texts.take(g).sumOf{it.length}+i+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
                         if(prefs.rememberManual)prefs.subtitlesDisabled=false;if(prefs.rememberManual)prefs.textLanguage=group.getTrackFormat(i).language
                         controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                     }}
                 }}
-                if(texts.isEmpty())item{Text("影片没有内嵌字幕，可以载入本机 SRT / VTT 文件。",fontSize=13.sp,lineHeight=20.sp,color=Color(0xFFB9B9BF))}
-                item {
+                if(texts.isEmpty())item{
                     val state by OnlineSubtitles.status.collectAsState()
                     val message=state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.second
-                    OutlinedButton(onClick={OnlineSubtitles.request(context,controller)},enabled=onlineAllowed&&message!="正在匹配字幕…",modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-subtitles")){
-                        Text(message?:"自动匹配在线字幕",maxLines=2)
-                    }
-                    Text(if(onlineAllowed)"射手字幕 · 按影片指纹匹配"else"封存档案不进行互联网匹配",fontSize=12.sp,color=Color(0xFFB9B9BF))
+                    Text(message?:if(onlineAllowed&&EnrichmentPreferences(context).subtitles)"无内嵌或同目录字幕时会自动匹配"else"自动字幕匹配已关闭",fontSize=13.sp,color=Color(0xFFB9B9BF))
                 }
-                item{OutlinedButton(onClick={onDismiss();onlineTrackSearch(context,media,false)},enabled=onlineAllowed,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("subtitle-web-search")){Text("按片名搜字幕 · 必应网页")}}
+                item{
+                    val found by OnlineSubtitles.resources.collectAsState()
+                    found?.takeIf{it.first==controller.currentMediaItem?.mediaId&&onlineAllowed}?.second?.take(4)?.forEach{resource->
+                        TextButton(onClick={runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(resource.page)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure{android.widget.Toast.makeText(context,"没有可打开资源页的浏览器",android.widget.Toast.LENGTH_LONG).show()}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
+                            Text("查看匹配资源 · ${resource.title}",maxLines=3,overflow=TextOverflow.Ellipsis)
+                        }
+                    }
+                }
                 item{val state by AutomaticSidecars.status.collectAsState();state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.let{Text(it.second,fontSize=12.sp,color=Color(0xFFB9B9BF))}}
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
+                }
             }
                 }
             }
@@ -137,8 +143,14 @@ import java.util.Locale
 }
 fun speedLabel(value:Float)=if(value==value.toInt().toFloat())"${value.toInt()}×"else"${value}×"
 private fun trackLabel(format:Format,fallback:String):String{
-    val name=format.label?.takeIf{it.isNotBlank()} ?: format.language?.takeIf{it!="und"}?.let{Locale.forLanguageTag(it).getDisplayName(Locale.SIMPLIFIED_CHINESE)} ?: "未标注语言"
+    val language=normalizedTrackLanguage(format.language)?:sidecarLanguage(format.label.orEmpty())?:sidecarLanguage(fallback)
+    val audio=format.sampleMimeType?.startsWith("audio/")==true
+    val name=when(language){"yue"->"粤语";"cmn"->"普通话";"zh-Hans"->if(audio)"中文"else"简体中文";"zh-Hant"->if(audio)"中文"else"繁体中文";"mul"->"多语种"
+        null->"未标注语种";else->Locale.forLanguageTag(language).getDisplayName(Locale.SIMPLIFIED_CHINESE)}
+    val label=format.label?.trim()?.take(240)?.takeIf{it.isNotEmpty()&&!Regex("(?i)(?:(?:audio|subtitle|track|音轨|字幕)\\s*\\d+|(?:sound|audio|subtitle|text)handler)").matches(it)}
     val codec=format.sampleMimeType?.takeUnless{it.contains("media3-cues")}
         ?.substringAfter('/')?.replace("mp4a-latm","AAC")?.uppercase(Locale.ROOT)
-    return listOfNotNull(fallback,name,codec).joinToString(" · ")
+    val role=when{format.roleFlags and C.ROLE_FLAG_COMMENTARY!=0->"解说";format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO!=0->"口述影像"
+        format.selectionFlags and C.SELECTION_FLAG_FORCED!=0->"强制字幕";else->null}
+    return listOfNotNull(name,label?.takeUnless{it==name||it==fallback},role,codec,fallback).distinct().joinToString(" · ")
 }

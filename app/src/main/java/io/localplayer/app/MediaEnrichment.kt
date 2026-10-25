@@ -19,6 +19,7 @@ internal class EnrichmentPreferences(context:Context){
     var posters:Boolean get()=p.getBoolean("posters",true);set(v){p.edit{putBoolean("posters",v)}}
     var subtitles:Boolean get()=p.getBoolean("subtitles",true);set(v){p.edit{putBoolean("subtitles",v)}}
     var bilingual:Boolean get()=p.getBoolean("bilingual",false);set(v){p.edit{putBoolean("bilingual",v)}}
+    var subtitleSource:String get()=p.getString("subtitle-source","subhd").takeIf{it in setOf("subhd","shooter")}?:"subhd";set(v){require(v in setOf("subhd","shooter"));p.edit{putString("subtitle-source",v)}}
 }
 internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest(listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
 
@@ -179,6 +180,9 @@ internal object MediaPosters {
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object OnlineSubtitles {
+    val resources=MutableStateFlow<Pair<String,List<SubtitleResource>>?>(null)
+    internal var subHd=SubHdSubtitles()
+    private var playerRef:java.lang.ref.WeakReference<Player>?=null
     val status=MutableStateFlow<Pair<String,String>?>(null)
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private var job:Job?=null
@@ -189,19 +193,22 @@ internal object OnlineSubtitles {
     private var generation=0L
     private fun stopRequest(){activeMedia=null;generation++;job?.cancel();job=null;val old=active;active=null;scope.launch(Dispatchers.IO){old?.close()}}
     internal var provider=ShooterSubtitles()
-    fun cancel(){stopRequest();attempted=null;status.value=null}
+    fun cancel(){stopRequest();attempted=null;status.value=null;resources.value=null;playerRef=null}
+    fun preferencesChanged(context:Context){val player=playerRef?.get();cancel();if(player!=null)runCatching{schedule(context.applicationContext,player)}}
     fun schedule(c:Context,player:Player){
+        playerRef=java.lang.ref.WeakReference(player)
         val item=player.currentMediaItem?:return
         val ref=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
         if(ref!=null&&SealedMedia.protects(ref))return
-        if(attempted==item.mediaId||job?.isActive==true)return
+        val requestKey=item.mediaId+"\u0000"+item.mediaMetadata.extras?.getString("play-intent")
+        if(attempted==requestKey)return
         if(!EnrichmentPreferences(c).subtitles||player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))return
         if(player.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT&&it.isSupported}||item.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true)return
-        attempted=item.mediaId
+        stopRequest();status.value=null;resources.value=null;attempted=requestKey;activeMedia=ref
         job=scope.launch{
             repeat(10){
                 delay(3000)
-                if(player.currentMediaItem?.mediaId!=item.mediaId)return@launch
+                if(player.currentMediaItem?.let{it.mediaId+"\u0000"+it.mediaMetadata.extras?.getString("play-intent")}!=requestKey)return@launch
                 if(!player.isPlaying||player.bufferedPosition-player.currentPosition>=5000){
                     match(c,player,false);return@launch
                 }
@@ -212,63 +219,78 @@ internal object OnlineSubtitles {
     fun request(c:Context,player:Player){stopRequest();job=scope.launch{match(c,player,true)}}
     private suspend fun match(context:Context,player:Player,force:Boolean){
         val item=player.currentMediaItem?:return
-        val id=item.mediaId
+        val id=item.mediaId;val intent=item.mediaMetadata.extras?.getString("play-intent")
         val parameters=player.trackSelectionParameters
-        val preferBilingual=EnrichmentPreferences(context).bilingual
+        val prefs=EnrichmentPreferences(context);val preferBilingual=prefs.bilingual;val source=prefs.subtitleSource
         val uri=item.localConfiguration?.uri?:return
         val media=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}?:return
+        if(SealedMedia.protects(media)){status.value=id to "封存档案不进行互联网匹配";return}
         activeMedia=media
-        if(SealedMedia.protects(media)){status.value=id to "封存档案仅使用内嵌、同目录或手动导入轨道";return}
+        if(!force&&(!prefs.subtitles||parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)||
+            player.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT&&it.isSupported}||item.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true))return
         if(!force&&player.isPlaying&&player.bufferedPosition-player.currentPosition<5000)return
-        status.value=id to "正在匹配字幕…"
-        val cancellation=Cancellation()
-        active=cancellation
-        val requestGeneration=generation
+        status.value=id to "正在匹配字幕…";resources.value=null
+        val cancellation=Cancellation();active=cancellation;val requestGeneration=generation
+        var found=emptyList<SubtitleResource>()
+        fun current()=generation==requestGeneration&&player.currentMediaItem?.mediaId==id&&player.currentMediaItem?.mediaMetadata?.extras?.getString("play-intent")==intent
         try{
             val caption=withContext(Dispatchers.IO){
                 val dir=File(context.cacheDir,"online-subtitles-v1").apply{mkdirs()}
-                val key=enrichmentKey(media)+(if(preferBilingual)"-bi"else"-zh")
+                val key=enrichmentKey(media)+"-$source"+(if(preferBilingual)"-bi"else"-zh")
                 val cached=dir.listFiles()?.firstOrNull{it.nameWithoutExtension==key&&it.extension in setOf("srt","ass","ssa","vtt")}
                 val watcher=EnrichmentDeadlines.timer.schedule({cancellation.close()},22,java.util.concurrent.TimeUnit.SECONDS)
                 val completion=coroutineContext.job.invokeOnCompletion{if(it!=null)cancellation.close()}
                 try{
                     if(cached!=null)return@withContext cached
-                    val file=if(uri.isPlayerNetworkUri()){
-                        val lease=PlaybackRegistry.preview(uri).also(cancellation::own);lease.open().also(cancellation::own)
-                    }else{
-                        val descriptor=context.contentResolver.openFileDescriptor(uri,"r")?:throw java.io.IOException("影片无法读取")
-                        val input=java.io.FileInputStream(descriptor.fileDescriptor);val size=input.channel.size()
-                        (object:RemoteFile{
-                            override val size=size
-                            override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int{cancellation.check();input.channel.position(position);return input.read(buffer,offset,length)}
-                            override fun close(){runCatching{input.close()};runCatching{descriptor.close()}}
-                        }).also(cancellation::own)
+                    var best:SubtitleContent?=null;var bestScore=Int.MIN_VALUE
+                    fun consider(candidate:SubtitleContent){
+                        val score=provider.preferenceScore(candidate.bytes,preferBilingual)?:return
+                        if(score>bestScore){best=candidate;bestScore=score}
                     }
-                    val matches=provider.search(file,media.title,preferBilingual,cancellation)
-                var best:Pair<SubtitleMatch,ByteArray>?=null
-                var bestScore=Int.MIN_VALUE
-                for(candidate in matches.take(4)){
-                    try{
-                        val bytes=provider.download(candidate,cancellation);ensureActive();cancellation.check()
-                        val score=provider.preferenceScore(bytes,preferBilingual)?:continue
-                        if(score>bestScore){best=candidate to bytes;bestScore=score}
-                    }catch(e:CancellationException){throw e}catch(_:Exception){cancellation.check()}
-                }
-                val chosen=best?:return@withContext null
-                ensureActive();cancellation.check()
-                val target=File(dir,key+"."+chosen.first.extension)
-                val temporary=File(dir,"$key.tmp")
-                try{temporary.writeBytes(chosen.second);check(temporary.renameTo(target))}finally{temporary.delete()}
-                dir.listFiles()?.filter{it.name!=target.name}?.sortedByDescending{it.lastModified()}?.drop(63)?.forEach{it.delete()}
-                target
+                    if(source=="subhd"){
+                        val identity=posterIdentity(media)
+                        found=subHd.search(identity,cancellation)
+                        for(candidate in found.filter{it.automatic}.take(3)){
+                            ensureActive();cancellation.check()
+                            try{subHd.download(candidate,identity,cancellation).forEach(::consider)}
+                            catch(e:SubtitleDownloadUnavailable){throw e}
+                            catch(e:CancellationException){throw e}
+                            catch(_:Exception){cancellation.check()}
+                        }
+                    }else{
+                        val file=if(uri.isPlayerNetworkUri()){
+                            val lease=PlaybackRegistry.preview(uri).also(cancellation::own);lease.open().also(cancellation::own)
+                        }else{
+                            val descriptor=context.contentResolver.openFileDescriptor(uri,"r")?:throw java.io.IOException("影片无法读取")
+                            val input=java.io.FileInputStream(descriptor.fileDescriptor);val size=input.channel.size()
+                            (object:RemoteFile{
+                                override val size=size
+                                override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int{cancellation.check();input.channel.position(position);return input.read(buffer,offset,length)}
+                                override fun close(){runCatching{input.close()};runCatching{descriptor.close()}}
+                            }).also(cancellation::own)
+                        }
+                        for(candidate in provider.search(file,media.title,preferBilingual,cancellation).take(4)){
+                            try{consider(SubtitleContent(provider.download(candidate,cancellation),candidate.extension,candidate.label))}
+                            catch(e:CancellationException){throw e}catch(_:Exception){cancellation.check()}
+                        }
+                    }
+                    ensureActive();cancellation.check()
+                    val chosen=best?:return@withContext null
+                    val target=File(dir,key+"."+chosen.extension);val temporary=File(dir,"$key.tmp")
+                    try{temporary.writeBytes(chosen.bytes);check(temporary.renameTo(target))}finally{temporary.delete()}
+                    dir.listFiles()?.filter{it.name!=target.name}?.sortedByDescending{it.lastModified()}?.drop(63)?.forEach{it.delete()}
+                    target
                 }finally{watcher.cancel(false);completion.dispose();cancellation.close()}
             }
-            if(generation!=requestGeneration||player.currentMediaItem?.mediaId!=id||(!force&&player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))||player.trackSelectionParameters!=parameters)return
-            if(caption==null){status.value=id to "射手未命中该版本，可按片名搜索或载入文件";return}
+            if(!current()||(!force&&player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))||player.trackSelectionParameters!=parameters)return
+            resources.value=if(caption==null)id to found else null
+            if(caption==null){status.value=id to "未找到可直接载入的匹配字幕";return}
             attach(player,caption)
-            status.value=id to if(caption.name.startsWith("sidecar-"))"已载入同目录字幕"else"已载入射手字幕"
-        }catch(e:CancellationException){throw e}catch(_:Exception){if(generation==requestGeneration&&player.currentMediaItem?.mediaId==id)status.value=id to "射手字幕暂不可用，可按片名搜索或载入文件"}
-        finally{if(active===cancellation)active=null;withContext(NonCancellable+Dispatchers.IO){cancellation.close()}}
+            status.value=id to if(source=="subhd")"已载入 SubHD 字幕"else"已载入射手字幕"
+        }catch(e:CancellationException){throw e}catch(_:Exception){if(current()){
+            resources.value=id to found
+            status.value=id to if(found.isNotEmpty())"已找到匹配资源；网站暂未提供可直接载入的字幕"else"字幕来源暂不可用，稍后重播时重试"
+        }}finally{if(active===cancellation)active=null;withContext(NonCancellable+Dispatchers.IO){cancellation.close()}}
     }
     fun clear(context:Context){cancel();File(context.cacheDir,"online-subtitles-v1").listFiles()?.forEach{it.delete()}}
     internal fun attach(player:Player,file:File){

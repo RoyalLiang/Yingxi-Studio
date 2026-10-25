@@ -86,7 +86,7 @@ class WebDavPlaybackTest {
                     }finally{PlaybackRegistry.remove(uri)}
                     assertEquals("Seek previews add no separate one-byte metadata probes",0,server.previewProbes.get()-probesBefore)
                 }finally{preview.close()}
-                ui.onNodeWithContentDescription("播放设置").performClick()
+                ui.onNodeWithTag("player-subtitles").performClick()
                 val panel=ui.onNodeWithTag("audio-subtitle-panel").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
                 val display=instrumentation.uiAutomation.takeScreenshot()
                 try {

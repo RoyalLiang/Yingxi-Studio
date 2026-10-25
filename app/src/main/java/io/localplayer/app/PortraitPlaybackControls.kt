@@ -27,7 +27,7 @@ import androidx.compose.ui.window.DialogProperties
 /** Native portrait controls: one quiet row, with full touch targets and no labels over the film. */
 @Composable internal fun PortraitPlaybackToolbar(
     position:Long,duration:Long,speed:Float,fill:Boolean,hasQueue:Boolean,buffering:Boolean,playRequested:Boolean,onPlay:()->Unit,
-    onSpeed:()->Unit,onSettings:()->Unit,onQueue:()->Unit,onScale:()->Unit,onRotate:()->Unit
+    onSpeed:()->Unit,onAudio:()->Unit,onSubtitles:()->Unit,onQueue:()->Unit,onRotate:()->Unit
 ){
     Column(Modifier.fillMaxWidth().testTag("portrait-playback-controls")){
         Row(Modifier.fillMaxWidth().padding(horizontal=8.dp).testTag("playback-time"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
@@ -40,9 +40,9 @@ import androidx.compose.ui.window.DialogProperties
             TextButton(onClick=onSpeed,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("playback-speed").semantics{contentDescription="播放速度"}){
                 Text(speedLabel(speed),color=PlayerInk,fontSize=14.sp,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
             }
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Subtitles,"播放设置",onSettings)}
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Audiotrack,"音轨",onAudio,modifier=Modifier.testTag("player-audio"))}
+            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Subtitles,"字幕",onSubtitles,modifier=Modifier.testTag("player-subtitles"))}
             Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.PlaylistPlay,"选集",onQueue,hasQueue)}
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(if(fill)Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio,"画面比例",onScale,modifier=Modifier.semantics{stateDescription=if(fill)"铺满屏幕，等比裁切"else"完整画面，保留原比例"})}
             Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.ScreenRotation,"旋转屏幕",onRotate)}
         }
     }
