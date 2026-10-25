@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 internal fun posterVideoFormat(media:MediaRef):String? {
-    val supported=setOf("mp4","mkv","m4v","mov","webm","avi","ts","m2ts","mpg","mpeg","wmv","flv","3gp")
+    val supported=setOf("mp4","mkv","m4v","mov","webm","avi","ts","m2ts","mpg","mpeg","wmv","asf","rm","flv","3gp")
     return listOfNotNull(media.title,media.path,media.localUri?.let{Uri.parse(it).lastPathSegment})
         .map{it.substringBefore('?').substringAfterLast('.',"").lowercase(java.util.Locale.ROOT)}
         .firstOrNull{it in supported}?.uppercase(java.util.Locale.ROOT)

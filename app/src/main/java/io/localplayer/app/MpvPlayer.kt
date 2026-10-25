@@ -138,10 +138,17 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 mapOf("config" to "no","vo" to "gpu-next","gpu-context" to "android","gpu-api" to "opengl","opengl-es" to "yes",
                     "keepaspect" to "yes","panscan" to if(fillVideo)"1"else"0","blend-subtitles" to "no",
                     "sub-use-margins" to "yes","sub-ass-force-margins" to "yes","sub-margin-x" to subtitleMarginX.toString(),"sub-margin-y" to subtitleMarginY.toString(),
+                    "vd" to "hevc,h264,vp8,vp9,mpeg1video,mpeg2video,mpeg4,h263,wmv1,wmv2,wmv3,vc1,rv10,rv20,rv30,rv40,theora,mjpeg,-",
                     "hwdec" to "no","target-prim" to "bt.709","target-trc" to "srgb","target-peak" to "100",
                     "idle" to "yes","keep-open" to "yes","pause" to "yes","force-window" to "no",
                     "cache" to "yes","demuxer-max-bytes" to "67108864","demuxer-readahead-secs" to "15",
-                    "audio-fallback-to-null" to "no","msg-level" to "all=no").forEach{(k,v)->engine.option(k,v)}
+                    "access-references" to "no","audio-fallback-to-null" to "no","msg-level" to "all=no").forEach{(k,v)->engine.option(k,v)}
+                if(sourceFormat.sampleMimeType==MimeTypes.VIDEO_DOLBY_VISION) {
+                    // Two decoded frames overlap HEVC work with GPU mapping without changing RPU or scaling.
+                    engine.option("vd-queue-enable","yes")
+                    engine.option("vd-queue-max-samples","2")
+                    engine.option("vd-queue-max-bytes","64MiB")
+                }
                 engine.init()
                 handler.post {
                     if(released||generation!=current)return@post
@@ -187,7 +194,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         }
         val files=(captions+SidecarAudio.from(item).map { Extra(it.uri,"audio-add","auto",it.name,sidecarLanguage(it.name)?:"") }).filter{(it.command to it.uri) !in externalInputs}
         if(files.isEmpty())return
-        worker.execute {
+        attachments.execute {
             files.forEach { file -> try {
                 val opened=MpvInput.open(context,file.uri)
                 handler.post {
@@ -348,7 +355,10 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         worker.execute{pending?.close();source?.close();captions.forEach{it.close()};runCatching{m?.destroy()}}
     }
     private fun done():ListenableFuture<*> = Futures.immediateVoidFuture()
-    companion object {private val worker=Executors.newSingleThreadExecutor()}
+    companion object {
+        private val worker=Executors.newSingleThreadExecutor()
+        private val attachments=Executors.newSingleThreadExecutor()
+    }
 }
 
 /** Keep backend viewport information across MediaSession's track-group ID remapping. */

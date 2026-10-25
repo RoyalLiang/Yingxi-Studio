@@ -5,13 +5,13 @@ import {sanitizeReport,CONSENT_VERSION} from '../public/report/schema.js';
 const origin='https://yingxi-station.pages.dev';
 const env={REPORT_GITHUB_TOKEN:'fixture-only-repository-credential',REPORT_TURNSTILE_SECRET:'fixture-only-challenge-credential',REPORT_TURNSTILE_SITE_KEY:'fixture-site-key'};
 const id='d7f30180-10c2-4cbb-a0a4-5a172a1118b0';
-const report={report:'yingxi-playback-v1',version:'0.2.0-alpha.56',model:'PLY110',source:'SFTP',sdrAvSyncMs:-92,encodedFrameRate:23.976,sdrPollMainMs:1.5,videoCodecs:'dvhe.05.06',decoder:'mpv.hevc.libplacebo.sdr-bt709',positionMs:Infinity,path:'/private/movie',password:'do-not-forward',headers:{Authorization:'do-not-forward'},url:'https://private.invalid/film'};
+const report={report:'yingxi-playback-v1',version:'0.2.0-alpha.56',model:'PLY110',source:'SFTP',sdrAvSyncMs:-92,encodedFrameRate:23.976,sdrPollMainMs:1.5,audioDecoder:'ffmpegLavc63.1.101-alac',videoCodecs:'dvhe.05.06',decoder:'mpv.hevc.libplacebo.sdr-bt709',positionMs:Infinity,path:'/private/movie',password:'do-not-forward',headers:{Authorization:'do-not-forward'},url:'https://private.invalid/film'};
 function body(extra={}){return {id,kind:'stutter',consent:true,consentVersion:CONSENT_VERSION,challenge:'fixture-token',report,...extra};}
 function context(payload=body(),headers={}){return {env,request:new Request(origin+'/api/playback-report',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:JSON.stringify(payload)})};}
 function verify(extra={}){return Response.json({success:true,hostname:'yingxi-station.pages.dev',action:'playback-report',cdata:id,...extra});}
 
 test('allowlist drops private fields, nonfinite numbers and unknown decoder strings',()=>{
- const {data,removed}=sanitizeReport(report);assert.equal(data.sdrAvSyncMs,-92);assert.equal(data.positionMs,null);assert.equal(data.model,'PLY110');assert.equal(data.sdrPollMainMs,1.5);
+ const {data,removed}=sanitizeReport(report);assert.equal(data.sdrAvSyncMs,-92);assert.equal(data.positionMs,null);assert.equal(data.model,'PLY110');assert.equal(data.sdrPollMainMs,1.5);assert.equal(data.audioDecoder,'ffmpegLavc63.1.101-alac');
  for(const key of ['path','password','headers','url']){assert(!Object.hasOwn(data,key));assert(removed.includes(key));}
  assert.equal(sanitizeReport({...report,decoder:'https://private.invalid'}).data.decoder,null);
   assert.equal(sanitizeReport({...report,model:'name@example.invalid'}).data.model,null);

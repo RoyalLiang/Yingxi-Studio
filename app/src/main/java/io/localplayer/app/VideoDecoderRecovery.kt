@@ -8,7 +8,7 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 
-/** One output reset and one HEVC fallback per episode; audio/network errors never trigger either. */
+/** One output reset and one software fallback per episode; audio/network errors never trigger either. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class VideoDecoderRecovery(
     private val player:ExoPlayer,
@@ -51,7 +51,7 @@ internal class VideoDecoderRecovery(
     override fun onEvents(player:Player,events:Player.Events){
         if(awaitingFirstFrame())arm()else{readySince=0;handler.removeCallbacks(watchdog)}
     }
-    private fun compatible(format:Format?)=format?.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null
+    private fun compatible(format:Format?)=format?.let(::softwareVideoFormat)==true
     private fun videoFormat():Format?=player.videoFormat?:player.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO}?.getTrackFormat(0)
     override fun onMediaItemTransition(item:MediaItem?,reason:Int) {
         if(item?.mediaId==mediaId)return
@@ -92,7 +92,7 @@ internal class VideoDecoderRecovery(
         if(player.currentMediaItem==null)return false
         val index=player.currentMediaItemIndex;val position=recoveryPosition();val playing=player.playWhenReady
         attempted=true;this.reason=reason;factory.forceSoftware=true;firstFrame=false;readySince=0
-        android.util.Log.d("YingxiDecoder","HEVC software fallback: $reason playing=$playing position=$position")
+        android.util.Log.d("YingxiDecoder","software fallback: ${format?.sampleMimeType} $reason playing=$playing position=$position")
         // Release the failed Surface producer before FFmpeg acquires the same output Surface.
         player.stop()
         selector.parameters=selector.parameters.buildUpon().setRendererDisabled(factory.nativeVideoIndex,true).build()

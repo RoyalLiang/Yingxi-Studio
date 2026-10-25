@@ -636,6 +636,13 @@
         "zh": "阿汐把未寄出的检修纸留在手边，迟灯重描听音旋钮旁的刻线。站务收拢零碎按钮，片窗按片源已有的档位放映，开门时也能看见信笺的版号。",
         "en": "Axi keeps an unsent repair note beside her while Chideng retraces the marks beside the listening dial. Station affairs gathers scattered buttons, the window uses the grades the source provides, and the opening shows the letter’s edition."
       }
+    },
+    {
+      "version": "0.2.0-alpha.57",
+      "text": {
+        "zh": "迟灯把试映纸条立在风扇罩边，阿汐拂净浮灰。旧片的几道接线归入同一张检修纸，片窗少为反复问讯停下手边的事。",
+        "en": "Chideng props a test scrap beside the fan guard; Axi brushes away its dust. More old-film connections share the same repair sheet, and the window spends less time asking for repeated updates."
+      }
     }
   ],
   "boundary": {
@@ -867,8 +874,8 @@
         "en": "Image Scavenger"
       },
       "summary": {
-        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。",
-        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact."
+        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。 试映时用纸角的抖动对照风扇与片架的响声，是迟灯和阿汐排查旧器材的小习惯，不代表新的技术或能力。",
+        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact. Chideng and Axi compare a trembling paper corner with fan and shelf noises while checking old equipment; this is an everyday habit, not a new technology or ability."
       },
       "canonStatus": "confirmed"
     },
@@ -1733,6 +1740,14 @@
       "text": {
         "zh": "我把检修纸的空白角折起，先留在手边。迟灯在横线间写下画面抖动的时刻，旁边的片罐不添新记号。折角不是回信，只提醒我：这张纸还没有寄出。",
         "en": "I fold the blank corner of the repair note and keep it beside me. Chideng writes the moment the picture shivered between its lines; the film tin beside it gets no new marks. A folded corner is no reply. It only reminds me that this note has not been sent."
+      }
+    },
+    {
+      "id": "diary_032",
+      "author": "chideng",
+      "text": {
+        "zh": "试映时，我把纸条立在风扇罩旁，先看纸角的抖动，再听片罐有没有轻碰架沿。阿汐替那只旧罩拂去浮灰，铅笔仍搁回原处。响声从哪儿来，要一处一处听。",
+        "en": "During a test screening I stand a scrap beside the fan guard, watching its corner tremble before listening for a tin touching the shelf. Axi brushes dust from the old guard and returns the pencil. We listen to one place at a time to learn where a rattle begins."
       }
     }
   ],

@@ -56,7 +56,7 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("lastIoFailure",io.lastFailure?:JSONObject.NULL)
         .put("bytes",metrics.bytes).put("readCalls",metrics.readCalls).put("maxReadMs",metrics.maxReadMs)
         .put("readTimeMs",metrics.readTimeMs).put("droppedFrames",metrics.droppedFrames)
-        .put("audioDecoder",diagnosticCodec(metrics.audioDecoder)?:JSONObject.NULL).put("audioRenderedBuffers",metrics.audioRenderedBuffers?:JSONObject.NULL)
+        .put("audioDecoder",diagnosticDecoder(metrics.audioDecoder)?:JSONObject.NULL).put("audioRenderedBuffers",metrics.audioRenderedBuffers?:JSONObject.NULL)
         .put("sdrDecoderDroppedFrames",metrics.sdrDecoderDroppedFrames?:JSONObject.NULL)
         .put("sdrAvSyncMs",metrics.sdrAvSyncMs?:JSONObject.NULL).put("sdrPollMs",metrics.sdrPollMs?:JSONObject.NULL)
         .put("sdrPollMainMs",metrics.sdrPollMainMs?:JSONObject.NULL)
@@ -68,7 +68,7 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
         .put("videoMime",mime?:JSONObject.NULL).put("encodedWidth",selected?.width?:0).put("encodedHeight",selected?.height?:0)
         .put("openCalls",metrics.openCalls).put("openTimeMs",metrics.openTimeMs)
         .put("firstFrameMs",metrics.firstFrameMs?:JSONObject.NULL).put("rebuffers",metrics.rebufferCount)
-        .put("decoder",metrics.decoder?.takeIf{it.matches(Regex("[A-Za-z0-9._+-]{1,160}"))}?:JSONObject.NULL)
+        .put("decoder",diagnosticDecoder(metrics.decoder)?:JSONObject.NULL)
         .put("decoderInitMs",metrics.decoderInitMs)
         .put("videoInputBuffers",metrics.videoInputBuffers?:JSONObject.NULL).put("videoRenderedBuffers",metrics.videoRenderedBuffers?:JSONObject.NULL)
         .put("videoSkippedInputs",metrics.videoSkippedInputs?:JSONObject.NULL).put("videoRendererEnabled",metrics.videoEnabled)
@@ -148,6 +148,8 @@ internal fun playbackWaitSummary():String {
             Text(if(copyFailed)"重试复制检修记录" else if(copied)"已复制检修记录" else "复制检修记录")
         }
     }
+
+internal fun diagnosticDecoder(value:String?):String?=value?.takeIf{it.matches(Regex("[A-Za-z0-9._+-]{1,160}"))}
 
 /** Accept codec identifiers only; never copy arbitrary format strings or exception messages. */
 internal fun diagnosticCodec(value:String?):String?=value?.takeIf{it.length<=80&&it.split(',').all{codec->

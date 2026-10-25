@@ -48,6 +48,11 @@ class Mpv4kViewportBenchmark {
                 c.pause()
                 activity=ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<PlaybackActivity>().firstOrNull()
                 val root=activity!!.window.decorView;val output=surface(root)!!;val m=MpvRuntime.load(context)
+                assertEquals("no",m.get("hwdec"));assertEquals("yes",m.get("vd-queue-enable"))
+                assertEquals("2",m.get("vd-queue-max-samples"))
+                assertEquals("bt.709",m.get("target-prim"));assertEquals("srgb",m.get("target-trc"))
+                val source=org.json.JSONObject(m.get("video-params")?:"{}")
+                assertEquals(3840,source.optInt("w"));assertEquals(2160,source.optInt("h"))
                 android.util.Log.i("Sdr4kBenchmark","wall_ms=${SystemClock.elapsedRealtime()-start} position_ms=${c.currentPosition} drop=${m.get("frame-drop-count")} decoder_drop=${m.get("decoder-frame-drop-count")} avsync=${m.get("avsync")} surface=${output.width}x${output.height} window=${root.width}x${root.height} sdr=${c.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")} resize=${(output.parent as? androidx.media3.ui.AspectRatioFrameLayout)?.resizeMode} panscan=${m.get("panscan")}")
                 assertTrue("P5 must not rasterize a surface outside the visible window",output.width<=root.width+2&&output.height<=root.height+2)
             }

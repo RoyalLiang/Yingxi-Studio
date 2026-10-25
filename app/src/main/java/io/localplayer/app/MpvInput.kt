@@ -25,7 +25,7 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                 val fd=context.contentResolver.openFileDescriptor(uri,"r")?:error("无法打开媒体文件")
                 return MpvInput(fd,{})
             }
-            val lease=PlaybackRegistry.preview(uri)
+            val lease=PlaybackRegistry.playback(uri)
             val thread=HandlerThread("yingxi-mpv-source").apply{start()}
             try {
                 val started=System.nanoTime()

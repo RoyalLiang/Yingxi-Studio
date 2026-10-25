@@ -11,7 +11,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
-/** Stable MediaSession player. Only unsupported, unencrypted DV5 enters the SDR backend. */
+/** Stable MediaSession player. Unsupported cleartext formats share the existing compatibility backend. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class CompatibilityPlayer(private val context:Context,private val native:ExoPlayer):ForwardingSimpleBasePlayer(native) {
     companion object { val VIDEO_LAYOUT=androidx.media3.session.SessionCommand("io.localplayer.VIDEO_LAYOUT",android.os.Bundle.EMPTY) }
@@ -31,6 +31,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
     private var closed=false
     private val nativeListener=object:Player.Listener {
         override fun onTracksChanged(tracks:Tracks){considerFallback()}
+        override fun onPlaybackStateChanged(state:Int){considerFallback()}
         override fun onMediaItemTransition(item:MediaItem?,reason:Int){requestedPosition=native.currentPosition.coerceAtLeast(0);nativeHasFrame=false}
         override fun onRenderedFirstFrame(){nativeHasFrame=true}
         override fun onPlayerError(error:PlaybackException){if(!retryWithoutAttachments(error))considerFallback()}
@@ -54,9 +55,11 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
     }
     private fun considerFallback(){
         if(closed||player!==native)return
-        val format=videoFormat()?:return
-        if(!needsDv5Sdr(format,native.currentTracks,native.playerError))return
+        val format=videoFormat()
+        if(!needsCompatibility(format,native.currentTracks,native.playerError,
+            native.playbackState==Player.STATE_ENDED&&native.currentTracks.groups.isEmpty()&&!nativeHasFrame))return
         val item=native.currentMediaItem?:return
+        if(item.localConfiguration?.drmConfiguration!=null)return
         val queue=(0 until native.mediaItemCount).map(native::getMediaItemAt)
         val index=native.currentMediaItemIndex
         val play=native.playWhenReady
@@ -64,7 +67,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
         native.pause() // No audio-only clock or history advancement while opening video.
         handler.post {
             if(closed||player!==native||native.currentMediaItem?.mediaId!=item.mediaId)return@post
-            val replacement=MpvPlayer(context,format)
+            val replacement=MpvPlayer(context,format?:Format.Builder().setSampleMimeType("video/x-unknown").build())
             replacement.setVideoLayout(fillVideo,subtitleMarginX,subtitleMarginY)
             replacement.setMediaItems(queue,index,start)
             replacement.playbackParameters=native.playbackParameters
@@ -81,7 +84,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
             compatibility=replacement
             setPlayer(replacement)
             output?.let{applyOutput(replacement,it)}
-            PlaybackMetrics.sdrStarted()
+            PlaybackMetrics.sdrStarted(format?.sampleMimeType==MimeTypes.VIDEO_DOLBY_VISION)
             replacement.prepare();replacement.playWhenReady=play
         }
     }
@@ -158,4 +161,25 @@ internal fun needsDv5Sdr(format:Format,tracks:Tracks,error:PlaybackException?):B
     return format.drmInitData==null && format.sampleMimeType==MimeTypes.VIDEO_DOLBY_VISION &&
         format.codecs?.split(',')?.any{Regex("(?:dvhe|dvh1)\\.0?5(?:\\..*)?",RegexOption.IGNORE_CASE).matches(it.trim())}==true &&
         (unsupportedVideo(tracks)||decoderFailed)
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun needsCompatibility(format:Format?,tracks:Tracks,error:PlaybackException?,emptyVideo:Boolean=false):Boolean {
+    if(format?.drmInitData!=null)return false
+    // Both bundled dav1d builds trap on the tested ARM64 10-bit path; keep AV1 on MediaCodec.
+    if(format?.sampleMimeType==MimeTypes.VIDEO_AV1)return false
+    if(error==null&&emptyVideo)return true
+    if(format!=null&&needsDv5Sdr(format,tracks,error))return true
+    if(error?.errorCode==PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED)return true
+    if(error?.errorCode==PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED&&
+        generateSequence(error.cause){it.cause}.filterIsInstance<ParserException>()
+            .any{it.message?.startsWith("No valid tracks were found")==true})return true
+    val decodeFailure=error?.errorCode in setOf(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FAILED,PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+        PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES)
+    if(error!=null&&!decodeFailure)return false
+    // Use the color-managed backend for formats outside the tested NextLib video routes.
+    return format?.sampleMimeType in setOf(MimeTypes.VIDEO_MPEG,MimeTypes.VIDEO_MP4V,MimeTypes.VIDEO_H263,
+        "video/wvc1","video/vc1","video/x-ms-wmv","video/mjpeg","video/x-vnd.on2.vp6","video/theora") &&
+        (unsupportedVideo(tracks)||decodeFailure)
 }

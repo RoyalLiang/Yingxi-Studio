@@ -48,6 +48,9 @@ class PlaybackDiagnosticTest {
     }
 
     @Test fun codecDiagnosticAcceptsDv5ButRejectsAddressesAndFreeText(){
+        assertEquals("ffmpeg9.0.1-alac",diagnosticDecoder("ffmpeg9.0.1-alac"))
+        assertEquals("c2.android.aac.decoder",diagnosticDecoder("c2.android.aac.decoder"))
+        assertNull(diagnosticDecoder("smb://private.invalid/movie"))
         assertEquals("dvhe.05.06",diagnosticCodec("dvhe.05.06"))
         assertEquals("hvc1.2.4.L153.B0",diagnosticCodec("hvc1.2.4.L153.B0"))
         assertNull(diagnosticCodec(android.net.Uri.Builder().scheme("smb").encodedAuthority("user:password@private.invalid").appendPath("film.mkv").build().toString()))

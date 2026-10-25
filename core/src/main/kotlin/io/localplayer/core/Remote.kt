@@ -46,7 +46,7 @@ class Credentials(val password: String) {
 
 data class Entry(val name: String, val path: String, val directory: Boolean, val size: Long, val createdAt: Long? = null) {
     val isVideo: Boolean get() = !directory && name.substringAfterLast('.', "").lowercase() in
-        setOf("mp4", "mkv", "m4v", "mov", "webm", "avi", "ts", "m2ts", "mpg", "mpeg", "wmv", "flv", "3gp")
+        setOf("mp4", "mkv", "m4v", "mov", "webm", "avi", "ts", "m2ts", "mpg", "mpeg", "wmv", "asf", "rm", "flv", "3gp")
 }
 
 object Paths {

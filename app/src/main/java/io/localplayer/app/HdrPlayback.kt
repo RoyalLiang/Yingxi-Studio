@@ -15,6 +15,13 @@ import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 internal class VideoOutputStateException(cause:IllegalStateException):IllegalStateException(cause)
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun softwareVideoFormat(format:Format):Boolean = format.drmInitData==null &&
+    format.sampleMimeType in setOf(MimeTypes.VIDEO_H264,MimeTypes.VIDEO_H265,
+        MimeTypes.VIDEO_VP8,MimeTypes.VIDEO_VP9,MimeTypes.VIDEO_MPEG2) &&
+    (format.sampleMimeType==MimeTypes.VIDEO_H265 || format.colorInfo?.colorTransfer !in
+        setOf(androidx.media3.common.C.COLOR_TRANSFER_ST2084,androidx.media3.common.C.COLOR_TRANSFER_HLG))
+
 // Kotlin interface delegation inherits Java default methods instead of forwarding them.
 // Renderer defaults include speed and wake-up scheduling, so forward those explicitly.
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -69,7 +76,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
     internal fun nativeGate(renderer:Renderer):Renderer {
         val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by renderer.capabilities {
             override fun supportsFormat(format:Format):Int =
-                if(forceSoftware&&format.sampleMimeType==MimeTypes.VIDEO_H265&&format.drmInitData==null)androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+            if(forceSoftware&&softwareVideoFormat(format))androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
                 else renderer.capabilities.supportsFormat(format)
         }
         return object:ForwardingPlaybackRenderer(renderer) {
@@ -102,7 +109,7 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
         softwareVideoIndex=out.size
         val capabilities=object:androidx.media3.exoplayer.RendererCapabilities by software.capabilities {
             override fun supportsFormat(format:Format):Int {
-                if(format.sampleMimeType!=MimeTypes.VIDEO_H265||format.drmInitData!=null)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
+                if(!softwareVideoFormat(format))return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE
                 // Capability tables can underreport level/profile support. Try platform decoding first;
                 // only VideoDecoderRecovery may enable the CPU renderer after an actual failure.
                 if(!forceSoftware)return androidx.media3.common.C.FORMAT_UNSUPPORTED_TYPE

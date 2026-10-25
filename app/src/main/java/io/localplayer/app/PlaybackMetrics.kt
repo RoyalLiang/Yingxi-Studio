@@ -47,7 +47,7 @@ object PlaybackMetrics {
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0
         videoCounters=null;videoEnabled=false;videoCodecErrors=0;videoDecoderReleases=0
  }
- @Synchronized fun sdrStarted(){sdr=true;audioDecoder=null;audioCounters=null;decoder="mpv.hevc.libplacebo.sdr-bt709";videoEnabled=true;videoCounters=null;firstFrame=null}
+ @Synchronized fun sdrStarted(dv5:Boolean=true){sdr=true;audioDecoder=null;audioCounters=null;decoder=if(dv5)"mpv.hevc.libplacebo.sdr-bt709"else"mpv.compatibility.sdr-bt709";videoEnabled=true;videoCounters=null;firstFrame=null}
  @Synchronized fun sdrFrame(){if(firstFrame==null)firstFrame=SystemClock.elapsedRealtime()-started}
  @Synchronized fun sdrOutput(frames:Int,decoderDropped:Int?=null,avSyncMs:Long?=null){if(sdr){videoEnabled=true;dropped=frames;sdrDecoderDroppedFrames=decoderDropped;sdrAvSyncMs=avSyncMs}}
     @Synchronized fun sdrPoll(nanos:Long,mainNanos:Long=0){if(sdr){sdrPollMs=nanos/1_000_000.0;sdrPollMainMs=mainNanos/1_000_000.0}}

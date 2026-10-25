@@ -23,8 +23,20 @@ class DecoderRoutingRegressionTest {
             C.FORMAT_UNSUPPORTED_TYPE, RendererCapabilities.getFormatSupport(software.supportsFormat(hevc)))
         factory.forceSoftware = true
         assertEquals(C.FORMAT_HANDLED, RendererCapabilities.getFormatSupport(software.supportsFormat(hevc)))
-        val avc = hevc.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H264).build()
-        assertEquals(C.FORMAT_UNSUPPORTED_TYPE, RendererCapabilities.getFormatSupport(software.supportsFormat(avc)))
+        for(mime in listOf(MimeTypes.VIDEO_H264,MimeTypes.VIDEO_VP8,MimeTypes.VIDEO_VP9,
+            MimeTypes.VIDEO_MPEG2)) {
+            val format=hevc.buildUpon().setSampleMimeType(mime).build()
+            assertEquals(mime,C.FORMAT_HANDLED,RendererCapabilities.getFormatSupport(software.supportsFormat(format)))
+            factory.forceSoftware=false
+            assertEquals(mime,C.FORMAT_UNSUPPORTED_TYPE,RendererCapabilities.getFormatSupport(software.supportsFormat(format)))
+            factory.forceSoftware=true
+        }
+        val hdr=hevc.buildUpon().setSampleMimeType(MimeTypes.VIDEO_AV1).setColorInfo(
+            ColorInfo.Builder().setColorTransfer(C.COLOR_TRANSFER_ST2084).build()).build()
+        assertFalse("Do not silently send HDR to the new SDR software paths",softwareVideoFormat(hdr))
+        assertFalse(softwareVideoFormat(hevc.buildUpon().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).build()))
+        val encrypted=hevc.buildUpon().setDrmInitData(DrmInitData(DrmInitData.SchemeData(C.WIDEVINE_UUID,"video/mp4",byteArrayOf(1)))).build()
+        assertFalse(softwareVideoFormat(encrypted))
         factory.forceSoftware = false
         assertEquals(C.FORMAT_UNSUPPORTED_TYPE, RendererCapabilities.getFormatSupport(software.supportsFormat(hevc)))
     }

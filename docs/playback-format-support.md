@@ -1,10 +1,32 @@
 # Android 播放格式与落地方案
 
+核对日期：2026-10-26。本轮版本：**0.2.0-alpha.57 / 59**。本轮以 [969c640 的 alpha.55 报告](https://github.com/RoyalLiang/Yingxi-Studio/blob/969c640bfa4055f777339cf6a3f698d736d842b1/docs/playback-format-support.md)为基线；实现与验证记录见[解码接入和流畅度验证](decoder-smoothness-validation.md)。发布状态仍以正式 Release 为准。
+
+## alpha.57 的接入边界
+
+| 路径 | 当前接入 | 验证与边界 |
+| --- | --- | --- |
+| 系统视频 | Media3 / MediaCodec 硬解优先，保留平台内部失败回退 | 软件 renderer 初次选择始终关闭；每个片目最多一次实际失败后的切换，网络、权限、音频错误不换视频 decoder。 |
+| NextLib 软件视频 | AVC、HEVC、VP8、VP9、MPEG-2 | AVC High10、VP9 10-bit SDR 和 MPEG-2 MKV 合成样片已纳入真实出帧、像素、seek、倍速回归。新接入的 AVC/VP8/VP9/MPEG-2 不抢占 HDR；HEVC 保留此前行为。 |
+| 软件音频 | 原有 NextLib AC-3/E-AC-3、DTS、TrueHD、ALAC 回退保持系统优先 | 五类合成原片的实际 decoder、PCM 输出、seek、倍速回归通过；不等于物理听感、Atmos 或无损多声道直通。 |
+| 旧封装与编码 | 复用 MPV；支持不受 Media3 提取器识别的容器、无法提取有效轨道和明确的旧视频编码失败 | WMV/ASF、RealMedia/RV20、MPEG-1 MKV、MPEG-4/H.263 AVI、MJPEG MOV 纳入合成样片回归。`.asf`、`.rm` 加入现有入口和格式标签；不据此承诺全部 WMV/RealVideo profile。 |
+| Dolby Vision P5 | 原有保留 RPU 的 HEVC 软件解码、libplacebo 到 BT.709/sRGB SDR 映射 | 解码与映色使用短帧队列；不改 `hwdec=no`、原分辨率、RPU、缩放和色彩参数。原一加 4K `dvhe.05.06` 的持续性能仍需同片真机验收。 |
+| 正片读取 | MPV 使用独立的正片 transport，继承注册连接器、预读和自适应状态 | 不再借用用于封面/预览的租约；关闭 MPV 自己的 transport 不关闭片目注册。FUSE 大于 4 GiB 的偏移与数据字节核验有专项回归。 |
+| 检修信息 | JNI 属性后台单次在途采样；附件读取独立排队；seek 丢弃旧快照 | 保留复制入口；`sdrPollMainMs` 表示主线程应用耗时，`sdrPollMs` 保留 alpha.56 的后台查询含义。调度调用变快不能等同整部原片帧率提高。 |
+
+### 仍未开放的能力
+
+- AV1 继续走现有系统路径。本轮在两套随包 dav1d 的 ARM64 10-bit 实播中复现了 SVE 非法指令崩溃，未开放第三方 AV1 软件回退；MPV 明确限制 decoder 清单，防止未知容器绕入该路径。8-bit 的单样片成功不足以覆盖 10-bit、film grain 与所有 CPU。
+- 新接入的软件 SDR MIME 不代表通用 HDR 输出、无损多声道直通或专业母版支持。TTML、独立 PGS/VobSub、光盘菜单、VVC/AVS 等仍按下方底稿的各自缺口维护。
+- 下面保留 alpha.55 核对底稿作为上下文；其“未接通”状态以本节明确覆盖的项目为准，其他项目没有因本轮自动升级。
+
+## alpha.55 核对底稿
+
 核对日期：2026-10-25。对应版本：**0.2.0-alpha.55 / 57**，基于已发布的 [alpha.54](https://github.com/RoyalLiang/Yingxi-Studio/tree/b13f572524bef3b525715ae98ba61af0355f895a)。下表区分已经接通、依赖设备的能力，以及尚未实施的方案。正式 Release 的状态以发布记录为准。
 
 目前最实用的组合是 MP4 / MKV 内的 H.264、HEVC、AV1、VP8/VP9，以及设备可解的音轨。普通影片先走 Android / Media3；HEVC 有明确的失败后软件回退。未加密的 Dolby Vision P5 在设备无法解码时，改走保留 RPU 的软件解码和 SDR 色彩映射。**这不是通用 MPV 模式，也不代表任意 4K P5 都已在真机流畅播放。**
 
-## 先区分四层支持
+### 先区分四层支持
 
 | 层次 | 例子 | 本文怎样判断 |
 | --- | --- | --- |
@@ -15,7 +37,7 @@
 
 下文的“已接通”只表示应用有可达路径；“系统条件”表示取决于设备解码器与输出能力；“未接通”包括库已包含但应用没有启用的能力。没有逐项实测的格式，不标为全设备验收通过。
 
-## 当前应用怎样选择播放链
+### 当前应用怎样选择播放链
 
 - [播放服务](../app/src/main/java/io/localplayer/app/PlaybackService.kt)使用 Media3 `1.11.1`、`DefaultMediaSourceFactory` 和[项目提取器](../app/src/main/java/io/localplayer/app/PlaybackExtractors.kt)，系统视频解码优先硬件。
 - [HEVC 回退](../app/src/main/java/io/localplayer/app/HdrPlayback.kt)手工加入 NextLib `1.11.1-0.16.0` 的视频 renderer，但只放行未加密 HEVC，并在真实失败后的 `forceSoftware` 状态启用。H.264、VP9、AV1 等即使包含在 NextLib 中，当前也没有这条应用软件回退。
@@ -23,7 +45,7 @@
 - [P5 路由](../app/src/main/java/io/localplayer/app/CompatibilityPlayer.kt)只在未加密 P5 不受支持或发生解码错误时进入 [MPV 后端](../app/src/main/java/io/localplayer/app/MpvPlayer.kt)。网络、权限、认证错误不能触发换解码器。MPV 使用 `hwdec=no`、`gpu-next`、BT.709 / sRGB SDR 目标；原片与解码分辨率保留。
 - MPV 的具体来源与四 ABI 摘要固定在[运行时清单](../third_party/mpv-runtime.json)；NextLib 固定版本与摘要在[解码器清单](../third_party/decoder-sources.json)。当前最低系统为 Android 15 / API 35，目标 API 36。
 
-## 封装与入口
+### 封装与入口
 
 | 封装 / 文件 | alpha.55 状态 | 缺口与最小落地方案 |
 | --- | --- | --- |
@@ -41,7 +63,7 @@
 
 依据：[Media3 1.11.1 提取器](https://github.com/androidx/media/blob/1.11.1/libraries/extractor/src/main/java/androidx/media3/extractor/DefaultExtractorsFactory.java)、[AVI 编码标记映射](https://github.com/androidx/media/blob/1.11.1/libraries/extractor/src/main/java/androidx/media3/extractor/avi/StreamFormatChunk.java)、[Matroska 提取器](https://github.com/androidx/media/blob/1.11.1/libraries/extractor/src/main/java/androidx/media3/extractor/mkv/MatroskaExtractor.java)。应用入口筛选见 [Entry.isVideo](../core/src/main/kotlin/io/localplayer/core/Remote.kt)；本机 SAF 还会接受文档提供者声明的 `video/*`。
 
-## 视频编码与 HDR
+### 视频编码与 HDR
 
 | 编码 / profile | alpha.54 可达路径与边界 | 缺口的落地方案 |
 | --- | --- | --- |
@@ -62,7 +84,7 @@
 
 系统条件的依据见 [Android 媒体格式](https://developer.android.com/media/platform/supported-formats)与 [HDR 输出要求](https://developer.android.com/media/grow/hdr-playback)。项目 P7/P8 边界由 [dolbyVisionBaseFormat](../app/src/main/java/io/localplayer/app/PlaybackExtractors.kt)明确限制；P5 的 `needsDv5Sdr` 不接受加密内容。
 
-## 音频编码与音效
+### 音频编码与音效
 
 以下指影片内的音轨。alpha.54 片架没有通用音乐库入口；“可读取音频封装”不等于已做音频文件产品。
 
@@ -80,7 +102,7 @@
 
 [Android AudioFormat](https://developer.android.com/reference/android/media/AudioFormat)区分普通编码与 JOC、TrueHD、DTS 等输出编码；[AudioTrack direct-playback 查询](https://developer.android.com/reference/android/media/AudioTrack#getDirectPlaybackSupport(android.media.AudioFormat,%20android.media.AudioAttributes))针对当前设备与输出属性，不能用随包解码器清单替代。MPV P5 后端会解该 P5 文件内部的音轨，但当前仅凭该路径不能承诺所有普通影片都得到同等音频能力。
 
-## 字幕：内嵌、外挂和搜寻分别验收
+### 字幕：内嵌、外挂和搜寻分别验收
 
 | 类型 | alpha.55 状态 | 缺口与落地方案 |
 | --- | --- | --- |
@@ -102,7 +124,7 @@
 - 本轮已经接通明确标示的互联网网页搜索，加本机/信源外挂文件导入。使用 **Microsoft Bing 网页搜索**（`https://www.bing.com/search`）；仅发送解析后的片名/年份和字幕或配音关键词，不包含 NAS 地址、认证信息或整条媒体 URI；封存柜内容继续受私密策略约束。
 - 将来接入音轨服务前，先明确服务商、鉴权/配额、文件格式、版本/剪辑匹配字段与下载/跳转契约；没有这些条件时不自动下载或声称已自动对齐对白。
 
-## P5 卡顿先做不改变解码结果的优化
+### P5 卡顿先做不改变解码结果的优化
 
 固定 [FFmpeg HEVC 解码器](https://github.com/FFmpeg/FFmpeg/blob/094a2f8a2a5e7fa64736e067de224ce28fdf5979/libavcodec/hevc/hevcdec.c)解析 RPU 并携带到输出帧；[mpv 帧元数据](https://github.com/mpv-player/mpv/blob/0b7ed670f7c353dd3dd4f8ae0fc788a181a15aa6/video/mp_image.c)与 [libplacebo 色彩映射](https://github.com/haasn/libplacebo/blob/3330a515d62139259c26239014f286e233bd3a5c/src/shaders/colorspace.c)承接正确的 P5 解释。把 P5 改名为 HEVC 或仅切到 `mediacodec-copy`，不能证明该元数据链仍完整；现有固定 Android 运行时也不能仅设 Vulkan 参数就启用 [构建时关闭的 Vulkan](https://github.com/mpv-android/mpv-android/blob/fdf74f6830c47dbaa8a22ac79726e8303f1db5af/buildscripts/scripts/libplacebo.sh#L17)。
 
@@ -112,7 +134,7 @@
 
 还应让检修信息在流畅度异常但未报错时也可复制，至少区分原片帧率、解码器、解码掉帧、VO 掉帧、音画差、缓存和读取等待。当前公开 P5 样片是 1080p / Level 5；原 OnePlus PLY110 的 3840×2076 `dvhe.05.06`、1× 持续播放、色彩和热稳态仍需同原片真机验证。
 
-## 按用户收益安排落地与验收
+### 按用户收益安排落地与验收
 
 | 优先级 | 工作 | 复用与依赖 | 完成信号 |
 | --- | --- | --- | --- |
@@ -125,7 +147,7 @@
 本报告未改动播放器、未启用新格式、未把研究方案当成发版事实；本轮实施结果由对应提交及交付记录更新。没有对全部列表做逐设备播放，也没有用公开小样替代原片真机结论。
 
 
-## alpha.55 已实施与验证边界
+### alpha.55 已实施与验证边界
 
 - P5 保留软件 HEVC、RPU、原分辨率与 BT.709/sRGB SDR 路径，缓存 JNI 方法和静态元数据，减少重复 pause 写入，并为认证源 FD 增加有界预读。铺满时由 MPV 在屏幕内裁切，避免超出屏幕的 Surface。
 - 同一 1080p P5 样片的 100 次主线程轮询，基线一次测量约 28.74 ms，早期候选约 12.92 ms；最终候选两次联跑约 52.09 ms 和 24.49 ms，负载与调度会影响结果，不能据此宣称稳定帧率提升。官方 4K/59.94fps P5 样片验证了可见 Surface 尺寸与出画面，模拟器掉帧没有稳定改善。OnePlus PLY110 原始 4K `dvhe.05.06` 的持续帧率、温升与色彩仍待同片实测。

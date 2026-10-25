@@ -58,6 +58,7 @@ object PlaybackRegistry {
     }
     fun get(uri: Uri): PlaybackLease = leases[uri.authority] ?: throw IOException("播放上下文已过期，请从信源重新打开")
     internal fun closeAsync(lease:PlaybackLease){closer.execute{lease.close()}}
+    internal fun playback(uri:Uri):PlaybackLease=get(uri).freshTransport()
     // Artwork uses its own transport and cancellation; it must never close the player's lease.
     fun preview(uri:Uri):PlaybackLease { val active=get(uri); return PlaybackLease(active.source,active.credentials,active.path,prefetch=false) }
     fun remove(uri: Uri?) { if(uri?.scheme=="localplayer") leases.remove(uri.authority)?.let { lease -> closer.execute { lease.close() } } }
