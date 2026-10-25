@@ -14,6 +14,15 @@ import com.google.common.util.concurrent.ListenableFuture
 /** Stable MediaSession player. Only unsupported, unencrypted DV5 enters the SDR backend. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class CompatibilityPlayer(private val context:Context,private val native:ExoPlayer):ForwardingSimpleBasePlayer(native) {
+    companion object { val VIDEO_LAYOUT=androidx.media3.session.SessionCommand("io.localplayer.VIDEO_LAYOUT",android.os.Bundle.EMPTY) }
+    private var fillVideo=false
+    private var subtitleMarginX=25
+    private var subtitleMarginY=22
+    internal fun setVideoLayout(fill:Boolean,marginX:Int,marginY:Int) {
+        fillVideo=fill;subtitleMarginX=marginX.coerceIn(0,360);subtitleMarginY=marginY.coerceIn(0,360)
+        compatibility?.setVideoLayout(fillVideo,subtitleMarginX,subtitleMarginY)
+    }
+
     private val handler=Handler(applicationLooper)
     private var compatibility:MpvPlayer?=null
     private var output:Any?=null
@@ -24,10 +33,25 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
         override fun onTracksChanged(tracks:Tracks){considerFallback()}
         override fun onMediaItemTransition(item:MediaItem?,reason:Int){requestedPosition=native.currentPosition.coerceAtLeast(0);nativeHasFrame=false}
         override fun onRenderedFirstFrame(){nativeHasFrame=true}
-        override fun onPlayerError(error:PlaybackException){considerFallback()}
+        override fun onPlayerError(error:PlaybackException){if(!retryWithoutAttachments(error))considerFallback()}
     }
     init {native.addListener(nativeListener)}
     private fun videoFormat():Format? = native.videoFormat?:native.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO}?.getTrackFormat(0)
+    private fun retryWithoutAttachments(error:PlaybackException):Boolean {
+        val item=native.currentMediaItem?:return false
+        if(player!==native||error !is androidx.media3.exoplayer.ExoPlaybackException||error.type!=androidx.media3.exoplayer.ExoPlaybackException.TYPE_SOURCE)return false
+        if(SidecarAudio.from(item).isEmpty()&&item.localConfiguration?.subtitleConfigurations.isNullOrEmpty())return false
+        handler.post {
+            if(closed||player!==native||native.playerError!==error||native.currentMediaItem!=item)return@post
+            val index=native.currentMediaItemIndex;val position=native.currentPosition.coerceAtLeast(0);val play=native.playWhenReady
+            val clean=SidecarAudio.attach(item,emptyList()).buildUpon().setSubtitleConfigurations(emptyList()).build()
+            val queue=(0 until native.mediaItemCount).map{if(it==index)clean else native.getMediaItemAt(it)}
+            AutomaticSidecars.status.value=item.mediaId to "外挂轨道无法读取，已继续播放主片；可重新选择文件"
+            native.trackSelectionParameters=native.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).clearOverridesOfType(C.TRACK_TYPE_TEXT).build()
+            native.setMediaItems(queue,index,position);native.prepare();native.playWhenReady=play
+        }
+        return true
+    }
     private fun considerFallback(){
         if(closed||player!==native)return
         val format=videoFormat()?:return
@@ -41,6 +65,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
         handler.post {
             if(closed||player!==native||native.currentMediaItem?.mediaId!=item.mediaId)return@post
             val replacement=MpvPlayer(context,format)
+            replacement.setVideoLayout(fillVideo,subtitleMarginX,subtitleMarginY)
             replacement.setMediaItems(queue,index,start)
             replacement.playbackParameters=native.playbackParameters
             replacement.volume=native.volume
@@ -66,7 +91,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
         val speed=player.playbackParameters;val volume=player.volume;val selection=player.trackSelectionParameters
         previous?.pause();previous?.clearVideoSurface()
         // Populate before swapping: listeners must always see the complete original queue.
-        native.setMediaItems(items,index,requestedPosition)
+        native.setMediaItems(items.map{softwareSdrItem(it,false)},index,requestedPosition)
         native.playbackParameters=speed;native.volume=volume;native.trackSelectionParameters=selection
         setPlayer(native);compatibility=null
         output?.let{applyOutput(native,it)}
@@ -76,7 +101,7 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
     override fun handleSetMediaItems(mediaItems:List<MediaItem>,startIndex:Int,startPositionMs:Long):ListenableFuture<*> {
         requestedPosition=startPositionMs.takeIf{it!=C.TIME_UNSET}?.coerceAtLeast(0)?:0
         if(compatibility!=null){toNative(mediaItems,startIndex.coerceAtLeast(0),requestedPosition,player.playWhenReady);return done()}
-        return super.handleSetMediaItems(mediaItems,startIndex,startPositionMs)
+        return super.handleSetMediaItems(mediaItems.map{softwareSdrItem(it,false)},startIndex,startPositionMs)
     }
     override fun handleSeek(mediaItemIndex:Int,positionMs:Long,seekCommand:Int):ListenableFuture<*> {
         requestedPosition=positionMs.takeIf{it!=C.TIME_UNSET}?.coerceAtLeast(0)?:0
@@ -91,7 +116,20 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
     override fun handleAddMediaItems(index:Int,mediaItems:List<MediaItem>):ListenableFuture<*>{restoreNative();return super.handleAddMediaItems(index,mediaItems)}
     override fun handleRemoveMediaItems(fromIndex:Int,toIndex:Int):ListenableFuture<*>{restoreNative();return super.handleRemoveMediaItems(fromIndex,toIndex)}
     override fun handleMoveMediaItems(fromIndex:Int,toIndex:Int,newIndex:Int):ListenableFuture<*>{restoreNative();return super.handleMoveMediaItems(fromIndex,toIndex,newIndex)}
-    override fun handleReplaceMediaItems(fromIndex:Int,toIndex:Int,mediaItems:List<MediaItem>):ListenableFuture<*>{restoreNative();return super.handleReplaceMediaItems(fromIndex,toIndex,mediaItems)}
+    override fun handleReplaceMediaItems(fromIndex:Int,toIndex:Int,mediaItems:List<MediaItem>):ListenableFuture<*> {
+        val replacement=mediaItems.singleOrNull()
+        val current=currentMediaItem
+        if(fromIndex==currentMediaItemIndex&&toIndex==fromIndex+1&&replacement!=null&&current!=null&&
+            replacement.mediaId==current.mediaId&&replacement.localConfiguration?.uri==current.localConfiguration?.uri&&
+            replacement.mediaMetadata.extras?.getString("play-intent")==current.mediaMetadata.extras?.getString("play-intent")) {
+            val items=(0 until mediaItemCount).map{if(it==fromIndex)replacement else getMediaItemAt(it)}
+            compatibility?.let{it.updateAttachments(items);return done()}
+            val position=currentPosition;val play=playWhenReady
+            native.setMediaItems(items,fromIndex,position);native.prepare();native.playWhenReady=play
+            return done()
+        }
+        restoreNative();return super.handleReplaceMediaItems(fromIndex,toIndex,mediaItems)
+    }
     override fun handleSetVideoOutput(videoOutput:Any):ListenableFuture<*> {output=videoOutput;return super.handleSetVideoOutput(videoOutput)}
     override fun handleClearVideoOutput(videoOutput:Any?):ListenableFuture<*> {
         if(videoOutput==null||videoOutput===output)output=null

@@ -11,10 +11,8 @@ import java.security.MessageDigest
 
 /** Only signed, build-pinned code is loaded. The child owns a separate FFmpeg namespace. */
 internal class MpvRuntime private constructor(private val bridge:Class<*>) {
-    private fun call(name:String,vararg args:Any?):Any? {
-        val types=args.map { when(it){is Context->Context::class.java;is Surface->Surface::class.java;is Array<*>->Array<String>::class.java;else->String::class.java} }.toTypedArray()
-        return bridge.getMethod(name,*types).invoke(null,*args)
-    }
+    private val methods=bridge.methods.associateBy{it.name}
+    private fun call(name:String,vararg args:Any?):Any?=methods.getValue(name).invoke(null,*args)
     fun create(context:Context){call("create",context.applicationContext)}
     fun init(){call("init")}
     fun destroy(){call("destroy")}

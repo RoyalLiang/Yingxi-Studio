@@ -29,7 +29,7 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
             val thread=HandlerThread("yingxi-mpv-source").apply{start()}
             try {
                 val started=System.nanoTime()
-                val file=lease.open()
+                val file=io.localplayer.core.ReadAheadFile(lease.open(),512*1024)
                 PlaybackMetrics.opened(System.nanoTime()-started)
                 val failed=java.util.concurrent.atomic.AtomicReference<Throwable?>()
                 val released=AtomicBoolean()

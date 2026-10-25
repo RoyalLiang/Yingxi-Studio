@@ -137,5 +137,33 @@ class Dv5SdrPlaybackTest {
         }finally{
             listOf("time-pos","pause","current-vo","vo","vid","video-frame-info","video-out-params/colormatrix").forEach{key->println(main{"DV5_ENGINE_$key="+runCatching{MpvRuntime.load(context).get(key)}.getOrNull()})}
             main{c.stop();activity?.finish();c.release()};PlaybackRequests.remove(target.playId)}
+    }    @Test fun selectedDubSurvivesCaptionChangesAndCanReturnToAutomatic() {
+        val context=ui.activity.applicationContext
+        val sample=File(context.cacheDir,"dv5-profile5.mp4");check(sample.isFile)
+        val audio=File(context.cacheDir,"sidecar-dts.mka");check(audio.isFile)
+        val caption=File(context.cacheDir,"dub-retain55.srt").apply{writeText("1\n00:00:00,000 --> 00:00:14,000\nRetained dub\n")}
+        val engine=main{MpvPlayer(context,Format.Builder().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION).setCodecs("dvhe.05.05").build())}
+        val surface=main{SurfaceView(ui.activity).also{ui.activity.addContentView(it,ViewGroup.LayoutParams(-1,-1));engine.setVideoSurfaceView(it)}}
+        val original=MediaItem.fromUri(Uri.fromFile(sample))
+        val dubbed=SidecarAudio.attach(original,listOf(SidecarAudio(Uri.fromFile(audio),"Film.zh.mka")))
+        try {
+            main{engine.setMediaItem(dubbed);engine.volume=0f;engine.prepare();engine.play()}
+            ui.waitUntil(20000){main{engine.currentTracks.groups.count{it.type==C.TRACK_TYPE_AUDIO}>=2}}
+            val runtime=MpvRuntime.load(context)
+            val external=main{engine.currentTracks.groups.last{it.type==C.TRACK_TYPE_AUDIO}}
+            val id=external.mediaTrackGroup.id.removePrefix("mpv-audio-")
+            main{engine.trackSelectionParameters=engine.trackSelectionParameters.buildUpon().setOverrideForType(TrackSelectionOverride(external.mediaTrackGroup,0)).build()}
+            ui.waitUntil(5000){main{runtime.get("aid")==id}}
+            val config=MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(caption)).setMimeType(MimeTypes.APPLICATION_SUBRIP).build()
+            main{engine.updateAttachments(listOf(dubbed.buildUpon().setSubtitleConfigurations(listOf(config)).build()))}
+            ui.waitUntil(5000){main{engine.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT}}}
+            main{assertEquals("Adding a caption retains selected audio ID",id,runtime.get("aid"));assertNull(engine.playerError)}
+            main{engine.trackSelectionParameters=engine.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,true).build()}
+            ui.waitUntil(5000){main{runtime.get("aid")=="no"}}
+            main{engine.trackSelectionParameters=engine.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}
+            ui.waitUntil(5000){main{runtime.get("aid")!="no"}}
+            main{assertTrue(engine.trackSelectionParameters.overrides.values.none{it.type==C.TRACK_TYPE_AUDIO});assertNull(engine.playerError)}
+        } finally {main{engine.release();(surface.parent as? ViewGroup)?.removeView(surface)};caption.delete()}
     }
+
 }

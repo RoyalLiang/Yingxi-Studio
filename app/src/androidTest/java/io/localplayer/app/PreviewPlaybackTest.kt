@@ -39,14 +39,22 @@ class PreviewPlaybackTest {
             scenario=ActivityScenario.launch(PlaybackActivity.intent(context,target))
             val future=main { MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync() }
             val player=future.get(10,TimeUnit.SECONDS);controller=player
-            ui.waitUntil(15_000){main{player.playbackState==Player.STATE_READY&&player.videoSize.width>0}}
+            main{assertTrue("App controller must retain media queue commands",player.isCommandAvailable(Player.COMMAND_SET_MEDIA_ITEM))}
+            try{ui.waitUntil(15_000){main{player.playbackState==Player.STATE_READY&&player.videoSize.width>0}}}
+            catch(e:Throwable){android.util.Log.i("Polish55State",main{playbackDiagnostic(player)});throw e}
             main{player.pause();player.seekTo(2000)}
             ui.waitUntil(10_000){main{player.playbackState==Player.STATE_READY&&player.currentPosition in 1500..2500}}
-            Thread.sleep(1000) // Let the independent reader warm while the video session remains paused.
+            Thread.sleep(1000)
+            ui.onNodeWithContentDescription("后退10秒").assertIsDisplayed()
+            ui.onNodeWithTag("playback-gesture-surface").performTouchInput {click(Offset(width*.18f,height*.22f))}
+            ui.waitUntil(2000){ui.onAllNodesWithContentDescription("后退10秒").fetchSemanticsNodes().isEmpty()}
+ // Let the independent reader warm while the video session remains paused.
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput {
                 down(Offset(width*.3f,height*.34f));moveTo(Offset(width*.34f,height*.34f),300)
             }
             ui.waitUntil(2000){ui.onAllNodesWithContentDescription("进度预览").fetchSemanticsNodes().isNotEmpty()}
+            ui.onNodeWithContentDescription("前进10秒").assertDoesNotExist()
+            ui.onNodeWithContentDescription("后退10秒").assertDoesNotExist()
             val first=ui.onNodeWithContentDescription("进度预览").fetchSemanticsNode().boundsInRoot
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput { moveTo(Offset(width*.39f,height*.34f),300) }
             ui.waitForIdle()
@@ -70,6 +78,8 @@ class PreviewPlaybackTest {
             }
             ui.onNodeWithTag("playback-gesture-surface").performTouchInput { up() }
             ui.waitUntil(5000){main{player.currentPosition>2500}}
+            ui.onNodeWithContentDescription("前进10秒").assertDoesNotExist()
+            ui.onNodeWithContentDescription("后退10秒").assertDoesNotExist()
             assertNull(main{player.playerError})
         } finally {
             main { controller?.let{it.stop();it.clearMediaItems();it.release()} }

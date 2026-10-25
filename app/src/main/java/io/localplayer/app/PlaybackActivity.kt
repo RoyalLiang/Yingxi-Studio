@@ -86,6 +86,35 @@ class PlaybackActivity:ComponentActivity(){
     private var captionReady=false
     private var captionMediaId:String?=null
     private var resumeAfterPicker=false
+    private var audioMediaId:String?=null
+    private val audioPicker=registerForActivityResult(ActivityResultContracts.OpenDocument()){uri ->
+        captionPickerOpen=false
+        val c=playerController
+        if(uri!=null&&c!=null&&c.currentMediaItem?.mediaId==audioMediaId)lifecycleScope.launch {
+            try {
+                val name=withContext(Dispatchers.IO){
+                    var label=uri.lastPathSegment?:"音轨"
+                    contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())label=it.getString(0)?:label}
+                    require(label.substringAfterLast('.',"").lowercase() in io.localplayer.core.SubtitleSidecars.audioExtensions){"请选择 MKA、M4A、AAC、AC3、FLAC、MP3、Ogg 或 WAV 音轨；裸 DTS/TrueHD 请先封装为 MKA"}
+                    runCatching{contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION)}
+                    label.take(240)
+                }
+                if(c.currentMediaItem?.mediaId==audioMediaId)c.currentMediaItem?.let { item ->
+                    val audio=(listOf(SidecarAudio(uri,name))+SidecarAudio.from(item)).distinctBy{it.uri}.take(8)
+                    c.replaceMediaItem(c.currentMediaItemIndex,SidecarAudio.attach(item,audio))
+                    android.widget.Toast.makeText(this@PlaybackActivity,"音轨已加入，可在播放选项中选择",android.widget.Toast.LENGTH_LONG).show()
+                }
+            }catch(e:kotlinx.coroutines.CancellationException){throw e}
+            catch(e:Exception){android.widget.Toast.makeText(this@PlaybackActivity,e.message?:"音轨无法读取",android.widget.Toast.LENGTH_LONG).show()}
+            finally{if(resumeAfterPicker&&c.currentMediaItem?.mediaId==audioMediaId)c.play();resumeAfterPicker=false;updatePictureInPicture()}
+        } else {if(resumeAfterPicker&&c?.currentMediaItem?.mediaId==audioMediaId)c?.play();resumeAfterPicker=false;updatePictureInPicture()}
+    }
+    private fun chooseAudio(){
+        audioMediaId=playerController?.currentMediaItem?.mediaId
+        resumeAfterPicker=playerController?.isPlaying==true
+        captionPickerOpen=true;playerController?.pause();updatePictureInPicture()
+        audioPicker.launch(arrayOf("audio/*","application/ogg","application/octet-stream"))
+    }
     private val captionPicker=registerForActivityResult(ActivityResultContracts.OpenDocument()){uri ->
         captionPickerOpen=false
         if(uri==null){captionReady=true;playerController?.let(::applyPendingCaption)}else readCaption(uri)
@@ -141,7 +170,7 @@ class PlaybackActivity:ComponentActivity(){
             }
             BackHandler{leave()}
             FullscreenPlayer(controller,title,connectionError,::leave,::rotate,::lock,::chooseCaption,
-                compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView)
+                compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView,::chooseAudio)
         }}
     }
     private fun chooseCaption(){
@@ -150,7 +179,7 @@ class PlaybackActivity:ComponentActivity(){
         captionPickerOpen=true
         playerController?.pause()
         updatePictureInPicture()
-        captionPicker.launch(arrayOf("application/x-subrip","text/vtt","text/plain","application/octet-stream"))
+        captionPicker.launch(arrayOf("application/x-subrip","text/vtt","text/plain","text/x-ssa","text/x-ass","application/octet-stream"))
     }
     private fun readCaption(uri:android.net.Uri){
         captionUri=uri
@@ -165,7 +194,8 @@ class PlaybackActivity:ComponentActivity(){
                     val mime=when{
                         name.endsWith(".srt",true)||type=="application/x-subrip"->androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
                         name.endsWith(".vtt",true)||type=="text/vtt"->androidx.media3.common.MimeTypes.TEXT_VTT
-                        else->throw java.io.IOException("请选择 SRT 或 VTT 字幕文件")
+                        name.endsWith(".ass",true)||name.endsWith(".ssa",true)->androidx.media3.common.MimeTypes.TEXT_SSA
+                    else->throw java.io.IOException("请选择 SRT、VTT、ASS 或 SSA 字幕文件")
                     }
                     contentResolver.openInputStream(uri)?.use{input ->
                         require(input.readNBytes(4*1024*1024+1).size<=4*1024*1024){"字幕文件请小于 4 MB"}
@@ -192,12 +222,11 @@ class PlaybackActivity:ComponentActivity(){
             val item=c.currentMediaItem ?: return@let
             val subtitle=MediaItem.SubtitleConfiguration.Builder(caption.uri).setMimeType(caption.mime).setLabel(caption.label)
                 .setLanguage("und").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
-            val position=if(c.playbackState==androidx.media3.common.Player.STATE_ENDED)0L else c.currentPosition
+            val restart=c.playbackState==Player.STATE_ENDED
             val index=c.currentMediaItemIndex
-            val items=(0 until c.mediaItemCount).map{if(it==index)item.buildUpon().setSubtitleConfigurations(listOf(subtitle)).build()else c.getMediaItemAt(it)}
-            // Media3 1.8 ProgressiveMediaSource can update the same URI in place,
-            // which does not create the merged subtitle source. Rebuild the list.
-            c.setMediaItems(items,index,position)
+            val items=(0 until c.mediaItemCount).map{if(it==index)item.buildUpon().setSubtitleConfigurations((listOf(subtitle)+item.localConfiguration?.subtitleConfigurations.orEmpty()).distinctBy{it.uri}).build()else c.getMediaItemAt(it)}
+            // Shared player rebuilds native merged sources; P5 adds attachments in place.
+            c.replaceMediaItem(index,items[index]);if(restart)c.seekTo(0)
             c.trackSelectionParameters=c.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT)
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setPreferredTextLanguage("und").build()
             PlaybackPreferences(this).subtitlesDisabled=false
@@ -333,9 +362,9 @@ class PlaybackActivity:ComponentActivity(){
         if(!foreground||compact||captionPickerOpen||isFinishing||!owns(c))return
         val id=c.currentMediaItem?.mediaId?:return
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
-        videoOrientation(c.videoSize)?.let{orientation->presentedMedia?.let{PlaybackOrientationProbe.remember(it,orientation)}}
+        videoOrientation(c)?.let{orientation->presentedMedia?.let{PlaybackOrientationProbe.remember(it,orientation)}}
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
-            manualDirection?:videoOrientation(c.videoSize)?:return
+            manualDirection?:videoOrientation(c)?:return
         if(requestedOrientation!=desired)requestedOrientation=desired
     }
     private fun rotate(){

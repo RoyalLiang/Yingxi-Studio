@@ -218,7 +218,7 @@ internal object OnlineSubtitles {
         val uri=item.localConfiguration?.uri?:return
         val media=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}?:return
         activeMedia=media
-        if(SealedMedia.protects(media)){status.value=id to "封存档案仅使用内嵌或手动导入字幕";return}
+        if(SealedMedia.protects(media)){status.value=id to "封存档案仅使用内嵌、同目录或手动导入轨道";return}
         if(!force&&player.isPlaying&&player.bufferedPosition-player.currentPosition<5000)return
         status.value=id to "正在匹配字幕…"
         val cancellation=Cancellation()
@@ -232,9 +232,6 @@ internal object OnlineSubtitles {
                 val watcher=EnrichmentDeadlines.timer.schedule({cancellation.close()},22,java.util.concurrent.TimeUnit.SECONDS)
                 val completion=coroutineContext.job.invokeOnCompletion{if(it!=null)cancellation.close()}
                 try{
-                    val sidecar=try { SidecarSubtitles.find(context,media,uri,cancellation,provider,preferBilingual) }
-                        catch(e:CancellationException){throw e}catch(_:Exception){cancellation.check();null}
-                    if(sidecar!=null)return@withContext sidecar
                     if(cached!=null)return@withContext cached
                     val file=if(uri.isPlayerNetworkUri()){
                         val lease=PlaybackRegistry.preview(uri).also(cancellation::own);lease.open().also(cancellation::own)
@@ -267,10 +264,10 @@ internal object OnlineSubtitles {
                 }finally{watcher.cancel(false);completion.dispose();cancellation.close()}
             }
             if(generation!=requestGeneration||player.currentMediaItem?.mediaId!=id||(!force&&player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))||player.trackSelectionParameters!=parameters)return
-            if(caption==null){status.value=id to "未找到匹配字幕";return}
+            if(caption==null){status.value=id to "射手未命中该版本，可按片名搜索或载入文件";return}
             attach(player,caption)
             status.value=id to if(caption.name.startsWith("sidecar-"))"已载入同目录字幕"else"已载入射手字幕"
-        }catch(e:CancellationException){throw e}catch(_:Exception){if(generation==requestGeneration&&player.currentMediaItem?.mediaId==id)status.value=id to "字幕服务暂不可用，可重试"}
+        }catch(e:CancellationException){throw e}catch(_:Exception){if(generation==requestGeneration&&player.currentMediaItem?.mediaId==id)status.value=id to "射手字幕暂不可用，可按片名搜索或载入文件"}
         finally{if(active===cancellation)active=null;withContext(NonCancellable+Dispatchers.IO){cancellation.close()}}
     }
     fun clear(context:Context){cancel();File(context.cacheDir,"online-subtitles-v1").listFiles()?.forEach{it.delete()}}
@@ -279,13 +276,13 @@ internal object OnlineSubtitles {
         val mime=when(file.extension){"ass","ssa"->MimeTypes.TEXT_SSA;"vtt"->MimeTypes.TEXT_VTT;else->MimeTypes.APPLICATION_SUBRIP}
         val caption=MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file)).setMimeType(mime).setLanguage("zh").setLabel(if(file.name.startsWith("sidecar-"))"同目录字幕 · 自动匹配"else"射手字幕 · 自动匹配").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
         val index=player.currentMediaItemIndex;val position=player.currentPosition;val playing=player.playWhenReady
-        val items=(0 until player.mediaItemCount).map{if(it==index)item.buildUpon().setSubtitleConfigurations(listOf(caption)).build()else player.getMediaItemAt(it)}
-        player.setMediaItems(items,index,position)
+        val items=(0 until player.mediaItemCount).map{if(it==index)item.buildUpon().setSubtitleConfigurations((listOf(caption)+item.localConfiguration?.subtitleConfigurations.orEmpty()).distinctBy{it.uri}).build()else player.getMediaItemAt(it)}
+        player.replaceMediaItem(index,items[index])
         player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setPreferredTextLanguage("zh").build()
-        player.prepare();player.playWhenReady=playing
+        player.playWhenReady=playing
     }
 }
 
-private object EnrichmentDeadlines {
+internal object EnrichmentDeadlines {
     val timer=java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
 }

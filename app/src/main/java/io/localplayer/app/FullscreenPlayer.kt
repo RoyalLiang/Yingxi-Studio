@@ -73,7 +73,7 @@ private val PlayerPanel = Color(0xF5202326)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun FullscreenPlayer(controller: MediaController?, title: String, connectionError: String?, back: () -> Unit,
     rotate: () -> Unit, lock: (Boolean) -> Unit, externalCaption: () -> Unit, compact: Boolean,
-    smallWindow: (() -> Unit)?, background: () -> Unit, videoView: (PlayerView) -> Unit) {
+    smallWindow: (() -> Unit)?, background: () -> Unit, videoView: (PlayerView) -> Unit, externalAudio: () -> Unit = {}) {
     val context = LocalContext.current
     val activity = context as Activity
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -82,6 +82,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var visible by rememberSaveable { mutableStateOf(true) }
     var locked by rememberSaveable { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
+    var diagnosticsOpen by remember { mutableStateOf(false) }
     var queue by remember { mutableStateOf(false) }
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val portrait=configuration.screenWidthDp<configuration.screenHeightDp
@@ -114,9 +115,25 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var thumbBounds by remember { mutableStateOf(Rect.Zero) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
+    var softwareSdr by remember { mutableStateOf(false) }
     var fill by rememberSaveable(portrait) { mutableStateOf(!portrait) }
     val previews = remember(controller) { PreviewFrames(context.applicationContext) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
+    val layoutDirection=androidx.compose.ui.platform.LocalLayoutDirection.current
+    val safeInsets=WindowInsets.safeDrawing
+    val safeLeft=if(compact)0 else safeInsets.getLeft(density,layoutDirection)
+    val safeRight=if(compact)0 else safeInsets.getRight(density,layoutDirection)
+    val safeBottom=if(compact)0 else safeInsets.getBottom(density)
+    val subtitleGutter=with(density){16.dp.roundToPx()}
+    LaunchedEffect(controller,fill,softwareSdr,playerBounds,safeLeft,safeRight,safeBottom) {
+        val height=playerBounds.height.coerceAtLeast(1f)
+        val args=android.os.Bundle().apply {
+            putBoolean("fill",fill)
+            putInt("margin-x",maxOf(25,kotlin.math.ceil((maxOf(safeLeft,safeRight)+subtitleGutter)*720f/height).toInt()))
+            putInt("margin-y",maxOf(22,kotlin.math.ceil((safeBottom+subtitleGutter)*720f/height).toInt()))
+        }
+        controller?.sendCustomCommand(CompatibilityPlayer.VIDEO_LAYOUT,args)
+    }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
     DisposableEffect(previews) { onDispose { previews.close(); activity.window.attributes = activity.window.attributes.apply { screenBrightness = originalBrightness } } }
     DisposableEffect(lifecycle,previews) {
@@ -140,6 +157,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             seekable = controller.isCurrentMediaItemSeekable
             videoAvailable = controller.videoSize.width > 0
             videoWidth = controller.videoSize.width; videoHeight = controller.videoSize.height
+            softwareSdr=controller.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true
             duration = controller.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
             error = controller.playerError?.let(::playbackFailure)
             if(error==null&&controller.playbackState==Player.STATE_READY){
@@ -178,6 +196,10 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
     LaunchedEffect(currentUri) { frame = null;previews.releaseReader() }
+    LaunchedEffect(currentUri,compact,buffering) {
+        val uri=currentUri
+        if(uri!=null&&!compact&&!buffering){delay(300);previews.warm(uri)}
+    }
     // Open the independent preview decoder only for an explicit seek gesture.
     LaunchedEffect(dragging, currentUri, buffering) {
         if (!dragging || currentUri == null || buffering) return@LaunchedEffect
@@ -191,8 +213,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     Box(Modifier.fillMaxSize().onGloballyPositioned { playerBounds=it.boundsInRoot() }.background(Color(0xFF101113)).pointerInput(Unit) {
         awaitPointerEventScope { while(true) { val event=awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial);if(event.changes.any{it.pressed&&!it.previousPressed})interaction++ } }
     }) {
-        AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true) }.also(videoView) },
-            update = { it.player = controller; it.resizeMode = if (fill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT },
+        AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true)
+            subtitleView?.let { subtitles ->
+                (subtitles.parent as? android.view.ViewGroup)?.removeView(subtitles)
+                overlayFrameLayout?.addView(subtitles,android.widget.FrameLayout.LayoutParams(-1,-1))
+            } }.also(videoView) },
+            update = { it.player = controller; it.resizeMode = if(softwareSdr)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+            it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,safeBottom+subtitleGutter) },
             onRelease = { it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit"))
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
@@ -222,7 +249,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                             if (allowed && gesture != 0) {
                                 change.consume()
                                 when (gesture) {
-                                    1 -> { dragging = true; target = (startPosition + total.x / size.width * 180_000).toLong().coerceIn(0, duration); visible = true }
+                                    1 -> { dragging = true; target = (startPosition + total.x / size.width * 180_000).toLong().coerceIn(0, duration) }
                                     2 -> { val value = (startLight - total.y / size.height).coerceIn(.03f, 1f); activity.window.attributes = activity.window.attributes.apply { screenBrightness = value }; hud = "亮度" to (value * 100).roundToInt(); hudRevision++ }
                                     3 -> { val maximum = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1); val value = (startVolume - total.y / size.height * maximum).roundToInt().coerceIn(0, maximum); audio.setStreamVolume(AudioManager.STREAM_MUSIC, value, 0); hud = "音量" to (value * 100 / maximum); hudRevision++ }
                                 }
@@ -238,7 +265,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         }
         if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration){ if(!locked&&!settings&&!queue&&!dragging&&!speedOpen)PlaybackWaitDiagnostics(controller) }
 
-        if (!compact && visible && !locked && !queue && !settings) {
+        if (!compact && (visible || dragging) && !locked && !queue && !settings) {
             if (!dragging) {
                 Row(Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color(0xB8101113), Color.Transparent)))
@@ -254,12 +281,14 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
                             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                                DropdownMenuItem(text = { Text("播放检修") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreOpen = false; diagnosticsOpen = true })
                                 DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
                                 if(smallWindow != null)DropdownMenuItem(text = { Text("画中画") }, leadingIcon = { Icon(Icons.Rounded.PictureInPictureAlt, null) }, enabled = videoAvailable, onClick = { moreOpen = false; smallWindow() })
                                 DropdownMenuItem(text = { Text("锁定方向与控件") }, leadingIcon = { Icon(Icons.Rounded.LockOpen, null) }, onClick = { moreOpen = false; locked = true; visible = false; lock(true) })
                             }
                         }
                     }
+                    if(!portrait)PlayerIcon(Icons.Rounded.Info, "播放检修", { diagnosticsOpen = true })
                     if(!portrait)PlayerIcon(Icons.Rounded.Headphones, "后台播放", background)
                     if (!portrait && smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     if(!portrait)PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
@@ -335,8 +364,18 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         if (!compact && locked && (visible || touchExploration)) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
-        if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption)
-        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackDiagnosticCopy(controller); TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
+        if(diagnosticsOpen)MaterialTheme(colorScheme=darkColorScheme(surface=PlayerPanel,onSurface=PlayerInk)) {
+            AlertDialog(onDismissRequest={diagnosticsOpen=false},
+                title={Text("播放检修",Modifier.testTag("playback-diagnostics"))},
+                text={Column { Text("播放中也可复制检修信息，用于区分解码掉帧与信源读取等待。") ; PlaybackDiagnosticCopy(controller) }},
+                confirmButton={TextButton(onClick={diagnosticsOpen=false}){Text("关闭")}})
+        }
+        if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption,externalAudio)
+        (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackDiagnosticCopy(controller)
+                controller?.currentMediaItem?.takeIf{SidecarAudio.from(it).isNotEmpty()}?.let{item ->
+                    TextButton(onClick={controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(item,emptyList()))}){Text("移除外挂音轨并重试",color=PlayerAccent)}
+                }
+                TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
     }
 }
 

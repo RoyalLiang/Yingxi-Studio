@@ -56,10 +56,18 @@ internal object PlaybackOrientationProbe {
             if(target.uri.isPlayerNetworkUri()){
                 preview=PlaybackRegistry.preview(target.uri)
                 cancellation.own(preview)
-                val file=preview.open()
+                var bytes=0L
+                val raw=preview.open()
+                val file=io.localplayer.core.ReadAheadFile(object:io.localplayer.core.RemoteFile by raw {
+                    override fun readAt(position:Long,buffer:ByteArray,offset:Int,length:Int):Int {
+                        cancellation.check()
+                        if(SystemClock.elapsedRealtime()>=deadline||bytes>=MAX_BYTES)throw IOException("Video metadata probe budget exceeded")
+                        return raw.readAt(position,buffer,offset,minOf(length.toLong(),MAX_BYTES-bytes).toInt()).also{if(it>0)bytes+=it}
+                    }
+                },64*1024)
+                cancellation.own(file)
                 if(target.media.sizeBytes!=null&&file.size!=target.media.sizeBytes)return null
                 retriever.setDataSource(object:MediaDataSource(){
-                    private var bytes=0L
                     @Synchronized override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {
                         cancellation.check()
                         if(SystemClock.elapsedRealtime()>=deadline||bytes>=MAX_BYTES)throw IOException("Video metadata budget exceeded")
@@ -67,7 +75,7 @@ internal object PlaybackOrientationProbe {
                         if(size==0)return 0
                         if(position>=file.size)return -1
                         val count=minOf(size.toLong(),file.size-position,128L*1024,MAX_BYTES-bytes).toInt()
-                        return file.readAt(position,buffer,offset,count).also{if(it>0)bytes+=it}
+                        return file.readAt(position,buffer,offset,count)
                     }
                     override fun getSize()=file.size
                     override fun close(){file.close()}

@@ -8,6 +8,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import io.localplayer.core.mediaDisplayTitle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
@@ -19,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,19 +78,23 @@ internal fun sealActionLabel(directory:Boolean)=if(directory)"封存片架（私
                 LazyVerticalGrid(columns=GridCells.Fixed(columns),contentPadding=PaddingValues(20.dp),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     if(SealedMedia.items().isEmpty())item(span={GridItemSpan(maxLineSpan)}){Text("柜里还没有封存的档案。",color=Muted)}
                     items(SealedMedia.items(),key={it.id}) { item->
-                        Surface(onClick={open(item)},color=androidx.compose.ui.graphics.Color.Transparent,modifier=Modifier.fillMaxWidth().testTag("sealed-item:${item.id}")) {
-                            Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                                Box(Modifier.fillMaxWidth().height(posterHeight).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(GroupedSurface)) {
-                                    if(item.directory)Icon(Icons.Rounded.FolderOpen,null,Modifier.align(Alignment.Center).size(32.dp),tint=Berry.copy(alpha=.5f))
-                                    else MediaThumbnail(item.media,Modifier.fillMaxSize())
-                                    PosterLabels(item.media,directory=item.directory)
-                                }
-                                Text(if(item.directory)item.media.title else mediaDisplayTitle(item.media.title),fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis)
-                                TextButton(onClick={SealedMedia.unseal(item.id)},modifier=Modifier.heightIn(min=48.dp)){Text("放回片架")}
-                            }
-                        }
+                        val touch=remember(item.id){MutableInteractionSource()}
+            val pressed by touch.collectIsPressedAsState()
+            val scale by animateFloatAsState(if(pressed).975f else 1f,tween(140),label="sealed-cover-press")
+            Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
+                Surface(onClick={open(item)},interactionSource=touch,shape=RoundedCornerShape(14.dp),color=GroupedSurface,
+                    modifier=Modifier.fillMaxWidth().height(posterHeight).graphicsLayer{scaleX=scale;scaleY=scale}.semantics{contentDescription=(if(item.directory)"片架："else"影集：")+item.media.title}.testTag("sealed-item:${item.id}")){
+                    Box(Modifier.fillMaxSize()){
+                        if(item.directory)Icon(Icons.Rounded.FolderOpen,null,Modifier.align(Alignment.Center).size(32.dp),tint=Berry.copy(alpha=.5f))
+                        MediaThumbnail(item.media,Modifier.fillMaxSize())
+                        PosterLabels(item.media,directory=item.directory)
                     }
-                    item(span={GridItemSpan(maxLineSpan)}){Text("封存只收起站内的显示与访问，原片仍留在原处。退到后台后柜门会重新落锁；柜内档案不作在线海报或字幕匹配。",fontSize=13.sp,lineHeight=20.sp,color=Muted)}
+                }
+                Text(if(item.directory)item.media.title else mediaDisplayTitle(item.media.title),fontSize=14.sp,lineHeight=20.sp,fontWeight=FontWeight.Medium,minLines=2,maxLines=2,overflow=TextOverflow.Ellipsis)
+                TextButton(onClick={SealedMedia.unseal(item.id)},modifier=Modifier.heightIn(min=48.dp)){Text("放回片架")}
+            }
+        }
+        item(span={GridItemSpan(maxLineSpan)}){Text("封存只收起站内的显示与访问，原片仍留在原处。退到后台后柜门会重新落锁；柜内档案可载入同目录轨道，不作互联网海报或轨道检索。",fontSize=13.sp,lineHeight=20.sp,color=Muted)}
                 }
             }
         }

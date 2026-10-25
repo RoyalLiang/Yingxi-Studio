@@ -11,8 +11,13 @@ object PlaybackMetrics {
  data class Snapshot(val firstFrameMs:Long?,val rebufferCount:Int,val droppedFrames:Int,
   val bytes:Long,val readCalls:Long,val readTimeMs:Long,val openCalls:Long=0,
   val openTimeMs:Long=0,val maxReadMs:Long=0,val decoder:String?=null,val decoderInitMs:Long=0,val videoInputBuffers:Int?=null,val videoRenderedBuffers:Int?=null,
-        val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0,val videoSkippedOutputs:Int?=null)
+        val videoSkippedInputs:Int?=null,val videoEnabled:Boolean=false,val videoCodecErrors:Int=0,val videoDecoderReleases:Int=0,val videoSkippedOutputs:Int?=null,val sdrDecoderDroppedFrames:Int?=null,val sdrAvSyncMs:Long?=null,val sdrPollMs:Double?=null,val audioDecoder:String?=null,val audioRenderedBuffers:Int?=null)
+ private var audioDecoder:String?=null
+ private var audioCounters:androidx.media3.exoplayer.DecoderCounters?=null
  private var sdr=false
+ private var sdrDecoderDroppedFrames:Int?=null
+ private var sdrAvSyncMs:Long?=null
+ private var sdrPollMs:Double?=null
  private var started=0L
  private var firstFrame:Long?=null
  private var played=false
@@ -33,26 +38,31 @@ object PlaybackMetrics {
     private var videoCodecErrors=0
     private var videoDecoderReleases=0
  @Synchronized fun reset(){
-  sdr=false
+  audioDecoder=null;audioCounters=null
+  sdr=false;sdrDecoderDroppedFrames=null;sdrAvSyncMs=null;sdrPollMs=null
   PlaybackIoProbe.reset()
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0
         videoCounters=null;videoEnabled=false;videoCodecErrors=0;videoDecoderReleases=0
  }
- @Synchronized fun sdrStarted(){sdr=true;decoder="mpv.hevc.libplacebo.sdr-bt709";videoEnabled=true;videoCounters=null;firstFrame=null}
+ @Synchronized fun sdrStarted(){sdr=true;audioDecoder=null;audioCounters=null;decoder="mpv.hevc.libplacebo.sdr-bt709";videoEnabled=true;videoCounters=null;firstFrame=null}
  @Synchronized fun sdrFrame(){if(firstFrame==null)firstFrame=SystemClock.elapsedRealtime()-started}
- @Synchronized fun sdrOutput(frames:Int){if(sdr){videoEnabled=true;dropped=frames}}
+ @Synchronized fun sdrOutput(frames:Int,decoderDropped:Int?=null,avSyncMs:Long?=null){if(sdr){videoEnabled=true;dropped=frames;sdrDecoderDroppedFrames=decoderDropped;sdrAvSyncMs=avSyncMs}}
+    @Synchronized fun sdrPoll(nanos:Long){if(sdr)sdrPollMs=nanos/1_000_000.0}
  @Synchronized fun read(count:Int,nanos:Long){bytes+=count;reads++;readNanos+=nanos;maxReadNanos=maxOf(maxReadNanos,nanos)}
  @Synchronized fun opened(nanos:Long){opens++;openNanos+=nanos}
  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     @Synchronized fun snapshot():Snapshot {
-        val counters=videoCounters;counters?.ensureUpdated()
+        val counters=videoCounters;counters?.ensureUpdated();audioCounters?.ensureUpdated()
         return Snapshot(firstFrame,rebuffers,dropped,bytes,reads,readNanos/1_000_000,opens,openNanos/1_000_000,maxReadNanos/1_000_000,decoder,decoderInitMs,
-            counters?.queuedInputBufferCount,counters?.renderedOutputBufferCount,counters?.skippedInputBufferCount,videoEnabled,videoCodecErrors,videoDecoderReleases,videoCounters?.skippedOutputBufferCount)
+            counters?.queuedInputBufferCount,counters?.renderedOutputBufferCount,counters?.skippedInputBufferCount,videoEnabled,videoCodecErrors,videoDecoderReleases,videoCounters?.skippedOutputBufferCount,sdrDecoderDroppedFrames,sdrAvSyncMs,sdrPollMs,audioDecoder,audioCounters?.renderedOutputBufferCount)
     }
  @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
  fun listener()=object:AnalyticsListener{
+        override fun onAudioEnabled(eventTime:AnalyticsListener.EventTime,counters:androidx.media3.exoplayer.DecoderCounters){synchronized(this@PlaybackMetrics){if(!sdr)audioCounters=counters}}
+        override fun onAudioDecoderInitialized(eventTime:AnalyticsListener.EventTime,name:String,initializedTimestampMs:Long,initializationDurationMs:Long){synchronized(this@PlaybackMetrics){if(!sdr)audioDecoder=name}}
+
         override fun onVideoEnabled(eventTime:AnalyticsListener.EventTime,counters:androidx.media3.exoplayer.DecoderCounters){synchronized(this@PlaybackMetrics){videoCounters=counters;videoEnabled=true}}
         override fun onVideoDisabled(eventTime:AnalyticsListener.EventTime,counters:androidx.media3.exoplayer.DecoderCounters){synchronized(this@PlaybackMetrics){if(videoCounters===counters)videoEnabled=false}}
         override fun onVideoCodecError(eventTime:AnalyticsListener.EventTime,error:Exception){synchronized(this@PlaybackMetrics){videoCodecErrors++}}

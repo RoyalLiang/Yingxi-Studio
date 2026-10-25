@@ -143,6 +143,13 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         MediaController controller=null;
         try{
             controller=controller();taps.put("session for "+clip+": "+(controller.getMetadata()==null?null:controller.getMetadata().getDescription().getTitle())+" "+controller.getPlaybackState());awaitPlaying(controller,250,0);
+            if(args!=null&&"true".equals(args.getString("require_audio"))){
+                android.media.AudioManager audio=(android.media.AudioManager)getTargetContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+                long end=SystemClock.elapsedRealtime()+10000;
+                while(!audio.isMusicActive()&&SystemClock.elapsedRealtime()<end)SystemClock.sleep(100);
+                if(!audio.isMusicActive())throw new AssertionError("No active audio output for "+clip);
+                passed.put(clip+": active audio output");
+            }
             long first=frame(activity);SystemClock.sleep(600);long next=frame(activity);
             if(first==next)throw new AssertionError("Picture did not advance");
             long issued=SystemClock.elapsedRealtime();controller.getTransportControls().seekTo(2500);awaitPlaying(controller,2700,issued);

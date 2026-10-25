@@ -12,6 +12,28 @@ import java.io.File
 class PreviewPerformanceTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test fun warmingPreparesMetadataWithoutDecodingASecondVideo():Unit=runBlocking {
+        val prepared=java.util.concurrent.CountDownLatch(1)
+        val decoded=java.util.concurrent.atomic.AtomicInteger()
+        val opens=java.util.concurrent.atomic.AtomicInteger()
+        val image=android.graphics.Bitmap.createBitmap(32,18,android.graphics.Bitmap.Config.ARGB_8888)
+        val loader=PreviewFrames {
+            opens.incrementAndGet()
+            object:PreviewDecoder {
+                override fun prepare(){prepared.countDown()}
+                override fun frame(timeMs:Long):android.graphics.Bitmap {decoded.incrementAndGet();return image}
+                override fun close(){}
+            }
+        }
+        try {
+            val uri=Uri.parse("content://fixture/warm")
+            loader.warm(uri)
+            assertTrue(withContext(Dispatchers.IO){prepared.await(2,java.util.concurrent.TimeUnit.SECONDS)})
+            assertEquals(0,decoded.get())
+            assertSame(image,loader.get(uri,5000));assertEquals(1,opens.get());assertEquals(1,decoded.get())
+        }finally{loader.close()}
+    }
+
     @Test fun latestCachedTargetBypassesSlowDecodeAndStaleCompletion(): Unit = runBlocking {
         val started=java.util.concurrent.CountDownLatch(1)
         val release=java.util.concurrent.CountDownLatch(1)

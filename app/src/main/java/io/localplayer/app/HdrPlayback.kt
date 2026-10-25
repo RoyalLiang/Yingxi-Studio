@@ -83,6 +83,12 @@ internal open class HdrRenderersFactory(context:Context):androidx.media3.exoplay
     internal fun reapplySoftwareOutput(player:androidx.media3.exoplayer.ExoPlayer) {
         softwareRenderer?.let{player.createMessage(it).setType(Renderer.MSG_SET_VIDEO_OUTPUT).setPayload(videoOutput).send()}
     }
+    override fun buildAudioRenderers(context:Context,extensionRendererMode:Int,selector:MediaCodecSelector,
+        enableDecoderFallback:Boolean,audioSink:androidx.media3.exoplayer.audio.AudioSink,eventHandler:Handler,
+        eventListener:androidx.media3.exoplayer.audio.AudioRendererEventListener,out:ArrayList<Renderer>) {
+        super.buildAudioRenderers(context,extensionRendererMode,selector,enableDecoderFallback,audioSink,eventHandler,eventListener,out)
+        out.add(io.github.anilbeesetti.nextlib.media3ext.ffdecoder.FfmpegAudioRenderer(eventHandler,eventListener,audioSink))
+    }
     override fun buildVideoRenderers(context:Context,extensionRendererMode:Int,selector:MediaCodecSelector,
         enableDecoderFallback:Boolean,eventHandler:Handler,eventListener:VideoRendererEventListener,
         allowedVideoJoiningTimeMs:Long,out:ArrayList<Renderer>) {

@@ -34,7 +34,7 @@ class SealedPlaybackRegressionTest {
             val c=future.get(10,TimeUnit.SECONDS);controller=c
             ui.waitUntil(10000){main{c.playerError!=null||c.playbackState==Player.STATE_READY&&c.currentPosition>200}}
             main{assertNull(c.playerError);assertEquals("封存影像",c.mediaMetadata.title.toString());assertEquals(ref.title,playbackItemTitle(c.currentMediaItem,""));assertTrue(activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE!=0);OnlineSubtitles.request(context,c)}
-            ui.waitUntil(5000){OnlineSubtitles.status.value?.second=="封存档案仅使用内嵌或手动导入字幕"}
+            ui.waitUntil(5000){OnlineSubtitles.status.value?.second=="封存档案仅使用内嵌、同目录或手动导入轨道"}
             main{SealedMedia.lock()}
             ui.waitUntil(5000){main{c.mediaItemCount==0&&!c.isPlaying}}
             main{assertNull(c.currentMediaItem);assertFalse(SealedMedia.unlocked);assertTrue(activity!!.isFinishing||activity!!.isDestroyed)}

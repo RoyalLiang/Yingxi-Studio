@@ -215,11 +215,13 @@ class MediaEnrichmentTest {
     @Test fun automaticSubtitleAttachmentPreservesQueueAndPositionAndRendersCue(){
         val media=File(context.cacheDir,"seek-performance.mp4");assertTrue(media.isFile)
         val subtitle=File(context.cacheDir,"enrichment-test.srt").apply{writeText("1\n00:00:00,000 --> 00:00:30,000\n自动匹配字幕验证\n")}
-        lateinit var player:ExoPlayer
+        lateinit var player:CompatibilityPlayer
         var initialized=false
         try{
             ui.runOnUiThread{
-                player=ExoPlayer.Builder(context).build();initialized=true
+                val data=androidx.media3.datasource.DefaultDataSource.Factory(context)
+                val factory=SidecarMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(data,PlaybackExtractors(context)),data)
+                player=CompatibilityPlayer(context,ExoPlayer.Builder(context).setMediaSourceFactory(factory).build());initialized=true
                 player.setMediaItems(listOf(MediaItem.fromUri(Uri.fromFile(media)),MediaItem.fromUri(Uri.fromFile(media))),0,2500)
                 player.prepare()
             }

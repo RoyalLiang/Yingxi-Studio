@@ -17,6 +17,7 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService:MediaSessionService(){
     private var session:MediaSession?=null
+    private var sidecars:AutomaticSidecars?=null
  private var privateObserver:(()->Unit)?=null
  private var videoRecovery:VideoDecoderRecovery?=null
     private var nextEpisode:NextEpisodePrefetch?=null
@@ -36,9 +37,10 @@ class PlaybackService:MediaSessionService(){
         super.onCreate();store=SourceStore(this);history=HistoryStore(this)
         val prefs=PlaybackPreferences(this)
         val renderers=playbackRenderers(this)
+        val dataSource=DefaultDataSource.Factory(this,PlaybackNetworkFactory())
  val nativePlayer=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
-            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this,PlaybackNetworkFactory()),PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()))
+            .setMediaSourceFactory(SidecarMediaSourceFactory(DefaultMediaSourceFactory(dataSource,PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()),dataSource))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(nativePlayer,renderers)
@@ -46,6 +48,7 @@ class PlaybackService:MediaSessionService(){
         cloudRecovery=CloudStreamRecovery(nativePlayer)
         cloudAdaptive=CloudAdaptiveController(nativePlayer)
         val player=CompatibilityPlayer(this,nativePlayer)
+        val sidecars=AutomaticSidecars(this).also{this.sidecars=it}
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
             if(protected){player.pause();player.stop();player.clearMediaItems()}
@@ -64,6 +67,7 @@ class PlaybackService:MediaSessionService(){
             }
             override fun onEvents(player:Player,events:Player.Events){
                 val live=(0 until player.mediaItemCount).map{player.getMediaItemAt(it).mediaId}.toSet()
+                sidecars.retain((0 until player.mediaItemCount).map(player::getMediaItemAt))
                 durations.keys.retainAll(live);completedItems.retainAll(live)
                 updateSessionActivity()
                 if(player.mediaItemCount==0)stopSelf()
@@ -74,6 +78,7 @@ class PlaybackService:MediaSessionService(){
                 nativePlayer.setWakeMode(if(next?.isPlayerNetworkUri()==true)C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
                 if(current!=next){
                     OnlineSubtitles.cancel();PlaybackRegistry.releaseConnection(current);current=next
+                sidecars.schedule(player)
                     player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverrides()
                         .setPreferredAudioLanguage(prefs.effectiveAudioLanguage).setPreferredTextLanguage(prefs.textLanguage)
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,prefs.subtitlesDisabled).build()
@@ -83,7 +88,7 @@ class PlaybackService:MediaSessionService(){
             override fun onIsPlayingChanged(isPlaying:Boolean){if(!isPlaying)nextEpisode?.cancel();if(!isPlaying)persist()}
             override fun onPlaybackStateChanged(state:Int){
                 if(state==Player.STATE_READY||state==Player.STATE_ENDED)persist()
-                if(state==Player.STATE_READY)OnlineSubtitles.schedule(this@PlaybackService,player)
+                if(state==Player.STATE_READY)sidecars.schedule(player)
             }
             override fun onPositionDiscontinuity(oldPosition:Player.PositionInfo,newPosition:Player.PositionInfo,reason:Int){
                 // At an automatic transition the Player already points at the NEXT item.
@@ -97,8 +102,18 @@ class PlaybackService:MediaSessionService(){
             }
         })
         session=MediaSession.Builder(this,player).setCallback(object:MediaSession.Callback{
-            override fun onConnect(session:MediaSession,controller:MediaSession.ControllerInfo):MediaSession.ConnectionResult {
-                if(controller.uid==Process.myUid())return super.onConnect(session,controller)
+            override fun onCustomCommand(session:MediaSession,controller:MediaSession.ControllerInfo,command:androidx.media3.session.SessionCommand,args:android.os.Bundle):com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+            if(controller.uid==Process.myUid()&&command.customAction==CompatibilityPlayer.VIDEO_LAYOUT.customAction) {
+                (session.player as? CompatibilityPlayer)?.setVideoLayout(args.getBoolean("fill"),args.getInt("margin-x",25),args.getInt("margin-y",22))
+                return com.google.common.util.concurrent.Futures.immediateFuture(androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS))
+            }
+            return super.onCustomCommand(session,controller,command,args)
+        }
+        override fun onConnect(session:MediaSession,controller:MediaSession.ControllerInfo):MediaSession.ConnectionResult {
+                if(controller.uid==Process.myUid()) {
+                return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                    .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(CompatibilityPlayer.VIDEO_LAYOUT).build()).build()
+            }
                 if(!controller.isTrusted)return MediaSession.ConnectionResult.reject()
                 // System/headset controllers may operate the existing queue, never inject media.
                 val commands=Player.Commands.Builder().addAll(
@@ -148,6 +163,7 @@ class PlaybackService:MediaSessionService(){
     }
     override fun onGetSession(controllerInfo:MediaSession.ControllerInfo)=session
     override fun onDestroy(){
+        sidecars?.close();sidecars=null
         privateObserver?.invoke();privateObserver=null
         val owned=requestIds
         OnlineSubtitles.cancel();nextEpisode?.close();nextEpisode=null;cloudRecovery?.close();cloudRecovery=null;cloudAdaptive?.close();cloudAdaptive=null;persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null

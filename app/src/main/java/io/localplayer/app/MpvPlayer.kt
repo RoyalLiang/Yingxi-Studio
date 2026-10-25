@@ -25,6 +25,14 @@ import java.util.concurrent.Executors
 internal class MpvPlayer(private val context:Context,private val sourceFormat:Format,private val openInput:(Context,android.net.Uri)->MpvInput={c,u->MpvInput.open(c,u)}):SimpleBasePlayer(Looper.getMainLooper()) {
     private val handler=Handler(Looper.getMainLooper())
     private var runtime:MpvRuntime?=null
+    private var fillVideo=false
+    private var subtitleMarginX=25
+    private var subtitleMarginY=22
+    internal fun setVideoLayout(fill:Boolean,marginX:Int,marginY:Int) {
+        fillVideo=fill;subtitleMarginX=marginX;subtitleMarginY=marginY
+        runtime?.let { it.set("panscan",if(fill)"1"else"0");it.set("sub-margin-x",marginX.toString());it.set("sub-margin-y",marginY.toString()) }
+    }
+
     private var input:MpvInput?=null
     private class Opening {
         var engine:MpvRuntime?=null
@@ -33,7 +41,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         fun close(){if(!disposed){disposed=true;input?.close();runCatching{engine?.destroy()}}}
     }
     private var opening:Opening?=null
-    private val subtitleInputs=mutableListOf<MpvInput>()
+    private val externalInputs=mutableMapOf<Pair<String,android.net.Uri>,MpvInput>()
     private var generation=0
     private var released=false
     private var items=listOf<MediaItem>()
@@ -48,8 +56,14 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     private var speed=PlaybackParameters.DEFAULT
     private var gain=1f
     private var selection=TrackSelectionParameters.Builder(context).build()
-    private var tracks=Tracks.EMPTY
-    private var video=VideoSize.UNKNOWN
+    private var tracks=readTracks("[]",sourceFormat.width,sourceFormat.height)
+    private val initialVideo=if(sourceFormat.width>0&&sourceFormat.height>0)VideoSize(sourceFormat.width,sourceFormat.height,sourceFormat.rotationDegrees,sourceFormat.pixelWidthHeightRatio)else VideoSize.UNKNOWN
+    private var video=initialVideo
+    private var decodedWidth=0
+    private var decodedHeight=0
+    private var nextMetadataPoll=0L
+    private var trackSignature:String?=null
+    private var pauseApplied:Boolean?=null
     private var subtitleRequested=false
     private var firstFrame=false
     private var firstFrameEvent=false
@@ -106,8 +120,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             .setSeekBackIncrementMs(10000).setSeekForwardIncrementMs(10000).build()
     }
     override fun handleSetMediaItems(mediaItems:List<MediaItem>,startIndex:Int,startPositionMs:Long):ListenableFuture<*> {
-        stopRuntime();items=mediaItems;index=startIndex.coerceIn(0,(items.size-1).coerceAtLeast(0));position=startPositionMs.takeIf{it!=C.TIME_UNSET}?.coerceAtLeast(0)?:0
-        duration=C.TIME_UNSET;buffered=position;failure=null;state=Player.STATE_IDLE;tracks=Tracks.EMPTY;video=VideoSize.UNKNOWN;firstFrame=false
+        stopRuntime();items=mediaItems.map{softwareSdrItem(it,true)};index=startIndex.coerceIn(0,(items.size-1).coerceAtLeast(0));position=startPositionMs.takeIf{it!=C.TIME_UNSET}?.coerceAtLeast(0)?:0
+        duration=C.TIME_UNSET;buffered=position;failure=null;state=Player.STATE_IDLE;tracks=readTracks("[]",sourceFormat.width,sourceFormat.height);video=initialVideo;firstFrame=false
         return done()
     }
     override fun handlePrepare():ListenableFuture<*> {
@@ -120,6 +134,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 val opened=openInput(context,uri).also{resources.input=it}
                 val engine=MpvRuntime.load(context);engine.create(context);resources.engine=engine
                 mapOf("config" to "no","vo" to "gpu-next","gpu-context" to "android","gpu-api" to "opengl","opengl-es" to "yes",
+                    "keepaspect" to "yes","panscan" to if(fillVideo)"1"else"0","blend-subtitles" to "no",
+                    "sub-use-margins" to "yes","sub-ass-force-margins" to "yes","sub-margin-x" to subtitleMarginX.toString(),"sub-margin-y" to subtitleMarginY.toString(),
                     "hwdec" to "no","target-prim" to "bt.709","target-trc" to "srgb","target-peak" to "100",
                     "idle" to "yes","keep-open" to "yes","pause" to "yes","force-window" to "no",
                     "cache" to "yes","demuxer-max-bytes" to "67108864","demuxer-readahead-secs" to "15",
@@ -140,61 +156,100 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         }
         return done()
     }
-    private fun loadSubtitles(item:MediaItem,engine:MpvRuntime,current:Int){
-        val captions=item.localConfiguration?.subtitleConfigurations.orEmpty()
-        if(captions.isEmpty())return
-        worker.execute {
-            captions.forEachIndexed{index,caption->
-                try {
-                    val opened=MpvInput.open(context,caption.uri)
-                    handler.post {
-                        if(released||generation!=current||runtime!==engine){worker.execute{opened.close()};return@post}
-                        subtitleInputs+=opened
-                        engine.command("sub-add",opened.path,if(index==0)"select" else "auto",caption.label?:"",caption.language?:"")
-                    }
-                }catch(_:Exception){handler.post{if(!released&&generation==current)OnlineSubtitles.status.value=item.mediaId to "字幕文件无法读取"}}
+    internal fun updateAttachments(mediaItems:List<MediaItem>) {
+        items=mediaItems.map{softwareSdrItem(it,true)}
+        runtime?.let { engine ->
+            generation++
+            val item=items.getOrNull(index)
+            val keep=item?.localConfiguration?.subtitleConfigurations.orEmpty().map{ "sub-add" to it.uri }.toSet()+
+                item?.let{SidecarAudio.from(it).map{audio->"audio-add" to audio.uri}}.orEmpty()
+            val list=runCatching{JSONArray(engine.get("track-list")?:"[]")}.getOrDefault(JSONArray())
+            val removed=externalInputs.filterKeys{it !in keep}
+            removed.forEach { (key,input) ->
+                for(i in 0 until list.length()) {
+                    val track=list.getJSONObject(i)
+                    if(track.optBoolean("external")&&track.optString("external-filename")==input.path)
+                        engine.command(if(key.first=="sub-add")"sub-remove"else"audio-remove",track.optInt("id").toString())
+                }
+                externalInputs.remove(key)
             }
+            worker.execute{removed.values.forEach{it.close()}}
+            subtitleRequested=false;nextMetadataPoll=0
+        }
+        invalidateState()
+    }
+    private fun loadAttachments(item:MediaItem,engine:MpvRuntime,current:Int){
+        data class Extra(val uri:android.net.Uri,val command:String,val select:String,val label:String,val language:String)
+        val captions=item.localConfiguration?.subtitleConfigurations.orEmpty().mapIndexed { i,c ->
+            Extra(c.uri,"sub-add",if(i==0)"select"else"auto",c.label?:"",c.language?:"")
+        }
+        val files=(captions+SidecarAudio.from(item).map { Extra(it.uri,"audio-add","auto",it.name,sidecarLanguage(it.name)?:"") }).filter{(it.command to it.uri) !in externalInputs}
+        if(files.isEmpty())return
+        worker.execute {
+            files.forEach { file -> try {
+                val opened=MpvInput.open(context,file.uri)
+                handler.post {
+                    if(released||generation!=current||runtime!==engine){worker.execute{opened.close()};return@post}
+                    externalInputs[file.command to file.uri]=opened;nextMetadataPoll=0
+                    engine.command(file.command,opened.path,file.select,file.label,file.language)
+                }
+            } catch(_:Exception) { handler.post {
+                if(!released&&generation==current)AutomaticSidecars.status.value=item.mediaId to "外挂轨道无法读取，可重新选择文件"
+            } } }
         }
     }
     private fun refresh(){
         val m=runtime?:return
+        val pollStart=android.os.SystemClock.elapsedRealtimeNanos()
         try {
             input?.failure?.let{throw java.io.IOException("远程文件读取中断",it)}
-            if(!firstFrame&&openingSince>0&&android.os.SystemClock.elapsedRealtime()-openingSince>30000)
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(!firstFrame&&openingSince>0&&now-openingSince>30000)
                 throw java.io.IOException("SDR 兼容解码未能生成画面")
-            val seconds=m.get("time-pos")?.toDoubleOrNull()
-            if(seconds!=null)position=(seconds*1000).toLong().coerceAtLeast(0)
-            duration=m.get("duration")?.toDoubleOrNull()?.let{(it*1000).toLong()}?:duration
+            m.get("time-pos")?.toDoubleOrNull()?.let{position=(it*1000).toLong().coerceAtLeast(0)}
             buffered=m.get("demuxer-cache-time")?.toDoubleOrNull()?.let{(it*1000).toLong()}?:position
-            val width=m.get("video-out-params/w")?.toIntOrNull()?:0
-            val height=m.get("video-out-params/h")?.toIntOrNull()?:0
-            if(width>0&&height>0){
-                val displayWidth=m.get("video-out-params/dw")?.toIntOrNull()?.takeIf{it>0}?:width
-                val displayHeight=m.get("video-out-params/dh")?.toIntOrNull()?.takeIf{it>0}?:height
-                val rotation=m.get("video-out-params/rotate")?.toIntOrNull()?:0
-                video=if(Math.floorMod(rotation,180)==90)VideoSize(displayHeight,displayWidth) else VideoSize(displayWidth,displayHeight)
-                tracks=readTracks(m,width,height)
-                val frame=m.get("video-frame-info/picture-type")
-                if(!frame.isNullOrBlank()&&m.get("vo-configured")=="yes"&&!firstFrame){firstFrame=true;firstFrameEvent=true;PlaybackMetrics.sdrFrame()}
-                if(firstFrame&&!subtitleRequested){
-                    subtitleRequested=true
-                    items.getOrNull(index)?.let{loadSubtitles(it,m,generation)}
+            // Container/track metadata does not need a synchronous JNI roundtrip every UI tick.
+            if(decodedWidth==0||now>=nextMetadataPoll){
+                nextMetadataPoll=now+1000
+                duration=m.get("duration")?.toDoubleOrNull()?.let{(it*1000).toLong()}?:duration
+                val params=runCatching{org.json.JSONObject(m.get("video-out-params")?:"{}")}.getOrNull()
+                val width=params?.optInt("w")?:0
+                val height=params?.optInt("h")?:0
+                if(width>0&&height>0){
+                    val dw=params?.optInt("dw")?.takeIf{it>0}?:width
+                    val dh=params?.optInt("dh")?.takeIf{it>0}?:height
+                    val rotation=params?.optInt("rotate")?:0
+                    video=if(Math.floorMod(rotation,180)==90)VideoSize(dh,dw)else VideoSize(dw,dh)
+                    val json=m.get("track-list")?:"[]"
+                    if(json!=trackSignature||width!=decodedWidth||height!=decodedHeight){
+                        tracks=readTracks(json,width,height,rotation,params?.optDouble("par",1.0)?.toFloat()?:1f,m.get("container-fps")?.toFloatOrNull()?:sourceFormat.frameRate);trackSignature=json
+                    }
+                    decodedWidth=width;decodedHeight=height
                 }
-                state=if(!firstFrame||m.get("paused-for-cache")=="yes")Player.STATE_BUFFERING else Player.STATE_READY
+                PlaybackMetrics.sdrOutput(m.get("frame-drop-count")?.toIntOrNull()?:0,
+                    m.get("decoder-frame-drop-count")?.toIntOrNull(),
+                    m.get("avsync")?.toDoubleOrNull()?.let{(it*1000).toLong()})
             }
+            if(!firstFrame&&!m.get("video-frame-info/picture-type").isNullOrBlank()&&m.get("vo-configured")=="yes"){
+                firstFrame=true;firstFrameEvent=true;nextMetadataPoll=0;PlaybackMetrics.sdrFrame()
+            }
+            if(firstFrame&&!subtitleRequested){subtitleRequested=true;items.getOrNull(index)?.let{loadAttachments(it,m,generation)}}
+            state=if(!firstFrame||m.get("paused-for-cache")=="yes")Player.STATE_BUFFERING else Player.STATE_READY
             if(m.get("eof-reached")=="yes"){
                 if(!firstFrame)throw java.io.IOException("SDR 兼容解码未能生成画面")
                 state=Player.STATE_ENDED;wanted=false
             }
-            if(m.get("idle-active")=="yes"&&width==0){failure=PlaybackException("SDR 兼容解码未能打开视频画面",null,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false}
-            PlaybackMetrics.sdrOutput(m.get("frame-drop-count")?.toIntOrNull()?:0)
+            if(decodedWidth==0&&m.get("idle-active")=="yes"){
+                failure=PlaybackException("SDR 兼容解码未能打开视频画面",null,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false
+            }
             syncPlay();invalidateState()
         }catch(e:Exception){failure=PlaybackException("SDR 兼容播放中断",e,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false;syncPlay();invalidateState()}
+        finally{PlaybackMetrics.sdrPoll(android.os.SystemClock.elapsedRealtimeNanos()-pollStart)}
     }
-    private fun readTracks(m:MpvRuntime,width:Int,height:Int):Tracks {
+    private fun readTracks(json:String,width:Int,height:Int,rotation:Int=sourceFormat.rotationDegrees,pixelRatio:Float=sourceFormat.pixelWidthHeightRatio,frameRate:Float=sourceFormat.frameRate):Tracks {
         val groups=mutableListOf<Tracks.Group>()
-        groups+=Tracks.Group(TrackGroup("mpv-video",sourceFormat.buildUpon().setWidth(width).setHeight(height).build()),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))
-        val list=runCatching{JSONArray(m.get("track-list")?:"[]")}.getOrDefault(JSONArray())
+        groups+=Tracks.Group(TrackGroup("mpv-video",sourceFormat.buildUpon().setWidth(width).setHeight(height).setRotationDegrees(rotation).setPixelWidthHeightRatio(pixelRatio).setFrameRate(frameRate).build()),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))
+        val list=runCatching{JSONArray(json)}.getOrDefault(JSONArray())
         for(i in 0 until list.length()){
             val t=list.getJSONObject(i);val type=t.optString("type")
             if(type !in setOf("audio","sub"))continue
@@ -205,15 +260,14 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         return Tracks(ImmutableList.copyOf(groups))
     }
     override fun handleSetTrackSelectionParameters(parameters:TrackSelectionParameters):ListenableFuture<*> {
-        selection=parameters
+        selection=parameters;nextMetadataPoll=0
         runtime?.let{m->
             m.set("sub-visibility",if(parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))"no" else "yes")
-            parameters.overrides.values.forEach{o->
-                val id=o.mediaTrackGroup.id
-                if(id.startsWith("mpv-audio-"))m.set("aid",id.removePrefix("mpv-audio-"))
-                if(id.startsWith("mpv-sub-"))m.set("sid",id.removePrefix("mpv-sub-"))
-            }
             m.set("alang",parameters.preferredAudioLanguages.joinToString(","));m.set("slang",parameters.preferredTextLanguages.joinToString(","))
+            for((type,property,prefix) in listOf(Triple(C.TRACK_TYPE_AUDIO,"aid","mpv-audio-"),Triple(C.TRACK_TYPE_TEXT,"sid","mpv-sub-"))) {
+                val id=parameters.overrides.values.firstOrNull{it.mediaTrackGroup.id.startsWith(prefix)}?.mediaTrackGroup?.id?.removePrefix(prefix)
+                m.set(property,if(type in parameters.disabledTrackTypes)"no"else id?:"auto")
+            }
         }
         return done()
     }
@@ -223,7 +277,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         if(active&&!focusHeld){focusHeld=audio.requestAudioFocus(focus)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED;suppressed=!focusHeld}
         if(!active&&focusHeld){audio.abandonAudioFocusRequest(focus);focusHeld=false;suppressed=false}
         val playing=wanted&&!suppressed&&state!=Player.STATE_IDLE&&state!=Player.STATE_ENDED
-        runtime?.set("pause",if(playing&&firstFrame)"no" else "yes")
+        val pause=!(playing&&firstFrame)
+        if(pauseApplied!=pause)runtime?.let{it.set("pause",if(pause)"yes"else"no");pauseApplied=pause}
         if(playing&&!wake.isHeld)wake.acquire(30*60*1000L)else if(!playing&&wake.isHeld)wake.release()
     }
     override fun handleSetPlaybackParameters(playbackParameters:PlaybackParameters):ListenableFuture<*>{speed=playbackParameters;runtime?.set("speed",speed.speed.toString());return done()}
@@ -246,7 +301,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         if(!value.isValid)return
         val changed=attachedSurface!==value
         if(changed&&attachedSurface!=null)detach()
-        surface=value;surfaceSize=Size(width.coerceAtLeast(1),height.coerceAtLeast(1))
+        surface=value;surfaceSize=Size(width.coerceAtLeast(1),height.coerceAtLeast(1));nextMetadataPoll=0
         runtime?.let{
             if(changed){it.attach(value);attachedSurface=value}
             it.set("android-surface-size","${surfaceSize.width}x${surfaceSize.height}")
@@ -258,12 +313,20 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     override fun handleStop():ListenableFuture<*>{stopRuntime();state=Player.STATE_IDLE;syncPlay();return done()}
     override fun handleRelease():ListenableFuture<*>{released=true;clearOutput();stopRuntime();wanted=false;syncPlay();runCatching{context.unregisterReceiver(noisy)};return done()}
     private fun stopRuntime(){
-        generation++;handler.removeCallbacks(poll)
+        generation++;handler.removeCallbacks(poll);decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null
         if(attachedSurface!=null){runtime?.let{it.set("vo","null");it.detach()}}
         attachedSurface=null;firstFrame=false;firstFrameEvent=false;subtitleRequested=false
-        val m=runtime;val source=input;val pending=opening;val captions=subtitleInputs.toList();subtitleInputs.clear();runtime=null;input=null;opening=null
+        val m=runtime;val source=input;val pending=opening;val captions=externalInputs.values.toList();externalInputs.clear();runtime=null;input=null;opening=null
         worker.execute{pending?.close();source?.close();captions.forEach{it.close()};runCatching{m?.destroy()}}
     }
     private fun done():ListenableFuture<*> = Futures.immediateVoidFuture()
     companion object {private val worker=Executors.newSingleThreadExecutor()}
+}
+
+/** Keep backend viewport information across MediaSession's track-group ID remapping. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun softwareSdrItem(item:MediaItem,enabled:Boolean):MediaItem {
+    val extras=android.os.Bundle(item.mediaMetadata.extras?:android.os.Bundle())
+    if(enabled)extras.putBoolean("sdr-compatibility",true)else extras.remove("sdr-compatibility")
+    return item.buildUpon().setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(extras).build()).build()
 }

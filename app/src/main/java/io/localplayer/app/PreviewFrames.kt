@@ -28,7 +28,7 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** A single, independent, cancellable read identity; never seeks the playing MediaSession. */
-internal interface PreviewDecoder : Closeable { fun frame(timeMs: Long): Bitmap? }
+internal interface PreviewDecoder : Closeable { fun prepare() {}; fun frame(timeMs: Long): Bitmap? }
 
 internal data class PreviewFrame(val bitmap: Bitmap, val timeMs: Long)
 
@@ -39,6 +39,7 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
     private val mutex = Mutex()
     private val closed = AtomicBoolean(false)
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val warmGeneration = java.util.concurrent.atomic.AtomicLong()
     private val pending = java.util.concurrent.ConcurrentHashMap.newKeySet<kotlinx.coroutines.CancellableContinuation<Bitmap?>>()
     private val cache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
@@ -87,8 +88,26 @@ class PreviewFrames internal constructor(private val openDecoder: (Uri) -> Previ
 
     internal fun releaseReader() {
         if(closed.get())return
+        warmGeneration.incrementAndGet()
+        active?.let{decoder->closer.execute{runCatching{decoder.close()}}}
         try { worker.execute { discard(session?.decoder) } }
         catch(_:java.util.concurrent.RejectedExecutionException){ /* Already disposed. */ }
+    }
+
+    /** Prepare metadata only; a second video decoder would compete with playback for CPU. */
+    internal fun warm(uri: Uri) {
+        if(closed.get())return
+        val ticket=warmGeneration.incrementAndGet()
+        try { worker.execute {
+            if(closed.get()||ticket!=warmGeneration.get()||session?.uri==uri)return@execute
+            discard(session?.decoder)
+            runCatching { openDecoder(uri) }.getOrNull()?.let { decoder ->
+                active=decoder
+                try{decoder.prepare()}catch(_:Exception){discard(decoder);return@let}
+                if(closed.get()||ticket!=warmGeneration.get())discard(decoder)
+                else session=Session(uri,decoder)
+            }
+        } } catch(_:java.util.concurrent.RejectedExecutionException) { /* Disposed. */ }
     }
 
     private fun discard(decoder: PreviewDecoder?) {
@@ -163,13 +182,16 @@ private class AndroidPreviewDecoder(private val context: Context, private val ur
     private val closed = AtomicBoolean(false)
     private var prepared = false
     private val data = if (uri.isPlayerNetworkUri()) RemotePreviewData(PlaybackRegistry.preview(uri)) else null
-    override fun frame(timeMs: Long): Bitmap? {
+    override fun prepare() {
         check(!closed.get())
-        if (!prepared) {
-            if (data != null) retriever.setDataSource(data) else retriever.setDataSource(context, uri)
-            prepared = true
-        }
-        return retriever.getScaledFrameAtTime(timeMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
+        if(!prepared)try {
+            if(data!=null)retriever.setDataSource(data)else retriever.setDataSource(context,uri)
+            prepared=true
+        } catch(e:Exception) { close();throw e }
+    }
+    override fun frame(timeMs: Long): Bitmap? {
+        prepare()
+        return retriever.getScaledFrameAtTime(timeMs*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,320,180)
     }
     override fun close() {
         if (closed.compareAndSet(false, true)) {

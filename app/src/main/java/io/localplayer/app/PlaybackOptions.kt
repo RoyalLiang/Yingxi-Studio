@@ -34,9 +34,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-@Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit){
+@Composable fun PlaybackOptions(controller:MediaController,onDismiss:()->Unit,onExternal:()->Unit,onAudioExternal:()->Unit={}){
     val context=LocalContext.current
     val prefs=remember(context){PlaybackPreferences(context)}
+    val media=controller.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+    val onlineAllowed=media!=null&&!SealedMedia.protects(media)
+
     var tracks by remember(controller){mutableStateOf(controller.currentTracks)}
     var currentItem by remember(controller){mutableStateOf(controller.currentMediaItem)}
     var parameters by remember(controller){mutableStateOf(controller.trackSelectionParameters)}
@@ -74,17 +77,24 @@ import java.util.Locale
                 item{CloudQualityChoices(controller,currentItem)}
                 item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val audio=tracks.groups.filter{it.type==C.TRACK_TYPE_AUDIO}
+                val externalAudio=currentItem?.let{SidecarAudio.from(it)}.orEmpty()
                 val audioAutomatic=parameters.overrides.keys.none{it.type==C.TRACK_TYPE_AUDIO}
                 if(audio.isEmpty())item{Text("影片没有可用音轨",fontSize=14.sp,color=Color(0xFFB9B9BF))}
                 else{
                     item{TrackChoice("自动选择",audioAutomatic){prefs.rememberedAudioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(prefs.audioLanguage).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
                     audio.forEachIndexed{g,group->for(i in 0 until group.length){
-                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"音轨 ${g+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
+                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),group.mediaTrackGroup.id.takeIf{it.contains(':')}?.substringBefore(':')?.toIntOrNull()?.takeIf{it>0}?.let{externalAudio.getOrNull(it-1)?.name}?:"音轨 ${g+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
                             if(prefs.rememberManual)prefs.rememberedAudioLanguage=group.getTrackFormat(i).language
                             controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                         }}
                     }}
                 }
+                item{OutlinedButton(onClick={onDismiss();onlineTrackSearch(context,media,true)},enabled=onlineAllowed,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-audio")){Text("按片名搜配音音轨 · 必应网页")}}
+                item{OutlinedButton(onClick={onDismiss();onAudioExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入音轨文件")}}
+                if(currentItem?.let{SidecarAudio.from(it).isNotEmpty()}==true)item{OutlinedButton(onClick={
+                    controller.currentMediaItem?.let{controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(it,emptyList()))}
+                },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("移除外挂音轨")}}
+                item{Text("外挂音轨共用影片进度、暂停和倍速；不同剪辑版本需使用对应音轨。",fontSize=12.sp,color=Color(0xFFB9B9BF))}
                 item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
                 item{Text("字幕",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val disabled=parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
@@ -102,11 +112,13 @@ import java.util.Locale
                 item {
                     val state by OnlineSubtitles.status.collectAsState()
                     val message=state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.second
-                    OutlinedButton(onClick={OnlineSubtitles.request(context,controller)},enabled=message!="正在匹配字幕…",modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-subtitles")){
+                    OutlinedButton(onClick={OnlineSubtitles.request(context,controller)},enabled=onlineAllowed&&message!="正在匹配字幕…",modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("online-subtitles")){
                         Text(message?:"自动匹配在线字幕",maxLines=2)
                     }
-                    Text("射手字幕 · 按影片指纹匹配",fontSize=12.sp,color=Color(0xFFB9B9BF))
+                    Text(if(onlineAllowed)"射手字幕 · 按影片指纹匹配"else"封存档案不进行互联网匹配",fontSize=12.sp,color=Color(0xFFB9B9BF))
                 }
+                item{OutlinedButton(onClick={onDismiss();onlineTrackSearch(context,media,false)},enabled=onlineAllowed,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("subtitle-web-search")){Text("按片名搜字幕 · 必应网页")}}
+                item{val state by AutomaticSidecars.status.collectAsState();state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.let{Text(it.second,fontSize=12.sp,color=Color(0xFFB9B9BF))}}
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
             }
                 }
