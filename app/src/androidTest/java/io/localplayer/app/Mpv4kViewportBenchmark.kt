@@ -37,9 +37,10 @@ class Mpv4kViewportBenchmark {
         var activity:PlaybackActivity?=null;var controller:MediaController?=null
         try {
             main{ui.activity.startActivity(PlaybackActivity.intent(ui.activity,target,ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE))}
+            ui.waitUntil(10000){activity=main{ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<PlaybackActivity>().firstOrNull()};activity!=null}
             val future=main{MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync()}
             val c=future.get(10,TimeUnit.SECONDS);controller=c
-            try{ui.waitUntil(30000){main{c.playerError!=null||PlaybackMetrics.snapshot().firstFrameMs!=null}}}
+            try{ui.waitUntil(30000){main{c.currentMediaItem?.mediaMetadata?.extras?.getString("play-intent")==target.playId&&(c.playerError!=null||(c.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true&&PlaybackMetrics.snapshot().firstFrameMs!=null))}}}
             catch(e:Throwable){android.util.Log.i("Polish55State",main{playbackDiagnostic(c)});throw e}
             main{assertNull(c.playerError);assertTrue(PlaybackMetrics.snapshot().decoder?.startsWith("mpv.")==true);c.play()}
             val start=SystemClock.elapsedRealtime();Thread.sleep(3000)

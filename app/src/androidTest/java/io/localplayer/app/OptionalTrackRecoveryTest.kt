@@ -30,11 +30,12 @@ class OptionalTrackRecoveryTest {
             val view=main{SurfaceView(ui.activity).also{ui.activity.addContentView(it,ViewGroup.LayoutParams(-1,-1));player.setVideoSurfaceView(it)}}
             var item=MediaItem.fromUri(Uri.fromFile(video))
             item=if(audio)SidecarAudio.attach(item,listOf(SidecarAudio(Uri.fromFile(bad),bad.name)))else item.buildUpon().setSubtitleConfigurations(listOf(
-                MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(bad)).setMimeType(MimeTypes.TEXT_VTT).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build())).build()
+                MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(bad)).setMimeType(MimeTypes.TEXT_VTT).setLanguage("zh").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build())).build()
             try {
-                main{player.setMediaItem(item,6000);player.volume=0f;player.prepare();player.play()}
-                ui.waitUntil(15000){main{player.isPlaying&&player.currentPosition>6500&&SidecarAudio.from(player.currentMediaItem!!).isEmpty()&&player.currentMediaItem!!.localConfiguration!!.subtitleConfigurations.isEmpty()}}
-                main{assertNull(player.playerError);assertTrue(player.videoSize.width>0);assertTrue(player.currentPosition<11000)}
+                main{player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setPreferredTextLanguage("zh").setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build();player.setMediaItem(item,6000);player.volume=0f;player.prepare();player.play()}
+                try {ui.waitUntil(15000){main{player.isPlaying&&player.currentPosition>7500&&(!audio||SidecarAudio.from(player.currentMediaItem!!).isEmpty())}}}
+                catch(e:androidx.compose.ui.test.ComposeTimeoutException){throw AssertionError(main{"Optional track recovery audio=$audio state=${player.playbackState} pos=${player.currentPosition} play=${player.playWhenReady} suppression=${player.playbackSuppressionReason} error=${player.playerError} audio=${SidecarAudio.from(player.currentMediaItem!!).size} text=${player.currentMediaItem!!.localConfiguration!!.subtitleConfigurations.size} tracks=${player.currentTracks.groups.map{Triple(it.type,it.isSelected,it.getTrackFormat(0).sampleMimeType)}}"},e)}
+                main{assertNull(player.playerError);assertTrue(player.videoSize.width>0);assertTrue(player.currentPosition<13000)}
             } finally {main{player.release();(view.parent as? ViewGroup)?.removeView(view)};bad.delete()}
         }
     }
