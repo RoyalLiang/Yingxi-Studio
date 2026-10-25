@@ -39,6 +39,7 @@ jobs:
           python3 -B website/tools/sync-world.py --check
           python3 -B -m unittest discover -s scripts -p test_repository_guard.py
           node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
+          node --test website/tools/test-playback-report.mjs
       - name: Archive checked website
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:

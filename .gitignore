@@ -88,3 +88,7 @@ __MACOSX/
 
 **/.build/
 ._*
+
+!/website/functions/
+!/website/functions/api/
+!/website/functions/api/*.js

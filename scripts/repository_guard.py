@@ -25,6 +25,7 @@ def allowed(name):
     if name in {"website/README.md", "website/DESIGN.md", "website/package.json", "website/package-lock.json", "website/wrangler.jsonc", "website/public/_headers"}: return True
     if name.startswith("website/public/") and p.suffix in {".html", ".css", ".js", ".json", ".webp", ".woff2", ".txt", ".webm", ".xml"}: return True
     if name.startswith("website/tools/") and p.suffix in {".mjs", ".py"}: return True
+    if name.startswith("website/functions/api/") and p.suffix == ".js": return True
     if p.parent == Path("releases") and p.suffix == ".md": return True
     return ((name.startswith("ios/") and p.suffix in {".swift", ".plist", ".pbxproj", ".xcscheme", ".json", ".md", ".png"}) or
         (name.startswith(("app/src/main/java/", "app/src/androidTest/java/", "core/src/main/kotlin/", "core/src/test/kotlin/")) and p.suffix == ".kt")

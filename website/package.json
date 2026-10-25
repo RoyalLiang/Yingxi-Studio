@@ -8,7 +8,8 @@
     "check": "node tools/check.mjs",
     "deploy": "node tools/deploy.mjs",
     "deploy:preview": "node tools/deploy.mjs --target preview",
-    "deploy:production": "node tools/deploy.mjs --target production"
+    "deploy:production": "node tools/deploy.mjs --target production",
+    "test:reports": "node --test tools/test-playback-report.mjs"
   },
   "devDependencies": {
     "wrangler": "4.152.0"

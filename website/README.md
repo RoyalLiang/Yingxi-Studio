@@ -87,3 +87,24 @@ node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 两条尚未随应用发布的日常短笺已使用独立稳定标识，保留 alpha.52 已发布的 `diary_026`。本轮官网落地不宣称新增短笺已包含在 alpha.52 APK 中。
 
 中文字体是带 OFL 许可的 Noto Sans SC 本地变量字体子集。修改文字后，使用 `tools/subset-fonts.py --sans-source 本地字体路径` 重新裁剪；该工具需要 fontTools 与 Brotli，不向在线服务提交文案。
+
+
+## 播放问题回执
+
+`/report/` 是应用内「上报播放问题」的轻量网页；`functions/api/playback-report.js` 是同域接收端。应用通过 URL fragment 携带快照，fragment 不会随 HTTP 请求发给服务器，页面读取后立即清除。用户预览并勾选公开同意、点击提交且通过人机校验后，接收端才向本仓库创建 Issue。浏览、复制、未勾选同意或通道未配置时不会自动发送报告。
+
+在 Cloudflare **Workers & Pages → yingxi-station → Settings → Variables and Secrets → Production** 配置：
+
+| 名称 | 类型 | 内容 |
+| --- | --- | --- |
+| `REPORT_GITHUB_TOKEN` | Secret | 有仓库权限的 GitHub 账号生成的细粒度 token；仅选择 RoyalLiang/Yingxi-Studio，Repository permissions 只开 Issues: Read and write（Metadata 只读为平台必需）。不用 Contents、Actions 或账号管理权限。 |
+| `REPORT_TURNSTILE_SECRET` | Secret | Turnstile widget 的服务端 Secret key。 |
+| `REPORT_TURNSTILE_SITE_KEY` | 普通变量 | 同一 widget 的公开 Site key；widget 域名允许 yingxi-station.pages.dev。 |
+
+不要把 Secret 写进源码、客户端、命令参数、日志或聊天。令牌需要设置有效期，并在到期前由维护者轮换。保存环境变量后重新部署，`GET /api/playback-report` 只返回公开 Site key 与可用状态；没有任何一个配置时提交会关闭，不假装回传成功。
+
+接收端验证 Origin、当前版本的明确同意、单次 Turnstile（hostname/action/request ID）、实际流式 32 KiB 上限与字段白名单。只传生成的设备/编码/性能字段，剔除媒体地址、认证等额外字段；不接收文件上传或自由文本。IP 只用于 Cloudflare Siteverify，不写入 Issue。GitHub 返回确认的 Issue URL 才显示成功；网络结果不明时提醒先检查仓库，不自动重试。Turnstile 不是全局配额；若出现实际滥用，应再接入持久限额，不用进程内 Map 冒充全局限流。
+
+检查命令：`npm run test:reports`、`npm run check`。先在本地/预览环境用合成报告验证，不将用户提供的检修记录当作发布测试数据自动发送。生产验收需维护者配置服务端授权，并主动提交一份无私人信息的合成报告。
+
+依据：[Pages Functions 与 Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)、[创建 GitHub Issue 的权限](https://docs.github.com/en/rest/issues/issues#create-an-issue)、[Turnstile 服务端验证](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)、[Pages 响应头](https://developers.cloudflare.com/pages/configuration/headers/)。
