@@ -1478,8 +1478,8 @@
         "en": "Playback repair note"
       },
       "meaning": {
-        "zh": "播放问题的本机快照，可预览或复制；仅在知情同意并主动提交后寄往公开仓库，不代表自动修复或已经收到回复。",
-        "en": "A local playback snapshot to preview or copy. It reaches the public repository only after informed consent and an explicit submission; it promises neither automatic repair nor a reply."
+        "zh": "播放问题的本机快照，可预览或复制；知情同意后可在播放器内主动上报至公开仓库。收到编号只表示投递成功，不代表问题已修复或已经收到回复。",
+        "en": "A local playback snapshot to preview or copy, with explicit submission from the player after informed consent. A receipt number confirms delivery to the public repository, not a repair or a reply."
       }
     }
   ],
@@ -1778,6 +1778,14 @@
       "text": {
         "zh": "我把磨平的短木签插回片架前沿，只在上面写片匣的短名。长长的来处仍夹在登记纸里，迟灯擦架子时便不用掀起整叠纸。找一部旧片，先从眼前认得出的字开始。",
         "en": "I slipped a worn wooden label back along the shelf edge and wrote only the film case’s short name. Its long trail stays with the register, so Chideng can dust the shelf without lifting the whole stack. To find an old film, begin with the words you can recognise."
+      }
+    },
+    {
+      "id": "diary_report_receipt_20261026",
+      "author": "axi",
+      "text": {
+        "zh": "我在检修纸右下角留了一小块空白。迟灯把铜尺横在桌边，说有了收条再记号码；没有收条，就让那里空着。寄出一张纸，和修好一部旧片，是两回事。",
+        "en": "I left a small blank corner on the repair note. Chideng laid his copper ruler along the desk: write the number only when a receipt arrives; otherwise leave it blank. Sending a note and mending an old film are two different things."
       }
     }
   ],

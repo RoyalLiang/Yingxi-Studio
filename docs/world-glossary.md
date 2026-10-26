@@ -71,7 +71,7 @@
 | signal_tuning | 调频寻声 | Tune for a trace | 探索中的离线调谐练习。旋钮与步进键调整生成的图形信号；随包短笺可以直接阅读，不扫描设备或接收真实无线电。 | An offline tuning practice in Explore. The dial and step buttons adjust generated signal graphics. Bundled notes can be read directly; no devices are scanned and no real radio is received. |
 | route_reading | 路标对读 | Read the waymarks | 离线对照随包记录，辨认已有依据与仍待核实的说法；练习不改变地图证据或章节。 | An offline comparison of bundled records and claims. Practice does not change map evidence or chapters. |
 | audio_preference | 听音频段 | Listening band | 音轨语言偏好，可跟随影片或优先中文、英文；不扫描无线电，也不生成缺少的配音。 | Audio-language preference: follow the film or prefer Chinese or English. It scans no radio and generates no missing dub. |
-| playback_report | 检修回执 | Playback repair note | 播放问题的本机快照，可预览或复制；仅在知情同意并主动提交后寄往公开仓库，不代表自动修复或已经收到回复。 | A local playback snapshot to preview or copy. It reaches the public repository only after informed consent and an explicit submission; it promises neither automatic repair nor a reply. |
+| playback_report | 检修回执 | Playback repair note | 播放问题的本机快照，可预览或复制；知情同意后可在播放器内主动上报至公开仓库。收到编号只表示投递成功，不代表问题已修复或已经收到回复。 | A local playback snapshot to preview or copy, with explicit submission from the player after informed consent. A receipt number confirms delivery to the public repository, not a repair or a reply. |
 
 ## 采用层级
 

@@ -93,7 +93,7 @@ node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 
 Android 的「上报播放问题」直接在播放器内完成。用户预览并主动勾选公开同意后，点一次「同意并上报」；受限 WebView 负责 Turnstile 安全校验与同源接收端 `functions/api/playback-report.js` 的提交，成功后显示实际仓库回执编号。报告者无需 GitHub 登录、复制 JSON 或切换到外部浏览器。
 
-`/report/submit.html` 只在原生按钮操作后接收冻结的快照，不从页面地址或 URL fragment 读取报告，也不因单独打开页面就提交。原生端不添加 JavaScript 原生对象接口，禁用文件/内容访问，只允许精确的 HTTPS 主页面；完成通知只接受当前请求 ID 和确认的正数编号。本机仅保存尚未确认尝试的 UUID，不保存诊断正文；关闭或进程中断后重开会先提示检查旧回执，用户明确开始新的上报才会重新生成请求。
+`/report/submit`（源码 `public/report/submit.html`）只在原生按钮操作后接收冻结的快照，不从页面地址或 URL fragment 读取报告，也不因单独打开页面就提交。原生端不添加 JavaScript 原生对象接口，禁用文件/内容访问，只允许精确的 HTTPS 主页面；完成通知只接受当前请求 ID 和确认的正数编号。本机仅保存尚未确认尝试的 UUID，不保存诊断正文；关闭或进程中断后重开会先提示检查旧回执，用户明确开始新的上报才会重新生成请求。
 
 `/report/` 仍是备用网页表单，也兼容旧客户端的 URL fragment 入口。fragment 不随 HTTP 请求发送，读取后立即清除；备用表单仍要求网页内明确同意和点击提交。浏览、复制、未勾选同意或通道未配置时不会自动发送报告。
 
