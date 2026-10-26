@@ -35,6 +35,10 @@ internal fun videoOrientation(tracks:androidx.media3.common.Tracks):Int? {
 internal class PlaybackOrientationState {
     private var mediaId:String?=null
     private var direction:Int?=null
+    fun restoreSnapshot(player:androidx.media3.common.Player){
+        mediaId=player.currentMediaItem?.mediaId
+        direction=videoOrientation(player.currentTracks)
+    }
     fun update(player:androidx.media3.common.Player,events:androidx.media3.common.Player.Events?,hint:Int?):Int? {
         val current=player.currentMediaItem?.mediaId
         if(current!=mediaId){mediaId=current;direction=hint}

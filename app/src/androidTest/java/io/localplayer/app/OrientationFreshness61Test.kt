@@ -31,4 +31,21 @@ class OrientationFreshness61Test {
             }finally{engine.release()}
         }
     }
+    @Test fun newlyConnectedControllerUsesItsCurrentTrackSnapshot(){
+        ui.runOnUiThread{
+            val engine=ExoPlayer.Builder(ui.activity).build()
+            try{
+                val format=Format.Builder().setSampleMimeType("video/avc").setWidth(360).setHeight(640).build()
+                val tracks=Tracks(listOf(Tracks.Group(TrackGroup(format),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))))
+                val player=object:ForwardingPlayer(engine){
+                    override fun getCurrentMediaItem()=MediaItem.Builder().setMediaId("restored-tall").build()
+                    override fun getCurrentTracks()=tracks
+                    override fun getVideoSize()=VideoSize(640,360)
+                }
+                val state=PlaybackOrientationState();state.restoreSnapshot(player)
+                assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,state.update(player,null,null))
+            }finally{engine.release()}
+        }
+    }
+
 }

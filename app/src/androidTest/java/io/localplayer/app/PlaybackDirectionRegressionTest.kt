@@ -98,4 +98,26 @@ class PlaybackDirectionRegressionTest {
             ui.onNodeWithTag("home-archives").assertIsDisplayed()
         } finally {main{activity.finish()};shell("settings put system user_rotation $rotation");shell("settings put system accelerometer_rotation $auto")}
     }
+    @Test fun backgroundEpisodeMetadataIsRetainedWhenReturningToThePlayer(){
+        val prefix=java.util.UUID.randomUUID().toString()
+        val items=listOf("direction-landscape.mp4","direction-portrait.mp4").map{name->
+            val file=File(context.cacheDir,name);check(file.isFile)
+            val uri=Uri.fromFile(file);val ref=MediaRef("$prefix-$name",name,"Local",localUri=uri.toString(),sizeBytes=file.length())
+            QueuedMedia(uri,ref,HistoryStore(context).token(ref.key))
+        }
+        val target=PlayTarget(items[0].uri,items[0].media.title,0,items[0].media,queue=items)
+        val scenario=androidx.test.core.app.ActivityScenario.launch<PlaybackActivity>(PlaybackActivity.intent(context,target))
+        val future=main{MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync()}
+        val player=future.get(10,TimeUnit.SECONDS)
+        try{
+            ready(player);direction(Configuration.ORIENTATION_LANDSCAPE);main{player.pause()}
+            scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+            main{player.seekToNextMediaItem()}
+            ui.waitUntil(15000){main{videoOrientation(player.currentTracks)==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT}}
+            main{assertEquals("Background metadata must reach the current clip cache before resume",android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,PlaybackOrientationProbe.cached(items[1].media))}
+            scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            direction(Configuration.ORIENTATION_PORTRAIT)
+        }finally{main{player.stop();player.clearMediaItems();player.release()};scenario.close();PlaybackRequests.remove(target.playId)}
+    }
+
 }

@@ -53,10 +53,33 @@ class PortraitPlayer61Test {
             ui.onNodeWithContentDescription("下一集").assertIsNotEnabled()
             swipe(true);assertEquals(2,main{player.currentMediaItemIndex})
             swipe(false);ui.waitUntil(3000){main{player.currentMediaItemIndex==1}}
+            ui.waitForIdle()
             java.io.File(ui.activity.getExternalFilesDir(null),"portrait-player61.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
             ui.onNodeWithContentDescription("选集").performClick()
+            ui.onNodeWithTag("playback-queue-drawer").assertIsDisplayed();ui.waitForIdle()
             java.io.File(ui.activity.getExternalFilesDir(null),"portrait-queue61.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
-            ui.onNodeWithTag("playback-queue-drawer").assertIsDisplayed()
         }finally{main{player.stop();player.clearMediaItems();player.release()}}
     }
+    @Test fun draggingFromHiddenControlsRaisesTheSubtitleSafeArea(){
+        main{ui.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT}
+        ui.waitUntil(5000){ui.activity.resources.configuration.orientation==Configuration.ORIENTATION_PORTRAIT}
+        val file=java.io.File(ui.activity.cacheDir,"direction-portrait.mp4");org.junit.Assume.assumeTrue(file.isFile)
+        val future=main{MediaController.Builder(ui.activity,SessionToken(ui.activity,ComponentName(ui.activity,PlaybackService::class.java))).buildAsync()}
+        val player=future.get(10,TimeUnit.SECONDS);var view:androidx.media3.ui.PlayerView?=null
+        try{
+            main{
+                player.setMediaItem(MediaItem.fromUri(android.net.Uri.fromFile(file)));player.prepare()
+                ui.activity.setContent{PlayerTheme{FullscreenPlayer(player,"字幕留白",null,{},{},{},{},false,null,{},{view=it})}}
+            }
+            ui.waitUntil(15000){main{player.playbackState==androidx.media3.common.Player.STATE_READY}}
+            val surface=ui.onNodeWithTag("playback-gesture-surface")
+            surface.performTouchInput{click()};ui.waitForIdle()
+            val hidden=main{view!!.subtitleView!!.paddingBottom}
+            surface.performTouchInput{down(Offset(width*.35f,height*.45f));moveBy(Offset(width*.25f,0f),250)}
+            ui.waitForIdle()
+            assertTrue("Subtitle padding must follow the toolbar revealed by dragging",main{view!!.subtitleView!!.paddingBottom}>hidden)
+            surface.performTouchInput{cancel()}
+        }finally{main{player.stop();player.clearMediaItems();player.release()}}
+    }
+
 }

@@ -1,7 +1,7 @@
 {
   "version": {
-    "versionName": "0.2.0-alpha.60",
-    "versionCode": 62
+    "versionName": "0.2.0-alpha.61",
+    "versionCode": 63
   },
   "atlasSha256": "1ab5c38d99f45a1f75b60cb749a65fa85b5808973576614b2822ac0d6e3e741d",
   "counts": {
@@ -31,8 +31,8 @@
     "applicationNames": 22
   },
   "repository": {
-    "releaseNoteFiles": 57,
-    "scavengerLetterFiles": 33,
+    "releaseNoteFiles": 58,
+    "scavengerLetterFiles": 34,
     "attributedLetterFiles": 35
   }
 }

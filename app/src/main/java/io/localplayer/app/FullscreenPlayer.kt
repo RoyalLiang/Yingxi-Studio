@@ -131,7 +131,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     val safeRight=if(compact)0 else safeInsets.getRight(density,layoutDirection)
     val safeBottom=if(compact)0 else safeInsets.getBottom(density)
     val subtitleGutter=with(density){16.dp.roundToPx()}
-    val subtitleBottom=if(portrait&&visible&&!locked&&!compact&&!queue&&!settings)maxOf(safeBottom,controlsHeight)else safeBottom
+    val subtitleBottom=if(portrait&&(visible||dragging)&&!locked&&!compact&&!queue&&!settings)maxOf(safeBottom,controlsHeight)else safeBottom
     LaunchedEffect(controller,fill,softwareSdr,playerBounds,safeLeft,safeRight,subtitleBottom) {
         val height=playerBounds.height.coerceAtLeast(1f)
         val args=android.os.Bundle().apply {

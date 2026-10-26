@@ -156,8 +156,10 @@ class PlaybackActivity:ComponentActivity(){
                     runCatching{future.get()}.onSuccess{c ->
                     if(isFinishing || isDestroyed){releaseSuperseded();c.release();return@onSuccess}
                     playerController=c;controller=c;c.addListener(presentationListener)
+                if(owns(c)){automaticDirection.restoreSnapshot(c)}
                     releaseSuperseded()
                     if(foreground){loadInitial(c);applyPendingCaption(c)}
+                updateVideoOrientation()
                     updatePictureInPicture()
                     }.onFailure{connectionError="无法连接播放会话，请返回重试"}
                 },ContextCompat.getMainExecutor(this@PlaybackActivity))
@@ -360,7 +362,7 @@ class PlaybackActivity:ComponentActivity(){
     private fun leave(){runCatching{playerController?.takeIf(::owns)?.let{it.stop();it.clearMediaItems()}};PlaybackRequests.remove(intent.getStringExtra("play-intent"));finish()}
     private fun updateVideoOrientation(events:Player.Events?=null) {
         val c=playerController?:return
-        if(!foreground||compact||captionPickerOpen||isFinishing||!owns(c))return
+        if(isFinishing||!owns(c))return
         val id=c.currentMediaItem?.mediaId?:return
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
         val target=PlaybackRequests.get(intent.getStringExtra("play-intent"))
@@ -369,6 +371,7 @@ class PlaybackActivity:ComponentActivity(){
             intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED).takeIf{it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE||it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT} else null
         val direction=automaticDirection.update(c,events,hint)
         direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(it,orientation)}}
+        if(!foreground||compact||captionPickerOpen)return
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
             manualDirection?:direction?:return
         if(requestedOrientation!=desired)requestedOrientation=desired
