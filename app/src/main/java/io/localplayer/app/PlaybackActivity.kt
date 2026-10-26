@@ -65,6 +65,7 @@ class PlaybackActivity:ComponentActivity(){
     private var presentedMedia:MediaRef?=null
     private var playerController:MediaController?=null
     private var directionMediaId:String?=null
+    private val automaticDirection=PlaybackOrientationState()
     private var manualDirection:Int?=null
     private var directionLocked=false
     private var foreground=false
@@ -78,7 +79,7 @@ class PlaybackActivity:ComponentActivity(){
         override fun onReceive(context:Context,intent:Intent){if(intent.action==ACTION_CLOSE_PIP)leave()}
     }
     private val presentationListener=object:Player.Listener{
-        override fun onEvents(player:Player,events:Player.Events){player.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{raw->runCatching{MediaRef.parse(raw)}.getOrNull()?.let{presentedMedia=it}};updateVideoOrientation();updatePictureInPicture()}
+        override fun onEvents(player:Player,events:Player.Events){player.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{raw->runCatching{MediaRef.parse(raw)}.getOrNull()?.let{presentedMedia=it}};updateVideoOrientation(events);updatePictureInPicture()}
     }
     private data class Caption(val uri:android.net.Uri,val mime:String,val label:String)
     private var pendingCaption:Caption?=null
@@ -357,14 +358,19 @@ class PlaybackActivity:ComponentActivity(){
         super.onDestroy()
     }
     private fun leave(){runCatching{playerController?.takeIf(::owns)?.let{it.stop();it.clearMediaItems()}};PlaybackRequests.remove(intent.getStringExtra("play-intent"));finish()}
-    private fun updateVideoOrientation() {
+    private fun updateVideoOrientation(events:Player.Events?=null) {
         val c=playerController?:return
         if(!foreground||compact||captionPickerOpen||isFinishing||!owns(c))return
         val id=c.currentMediaItem?.mediaId?:return
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
-        videoOrientation(c)?.let{orientation->presentedMedia?.let{PlaybackOrientationProbe.remember(it,orientation)}}
+        val target=PlaybackRequests.get(intent.getStringExtra("play-intent"))
+        val media=if(target?.uri?.toString()==id)target.media else c.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+        val hint=media?.let(PlaybackOrientationProbe::cached)?:if(target?.uri?.toString()==id)
+            intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED).takeIf{it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE||it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT} else null
+        val direction=automaticDirection.update(c,events,hint)
+        direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(it,orientation)}}
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
-            manualDirection?:videoOrientation(c)?:return
+            manualDirection?:direction?:return
         if(requestedOrientation!=desired)requestedOrientation=desired
     }
     private fun rotate(){

@@ -117,6 +117,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var frame by remember { mutableStateOf<Bitmap?>(null) }
     var playerBounds by remember { mutableStateOf(Rect.Zero) }
     var thumbBounds by remember { mutableStateOf(Rect.Zero) }
+    var controlsHeight by remember { mutableIntStateOf(0) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
     var bitrate by remember { mutableStateOf<String?>(null) }
@@ -130,12 +131,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     val safeRight=if(compact)0 else safeInsets.getRight(density,layoutDirection)
     val safeBottom=if(compact)0 else safeInsets.getBottom(density)
     val subtitleGutter=with(density){16.dp.roundToPx()}
-    LaunchedEffect(controller,fill,softwareSdr,playerBounds,safeLeft,safeRight,safeBottom) {
+    val subtitleBottom=if(portrait&&visible&&!locked&&!compact&&!queue&&!settings)maxOf(safeBottom,controlsHeight)else safeBottom
+    LaunchedEffect(controller,fill,softwareSdr,playerBounds,safeLeft,safeRight,subtitleBottom) {
         val height=playerBounds.height.coerceAtLeast(1f)
         val args=android.os.Bundle().apply {
             putBoolean("fill",fill)
             putInt("margin-x",maxOf(25,kotlin.math.ceil((maxOf(safeLeft,safeRight)+subtitleGutter)*720f/height).toInt()))
-            putInt("margin-y",maxOf(22,kotlin.math.ceil((safeBottom+subtitleGutter)*720f/height).toInt()))
+            putInt("margin-y",maxOf(22,kotlin.math.ceil((subtitleBottom+subtitleGutter)*720f/height).toInt()))
         }
         controller?.sendCustomCommand(CompatibilityPlayer.VIDEO_LAYOUT,args)
     }
@@ -229,15 +231,16 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 overlayFrameLayout?.addView(subtitles,android.widget.FrameLayout.LayoutParams(-1,-1))
             } }.also(videoView) },
             update = { it.player = controller; it.resizeMode = if(softwareSdr)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
-            it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,safeBottom+subtitleGutter) },
+            it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,subtitleBottom+subtitleGutter) },
             onRelease = { it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit"))
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { visible = !visible }
-                .pointerInput(controller, locked, duration, seekable) {
+                .pointerInput(controller, locked, duration, seekable,portrait,items.size,touchExploration) {
                     var start = Offset.Zero
                     var total = Offset.Zero
                     var startPosition = 0L
+                var startIndex = 0
                     var startLight = 0f
                     var startVolume = 0
                     var allowed = false
@@ -245,7 +248,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     val edge = with(density) { 24.dp.toPx() }
                     detectDragGestures(onDragStart = { point ->
                         allowed = !locked && point.x > edge && point.x < size.width - edge
-                        start = point; total = Offset.Zero; gesture = 0; startPosition = controller?.currentPosition ?: 0
+                        start = point; total = Offset.Zero; gesture = 0; startPosition = controller?.currentPosition ?: 0; startIndex=controller?.currentMediaItemIndex?:0
                         startLight = activity.window.attributes.screenBrightness.takeIf { it >= 0 }
                             ?: (Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) / 255f)
                         startVolume = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -253,7 +256,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         if (allowed) {
                             total += delta
                             if (gesture == 0 && maxOf(abs(total.x), abs(total.y)) >= threshold) {
-                                gesture = if (abs(total.x) > abs(total.y)) 1 else if (start.x < size.width / 2) 2 else 3
+                                gesture = if (abs(total.x) > abs(total.y)) 1 else if(portrait&&items.size>1&&!touchExploration&&start.x>size.width*.2f&&start.x<size.width*.8f)4 else if (start.x < size.width / 2) 2 else 3
                                 if (gesture == 1 && (!seekable || duration <= 0)) { allowed = false; gesture = 0 }
                             }
                             if (allowed && gesture != 0) {
@@ -265,7 +268,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                                 }
                             }
                         }
-                    }, onDragEnd = { if (gesture == 1 && dragging) { controller?.seekTo(target); position = target }; dragging = false; gesture = 0 },
+                    }, onDragEnd = {
+                    if(gesture==4&&abs(total.y)>maxOf(threshold*4,size.height*.12f))controller?.takeIf{it.currentMediaItemIndex==startIndex}?.let{player->
+                        if(total.y<0&&startIndex<items.lastIndex)player.seekToNextMediaItem()
+                        else if(total.y>0&&startIndex>0)player.seekToPreviousMediaItem()
+                    }
+                    if (gesture == 1 && dragging) { controller?.seekTo(target); position = target }; dragging = false; gesture = 0
+                },
                         onDragCancel = {
                             if (gesture == 2) activity.window.attributes = activity.window.attributes.apply { screenBrightness = startLight }
                             if (gesture == 3) audio.setStreamVolume(AudioManager.STREAM_MUSIC, startVolume, 0)
@@ -304,7 +313,11 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     if (!portrait && smallWindow != null) PlayerIcon(Icons.Rounded.PictureInPictureAlt, "画中画", smallWindow, videoAvailable)
                     if(!portrait)PlayerIcon(Icons.Rounded.LockOpen, "锁定方向与控件", { locked = true; visible = false; lock(true) })
                 }
-                if (!speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if(portrait)Column(Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)).padding(end=12.dp,bottom=with(density){controlsHeight.toDp()}+24.dp).testTag("portrait-track-actions"),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                PlayerIcon(Icons.Rounded.Audiotrack,"音轨",{trackType=C.TRACK_TYPE_AUDIO;settings=true},controller!=null,Modifier.testTag("player-audio").background(Color(0x66101113),CircleShape))
+                PlayerIcon(Icons.Rounded.Subtitles,"字幕",{trackType=C.TRACK_TYPE_TEXT;settings=true},controller!=null,Modifier.testTag("player-subtitles").background(Color(0x66101113),CircleShape))
+            }
+            if (!portrait && !speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
                     PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
                     IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(if(portrait)64.dp else 72.dp).background(Color(0x8C101113), CircleShape)) {
@@ -314,15 +327,15 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { controller?.seekToNextMediaItem() }, index < items.lastIndex)
                 }
             }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onGloballyPositioned{controlsHeight=it.size.height}
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6101113))))
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = if(portrait)16.dp else 24.dp, vertical = 8.dp)) {
                 val shown = if (dragging) target else position
                 PlayerTimeline(shown,duration,buffered,dragging,seekable,
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
                 if(portrait)PortraitPlaybackToolbar(
-                    position=shown,duration=duration,speed=speed,fill=fill,hasQueue=items.isNotEmpty(),buffering=buffering&&controller!=null,playRequested=playRequested,onPlay={if(playRequested)controller?.pause()else controller?.play()},
-                    onSpeed={speedOpen=true},onAudio={trackType=C.TRACK_TYPE_AUDIO;settings=true},onSubtitles={trackType=C.TRACK_TYPE_TEXT;settings=true},onQueue={queue=true},
+                    position=shown,duration=duration,speed=speed,index=index,count=items.size,playRequested=playRequested,enabled=controller!=null,onPlay={if(playRequested)controller?.pause()else controller?.play()},
+                    onSpeed={speedOpen=true},onQueue={queue=true},onPrevious={controller?.seekToPreviousMediaItem()},onNext={controller?.seekToNextMediaItem()},
                     onRotate=rotate
                 ) else Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
                     if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})

@@ -24,26 +24,29 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-/** Native portrait controls: one quiet row, with full touch targets and no labels over the film. */
+/** Portrait actions stay within thumb reach; track icons live beside the picture. */
 @Composable internal fun PortraitPlaybackToolbar(
-    position:Long,duration:Long,speed:Float,fill:Boolean,hasQueue:Boolean,buffering:Boolean,playRequested:Boolean,onPlay:()->Unit,
-    onSpeed:()->Unit,onAudio:()->Unit,onSubtitles:()->Unit,onQueue:()->Unit,onRotate:()->Unit
+    position:Long,duration:Long,speed:Float,index:Int,count:Int,playRequested:Boolean,enabled:Boolean,
+    onPlay:()->Unit,onSpeed:()->Unit,onQueue:()->Unit,onPrevious:()->Unit,onNext:()->Unit,onRotate:()->Unit
 ){
     Column(Modifier.fillMaxWidth().testTag("portrait-playback-controls")){
-        Row(Modifier.fillMaxWidth().padding(horizontal=8.dp).testTag("playback-time"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-            Text(playbackTime(position),color=PlayerInk,fontSize=12.sp,fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
-            if(buffering)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",onPlay)
-            Text(playbackTime(duration),color=PlayerInk.copy(alpha=.65f),fontSize=12.sp,fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth().testTag("playback-toolbar"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-            TextButton(onClick=onSpeed,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("playback-speed").semantics{contentDescription="播放速度"}){
-                Text(speedLabel(speed),color=PlayerInk,fontSize=14.sp,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth().testTag("playback-toolbar"),verticalAlignment=Alignment.CenterVertically){
+            PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",onPlay,enabled)
+            Text("${playbackTime(position)} / ${playbackTime(duration)}",Modifier.weight(1f).testTag("playback-time"),color=PlayerInk,fontSize=11.sp,fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace,maxLines=1,softWrap=false,overflow=TextOverflow.Ellipsis)
+            TextButton(onClick=onSpeed,enabled=enabled,contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.heightIn(min=48.dp).testTag("playback-speed").semantics{contentDescription="播放速度"}){
+                Text(speedLabel(speed),color=PlayerInk,fontSize=13.sp,maxLines=1,softWrap=false)
             }
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Audiotrack,"音轨",onAudio,modifier=Modifier.testTag("player-audio"))}
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.Subtitles,"字幕",onSubtitles,modifier=Modifier.testTag("player-subtitles"))}
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.PlaylistPlay,"选集",onQueue,hasQueue)}
-            Box(Modifier.weight(1f),contentAlignment=Alignment.Center){PlayerIcon(Icons.Rounded.ScreenRotation,"旋转屏幕",onRotate)}
+            PlayerIcon(Icons.Rounded.Fullscreen,"旋转屏幕",onRotate)
+        }
+        if(count>1)Row(Modifier.fillMaxWidth().testTag("portrait-episode-bar"),verticalAlignment=Alignment.CenterVertically){
+            PlayerIcon(Icons.Rounded.SkipPrevious,"上一集",onPrevious,enabled&&index>0)
+            TextButton(onClick=onQueue,modifier=Modifier.weight(1f).heightIn(min=48.dp).semantics{contentDescription="选集"},contentPadding=PaddingValues(horizontal=8.dp)){
+                Icon(Icons.Rounded.PlaylistPlay,null,Modifier.size(20.dp),tint=PlayerInk)
+                Spacer(Modifier.width(8.dp))
+                Text("选集 ${index+1}/$count",color=PlayerInk,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Spacer(Modifier.width(4.dp));Icon(Icons.Rounded.KeyboardArrowUp,null,Modifier.size(16.dp),tint=PlayerInk.copy(alpha=.6f))
+            }
+            PlayerIcon(Icons.Rounded.SkipNext,"下一集",onNext,enabled&&index<count-1)
         }
     }
 }

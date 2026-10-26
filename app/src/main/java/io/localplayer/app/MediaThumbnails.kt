@@ -59,6 +59,7 @@ internal object MediaThumbnails {
         scope.launch { load(context.applicationContext, media, activeUri) }
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     suspend fun load(context: Context, media: MediaRef, activeUri: Uri? = null): Bitmap? = withContext(dispatcher) {
         val cacheKey = key(media)
         val history = HistoryStore(context)
@@ -118,6 +119,10 @@ internal object MediaThumbnails {
                 })
             }
             cancellation.check()
+            val width=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()?:0
+            val height=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()?:0
+            val rotation=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?:0
+            videoOrientation(androidx.media3.common.VideoSize(width,height,rotation,1f))?.let{PlaybackOrientationProbe.remember(media,it)}
             val bitmap = retriever.embeddedPicture?.let(MediaPosters::decode)
                 ?: retriever.getScaledFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
                 ?: retriever.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)

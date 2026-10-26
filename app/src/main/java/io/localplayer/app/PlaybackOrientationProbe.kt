@@ -25,8 +25,10 @@ internal object PlaybackOrientationProbe {
     private fun key(media:MediaRef)=listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000")
     fun remember(media:MediaRef,orientation:Int)=synchronized(known){known[key(media)]=orientation;Unit}
 
+    fun cached(media:MediaRef):Int?=synchronized(known){known[key(media)]}
+
     suspend fun resolve(context:Context,target:PlayTarget):Int? {
-        synchronized(known){known[key(target.media)]}?.let{return it}
+        cached(target.media)?.let{return it}
         return withTimeoutOrNull(TIMEOUT_MS){
             suspendCancellableCoroutine { continuation->
                 val cancellation=Cancellation()

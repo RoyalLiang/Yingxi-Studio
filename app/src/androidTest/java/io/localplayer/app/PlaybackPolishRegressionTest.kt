@@ -73,8 +73,7 @@ class PlaybackPolishRegressionTest {
         ui.runOnUiThread { ui.activity.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
         ui.waitUntil(5000) { ui.activity.resources.configuration.orientation==Configuration.ORIENTATION_PORTRAIT }
         val toolbar=ui.onNodeWithTag("playback-toolbar").fetchSemanticsNode().boundsInRoot
-        listOf(ui.onNodeWithTag("playback-speed"),ui.onNodeWithTag("player-audio"),
-            ui.onNodeWithTag("player-subtitles"),ui.onNodeWithContentDescription("选集"),ui.onNodeWithContentDescription("旋转屏幕")).forEach { node ->
+        listOf(ui.onNodeWithTag("playback-speed"),ui.onNodeWithContentDescription("旋转屏幕")).forEach { node ->
             val bounds=node.assertIsDisplayed().fetchSemanticsNode().boundsInRoot
             assertTrue(bounds.right<=toolbar.right+2&&bounds.left>=toolbar.left-2)
             assertTrue(bounds.bottom<=toolbar.bottom+2&&bounds.top>=toolbar.top-2)

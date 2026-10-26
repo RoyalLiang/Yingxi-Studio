@@ -71,11 +71,11 @@ internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:
             if(started||url!=PLAYBACK_REPORT_SUBMIT_PAGE||view.url!=PLAYBACK_REPORT_SUBMIT_PAGE)return
             started=true
             view.evaluateJavascript("typeof window.startPlaybackReport==='function'&&(window.startPlaybackReport($request),true)"){ready->
-                if(ready!="true")error("上报页面未能载入，请保留检修内容后稍后重试。")
+                if(!acknowledged&&ready!="true")error("上报页面未能载入，请保留检修内容后稍后重试。")
             }
         }
         override fun onReceivedError(view:WebView,resource:WebResourceRequest,failure:WebResourceError) {
-            if(resource.isForMainFrame)error("未能连接上报通道，请保留检修内容后稍后重试。")
+            if(!acknowledged&&resource.isForMainFrame)error("未能连接上报通道，请保留检修内容后稍后重试。")
         }
     }
 }

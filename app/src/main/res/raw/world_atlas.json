@@ -665,6 +665,14 @@
         "zh": "阿汐在检修纸右下角留出空白，迟灯把铜尺横在桌边；送达时才添上收条号码，修片的事仍留在另一栏。",
         "en": "Axi leaves a blank corner on the repair note while Chideng lays his copper ruler along the desk. A receipt number is added on delivery; mending the film remains a separate entry."
       }
+    },
+    {
+      "id": "chronicle_player_polish_061",
+      "version": "0.2.0-alpha.61",
+      "text": {
+        "zh": "迟灯缝好片窗旧绒条的松角，阿汐把下一只片匣放在不遮挡登记纸的桌边。",
+        "en": "Chideng stitches a loose corner of the old window felt; Axi places the next film case where it leaves the register clear."
+      }
     }
   ],
   "boundary": {
@@ -896,8 +904,8 @@
         "en": "Image Scavenger"
       },
       "summary": {
-        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。 试映时用纸角的抖动对照风扇与片架的响声，是迟灯和阿汐排查旧器材的小习惯，不代表新的技术或能力。 阿汐的片罐纸签把旧字和编号分作两行；看不清的字暂留空白。",
-        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact. Chideng and Axi compare a trembling paper corner with fan and shelf noises while checking old equipment; this is an everyday habit, not a new technology or ability. Axi separates old words and tin numbers onto two label lines, leaving unreadable words blank."
+        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。 试映时用纸角的抖动对照风扇与片架的响声，是迟灯和阿汐排查旧器材的小习惯，不代表新的技术或能力。 阿汐的片罐纸签把旧字和编号分作两行；看不清的字暂留空白。迟灯把片窗旧绒条的松角缝回背面，阿汐将下一只片匣靠在桌边，不遮住正在看的登记纸。",
+        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact. Chideng and Axi compare a trembling paper corner with fan and shelf noises while checking old equipment; this is an everyday habit, not a new technology or ability. Axi separates old words and tin numbers onto two label lines, leaving unreadable words blank. Chideng stitches a loose felt corner behind the projection window; Axi sets the next film case beside the desk without covering the register in use."
       },
       "canonStatus": "confirmed"
     },
@@ -1794,6 +1802,14 @@
       "text": {
         "zh": "我在检修纸右下角留了一小块空白。迟灯把铜尺横在桌边，说有了收条再记号码；没有收条，就让那里空着。寄出一张纸，和修好一部旧片，是两回事。",
         "en": "I left a small blank corner on the repair note. Chideng laid his copper ruler along the desk: write the number only when a receipt arrives; otherwise leave it blank. Sending a note and mending an old film are two different things."
+      }
+    },
+    {
+      "id": "diary_felt_corner_20261027",
+      "author": "chideng",
+      "text": {
+        "zh": "阿汐把下一只片匣靠在桌边，没压住正在看的登记纸。我把片窗旧绒条的一角重新缝好，线头藏在背面。她换片时只抬一下手，灯光便顺着原来的边沿落下来。",
+        "en": "Axi set the next film case beside the desk, leaving the register in view. I stitched a loose corner of the projection window’s old felt and tucked the thread behind it. She lifted one hand to change the film; the light settled along the same edge."
       }
     }
   ],

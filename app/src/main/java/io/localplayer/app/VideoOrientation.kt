@@ -17,10 +17,32 @@ internal fun videoOrientation(size:VideoSize):Int? {
 /** Container dimensions are available before a decoder produces its first frame. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun videoOrientation(player:androidx.media3.common.Player):Int? {
-    val groups=player.currentTracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}.sortedByDescending{it.isSelected}
+    return videoOrientation(player.currentTracks)?:videoOrientation(player.videoSize)
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun videoOrientation(tracks:androidx.media3.common.Tracks):Int? {
+    val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}.sortedByDescending{it.isSelected}
     for(group in groups)for(i in 0 until group.length) {
         val format=group.getTrackFormat(i)
         videoOrientation(VideoSize(format.width,format.height,format.rotationDegrees,format.pixelWidthHeightRatio))?.let{return it}
     }
-    return videoOrientation(player.videoSize)
+    return null
+}
+
+/** Direction decision separated from Activity side effects so stale transition data can be tested. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal class PlaybackOrientationState {
+    private var mediaId:String?=null
+    private var direction:Int?=null
+    fun update(player:androidx.media3.common.Player,events:androidx.media3.common.Player.Events?,hint:Int?):Int? {
+        val current=player.currentMediaItem?.mediaId
+        if(current!=mediaId){mediaId=current;direction=hint}
+        else if(direction==null)direction=hint
+        // A transition can still expose the previous clip's size until fresh metadata arrives.
+        val freshSize=if(events?.contains(androidx.media3.common.Player.EVENT_VIDEO_SIZE_CHANGED)==true)videoOrientation(player.videoSize)else null
+        val freshTracks=if(events?.contains(androidx.media3.common.Player.EVENT_TRACKS_CHANGED)==true)videoOrientation(player.currentTracks)else null
+        direction=freshSize?:freshTracks?:direction
+        return direction
+    }
 }
