@@ -283,8 +283,28 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     }
     private fun readTracks(json:String,width:Int,height:Int,rotation:Int=sourceFormat.rotationDegrees,pixelRatio:Float=sourceFormat.pixelWidthHeightRatio,frameRate:Float=sourceFormat.frameRate):Tracks {
         val groups=mutableListOf<Tracks.Group>()
-        groups+=Tracks.Group(TrackGroup("mpv-video",sourceFormat.buildUpon().setWidth(width).setHeight(height).setRotationDegrees(rotation).setPixelWidthHeightRatio(pixelRatio).setFrameRate(frameRate).build()),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))
         val list=runCatching{JSONArray(json)}.getOrDefault(JSONArray())
+        val videos=(0 until list.length()).map{list.getJSONObject(it)}.filter{it.optString("type")=="video"&&it.optInt("id")>0&&!it.optBoolean("image")&&!it.optBoolean("albumart")&&!it.optBoolean("dependent")}
+        for(t in videos){
+            val id=t.getInt("id");val selected=t.optBoolean("selected")
+            val codec=t.optString("codec")
+            val mime=if(t.optInt("dolby-vision-profile")>0)MimeTypes.VIDEO_DOLBY_VISION else when(codec){
+                "h264"->MimeTypes.VIDEO_H264;"hevc"->MimeTypes.VIDEO_H265;"av1"->MimeTypes.VIDEO_AV1
+                "vp8"->MimeTypes.VIDEO_VP8;"vp9"->MimeTypes.VIDEO_VP9;"mpeg4"->MimeTypes.VIDEO_MP4V
+                "mpeg1video","mpeg2video"->MimeTypes.VIDEO_MPEG2;"h263"->MimeTypes.VIDEO_H263
+                "vc1","wmv3"->"video/wvc1";"mjpeg"->"video/mjpeg";"theora"->"video/theora"
+                else->"video/x-unknown"
+            }
+            val builder=if(videos.size==1)sourceFormat.buildUpon()else Format.Builder().setSampleMimeType(mime).setCodecs(codec.ifBlank{null})
+            val rate=t.optInt("demux-bitrate",-1).takeIf{it>0}?:if(videos.size==1)sourceFormat.averageBitrate else -1
+            val format=builder.setId(id.toString()).setAverageBitrate(rate)
+                .setWidth(t.optInt("demux-w",if(selected)width else -1)).setHeight(t.optInt("demux-h",if(selected)height else -1))
+                .setRotationDegrees(t.optInt("demux-rotation",if(selected)rotation else 0))
+                .setPixelWidthHeightRatio(t.optDouble("demux-par",if(selected)pixelRatio.toDouble()else 1.0).toFloat())
+                .setFrameRate(t.optDouble("demux-fps",if(selected)frameRate.toDouble()else -1.0).toFloat()).build()
+            groups+=Tracks.Group(TrackGroup("mpv-video-$id",format),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(selected))
+        }
+        if(videos.isEmpty())groups+=Tracks.Group(TrackGroup("mpv-video",sourceFormat.buildUpon().setWidth(width).setHeight(height).setRotationDegrees(rotation).setPixelWidthHeightRatio(pixelRatio).setFrameRate(frameRate).build()),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))
         for(i in 0 until list.length()){
             val t=list.getJSONObject(i);val type=t.optString("type")
             if(type !in setOf("audio","sub"))continue
@@ -299,6 +319,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         runtime?.let{m->
             m.set("sub-visibility",if(parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))"no" else "yes")
             m.set("alang",parameters.preferredAudioLanguages.joinToString(","));m.set("slang",parameters.preferredTextLanguages.joinToString(","))
+            val video=parameters.overrides.values.firstOrNull{override->override.type==C.TRACK_TYPE_VIDEO&&tracks.groups.any{it.mediaTrackGroup==override.mediaTrackGroup}}?.mediaTrackGroup?.id?.takeIf{it.startsWith("mpv-video-")}?.removePrefix("mpv-video-")
+            m.set("vid",video?:"auto")
             for((type,property,prefix) in listOf(Triple(C.TRACK_TYPE_AUDIO,"aid","mpv-audio-"),Triple(C.TRACK_TYPE_TEXT,"sid","mpv-sub-"))) {
                 val id=parameters.overrides.values.firstOrNull{it.mediaTrackGroup.id.startsWith(prefix)}?.mediaTrackGroup?.id?.removePrefix(prefix)
                 m.set(property,if(type in parameters.disabledTrackTypes)"no"else id?:"auto")

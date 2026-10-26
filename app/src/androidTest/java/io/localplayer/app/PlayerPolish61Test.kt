@@ -100,4 +100,18 @@ class PlayerPolish61Test {
         }finally{main{player.release()}}
     }
 
+    @Test fun obsoleteVideoOverrideDoesNotHideTheCurrentSourcesDefaultSelection(){
+        val format=Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).setWidth(640).setHeight(360).build()
+        val current=TrackGroup("current",format,format.buildUpon().setWidth(320).setHeight(180).build())
+        val tracks=Tracks(listOf(Tracks.Group(current,false,intArrayOf(C.FORMAT_HANDLED,C.FORMAT_HANDLED),booleanArrayOf(true,false))))
+        val player=main{ExoPlayer.Builder(ui.activity).build()}
+        try{
+            main{
+                player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setOverrideForType(TrackSelectionOverride(TrackGroup("previous",format),0)).build()
+                ui.activity.setContent{PlayerTheme{PlaybackQualityChoices(player,null,tracks,player.trackSelectionParameters)}}
+            }
+            ui.onNodeWithTag("video-quality-auto").assertIsSelected()
+        }finally{main{player.release()}}
+    }
+
 }

@@ -1,0 +1,71 @@
+package io.localplayer.app
+
+import android.net.Uri
+import android.view.SurfaceView
+import android.view.ViewGroup
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.*
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import java.io.File
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+class MpvVideoQualityTest {
+    @get:Rule val ui=createAndroidComposeRule<MainActivity>()
+    private fun <T> main(block:()->T):T{var result:Result<T>?=null;ui.runOnUiThread{result=runCatching(block)};return result!!.getOrThrow()}
+    @Test fun softwareBackendListsAndSwitchesActualVideoTracks(){
+        val file=File(ui.activity.cacheDir,"mpv-multi-cover.mp4").takeIf{it.isFile}?:File(ui.activity.cacheDir,"two-video-tracks.mp4");org.junit.Assume.assumeTrue(file.isFile)
+        val player=main{MpvPlayer(ui.activity,Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).setWidth(640).setHeight(360).build())}
+        try{
+            main{
+                player.setMediaItems(listOf(MediaItem.fromUri(Uri.fromFile(file)),MediaItem.fromUri(Uri.fromFile(file))))
+                player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setPreferredAudioLanguage("zh").setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()
+                player.setPlaybackSpeed(1.25f)
+                ui.activity.setContent{PlayerTheme{
+                    var tracks by remember{mutableStateOf(player.currentTracks)};var parameters by remember{mutableStateOf(player.trackSelectionParameters)}
+                    DisposableEffect(player){val listener=object:Player.Listener{override fun onEvents(p:Player,e:Player.Events){tracks=p.currentTracks;parameters=p.trackSelectionParameters}};player.addListener(listener);onDispose{player.removeListener(listener)}}
+                    Column{
+                        AndroidView(factory={SurfaceView(it).also(player::setVideoSurfaceView)},modifier=Modifier.height(180.dp).fillMaxWidth())
+                        PlaybackQualityChoices(player,player.currentMediaItem,tracks,parameters)
+                    }
+                }}
+                player.prepare();player.play()
+            }
+            ui.waitUntil(30000){main{player.playerError!=null||player.playbackState==Player.STATE_READY&&player.videoSize.width>0}}
+            ui.waitUntil(10000){main{player.currentTracks.groups.count{it.type==C.TRACK_TYPE_VIDEO}==2}}
+            val choice=main{
+                assertNull(player.playerError);player.pause();player.seekTo(3000)
+                File(ui.activity.getExternalFilesDir(null),"mpv-quality-track-list.json").writeText(MpvRuntime.load(ui.activity).get("track-list")?:"[]")
+                val groups=player.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
+                assertEquals("Software playback must expose both real video tracks",2,groups.size)
+                val low=groups.indexOfFirst{it.getTrackFormat(0).width==320};assertTrue(low>=0)
+                val native=org.json.JSONArray(MpvRuntime.load(ui.activity).get("track-list"))
+                val lowRate=(0 until native.length()).map{native.getJSONObject(it)}.first{it.optInt("demux-w")==320}.getInt("demux-bitrate")
+                assertEquals(lowRate,groups[low].getTrackFormat(0).averageBitrate)
+                "video-quality-$low-0"
+            }
+            ui.onNodeWithTag(choice).performClick()
+            ui.waitUntil(15000){main{player.playerError!=null||player.videoSize.width==320}}
+            main{
+                assertNull(player.playerError);assertEquals(320,player.videoSize.width)
+                assertEquals(2,player.mediaItemCount);assertEquals(0,player.currentMediaItemIndex)
+                assertTrue(player.currentPosition>=2900);assertFalse(player.playWhenReady);assertEquals(1.25f,player.playbackParameters.speed)
+                assertEquals(listOf("zh"),player.trackSelectionParameters.preferredAudioLanguages)
+                assertTrue(player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))
+            }
+            val high=main{player.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}.indexOfFirst{it.getTrackFormat(0).width==640}}
+            ui.onNodeWithTag("video-quality-$high-0").performClick()
+            ui.waitUntil(15000){main{player.videoSize.width==640}}
+            ui.onNodeWithTag("video-quality-auto").performClick()
+            main{assertTrue(player.trackSelectionParameters.overrides.keys.none{it.type==C.TRACK_TYPE_VIDEO});assertFalse(player.playWhenReady);assertNull(player.playerError)}
+        }finally{main{player.release()}}
+    }
+}

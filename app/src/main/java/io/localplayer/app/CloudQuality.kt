@@ -124,7 +124,7 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
             Text(format?.let{videoQualityLabel(it)}?:"正在读取视频属性…",fontSize=15.sp,color=PlayerInk)
             if(format!=null)Text("此片源只有一个可用视频轨道",fontSize=12.sp,color=PlayerInk.copy(alpha=.65f))
         }else{
-            val automatic=parameters.overrides.keys.none{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
+            val automatic=groups.none{parameters.overrides.containsKey(it.mediaTrackGroup)}
             FilterChip(selected=automatic,onClick={player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()},label={Text(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认")},modifier=Modifier.testTag("video-quality-auto"))
             groups.forEachIndexed{g,group->
                 (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
