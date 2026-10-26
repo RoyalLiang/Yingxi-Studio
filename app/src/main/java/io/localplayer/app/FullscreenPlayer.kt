@@ -168,8 +168,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             duration = controller.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
                 val selectedVideo=controller.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO&&it.isSelected}
                 val format=selectedVideo?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
-                val media=controller.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
-                bitrate=playbackBitrateLabel(format,media?.sizeBytes,duration)
+                bitrate=playbackBitrateLabel(format)
             error = controller.playerError?.let(::playbackFailure)
             if(error==null&&controller.playbackState==Player.STATE_READY){
                 val video=controller.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}

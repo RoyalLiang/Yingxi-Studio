@@ -84,7 +84,7 @@ class NativePlaybackReportTest {
             ui.activity.setContent{PlayerTheme{PlaybackReportDialog(null){}}}
             ui.onNodeWithTag("report-pending").assertIsDisplayed()
             ui.onNodeWithTag("report-continue").assertDoesNotExist()
-            ui.onNodeWithTag("report-new-attempt").performScrollTo().performClick()
+            ui.onNodeWithTag("report-new-attempt").performScrollTo().assertTextContains("上报新的问题").performClick()
             ui.onNodeWithTag("report-consent").performScrollTo().assertIsOff()
             ui.onNodeWithTag("report-continue").assertIsNotEnabled()
             assertNull(attempts.pending())

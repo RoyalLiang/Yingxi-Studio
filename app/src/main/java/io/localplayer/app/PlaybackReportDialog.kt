@@ -66,12 +66,12 @@ import org.json.JSONObject
                     TextButton(onClick={preview=!preview},modifier=Modifier.heightIn(min=48.dp).testTag("report-preview")){Text(if(preview)"收起检修内容"else"查看检修内容")}
                     if(preview)Text(report,Modifier.fillMaxWidth().heightIn(max=176.dp).verticalScroll(rememberScrollState()).testTag("report-payload"),fontFamily=FontFamily.Monospace,fontSize=11.sp,lineHeight=16.sp,color=PlayerInk)
                     if(previous!=null){
-                        Text("上次上报待确认",Modifier.testTag("report-pending"),fontSize=15.sp,color=PlayerInk)
+                        Text("上次送达未确认，请先检查回执",Modifier.testTag("report-pending"),fontSize=15.sp,color=PlayerInk)
                         TextButton(onClick={runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/RoyalLiang/Yingxi-Studio/issues").buildUpon().appendQueryParameter("q","yingxi-playback-report:$previous").build()))}.onFailure{Toast.makeText(context,"未能打开回执链接",Toast.LENGTH_SHORT).show()}}){Text("检查上次回执")}
                         TextButton(enabled=!reserving,onClick={
                             reserving=true
                             scope.launch{withContext(Dispatchers.IO){attempts.clear(previous!!)};previous=attempts.pending();agreed=false;reserving=false}
-                        },modifier=Modifier.testTag("report-new-attempt")){Text("重新上报")}
+                        },modifier=Modifier.testTag("report-new-attempt")){Text("上报新的问题")}
                     }else{
                         Text("设备型号、系统及应用版本、编码、播放状态与性能计数将公开至 GitHub「RoyalLiang/Yingxi-Studio」。",fontSize=13.sp,lineHeight=20.sp,color=PlayerInk.copy(alpha=.8f))
                         Text("Cloudflare 使用 IP 做安全校验；IP、片名、路径与账号不写入仓库。",fontSize=12.sp,lineHeight=19.sp,color=PlayerInk.copy(alpha=.72f))

@@ -14,13 +14,12 @@ class PlayerPolish61Test {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private fun <T> main(block:()->T):T{var result:Result<T>?=null;ui.runOnUiThread{result=runCatching(block)};return result!!.getOrThrow()}
 
-    @Test fun bitratePropertiesDistinguishMeasuredPeakAndContainerEstimate(){
-        assertEquals("2.0 Mbps",playbackBitrateLabel(Format.Builder().setAverageBitrate(2_000_000).build(),1_000_000,1000))
+    @Test fun bitratePropertiesDistinguishAveragePeakAndMissingValues(){
+        assertEquals("2.0 Mbps",playbackBitrateLabel(Format.Builder().setAverageBitrate(2_000_000).build()))
         assertEquals("峰值 3.0 Mbps",playbackBitrateLabel(Format.Builder().setPeakBitrate(3_000_000).build()))
-        assertEquals("约 8.0 Mbps",playbackBitrateLabel(null,1_000_000,1000))
         assertEquals("256 Kbps",playbackBitrateLabel(Format.Builder().setAverageBitrate(256_000).build()))
-        assertNull(playbackBitrateLabel(null,1_000_000,0))
-        assertNull(playbackBitrateLabel(null,-1,1000))
+        assertNull(playbackBitrateLabel(null))
+        assertNull(playbackBitrateLabel(Format.Builder().build()))
     }
 
     @Test fun fixedVideoAlternativesCanBeSelectedWithoutAdaptiveSupport(){
