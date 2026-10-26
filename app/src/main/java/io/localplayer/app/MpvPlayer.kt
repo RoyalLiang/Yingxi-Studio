@@ -295,7 +295,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 "vc1"->"video/wvc1";"wmv3"->"video/x-ms-wmv";"mjpeg"->"video/mjpeg";"theora"->"video/theora"
                 else->"video/x-unknown"
             }
-            val builder=if(videos.size==1)sourceFormat.buildUpon()else Format.Builder().setSampleMimeType(mime).setCodecs(codec.ifBlank{null})
+            val builder=if(videos.size==1)sourceFormat.buildUpon()else Format.Builder().setSampleMimeType(mime)
             val rate=t.optInt("demux-bitrate",-1).takeIf{it>0}?:if(videos.size==1)sourceFormat.averageBitrate else -1
             val format=builder.setId(id.toString()).setAverageBitrate(rate)
                 .setWidth(t.optInt("demux-w",if(selected)width else -1)).setHeight(t.optInt("demux-h",if(selected)height else -1))
