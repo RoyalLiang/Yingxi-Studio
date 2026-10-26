@@ -291,8 +291,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             val mime=if(t.optInt("dolby-vision-profile")>0)MimeTypes.VIDEO_DOLBY_VISION else when(codec){
                 "h264"->MimeTypes.VIDEO_H264;"hevc"->MimeTypes.VIDEO_H265;"av1"->MimeTypes.VIDEO_AV1
                 "vp8"->MimeTypes.VIDEO_VP8;"vp9"->MimeTypes.VIDEO_VP9;"mpeg4"->MimeTypes.VIDEO_MP4V
-                "mpeg1video","mpeg2video"->MimeTypes.VIDEO_MPEG2;"h263"->MimeTypes.VIDEO_H263
-                "vc1","wmv3"->"video/wvc1";"mjpeg"->"video/mjpeg";"theora"->"video/theora"
+                "mpeg1video"->MimeTypes.VIDEO_MPEG;"mpeg2video"->MimeTypes.VIDEO_MPEG2;"h263"->MimeTypes.VIDEO_H263
+                "vc1"->"video/wvc1";"wmv3"->"video/x-ms-wmv";"mjpeg"->"video/mjpeg";"theora"->"video/theora"
                 else->"video/x-unknown"
             }
             val builder=if(videos.size==1)sourceFormat.buildUpon()else Format.Builder().setSampleMimeType(mime).setCodecs(codec.ifBlank{null})
