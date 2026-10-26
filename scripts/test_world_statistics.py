@@ -47,7 +47,7 @@ class WorldStatisticsTests(unittest.TestCase):
 
     def test_canon_adoption_does_not_mark_a_route_surveyed(self):
         counts = summarize(self.world)
-        self.assertEqual(28, counts['adoptedTerms'])
+        self.assertEqual(37, counts['adoptedTerms'])
         self.assertEqual(4, counts['unverifiedPlaces'])
         self.assertEqual(1, counts['surveyedRoutes'])
         self.assertFalse(next(p for p in self.world['nodes'] if p['id'] == 'ideal')['known'])

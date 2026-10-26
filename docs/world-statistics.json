@@ -3,7 +3,7 @@
     "versionName": "0.2.0-alpha.61",
     "versionCode": 63
   },
-  "atlasSha256": "1ab5c38d99f45a1f75b60cb749a65fa85b5808973576614b2822ac0d6e3e741d",
+  "atlasSha256": "eb65a9e7bdd0e2c5e96c6100c7f19c9e457a79f6cb9cfeefc8e890c9273fbb0d",
   "counts": {
     "places": 6,
     "surveyedPlaces": 2,
@@ -19,10 +19,10 @@
       "chideng": 17,
       "mitu": 6
     },
-    "terms": 28,
-    "adoptedTerms": 28,
+    "terms": 57,
+    "adoptedTerms": 37,
     "stationHearsayTerms": 3,
-    "proposalExtensions": 4,
+    "proposalExtensions": 6,
     "dailyNotes": 38,
     "surfaceNotes": 3,
     "chronicles": 40,
