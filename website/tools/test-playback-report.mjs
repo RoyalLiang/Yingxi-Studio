@@ -48,3 +48,21 @@ test('unknown delivery is never retried and only exposes a trusted repository se
  let posts=0;const response=await onRequestPost(context(),async url=>{if(url.includes('/siteverify'))return verify();posts++;throw Error('network interrupted after send');});
  const result=await response.json();assert.equal(response.status,502);assert.equal(posts,1);assert.equal(result.uncertain,true);assert(result.url.startsWith('https://github.com/RoyalLiang/Yingxi-Studio/issues?'));assert(!JSON.stringify(result).includes(env.REPORT_GITHUB_TOKEN));
 });
+
+// The mobile page has no URL-driven automatic submission. The app supplies a request only after its send action.
+const {nativeReportRequest,sendNativeReport}=await import('../public/report/native-report.js');
+test('native request requires explicit current consent and strips private fields',()=>{
+ for(const value of [body({consent:false}),body({consentVersion:'old'}),body({id:'not-an-id'})])assert.throws(()=>nativeReportRequest(value));
+ const request=nativeReportRequest(body());assert.equal(request.id,id);assert.equal(request.consent,true);assert(!Object.hasOwn(request.report,'path'));assert(!Object.hasOwn(request,'challenge'));
+});
+test('native submission sends one consented sanitized request and preserves confirmed acknowledgement',async()=>{
+ let calls=0;const result=await sendNativeReport(body(),'fixture-token',async(url,options)=>{
+  calls++;assert.equal(url,'/api/playback-report');const data=JSON.parse(options.body);assert.equal(data.id,id);assert.equal(data.consent,true);assert.equal(data.challenge,'fixture-token');assert(!JSON.stringify(data).includes('do-not-forward'));
+  return Response.json({number:123,url:'https://github.com/RoyalLiang/Yingxi-Studio/issues/123'},{status:201});
+ });assert.equal(calls,1);assert.equal(result.status,201);assert.equal(result.result.number,123);
+});
+test('native network uncertainty is not retried and invalid consent cannot call the receiver',async()=>{
+ let calls=0;await assert.rejects(sendNativeReport(body(),'fixture-token',async()=>{calls++;throw Error('connection lost');}));assert.equal(calls,1);
+ await assert.rejects(sendNativeReport(body({consent:false}),'fixture-token',()=>assert.fail('must not submit')));
+ await assert.rejects(sendNativeReport(body(),'',()=>assert.fail('must not submit')));
+});

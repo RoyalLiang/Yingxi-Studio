@@ -91,7 +91,11 @@ node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 
 ## 播放问题回执
 
-`/report/` 是应用内「上报播放问题」的轻量网页；`functions/api/playback-report.js` 是同域接收端。应用通过 URL fragment 携带快照，fragment 不会随 HTTP 请求发给服务器，页面读取后立即清除。用户预览并勾选公开同意、点击提交且通过人机校验后，接收端才向本仓库创建 Issue。浏览、复制、未勾选同意或通道未配置时不会自动发送报告。
+Android 的「上报播放问题」直接在播放器内完成。用户预览并主动勾选公开同意后，点一次「同意并上报」；受限 WebView 负责 Turnstile 安全校验与同源接收端 `functions/api/playback-report.js` 的提交，成功后显示实际仓库回执编号。报告者无需 GitHub 登录、复制 JSON 或切换到外部浏览器。
+
+`/report/submit.html` 只在原生按钮操作后接收冻结的快照，不从页面地址或 URL fragment 读取报告，也不因单独打开页面就提交。原生端不添加 JavaScript 原生对象接口，禁用文件/内容访问，只允许精确的 HTTPS 主页面；完成通知只接受当前请求 ID 和确认的正数编号。本机仅保存尚未确认尝试的 UUID，不保存诊断正文；关闭或进程中断后重开会先提示检查旧回执，用户明确开始新的上报才会重新生成请求。
+
+`/report/` 仍是备用网页表单，也兼容旧客户端的 URL fragment 入口。fragment 不随 HTTP 请求发送，读取后立即清除；备用表单仍要求网页内明确同意和点击提交。浏览、复制、未勾选同意或通道未配置时不会自动发送报告。
 
 在 Cloudflare **Workers & Pages → yingxi-station → Settings → Variables and Secrets → Production** 配置：
 
@@ -108,3 +112,6 @@ node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 检查命令：`npm run test:reports`、`npm run check`。先在本地/预览环境用合成报告验证，不将用户提供的检修记录当作发布测试数据自动发送。生产验收需维护者配置服务端授权，并主动提交一份无私人信息的合成报告。
 
 依据：[Pages Functions 与 Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)、[创建 GitHub Issue 的权限](https://docs.github.com/en/rest/issues/issues#create-an-issue)、[Turnstile 服务端验证](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)、[Pages 响应头](https://developers.cloudflare.com/pages/configuration/headers/)。
+
+
+原生 WebView 实现依据：[Cloudflare 移动端集成](https://developers.cloudflare.com/turnstile/get-started/mobile-implementation/)、[Android WebView 导航与脚本](https://developer.android.com/develop/ui/views/layout/webapps/webview)、[Android 文件访问安全](https://developer.android.com/privacy-and-security/risks/webview-unsafe-file-inclusion)。JavaScript 与 DOM storage 用于实际校验；不为此开放本机文件访问。
