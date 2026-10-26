@@ -657,6 +657,14 @@
         "zh": "片架前沿换上磨平的短木签，阿汐把片匣短名留在眼前，长来处仍夹在登记纸中。迟灯擦拭片架，不必再掀动整叠旧纸。",
         "en": "Worn wooden labels return to the shelf edge. Axi keeps the short film names in sight and the longer trails in the register, leaving Chideng room to dust without disturbing the old papers."
       }
+    },
+    {
+      "id": "chronicle_mobile_report_060",
+      "version": "0.2.0-alpha.60",
+      "text": {
+        "zh": "阿汐在检修纸右下角留出空白，迟灯把铜尺横在桌边；送达时才添上收条号码，修片的事仍留在另一栏。",
+        "en": "Axi leaves a blank corner on the repair note while Chideng lays his copper ruler along the desk. A receipt number is added on delivery; mending the film remains a separate entry."
+      }
     }
   ],
   "boundary": {
