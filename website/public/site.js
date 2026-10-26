@@ -29,7 +29,7 @@ if(document.querySelector('[data-open-resident]'))fetch('assets/letters.json').t
     openDialog(document.querySelector('#resident-dialog'),button);
   });
 }).catch(()=>{for(const button of document.querySelectorAll('[data-open-resident]'))button.addEventListener('click',()=>{const fallback=document.querySelector('#all-letters');fallback.open=true;fallback.scrollIntoView({behavior:reduceMotion.matches?'instant':'smooth',block:'center'});});});
-const entranceNodes=document.querySelectorAll('.section-top,.highlight-card,.library-section>h2,.library-layout,.world-intro,.era-story article,.world-map-copy,.world-map figure,.resident-card,.world-after p,.book-era article,.book-place,.book-life,.book-resident,.book-section>h2,.download-section>h2,.faq-section>h2');
+const entranceNodes=document.querySelectorAll('.species-directory>h2,.species-directory>p,.species-directory>nav,.specimen-art,.specimen-copy,.species-web>h2,.species-web p,.section-top,.highlight-card,.library-section>h2,.library-layout,.world-intro,.era-story article,.world-map-copy,.world-map figure,.resident-card,.world-after p,.book-era article,.book-place,.book-life,.book-resident,.book-section>h2,.download-section>h2,.faq-section>h2');
 if('IntersectionObserver'in window){const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){if(!reduceMotion.matches)entry.target.classList.add('is-entering');observer.unobserve(entry.target);}}},{threshold:.16});entranceNodes.forEach(node=>observer.observe(node));}
 const hero=document.querySelector('.hero');const stage=document.querySelector('.product-stage');const pure=document.querySelector('.pure-story');let queued=false;
 const clamp=x=>Math.max(0,Math.min(1,x));

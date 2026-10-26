@@ -123,7 +123,7 @@ def render_glossary(world):
     lines=["# 映汐世界观名词表", "", "本表由随包图谱生成，应用探索页的「废土词典」读取相同数据。修改定义时先维护图谱，再运行 `python3 -B scripts/worldbook.py --write-glossary`。", "", "2026-10-22 用户明确采用核爆长潮、地下放映站、聚落生态、孢子机制、觉醒感知及理想城贸易。正式设定与站内证据分别列示：地点存在不等于角色已走通路线。演进提案仍未成为事实。", "", "人物、地点衔接、矛盾处理及第二章内容见[世界书](worldbook.md)。第一、二章均可手动阅读，分别保留阅读位置；第二章纸条的寄信人和所述设备情况仍未证实。", "", "| 稳定标识 | 名词 | English | 分类 | 正式采用 | 站内证据 | 定义 | 演进提案 |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     def cell(value):return value.replace('|',r'\|').replace('\n',' ')
     for item in world['lexicon']:
-        values=[item['id'],item['name']['zh'],item['name']['en'],item['category']['zh'],'正式设定' if item['canonStatus']=='confirmed' else '演进提案','站内传闻' if item['status']=='rumor' else '已知记录',item['summary']['zh'],item.get('proposal',{}).get('zh','—')]
+        values=[item['id'],item['name']['zh'],item['name']['en'],item['category']['zh'],'正式设定' if item['canonStatus']=='confirmed' else '演进提案','未核作者提案' if item['canonStatus']=='proposal' else ('站内传闻' if item['status']=='rumor' else '已知记录'),item['summary']['zh'],item.get('proposal',{}).get('zh','—')]
         lines.append('| '+' | '.join(cell(value) for value in values)+' |')
     lines+=['','## 应用名称与故事实体分开解释','','应用统一为「映汐放映站」，保留「避难所」「废墟档案库」等废土风格名称。远程媒体通过「幸存者据点」（SMB/SFTP）与「外部信号塔」（网盘/WebDAV）分别登记，「废墟档案库」指本机影像；故事中的避难所指实体聚居据点。「档案室」收录人物、性格、语录与据点大事记，章节来信在「探索」中阅读；大事记按应用版本选录变化，「相伴第 N 天」按本地首次安装日期计天。','','阿汐给旧片罐补写侧签、迟灯照看设备，属于既有据点日常；地下建筑已由用户采用，路线调查仍单独记录。「封存柜」是应用内私密目录与剧集登记，不移动或加密原文件。','', '「今日拾获」是实际浏览目录时新记录的媒体；「信号破译中」保留「正在缓冲」的读屏说明。这些名称不代表物资掉落、文件修复、觉醒能力或章节解锁。','']
     lines.extend(['', '## 应用称谓与功能边界', '', '| 稳定标识 | 中文 | English | 功能含义 | Meaning |', '| --- | --- | --- | --- | --- |'])

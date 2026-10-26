@@ -24,8 +24,8 @@
       "y": 0.14,
       "known": true,
       "description": {
-        "zh": "旧铁路线终点的防辐射地下避难所，也是还在运转的最后一间放映室。文明纪元幸存的影像在这里归档，无论是拾荒者、变种人行商还是觉醒者旅人，都能借一晚灯光。",
-        "en": "A radiation-shielded underground shelter at the end of an old railway, and its last working screening room. Surviving images from the Civilization Era are catalogued here; scavengers, mutant traders, and Awakened travelers alike may borrow its light."
+        "zh": "旧铁路线终点、由旧避难所外围改建的地下幸存者据点，保留仍在运转的放映室。文明纪元幸存的影像在这里归档，无论是拾荒者、变种人行商还是觉醒者旅人，都能借一晚灯光。",
+        "en": "An underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter, with a working screening room. Surviving images from the Civilization Era are catalogued here; scavengers, mutant traders, and Awakened travelers alike may borrow its light."
       }
     },
     {
@@ -118,8 +118,8 @@
       "y": 0.5,
       "known": false,
       "description": {
-        "zh": "围绕旧能源塔与环状净水工程重建的洁净秩序城邦，经盐环商队与避难所互通修配零件和旧纪元纪录片。城邦与贸易已纳入正式设定；站内仍未掌握可实地循行的城址与路线。",
-        "en": "A clean, ordered city rebuilt around surviving energy towers and circular waterworks. Salt Ring caravans exchange repair parts and old-era documentaries with shelters. The city and trade are established canon; the station still lacks a surveyed location and route."
+        "zh": "理想城又以高塔称呼，是繁荣纪元技术的集大成者与技术落地的受益者。它围绕旧能源塔与环状净水工程重建，凭技术优势高高在上、俯视外界，经盐环商队交换修配零件与旧纪元纪录片。与太阳军团格格不入，但具体冲突与战事未定；站内城址及实测路线仍待核。",
+        "en": "Also called the high towers, Ideal City embodies the accumulated technology of the Prosperity Era and benefits from its application. Rebuilt around old energy towers and circular waterworks, it looks down on the outside world from technological privilege and exchanges repair parts and old documentaries through Salt Ring caravans. It is at odds with the Sun Legion, without a defined conflict or war; the station still lacks a surveyed location and route."
       }
     }
   ],
@@ -684,8 +684,8 @@
         "en": "Civilization Era"
       },
       "summary": {
-        "zh": "核爆毁灭前的旧文明时代，留下地下掩体、铁路设施、能源塔、净水工程，以及散落在磁盘、服务器和胶片盒中的影像与声轨遗物。",
-        "en": "The age before nuclear destruction, leaving shelters, railway works, energy towers, waterworks, and image and sound records scattered across drives, servers and film tins."
+        "zh": "又称繁荣纪元，指核爆毁灭前的旧文明时代，留下地下掩体、铁路、能源塔、净水工程与磁盘、服务器和胶片中的影像声轨。两个名称指向同一旧时代；核爆后技术体系已断层，遗产的继承与再现并不均匀。",
+        "en": "Also called the Prosperity Era: the old civilization before nuclear destruction, leaving shelters, railways, energy towers, waterworks, and images and sound on drives, servers, and film. Both names refer to the same era. Technology fractured after the nuclear fall, with uneven inheritance and reproduction."
       },
       "canonStatus": "confirmed"
     },
@@ -735,8 +735,8 @@
         "en": "Old World"
       },
       "summary": {
-        "zh": "居民对文明纪元及其遗存的日常称呼。",
-        "en": "The everyday name for the Civilization Era and what survives from it."
+        "zh": "居民对文明纪元（繁荣纪元）及其遗存的日常称呼，不另设一个纪元。",
+        "en": "An everyday name for the Civilization Era, also called the Prosperity Era, and its remains; not an additional era."
       },
       "canonStatus": "confirmed"
     },
@@ -773,8 +773,8 @@
         "en": "Underground Shelters"
       },
       "summary": {
-        "zh": "由文明纪元地下掩体、旧铁路隧道和重型混凝土隔离门改建的防辐射据点；映汐放映站属于这一类。应用中的避难所入口只是连接登记，不说明真实服务器位于地下。",
-        "en": "Radiation shelters adapted from old bunkers, railway tunnels and heavy concrete doors. Yingxi Station belongs to this group. The app’s shelter entrance is a connection register, not a claim that servers are underground."
+        "zh": "深埋地下、很少与外界往来的避难设施，内部集成繁荣纪元的顶尖技术。人口、运行现状与技术能否完整复现须逐处说明。映汐只是旧避难所外围改建的据点，深层设施另算；应用连接入口的废土称谓不证明真实服务器的建筑形态或技术水平。",
+        "en": "Deep underground shelters with little outside contact, integrating the Prosperity Era’s most advanced technology. Population, operational condition, and reproducibility must be established for each site. Yingxi is an outpost adapted from an old shelter’s outskirts, distinct from its deep facilities. Narrative names for app connections do not establish a server’s architecture or technology."
       },
       "canonStatus": "confirmed"
     },
@@ -790,8 +790,8 @@
         "en": "Survivor Settlements"
       },
       "summary": {
-        "zh": "人类、变种人工匠与觉醒者依托停运列站、盐原高地和净水井组成的共生社区。盐环列站是已知聚落；职业举例不限制个体的身份与选择。",
-        "en": "Communities of humans, mutant craftspeople and Awakened residents around disused stations, salt highlands and wells. Salt Ring is a known settlement; example occupations do not determine every individual’s identity."
+        "zh": "100户及以上的普通幸存者聚居地；少于100户称幸存者据点，100户归聚落一侧。聚落可依托停运列站、盐原高地与净水井，由人类、变种人与觉醒者共同生活。盐环列站沿用聚落身份，具体户数与户籍构成尚未写定。",
+        "en": "Ordinary survivor communities with at least 100 households; those below 100 are outposts, with exactly 100 belonging to the settlement category. They may occupy railway stops, salt-flat highlands, and water wells, shared by humans, mutants, and Awakened people. Salt Ring Stops remains a settlement; its exact household count and composition are unspecified."
       },
       "canonStatus": "confirmed"
     },
@@ -807,8 +807,8 @@
         "en": "Ideal City"
       },
       "summary": {
-        "zh": "围绕旧能源塔与环状净水工程重建的洁净秩序城邦，经盐环商队与避难所互通修配零件和旧纪元纪录片。城邦与贸易已纳入正式设定；站内仍未掌握可实地循行的城址与路线。",
-        "en": "A clean, ordered city rebuilt around surviving energy towers and circular waterworks. Salt Ring caravans exchange repair parts and old-era documentaries with shelters. The city and trade are established canon; the station still lacks a surveyed location and route."
+        "zh": "理想城又以高塔称呼，是繁荣纪元技术的集大成者与技术落地的受益者。它围绕旧能源塔与环状净水工程重建，凭技术优势高高在上、俯视外界，经盐环商队交换修配零件与旧纪元纪录片。与太阳军团格格不入，但具体冲突与战事未定；站内城址及实测路线仍待核。",
+        "en": "Also called the high towers, Ideal City embodies the accumulated technology of the Prosperity Era and benefits from its application. Rebuilt around old energy towers and circular waterworks, it looks down on the outside world from technological privilege and exchanges repair parts and old documentaries through Salt Ring caravans. It is at odds with the Sun Legion, without a defined conflict or war; the station still lacks a surveyed location and route."
       },
       "canonStatus": "confirmed"
     },
@@ -824,10 +824,14 @@
         "en": "Radiation-mutated Species"
       },
       "summary": {
-        "zh": "核后辐射演化出的多样生灵，已记录的温顺种群包括循无线电波迁徙的回声海水鸟、趋光孢子蛾和盐原驮兽，与据点居民形成共处生态。",
-        "en": "Diverse life shaped by postwar radiation. Recorded gentle populations include radio-guided Echo Sea birds, light-seeking spore moths and saltland pack animals, sharing an ecology with station residents."
+        "zh": "核后辐射演化出的多样生灵，既有循无线电波迁徙的温顺水鸟、趋光孢子蛾与盐原驮兽，也存在会侵袭人类活动、物资和设施的变异物种。个体、生态条件与实际行为决定应对；具体新物种和机制按采用记录维护。",
+        "en": "Diverse life altered after the nuclear fall includes gentle radio-following seabirds, light-seeking spore-moths, and salt-flat pack beasts, as well as mutated species that threaten people, supplies, and facilities. Responses depend on individuals, conditions, and observed behavior; new species and mechanisms require their own adoption records."
       },
-      "canonStatus": "confirmed"
+      "canonStatus": "confirmed",
+      "proposal": {
+        "zh": "物种图鉴第一册创作20项生态类群，包括对硬背鼠的展开，以及食物网、隐蔽侵袭与共处关系。它们都是作者提案，尚无站内目击或实测记录，不自动成为正式物种或已核路线。",
+        "en": "The first bestiary develops twenty ecological concepts, including the hard-backed rat, food webs, hidden threats, and coexistence. All are author proposals without station sightings or surveys, adding no adopted species or verified routes."
+      }
     },
     {
       "id": "spores",
@@ -841,8 +845,8 @@
         "en": "Self-evolving Spores"
       },
       "summary": {
-        "zh": "潮湿废墟与沉没档案馆中的共生荧光菌群，能利用残余辐射与微弱电磁信号迭代，在密封胶片盒外结成隔绝潮水与盐雾的透气菌膜。盒内干爽不等于整片废墟已经安全。",
-        "en": "Symbiotic luminous colonies in damp ruins and the Drowned Archive, using residual radiation and weak electromagnetic signals to evolve. Their breathable membrane shields sealed film tins from water and salt spray; a dry tin does not make an entire ruin safe."
+        "zh": "潮湿废墟与沉没档案馆中的共生荧光菌群，能利用残余辐射与微弱电磁信号迭代，在密封胶片盒外结成隔绝潮水与盐雾的透气菌膜。盒内干爽不等于整片废墟已经安全。 既有保护作用不能外推为所有生长环境、饮水或居住空间都安全，新用途仍需验证。",
+        "en": "Symbiotic luminous colonies in damp ruins and the Drowned Archive, using residual radiation and weak electromagnetic signals to evolve. Their breathable membrane shields sealed film tins from water and salt spray; a dry tin does not make an entire ruin safe. This protective role does not establish safety in every growth environment, water supply, or inhabited space; new applications require verification."
       },
       "canonStatus": "confirmed"
     },
@@ -947,8 +951,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "旧铁路线终点地下避难所中的最后一间放映室，阿汐登记影像、迟灯维护设备。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。 阿汐在片架旁留了一张写着“灯还亮着”的短笺，给路过与回来的人。迟灯抚平片窗两侧的旧绒条，毛边向外收起，阿汐试映时核看画框的齐整边缘。 阿汐用空片罐盖压住片单留白的一角，标题朝向来人；片单留在灯下，读不读都不挡放映。 迟灯把片罐盖沿旧布的接缝收在内侧，线头压进两层布之间，阿汐移开盖子时片单纸角不会被带起。 阿汐用磨平的短木签标注片架，长来处留在登记纸中；应用中的本机片架对应已授权文件夹，片架名称不改变原目录。",
-        "en": "The last screening room in an underground shelter at the old railway terminus. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures. Chideng flattens the evening’s tickets with a brass ruler; Axi notes paused frames on their backs. Filed by date, these slips are not evidence of travel beyond the station. Axi leaves a note beside the shelves for passing and returning visitors: the light is still on. Chideng smooths the felt beside the projection window and tucks its frayed edges outward; Axi checks the even frame during a test screening. Axi holds a film list by its blank corner with an empty tin lid, its title facing visitors; reading it never delays a screening. Chideng turns the cloth seam inside the film-tin lid and tucks loose threads between its layers, so Axi can lift it without catching the film list’s paper corner. Axi marks the shelves with worn wooden labels and keeps longer trails in the register. In the app, a local shelf means a granted folder; its display name does not change the original directory."
+        "zh": "映汐放映站位于旧铁路线终点，由旧避难所外围改建为地下幸存者据点；阿汐登记影像，迟灯维护设备，深层避难所另行区分。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。 阿汐在片架旁留了一张写着“灯还亮着”的短笺，给路过与回来的人。迟灯抚平片窗两侧的旧绒条，毛边向外收起，阿汐试映时核看画框的齐整边缘。 阿汐用空片罐盖压住片单留白的一角，标题朝向来人；片单留在灯下，读不读都不挡放映。 迟灯把片罐盖沿旧布的接缝收在内侧，线头压进两层布之间，阿汐移开盖子时片单纸角不会被带起。 阿汐用磨平的短木签标注片架，长来处留在登记纸中；应用中的本机片架对应已授权文件夹，片架名称不改变原目录。",
+        "en": "Yingxi Station is an underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter; Axi records images and Chideng maintains equipment, while the deep shelter is distinct. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures. Chideng flattens the evening’s tickets with a brass ruler; Axi notes paused frames on their backs. Filed by date, these slips are not evidence of travel beyond the station. Axi leaves a note beside the shelves for passing and returning visitors: the light is still on. Chideng smooths the felt beside the projection window and tucks its frayed edges outward; Axi checks the even frame during a test screening. Axi holds a film list by its blank corner with an empty tin lid, its title facing visitors; reading it never delays a screening. Chideng turns the cloth seam inside the film-tin lid and tucks loose threads between its layers, so Axi can lift it without catching the film list’s paper corner. Axi marks the shelves with worn wooden labels and keeps longer trails in the register. In the app, a local shelf means a granted folder; its display name does not change the original directory."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
@@ -960,7 +964,7 @@
       "id": "salt",
       "status": "confirmed",
       "category": {
-        "zh": "据点",
+        "zh": "地点",
         "en": "Places"
       },
       "name": {
@@ -1162,6 +1166,503 @@
       "summary": {
         "zh": "适应盐原环境的温顺变异驮兽，可伴聚落向导与商队负重出行。具体驯养制度、数量与路线没有因此定案。",
         "en": "Gentle mutated pack animals adapted to the saltlands, accompanying guides and caravans. Their number, husbandry and precise routes remain unspecified."
+      }
+    },
+    {
+      "id": "prosperity_era",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "纪元",
+        "en": "Eras"
+      },
+      "name": {
+        "zh": "繁荣纪元",
+        "en": "Prosperity Era"
+      },
+      "summary": {
+        "zh": "文明纪元的另一称呼，指核爆毁灭前的旧文明时代，不另增一个独立纪元。其技术遗产在核爆后并未被各方完整继承。",
+        "en": "Another name for the Civilization Era before the nuclear destruction, not a separate era. Its technological inheritance did not pass intact to every postwar society."
+      }
+    },
+    {
+      "id": "survivor_outposts",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "聚居",
+        "en": "Communities"
+      },
+      "name": {
+        "zh": "幸存者据点",
+        "en": "Survivor outposts"
+      },
+      "summary": {
+        "zh": "少于100户的普通幸存者聚居地；达到100户及以上称幸存者聚落。映汐放映站由旧避难所外围改建，属于地下幸存者据点，具体户数尚未写定。建筑在地下，不等于它就是封闭的深层避难所。",
+        "en": "Ordinary survivor communities with fewer than 100 households; those with 100 or more are called settlements. Yingxi Station is an underground outpost adapted from the outskirts of an old shelter; its exact household count is unspecified. Being underground does not make it a closed deep shelter."
+      }
+    },
+    {
+      "id": "itinerant_traders",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "势力与群体",
+        "en": "Factions and groups"
+      },
+      "name": {
+        "zh": "行商",
+        "en": "Itinerant traders"
+      },
+      "summary": {
+        "zh": "游走在废土上的移动商人，以流动交易连接不同的人和聚居地。行商与商队往来不自动证明某条路线已经由放映站实地核验，具体组织与交易规则逐处说明。",
+        "en": "Mobile merchants who travel the wasteland, linking people and communities through trade. Their movements do not by themselves establish a route surveyed by Yingxi Station; particular organizations and trading arrangements remain local details."
+      }
+    },
+    {
+      "id": "wasteland_roamers",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "势力与群体",
+        "en": "Factions and groups"
+      },
+      "name": {
+        "zh": "废土客",
+        "en": "Wasteland scavenger bands"
+      },
+      "summary": {
+        "zh": "通常三五成群行动的拾荒者小队，在废土中搜寻遗物与可用物资。“三五成群”描述常见小队形态，不设军队式固定编制；影像拾荒者是一种职业，不意味着阿汐的族群、觉醒状态或所属小队已确定。",
+        "en": "Small bands of scavengers, often three to five people, searching the wasteland for relics and usable supplies. This describes a common group size rather than a fixed military unit. Image scavenging is an occupation and does not establish Axi’s ancestry, awakening status, or membership in a band."
+      }
+    },
+    {
+      "id": "raiders",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "势力与群体",
+        "en": "Factions and groups"
+      },
+      "name": {
+        "zh": "掠夺者",
+        "en": "Raiders"
+      },
+      "summary": {
+        "zh": "废土上失去人性、行事残暴的幸存者聚落，以掠夺伤害他人。这是对其行径与群体形态的描述，不是新的生命谱系，也不按变种人或觉醒者等族群认定。具体据点、首领与势力范围尚未写定。",
+        "en": "Brutal survivor settlements that have abandoned their humanity and prey on others. This describes conduct and organization, not a biological lineage or an identity assigned to mutants or Awakened people. Particular bases, leaders, and territories remain unspecified."
+      }
+    },
+    {
+      "id": "sun_legion",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "势力与群体",
+        "en": "Factions and groups"
+      },
+      "name": {
+        "zh": "太阳军团",
+        "en": "Sun Legion"
+      },
+      "summary": {
+        "zh": "由大型掠夺者群体聚集形成的力量，具备更加军队化的编制与素养，与理想城格格不入。其统帅、人数、驻地、军衔兵种、装备与具体战事尚未写定；势力正式存在，不等于站内已掌握其行军路线或已经开战的证据。",
+        "en": "A force formed by the gathering of large raider groups, with more military organization and discipline, fundamentally at odds with Ideal City. Its command, numbers, bases, ranks, branches, equipment, and particular campaigns remain unspecified. Canonical existence does not establish station knowledge of marching routes or an ongoing war."
+      }
+    },
+    {
+      "id": "technology_fracture",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "技术",
+        "en": "Technology"
+      },
+      "name": {
+        "zh": "技术断层",
+        "en": "Technological fracture"
+      },
+      "summary": {
+        "zh": "核爆后技术体系出现断层，各方仍沿不同维度探索。深层避难所保有顶尖技术，理想城继承并受益于旧文明技术，但不能据此推定所有地区掌握同样水平。拥有遗物、能够使用、能够维修与能够重新制造须分别说明，旧影像也不能自动补齐工业与知识链条。 各方还会主动勘探与试造，探索适应核后环境的新材料和构造；方向不局限于消耗旧物，具体工艺与成果仍须逐项检验。",
+        "en": "Technology suffered a systemic break after the nuclear destruction, and different groups continue to explore along different paths. Deep shelters retain advanced technology and Ideal City inherits and benefits from old civilization technology, without making those capabilities universal. Possession, operation, repair, and reproduction are distinct; old footage cannot automatically restore industrial and knowledge chains. Groups also survey and experiment, exploring materials and structures adapted to postwar conditions. Development is not limited to consuming old relics; particular crafts and achievements must still be tested."
+      }
+    },
+    {
+      "id": "wasteland_threats",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "生存与探索",
+        "en": "Survival and exploration"
+      },
+      "name": {
+        "zh": "废土风险",
+        "en": "Wasteland threats"
+      },
+      "summary": {
+        "zh": "废土不是稳定安全的生活环境。掠夺者、变异物种侵袭与既有辐射风雨、潮水和废墟环境共同影响据点、运输与出行；建设和接待也必须负担防护、维护和人员消耗。具体物种、攻击方式与事件须逐项建立，不能仅凭地下位置或一次防护成功宣告永久安全。",
+        "en": "The wasteland is not a reliably safe environment. Raiding, attacks by mutated life, fallout weather, tides, and ruins affect communities, transport, and travel. Construction and hospitality also carry protection, maintenance, and human costs. Particular species, attacks, and events must be established separately; an underground location or one successful defense does not create permanent safety."
+      }
+    },
+    {
+      "id": "independent_exploration",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "生存与探索",
+        "en": "Survival and exploration"
+      },
+      "name": {
+        "zh": "自主探索与构造",
+        "en": "Independent exploration and construction"
+      },
+      "summary": {
+        "zh": "技术断层后的各方需要主动勘探、观察、试错与局部建造，发展适合自身环境的材料、工艺和协作。探索可能损失人员与物资，原型可能失效；获得可维护、可传授的局部成果仍须持续验证。方向已确认，具体装置和成功成果不预先写定。",
+        "en": "After the technological fracture, groups actively survey, observe, experiment, and build locally, developing materials, craft, and cooperation suited to their conditions. Exploration can cost lives and supplies, and prototypes can fail. Maintainable, teachable local achievements require continuing verification. This direction is adopted; particular devices and successful outcomes are not predetermined."
+      },
+      "proposal": {
+        "zh": "小说构造提案：折返风箱与可拆护网、分路检修构架、可换件驮架、菌膜观察匣与封套试制。材料不合、通风受阻、损耗或样片失效都可能导致返工；硬背鼠、本轮袭击和勘探支线仍是小说暂定内容，不据此新增正式物种、参数、路线或战争。 据点还可探索观察、交易缓冲、生活照料、作业与档案的空间边界及退路可能；这些安排尚未成为已建成设施或安全路线。",
+        "en": "Novel proposals include a baffled ventilation box with removable mesh, separable maintenance structures, replaceable pack-frame parts, and observation cases for studying fungal protective layers. Incompatible materials, restricted airflow, wear, or failed samples can force rebuilding. Hard-backed rats, the attacks, and the survey branch in this draft remain fictional proposals, adding no adopted species, parameters, routes, or war. The outpost may also investigate boundaries between observation, trade, living and care, work, and archives, and whether a retreat route exists. These are not completed facilities or established safe routes."
+      }
+    },
+    {
+      "id": "hardback_rat",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "硬背鼠",
+        "en": "Hard-backed rat"
+      },
+      "summary": {
+        "zh": "创作提案：体型低伏、背有硬皮的杂食啮兽，依赖遮蔽、温暖、根茎、虫卵和油脂残屑。群体会破坏储物和软质附件，但不以电为食，也不理解线路。",
+        "en": "Species concept: A low, hard-backed scavenger drawn to shelter, warmth, roots, larvae, and greasy scraps. Groups damage stores and soft fittings; neither their diet nor their intelligence grants mastery of electricity."
+      }
+    },
+    {
+      "id": "door_knock_snail",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "叩门蜗",
+        "en": "Door-knocking snail"
+      },
+      "summary": {
+        "zh": "创作提案：多腔壳和附着锈片随风敲响旧金属，制造近似叩门的声音。它刮食潮湿生长层，不模仿人语，却可能耗尽守夜人的警觉。",
+        "en": "Species concept: A chambered snail whose shell and attached rust flakes knock against old metal in the wind. It grazes damp growth rather than imitating speech, yet its accidental sounds can exhaust a watch."
+      }
+    },
+    {
+      "id": "blind_culvert_otter",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "盲渠獭",
+        "en": "Blind culvert otter"
+      },
+      "summary": {
+        "zh": "创作提案：眼睛退化、依靠触须与近处水流狩猎的水生捕食者，吃鱼、蛙和小兽。隐蔽巢穴可能堵住旧水工设施，干盐地则严重限制其行动。",
+        "en": "Species concept: A nearly blind water predator using whiskers and nearby currents to hunt fish, frogs, and small animals. Its sheltered nests can obstruct old waterworks, while dry saltlands sharply limit its movement."
+      }
+    },
+    {
+      "id": "sailbone_heron",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "帆骨鹭",
+        "en": "Sail-boned heron"
+      },
+      "summary": {
+        "zh": "创作提案：具帆状翼与高肩骨架的海岸鹭，捕食浅水生物并守护高处巢区。起落需要风与空间，不能在地下自由飞行或把成年人抓上天。",
+        "en": "Species concept: A coastal heron with sail-like wings and a high shoulder frame. It hunts shallow-water prey and fiercely guards elevated nests, but depends on wind and room to take off."
+      }
+    },
+    {
+      "id": "lantern_gut_eel",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "灯胃鳗",
+        "en": "Lantern-gut eel"
+      },
+      "summary": {
+        "zh": "创作提案：腹部半透明、进食后通过拟设共生微生物发光的鳗。移动冷光会误导夜行者，但不编码消息，也不能脱离活体与环境永久照明。",
+        "en": "Species concept: An eel whose translucent belly glows after feeding through a proposed microbial partnership. Its light can mislead night travelers, but does not encode messages or survive indefinitely outside the animal."
+      }
+    },
+    {
+      "id": "salt_mirror_spider",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "盐镜蛛",
+        "en": "Salt-mirror spider"
+      },
+      "summary": {
+        "zh": "创作提案：伏在盐壳上伪装成水滴的小型蛛，捕食灯边与片架旁的蛾虫。蛛网减少虫害，也可能卡住精细部件；不是现成工业纤维。",
+        "en": "Species concept: A small salt-camouflaged spider hunting moths around sheltered frames and shelves. Its webs both protect archives from insects and interfere with delicate moving parts; they are not ready-made industrial fiber."
+      }
+    },
+    {
+      "id": "paperwing_moth",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "纸翅螟",
+        "en": "Paper-winged moth"
+      },
+      "summary": {
+        "zh": "创作提案：幼虫吃浆料、胶质、菌皮和旧纤维的档案害虫，成虫像纸灰。它破坏记录与器物之间的实物联系，不吞食文字含义、数字数据或记忆。",
+        "en": "Species concept: An archive moth whose larvae eat paste, adhesive, fungal skins, and old fibers. It destroys the physical links between records and objects rather than consuming language, digital data, or memory."
+      }
+    },
+    {
+      "id": "filter_throat_frog",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "滤喉蛙",
+        "en": "Filter-throated frog"
+      },
+      "summary": {
+        "zh": "创作提案：喉囊有透明褶层的湿地蛙，叫声与体况可提供环境变化线索。安静有多种原因，它不能证明水可饮或把脏水净化。",
+        "en": "Species concept: A wetland frog with a folded translucent throat sac. Its changing calls and condition offer environmental clues, but silence has many causes and the animal cannot certify or purify drinking water."
+      }
+    },
+    {
+      "id": "copper_ear_fox",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "铜耳狐",
+        "en": "Copper-eared fox"
+      },
+      "summary": {
+        "zh": "创作提案：耳缘铜锈色、追踪鼠和可听机械声的捕食者。既可能减轻鼠患，也会偷食或护幼；它不解读电磁消息，也不是无需照料的活设备。",
+        "en": "Species concept: A copper-colored-eared hunter following rats and audible machinery sounds. It may reduce rodent pressure while stealing food or defending young; its senses do not decode electromagnetic messages."
+      }
+    },
+    {
+      "id": "rustback_dog",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "锈背犬",
+        "en": "Rust-backed dog"
+      },
+      "summary": {
+        "zh": "创作提案：在废路和营地残食附近活动的机会性群居捕食者。既参与食腐，也可能威胁旅行者；忠诚与永不丢失目标的追踪能力并非天性。",
+        "en": "Species concept: An opportunistic pack predator and scavenger living around roads and camp waste. Its presence can remove carrion or endanger travelers, but neither loyalty nor perfect tracking is innate."
+      }
+    },
+    {
+      "id": "mudplate_boar",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "沼甲豚",
+        "en": "Mud-plated boar"
+      },
+      "summary": {
+        "zh": "创作提案：背侧附着泥盐与枯根的强壮湿地杂食兽。拱掘改变土壤和水沟，争水与育幼行为会使水点、田地和道路变得危险。",
+        "en": "Species concept: A powerful wetland omnivore wearing accumulated mud, salt, and roots. Its rooting reshapes soil and waterways, while territorial or breeding behavior can make water points and tracks unsafe."
+      }
+    },
+    {
+      "id": "wandering_shell_crab",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "走壳蟹",
+        "en": "Wandering-shell crab"
+      },
+      "summary": {
+        "zh": "创作提案：把旧片罐、碎盔和空腔零件当作壳的食腐蟹。它因形状和空间搬走器物，不理解器物在人类手中的意义，把潮滩生态与失踪货物连在一起。",
+        "en": "Species concept: A scavenging crab that shelters in abandoned tins, helmets, and hollow parts. It moves objects for their usable shape, not their human meaning, linking shoreline ecology with lost cargo."
+      }
+    },
+    {
+      "id": "wall_glider_lizard",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "贴墙伞蜥",
+        "en": "Wall-gliding lizard"
+      },
+      "summary": {
+        "zh": "创作提案：伏在墙上像分层旧墙皮、可凭侧膜作短距滑移的攀爬捕食者。让垂直废墟成为风险，但依赖落差、合适天气和猎物，不能自由悬飞。",
+        "en": "Species concept: A climbing ambush reptile resembling layered wall skin, with side membranes for short descents. It makes vertical ruins hazardous but requires height, suitable weather, and prey rather than flying freely."
+      }
+    },
+    {
+      "id": "saddle_seam_louse",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "鞍缝虱",
+        "en": "Saddle-seam louse"
+      },
+      "summary": {
+        "zh": "创作提案：随驮兽和有遮蔽的旧布缝迁移的微小寄生者，影响睡眠、皮肤与来客之间的信任。需要宿主和合适环境，不能无限自行繁殖。",
+        "en": "Species concept: A tiny parasite moving with pack animals and sheltered fabric seams. It burdens rest, skin, and trust between visitors and residents, but needs hosts and suitable conditions rather than reproducing without limit."
+      }
+    },
+    {
+      "id": "salt_lip_rosette",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "盐唇花",
+        "en": "Salt-lipped rosette"
+      },
+      "summary": {
+        "zh": "创作提案：盐结晶镶在厚叶边的贴地莲座植物，能短时承露并稳定部分表土。支撑食草动物与栽培设想，但仍需要水、养分、时间与照料。",
+        "en": "Species concept: A low succulent rosette whose salt-crusted leaf edges hold brief dew and stabilize some ground. It supports herbivores and possible cultivation, but still needs water, nutrients, time, and protection."
+      }
+    },
+    {
+      "id": "tide_return_reed",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "返潮芦",
+        "en": "Tide-return reed"
+      },
+      "summary": {
+        "zh": "创作提案：折断中空茎能随风水发出哨声的岸边芦草。为小生物提供遮蔽并有轻型材料价值，也隐藏不稳地面与误导声音判断。",
+        "en": "Species concept: A hollow-stemmed shoreline reed whose broken stems whistle with wind and water. It shelters a food web and offers potential light material, while concealing unstable ground and confusing listeners."
+      }
+    },
+    {
+      "id": "blackbrush_lichen",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "黑帚地衣",
+        "en": "Blackbrush lichen"
+      },
+      "summary": {
+        "zh": "创作提案：会捕集尘粒的缓慢黑色共生生长层，在特定潮湿条件下可能连通近处旧接点，造成间歇故障。它不寻找、理解或修复电路。",
+        "en": "Species concept: A slow dark symbiotic growth that traps conductive dust. Under particular wet conditions it may bridge nearby contacts, causing intermittent faults, but does not seek, understand, or repair circuits."
+      }
+    },
+    {
+      "id": "ceramic_crust_moss",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "瓷壳苔",
+        "en": "Ceramic-crust growth"
+      },
+      "summary": {
+        "zh": "创作提案：有浅白矿化外壳和柔软活缘的苔状共生层，改变缝隙与器物表面，可启发材料研究。像瓷并不证明其绝缘、隔热或强度可靠。",
+        "en": "Species concept: A pale mineralized symbiotic crust with a soft living edge. It changes gaps and surfaces and suggests possible material research, but its resemblance to ceramic proves neither insulation nor useful strength."
+      }
+    },
+    {
+      "id": "tide_barge",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "潮舟兽",
+        "en": "Tide barge"
+      },
+      "summary": {
+        "zh": "创作提案：体量巨大、移动缓慢的浅水摄食者，背上附着小型生态，看似覆生的沉船或礁石。食源、潮水与健康约束其活动，不能成为无需照料的移动城堡。",
+        "en": "Species concept: A huge slow shallow-water grazer and filter feeder resembling an overgrown wreck. Its attached miniature ecosystem can look like a fixed reef, but feeding needs, tides, and health constrain its movement."
+      }
+    },
+    {
+      "id": "chorus_cricket",
+      "status": "rumor",
+      "canonStatus": "proposal",
+      "category": {
+        "zh": "物种创作提案",
+        "en": "Species concepts"
+      },
+      "name": {
+        "zh": "合声蛩",
+        "en": "Chorus cricket"
+      },
+      "summary": {
+        "zh": "创作提案：能形成季节性叠声的小型鸣虫，有时随近处可听机械节律同步。声音会掩盖脚步或像中继信号，却不解码无线电，也没有统一操控意识。",
+        "en": "Species concept: A small insect forming seasonal acoustic choruses, sometimes entrained by nearby audible machinery. The layered sound can obscure footsteps or resemble a relay, without decoding radio or sharing a controlling mind."
       }
     }
   ],

@@ -51,3 +51,5 @@
 .book-map .map-hit{fill:transparent;stroke:none}
 
 @media(max-width:359px){.book-map text{font-size:48px}}
+
+.world-entry-link{gap:18px 36px;flex-wrap:wrap}.book-community h3{margin-bottom:18px}.book-community p{margin-top:0}
