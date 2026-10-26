@@ -105,7 +105,7 @@ class FullscreenExperienceTest {
             main { c.pause() }
             println("UX_METRICS $protocol ${PlaybackMetrics.snapshot()}")
             ui.onNodeWithTag("video-definition").assertIsDisplayed()
-        ui.onNodeWithText(videoDefinition(main{c.videoSize.width},main{c.videoSize.height})!!).assertIsDisplayed()
+        ui.onNodeWithTag("video-definition").assertHasClickAction()
         capture("${protocol.name.lowercase()}-controls")
             // Paused controls remain visible, so this test also catches the old non-clickable label.
             ui.waitForIdle()

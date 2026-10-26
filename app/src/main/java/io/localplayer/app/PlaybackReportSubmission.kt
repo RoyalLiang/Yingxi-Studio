@@ -1,4 +1,9 @@
 package io.localplayer.app
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Check
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -27,11 +32,11 @@ internal const val PLAYBACK_REPORT_CONSENT="2026-10-26"
 
 internal fun playbackReportRequest(report:String):JSONObject = JSONObject()
     .put("id",UUID.randomUUID().toString()).put("kind","other")
-    .put("report",JSONObject(report)).put("consent",true).put("consentVersion",PLAYBACK_REPORT_CONSENT)
+    .put("nativeUi",2).put("report",JSONObject(report)).put("consent",true).put("consentVersion",PLAYBACK_REPORT_CONSENT)
 
 /** No native JS interface, local file access, credentials or payload in the page URL. */
 @SuppressLint("SetJavaScriptEnabled")
-internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:(Long)->Unit={},error:(String)->Unit):WebView = WebView(context).apply {
+internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:(Long)->Unit={},phase:(String)->Unit={},error:(String)->Unit):WebView = WebView(context).apply {
     setBackgroundColor(Color.TRANSPARENT)
     settings.javaScriptEnabled=true
     settings.domStorageEnabled=true
@@ -48,6 +53,11 @@ internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:
             if(view.url==PLAYBACK_REPORT_SUBMIT_PAGE&&resource.url.scheme=="yingxi-report"&&resource.url.host=="receipt"){
                 val number=resource.url.getQueryParameter("number")?.toLongOrNull()
                 if(!acknowledged&&resource.url.getQueryParameter("id")==request.getString("id")&&number!=null&&number>0){acknowledged=true;confirmed(number)}
+                return true
+            }
+            if(view.url==PLAYBACK_REPORT_SUBMIT_PAGE&&resource.url.scheme=="yingxi-report"&&resource.url.host=="state"){
+                val value=resource.url.getQueryParameter("phase")
+                if(!acknowledged&&resource.url.getQueryParameter("id")==request.getString("id")&&value in setOf("checking","sending","challenge","error"))phase(value!!)
                 return true
             }
             if(target==PLAYBACK_REPORT_SUBMIT_PAGE)return false
@@ -70,17 +80,34 @@ internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:
     }
 }
 
-@Composable internal fun PlaybackReportSubmission(request:JSONObject,confirmed:(Long)->Unit) {
-    var failure by remember{mutableStateOf<String?>(null)}
-    Text("正在发送这份回执；如需安全校验，可在此完成。",fontSize=13.sp,color=PlayerInk.copy(alpha=.76f))
-    failure?.let{Text(it,Modifier.testTag("report-send-error"),fontSize=14.sp,color=PlayerAccent)}
-    AndroidView(
-        factory={context->playbackReportWebView(context,request,confirmed){failure=it}.apply{loadUrl(PLAYBACK_REPORT_SUBMIT_PAGE)}},
-        onRelease={it.stopLoading();it.destroy()},
-        modifier=Modifier.fillMaxWidth().height(320.dp).testTag("report-submission")
-    )
+@Composable internal fun PlaybackReportSubmission(request:JSONObject,confirmed:(Long)->Unit,dismiss:()->Unit={}){
+    var phase by remember(request.getString("id")){mutableStateOf("checking")}
+    var number by remember{mutableLongStateOf(0)}
+    LaunchedEffect(phase){
+        if(phase=="success"){kotlinx.coroutines.delay(1200);dismiss()}
+        else if(phase=="checking"||phase=="sending"){kotlinx.coroutines.delay(45_000);phase="error"}
+    }
+    androidx.compose.ui.window.Dialog(onDismissRequest=dismiss,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)){
+        SheetGlassEffect()
+        GlassSurface(Modifier.width(264.dp).testTag("report-delivery"),dark=true,radius=26){
+            Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){
+                Box(Modifier.fillMaxWidth().height(if(phase=="challenge")160.dp else 72.dp),contentAlignment=androidx.compose.ui.Alignment.Center){
+                    if(phase!="success"&&phase!="error")AndroidView(
+                        factory={context->playbackReportWebView(context,request,confirmed={receipt->number=receipt;phase="success";confirmed(receipt)},phase={phase=it},error={phase="error"}).apply{loadUrl(PLAYBACK_REPORT_SUBMIT_PAGE)}},
+                        onRelease={it.stopLoading();it.destroy()},modifier=Modifier.matchParentSize().testTag("report-submission")
+                    )
+                    when(phase){
+                        "checking","sending"->androidx.compose.material3.CircularProgressIndicator(Modifier.size(30.dp).testTag("report-sending"),color=PlayerAccent,strokeWidth=2.dp)
+                        "success"->androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Check,"上报成功",Modifier.size(36.dp),tint=PlayerAccent)
+                        "error"->androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.ErrorOutline,"上报未完成",Modifier.size(36.dp),tint=PlayerAccent)
+                    }
+                }
+                Text(when(phase){"challenge"->"请完成安全校验";"success"->"已上报 · #$number";"error"->"上报未完成";else->"正在上报"},Modifier.testTag(if(phase=="error")"report-send-error"else"report-delivery-status").semantics{liveRegion=LiveRegionMode.Polite},fontSize=15.sp,color=PlayerInk)
+                if(phase=="error"||phase=="challenge")androidx.compose.material3.TextButton(onClick=dismiss){Text("关闭",color=PlayerAccent)}
+            }
+        }
+    }
 }
-
 
 /** A receipt marker survives closing the dialog or process death; no diagnostic body is stored. */
 internal class PlaybackReportAttempts(context:Context){

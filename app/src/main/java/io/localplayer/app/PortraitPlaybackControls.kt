@@ -49,25 +49,14 @@ import androidx.compose.ui.window.DialogProperties
 }
 
 @Composable internal fun PlaybackSpeedPanel(current:Float,dismiss:()->Unit,select:(Float)->Unit){
-    Dialog(onDismissRequest=dismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
-        val view=LocalView.current
-        SideEffect{(view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let{window->
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window,false)
-            androidx.core.view.WindowInsetsControllerCompat(window,view).apply{
-                hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior=androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        }}
-        BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)){
-            val width=minOf(maxWidth-24.dp,320.dp).coerceAtLeast(1.dp)
-            Surface(modifier=Modifier.align(Alignment.CenterEnd).padding(12.dp).width(width).heightIn(max=maxHeight*.85f).testTag("playback-speed-panel"),color=Color(0xFF202126),contentColor=Color.White,shape=RoundedCornerShape(22.dp)){
-                Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Row(verticalAlignment=Alignment.CenterVertically){Text("播放速度",Modifier.weight(1f),fontSize=20.sp);IconButton(onClick=dismiss){Icon(Icons.Rounded.Close,"关闭倍速面板")}}
-                    listOf(.25f,.5f,.75f,1f,1.25f,1.5f,1.75f,2f,2.5f,3f,3.5f,4f).chunked(3).forEach{row->
-                        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-                            row.forEach{value->
-                                TextButton(onClick={select(value)},modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("speed-option-$value"),colors=ButtonDefaults.textButtonColors(containerColor=if(value==current)Color(0xFF5C3443)else Color.Transparent,contentColor=Color(0xFFFFB4C8))){Text("${value}×",maxLines=1)}
-                            }
+    PlaybackSheet("播放速度","playback-speed-panel",dismiss,closeLabel="关闭倍速面板"){
+        Column(Modifier.fillMaxWidth().weight(1f,fill=false).verticalScroll(rememberScrollState()).padding(start=16.dp,end=16.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+            listOf(.25f,.5f,.75f,1f,1.25f,1.5f,1.75f,2f,2.5f,3f,3.5f,4f).chunked(3).forEach{row->
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    row.forEach{value->
+                        TextButton(onClick={select(value)},contentPadding=PaddingValues(4.dp),shape=RoundedCornerShape(14.dp),modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("speed-option-$value"),
+                            colors=ButtonDefaults.textButtonColors(containerColor=if(value==current)PlayerAccent.copy(alpha=.18f)else Color.Transparent,contentColor=if(value==current)PlayerAccent else PlayerInk)){
+                            Text(speedLabel(value),fontSize=15.sp,maxLines=1,softWrap=false)
                         }
                     }
                 }

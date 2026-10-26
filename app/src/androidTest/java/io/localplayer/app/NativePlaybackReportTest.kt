@@ -32,8 +32,8 @@ class NativePlaybackReportTest {
     }
     @Test fun appHandsAConsentedSnapshotToItsTrustedPageExactlyOnceWithoutLocalFileAccess(){
         val payload=playbackReportRequest("""{"report":"yingxi-playback-v1","version":"1.2.3","model":"synthetic <\/script> ' \u2028 test"}""")
-        val errors=mutableListOf<String>();val receipts=mutableListOf<Long>()
-        val view=main{playbackReportWebView(ui.activity,payload,{receipts+=it}){errors+=it}}
+        val errors=mutableListOf<String>();val receipts=mutableListOf<Long>();val phases=mutableListOf<String>()
+        val view=main{playbackReportWebView(ui.activity,payload,{receipts+=it},phase={phases+=it}){errors+=it}}
         try{
             main{
                 assertFalse(view.settings.allowFileAccess);assertFalse(view.settings.allowContentAccess)
@@ -51,6 +51,12 @@ class NativePlaybackReportTest {
             main{
                 view.webViewClient.shouldOverrideUrlLoading(view,request("yingxi-report://receipt?id=other&number=37"))
                 assertTrue(receipts.isEmpty())
+            view.webViewClient.shouldOverrideUrlLoading(view,request("yingxi-report://state?id=other&phase=challenge"))
+            view.webViewClient.shouldOverrideUrlLoading(view,request("yingxi-report://state?id="+payload.getString("id")+"&phase=success"))
+            assertTrue(phases.isEmpty())
+            view.webViewClient.shouldOverrideUrlLoading(view,request("yingxi-report://state?id="+payload.getString("id")+"&phase=challenge"))
+            assertEquals(listOf("challenge"),phases)
+
                 val receipt=request("yingxi-report://receipt?id="+payload.getString("id")+"&number=37")
                 assertTrue(view.webViewClient.shouldOverrideUrlLoading(view,receipt))
                 assertTrue(view.webViewClient.shouldOverrideUrlLoading(view,receipt))

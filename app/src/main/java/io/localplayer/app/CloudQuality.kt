@@ -114,20 +114,20 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-@Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters) {
+@Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters){
     if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item);return}
     val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
-    val adaptive=groups.filter{it.isAdaptiveSupported&&it.length>1}
-    Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text("画面档位",fontSize=17.sp)
+    val selectable=groups.sumOf{group->(0 until group.length).count{group.isTrackSupported(it)}}>1
+    Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
         val format=groups.firstOrNull{it.isSelected}?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
-        if(adaptive.isEmpty()) {
-            Text(format?.let{videoQualityLabel(it)}?:"正在读取画面规格…",fontSize=14.sp,color=PlayerInk)
-            Text("此片源只提供原片，暂无其他码率档位。",fontSize=12.sp,color=PlayerInk.copy(alpha=.65f))
-        } else {
+        if(!selectable){
+            val media=item?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+            Text(format?.let{videoQualityLabel(it,media?.sizeBytes,player.duration)}?:playbackBitrateLabel(null,media?.sizeBytes,player.duration)?:"正在读取视频属性…",fontSize=15.sp,color=PlayerInk)
+            if(format!=null)Text("此片源只有一个可用视频轨道",fontSize=12.sp,color=PlayerInk.copy(alpha=.65f))
+        }else{
             val automatic=parameters.overrides.keys.none{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
-            FilterChip(selected=automatic,onClick={player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()},label={Text("自动")},modifier=Modifier.testTag("video-quality-auto"))
-            adaptive.forEachIndexed{g,group->
+            FilterChip(selected=automatic,onClick={player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()},label={Text(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认")},modifier=Modifier.testTag("video-quality-auto"))
+            groups.forEachIndexed{g,group->
                 (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
                     FilterChip(selected=!automatic&&group.isTrackSelected(i),onClick={
                         player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build()
@@ -138,8 +138,19 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
     }
 }
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal fun videoQualityLabel(format:androidx.media3.common.Format):String {
+internal fun videoQualityLabel(format:androidx.media3.common.Format,sizeBytes:Long?=null,durationMs:Long=0):String {
     val size=if(format.width>0&&format.height>0)"${format.width}×${format.height}"else"原片"
-    val rate=format.averageBitrate.takeIf{it>0}?:format.peakBitrate.takeIf{it>0}
-    return size+(rate?.let{String.format(java.util.Locale.ROOT," · %.1f Mbps",it/1_000_000.0)}?:"")
+    return size+(playbackBitrateLabel(format,sizeBytes,durationMs)?.let{" · $it"}?:"")
+}
+
+/** Container size is an estimate of the whole stream, including audio and overhead. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun playbackBitrateLabel(format:androidx.media3.common.Format?,sizeBytes:Long?=null,durationMs:Long=0):String? {
+    val average=format?.averageBitrate?.takeIf{it>0}?.toDouble()
+    val peak=format?.peakBitrate?.takeIf{it>0}?.toDouble()
+    val estimate=if(sizeBytes!=null&&sizeBytes>0&&durationMs>0)sizeBytes.toDouble()*8000/durationMs else null
+    val rate=average?:peak?:estimate?:return null
+    val prefix=if(average!=null)""else if(peak!=null)"峰值 "else"约 "
+    return prefix+if(rate>=1_000_000)String.format(java.util.Locale.ROOT,"%.1f Mbps",rate/1_000_000)
+        else String.format(java.util.Locale.ROOT,"%.0f Kbps",rate/1000)
 }

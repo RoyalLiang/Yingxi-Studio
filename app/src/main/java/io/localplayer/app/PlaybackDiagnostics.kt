@@ -1,4 +1,9 @@
 package io.localplayer.app
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 
 import io.localplayer.core.RemoteReadTelemetry
 import android.content.ClipData
@@ -133,21 +138,21 @@ internal fun playbackWaitSummary():String {
     }
 }
 
-@Composable internal fun PlaybackDiagnosticCopy(player:Player?,waitMs:Long?=null,snapshot:String?=null){
+@Composable internal fun PlaybackDiagnosticCopy(player:Player?,waitMs:Long?=null,snapshot:String?=null,iconOnly:Boolean=false){
     val context=LocalContext.current
     var copied by remember{mutableStateOf(false)}
     var copyFailed by remember{mutableStateOf(false)}
-    TextButton(onClick={
-            val result=runCatching{
-                context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",snapshot?:playbackDiagnostic(player,waitMs)))
-            }
-            copied=result.isSuccess;copyFailed=result.isFailure
-            if(result.isFailure)Toast.makeText(context,"未能复制，请重试",Toast.LENGTH_SHORT).show()
-        },modifier=Modifier.heightIn(min=48.dp).testTag("playback-diagnostic-copy"),
-            colors=ButtonDefaults.textButtonColors(contentColor=PlayerAccent)){
-            Text(if(copyFailed)"重试复制检修记录" else if(copied)"已复制检修记录" else "复制检修记录")
-        }
+    val copy:()->Unit={
+        val result=runCatching{context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("映汐放映检修",snapshot?:playbackDiagnostic(player,waitMs)))}
+        copied=result.isSuccess;copyFailed=result.isFailure
+        if(result.isFailure)Toast.makeText(context,"未能复制，请重试",Toast.LENGTH_SHORT).show()
     }
+    if(iconOnly)IconButton(onClick=copy,modifier=Modifier.size(48.dp).testTag("playback-diagnostic-copy")){
+        Icon(if(copied)Icons.Rounded.Check else Icons.Rounded.ContentCopy,if(copied)"已复制检修内容"else"复制检修内容",tint=PlayerAccent)
+    }else TextButton(onClick=copy,modifier=Modifier.heightIn(min=48.dp).testTag("playback-diagnostic-copy"),colors=ButtonDefaults.textButtonColors(contentColor=PlayerAccent)){
+        Text(if(copyFailed)"重试复制检修记录"else if(copied)"已复制检修记录"else"复制检修记录")
+    }
+}
 
 internal fun diagnosticDecoder(value:String?):String?=value?.takeIf{it.matches(Regex("[A-Za-z0-9._+-]{1,160}"))}
 

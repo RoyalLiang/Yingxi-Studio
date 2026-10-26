@@ -119,6 +119,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var thumbBounds by remember { mutableStateOf(Rect.Zero) }
     var videoWidth by remember { mutableIntStateOf(0) }
     var videoHeight by remember { mutableIntStateOf(0) }
+    var bitrate by remember { mutableStateOf<String?>(null) }
     var softwareSdr by remember { mutableStateOf(false) }
     var fill by rememberSaveable(portrait) { mutableStateOf(!portrait) }
     val previews = remember(controller,previewScope) { PreviewFrames(context.applicationContext,previewScope) }
@@ -165,6 +166,10 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             videoWidth = controller.videoSize.width; videoHeight = controller.videoSize.height
             softwareSdr=controller.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true
             duration = controller.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
+                val selectedVideo=controller.currentTracks.groups.firstOrNull{it.type==C.TRACK_TYPE_VIDEO&&it.isSelected}
+                val format=selectedVideo?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
+                val media=controller.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+                bitrate=playbackBitrateLabel(format,media?.sizeBytes,duration)
             error = controller.playerError?.let(::playbackFailure)
             if(error==null&&controller.playbackState==Player.STATE_READY){
                 val video=controller.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
@@ -269,7 +274,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact)StationBuffering((buffering || controller == null) && error == null && connectionError == null,!settings&&!queue&&!dragging&&!locked&&!speedOpen&&hud==null&&!touchExploration){ if(!locked&&!settings&&!queue&&!dragging&&!speedOpen)PlaybackWaitDiagnostics{wait->diagnosticsWait=wait;diagnosticsOpen=true} }
+        if(!compact&&(buffering||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
+            CircularProgressIndicator(Modifier.align(Alignment.Center).size(32.dp).testTag("playback-buffering"),color=PlayerInk,strokeWidth=2.dp)
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {
             if (!dragging) {
@@ -278,17 +284,15 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PlayerIcon(Icons.AutoMirrored.Rounded.ArrowBack, "返回", back)
                     Text(currentTitle, Modifier.weight(1f).padding(start = 8.dp), color = PlayerInk, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            videoDefinition(videoWidth,videoHeight)?.let { definition ->
-                Text(definition,Modifier.padding(horizontal=8.dp).clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha=.13f)).semantics { contentDescription="视频清晰度 $definition，${videoWidth}×${videoHeight}" }
-                    .padding(horizontal=9.dp,vertical=5.dp).testTag("video-definition"),color=PlayerInk,fontSize=11.sp)
-            }
+                TextButton(enabled=controller!=null,onClick={trackType=C.TRACK_TYPE_VIDEO;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("video-definition")
+                    .semantics{contentDescription="画质，${bitrate?:videoDefinition(videoWidth,videoHeight)?:"原片"}"}){
+                    Text(bitrate?:videoDefinition(videoWidth,videoHeight)?:"画质",color=PlayerInk,fontSize=12.sp,maxLines=1)
+                }
                     if(portrait)Box {
                         PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
                             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
                                 DropdownMenuItem(text = { Text("上报播放问题") }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreOpen = false; diagnosticsWait = null; diagnosticsOpen = true })
-                                DropdownMenuItem(text={Text("画质")},leadingIcon={Icon(Icons.Rounded.Tune,null)},onClick={moreOpen=false;trackType=C.TRACK_TYPE_VIDEO;settings=true})
                             DropdownMenuItem(text={Text("画面比例")},leadingIcon={Icon(Icons.Rounded.AspectRatio,null)},onClick={moreOpen=false;fill=!fill})
                             DropdownMenuItem(text = { Text("后台播放") }, leadingIcon = { Icon(Icons.Rounded.Headphones, null) }, onClick = { moreOpen = false; background() })
                                 if(smallWindow != null)DropdownMenuItem(text = { Text("画中画") }, leadingIcon = { Icon(Icons.Rounded.PictureInPictureAlt, null) }, enabled = videoAvailable, onClick = { moreOpen = false; smallWindow() })
@@ -341,13 +345,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                                 }
                             }
                         }
-                        TextButton(onClick={trackType=C.TRACK_TYPE_AUDIO;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("player-audio").semantics{contentDescription="音轨"}){
-                            Icon(Icons.Rounded.Audiotrack,null,tint=PlayerInk);Spacer(Modifier.width(4.dp));Text("音轨",color=PlayerInk,maxLines=1)
-                        }
-                        TextButton(onClick={trackType=C.TRACK_TYPE_TEXT;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("player-subtitles").semantics{contentDescription="字幕"}){
-                            Icon(Icons.Rounded.Subtitles,null,tint=PlayerInk);Spacer(Modifier.width(4.dp));Text("字幕",color=PlayerInk,maxLines=1)
-                        }
-                        PlayerIcon(Icons.Rounded.Tune,"画质",{trackType=C.TRACK_TYPE_VIDEO;settings=true})
+                        PlayerIcon(Icons.Rounded.Audiotrack,"音轨",{trackType=C.TRACK_TYPE_AUDIO;settings=true},modifier=Modifier.testTag("player-audio"))
+                        PlayerIcon(Icons.Rounded.Subtitles,"字幕",{trackType=C.TRACK_TYPE_TEXT;settings=true},modifier=Modifier.testTag("player-subtitles"))
                         PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() })
                         TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
                         PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)

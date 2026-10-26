@@ -115,3 +115,9 @@ Android 的「上报播放问题」直接在播放器内完成。用户预览并
 
 
 原生 WebView 实现依据：[Cloudflare 移动端集成](https://developers.cloudflare.com/turnstile/get-started/mobile-implementation/)、[Android WebView 导航与脚本](https://developer.android.com/develop/ui/views/layout/webapps/webview)、[Android 文件访问安全](https://developer.android.com/privacy-and-security/risks/webview-unsafe-file-inclusion)。JavaScript 与 DOM storage 用于实际校验；不为此开放本机文件访问。
+
+### 应用内简洁反馈
+
+`nativeUi: 2` 仅控制应用内显示，不进入公开报告字段。新版确认卡提交后切换为原生进度与结果提示；页面沿用同一份告知版本、白名单和单次 POST 约束。旧客户端不带此标记，仍显示原有网页状态与校验内容。
+
+校验使用 Cloudflare 官方 [`interaction-only` appearance](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/)：仅在需要交互时显示组件，未移除安全校验。页面通过受限 `yingxi-report://state` 回调告知原生层校验、发送和失败状态；原生层核对当前可信页面、主框架与请求 UUID，仅收到有效 Issue 回执才显示成功。没有回执时保留待核标记，不自动重发。

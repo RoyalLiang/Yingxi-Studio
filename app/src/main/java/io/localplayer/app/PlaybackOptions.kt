@@ -52,28 +52,9 @@ import java.util.Locale
         }
         controller.addListener(listener);onDispose{controller.removeListener(listener)}
     }
-    MaterialTheme(colorScheme=darkColorScheme(primary=Color(0xFFFFA1BC),surface=Color(0xFF202126),onSurface=PlayerInk,onPrimary=Color(0xFF53102A),secondaryContainer=Color(0xFF67273B),onSecondaryContainer=PlayerInk)){
-        Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
-            val view=androidx.compose.ui.platform.LocalView.current
-            SideEffect {
-                (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { window ->
-                    androidx.core.view.WindowInsetsControllerCompat(window,view).apply {
-                        hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                        systemBarsBehavior=androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    }
-                }
-            }
-            BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                Box(Modifier.fillMaxSize().testTag("settings-dismiss-backdrop").clickable(
-                    interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss))
-                val panelWidth=minOf(maxWidth-24.dp,if(maxWidth>maxHeight)380.dp else 336.dp).coerceAtLeast(1.dp)
-                Surface(Modifier.align(Alignment.CenterEnd).padding(12.dp).width(panelWidth).heightIn(max=maxHeight*.9f).testTag("audio-subtitle-panel").pointerInput(Unit) { detectTapGestures(onTap = {}) },
-                    shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface,contentColor=PlayerInk) {
-            LazyColumn(modifier=Modifier.testTag("playback-settings-list"),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                item { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text(when(trackType){C.TRACK_TYPE_AUDIO->"音轨";C.TRACK_TYPE_TEXT->"字幕";C.TRACK_TYPE_VIDEO->"画质";else->"播放选项"},Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold)
-                    IconButton(onClick=onDismiss){Icon(Icons.Rounded.Close,"关闭播放选项")}
-                } }
+    PlaybackSheet(when(trackType){C.TRACK_TYPE_AUDIO->"音轨";C.TRACK_TYPE_TEXT->"字幕";C.TRACK_TYPE_VIDEO->"画质";else->"播放选项"},"audio-subtitle-panel",onDismiss,closeLabel="关闭播放选项"){
+        LazyColumn(modifier=Modifier.weight(1f,fill=false).testTag("playback-settings-list"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+
                 if(trackType==null||trackType==C.TRACK_TYPE_VIDEO)item{PlaybackQualityChoices(controller,currentItem,tracks,parameters)}
                 if(trackType==null||trackType==C.TRACK_TYPE_AUDIO){
                 if(trackType==null)item{Text("音轨",fontSize=17.sp,fontWeight=FontWeight.Medium)}
@@ -127,9 +108,6 @@ import java.util.Locale
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
                 }
             }
-                }
-            }
-        }
     }
 }
 

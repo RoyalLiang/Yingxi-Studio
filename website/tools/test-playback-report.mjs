@@ -66,3 +66,30 @@ test('native network uncertainty is not retried and invalid consent cannot call 
  await assert.rejects(sendNativeReport(body({consent:false}),'fixture-token',()=>assert.fail('must not submit')));
  await assert.rejects(sendNativeReport(body(),'',()=>assert.fail('must not submit')));
 });
+
+// Exercise the shipped page controller with a local DOM/Turnstile fixture; no public Issue is posted.
+test('compact native UI keeps legacy behavior and posts once through verification states',async()=>{
+  const old={window:globalThis.window,document:globalThis.document,fetch:globalThis.fetch};
+  try{
+    for(const nativeUi of [1,2]){
+      const navigations=[],posts=[];let options,quiet;
+      const status={textContent:'',classList:{toggle(){}}},link={hidden:true};
+      globalThis.window={location:{set href(value){navigations.push(value)}},turnstile:{render(_selector,value){options=value}}};
+      globalThis.document={body:{classList:{toggle(_name,value){quiet=value}}},getElementById:id=>id==='status'?status:link,createElement:()=>({}),head:{append(script){script.onload()}}};
+      globalThis.fetch=async(_url,init)=>{
+        if(init?.method==='POST'){posts.push(JSON.parse(init.body));return {status:201,json:async()=>({number:17,url:'https://github.com/RoyalLiang/Yingxi-Studio/issues/17'})}}
+        return {ok:true,json:async()=>({available:true,siteKey:'synthetic-widget-key',consentVersion:'2026-10-26'})};
+      };
+      await import(new URL('../public/report/native-report.js?native-ui-test='+nativeUi,import.meta.url));
+      const input={id:'00000000-0000-4000-8000-000000000001',kind:'other',consent:true,consentVersion:'2026-10-26',nativeUi,report:{report:'yingxi-playback-v1',version:'1.2.3'}};
+      await window.startPlaybackReport(input);
+      assert.equal(quiet,nativeUi===2);assert.equal(options.appearance,nativeUi===2?'interaction-only':'always');
+      options['before-interactive-callback']();options['after-interactive-callback']();
+      await options.callback('synthetic-challenge');await options.callback('synthetic-challenge');await window.startPlaybackReport(input);
+      assert.equal(posts.length,1);assert.equal(posts[0].nativeUi,undefined);
+      assert.ok(navigations.at(-1).includes('yingxi-report://receipt?'));
+      assert.equal(navigations.some(value=>value.includes('phase=challenge')),nativeUi===2);
+      assert.match(status.textContent,/#17/);
+    }
+  }finally{globalThis.window=old.window;globalThis.document=old.document;globalThis.fetch=old.fetch}
+});
