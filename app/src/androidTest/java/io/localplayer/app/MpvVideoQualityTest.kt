@@ -68,4 +68,42 @@ class MpvVideoQualityTest {
             main{assertTrue(player.trackSelectionParameters.overrides.keys.none{it.type==C.TRACK_TYPE_VIDEO});assertFalse(player.playWhenReady);assertNull(player.playerError)}
         }finally{main{player.release()}}
     }
+    @Test fun actualPlayerSessionMapsQualityChoicesToTheCompatibilityVideoTrack(){
+        val context=ui.activity.applicationContext
+        val file=File(context.cacheDir,"dual-p5.mp4");org.junit.Assume.assumeTrue("Two verified P5 tracks required",file.isFile)
+        val uri=Uri.fromFile(file);val ref=MediaRef("dual-p5-${java.util.UUID.randomUUID()}","双视频轨 P5", "Local",localUri=uri.toString(),sizeBytes=file.length())
+        val target=PlayTarget(uri,ref.title,500,ref)
+        var activity:PlaybackActivity?=null
+        main{ui.activity.startActivity(PlaybackActivity.intent(ui.activity,target))}
+        ui.waitUntil(10000){activity=main{androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<PlaybackActivity>().firstOrNull()};activity!=null}
+        val future=main{androidx.media3.session.MediaController.Builder(context,androidx.media3.session.SessionToken(context,android.content.ComponentName(context,PlaybackService::class.java))).buildAsync()}
+        val controller=future.get(10,java.util.concurrent.TimeUnit.SECONDS)
+        try{
+            ui.waitUntil(30000){main{controller.playerError!=null||controller.playbackState==Player.STATE_READY&&controller.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true&&controller.currentTracks.groups.count{it.type==C.TRACK_TYPE_VIDEO}==2}}
+            main{
+                if(controller.playerError!=null){
+                    val runtime=MpvRuntime.load(context)
+                    val data=org.json.JSONObject()
+                    for(key in listOf("vid","track-list","time-pos","pause","vo-configured","current-vo","video-out-params","video-frame-info","idle-active","eof-reached"))data.put(key,runCatching{runtime.get(key)}.getOrNull())
+                    File(context.getExternalFilesDir(null),"dual-p5-failure.json").writeText(data.toString())
+                }
+                assertNull(controller.playerError?.stackTraceToString(),controller.playerError);assertTrue(controller.currentMediaItem!!.mediaMetadata.extras!!.getBoolean("sdr-compatibility"))
+                controller.pause();controller.seekTo(3000);controller.setPlaybackSpeed(1.25f)
+                controller.trackSelectionParameters=controller.trackSelectionParameters.buildUpon().setPreferredAudioLanguage("zh").setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()
+            }
+            ui.onNodeWithTag("video-definition").performClick()
+            ui.onNodeWithTag("video-quality-1-0").performScrollTo().performClick()
+            ui.waitUntil(10000){main{MpvRuntime.load(context).get("vid")=="2"}}
+            main{
+                assertNull(controller.playerError);assertEquals(0,controller.currentMediaItemIndex)
+                assertTrue(controller.currentPosition>=2900);assertFalse(controller.playWhenReady)
+                assertEquals(1.25f,controller.playbackParameters.speed)
+                assertEquals(listOf("zh"),controller.trackSelectionParameters.preferredAudioLanguages)
+                assertTrue(controller.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))
+            }
+            ui.onNodeWithTag("video-quality-auto").performScrollTo().performClick()
+            ui.waitUntil(10000){main{MpvRuntime.load(context).get("vid")=="1"}}
+        }finally{main{controller.stop();controller.clearMediaItems();controller.release();activity?.finish()};PlaybackRequests.remove(target.playId)}
+    }
+
 }
