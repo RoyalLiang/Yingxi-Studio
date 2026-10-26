@@ -9,8 +9,8 @@
 <p align="center"><strong>一款简洁的 Android 本地与局域网视频播放器。</strong><br>打开文件、连上自己的媒体库，然后安心看完一部片子。</p>
 
 <p align="center">
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36.apk">下载 arm64 安装包</a> ·
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.34">阅读版本信笺</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.63/yingxi-0.2.0-alpha.63-65.apk">下载 arm64 安装包</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.63">阅读版本信笺</a> ·
   <a href="docs/player-controls.md">播放与操作</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
@@ -53,10 +53,10 @@
 
 | 架构 | 安装包 |
 | --- | --- |
-| arm64-v8a | [arm64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36.apk) |
-| armeabi-v7a | [armv7](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-armeabi-v7a.apk) |
-| x86_64 | [x86_64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-x86_64.apk) |
-| x86 | [x86](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.34/yingxi-0.2.0-alpha.34-36-x86.apk) |
+| arm64-v8a | [arm64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.63/yingxi-0.2.0-alpha.63-65.apk) |
+| armeabi-v7a | [armv7](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.63/yingxi-0.2.0-alpha.63-65-armeabi-v7a.apk) |
+| x86_64 | [x86_64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.63/yingxi-0.2.0-alpha.63-65-x86_64.apk) |
+| x86 | [x86](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-alpha.63/yingxi-0.2.0-alpha.63-65-x86.apk) |
 
 原有文件名用于 arm64 接续更新。alpha.33 及更早的 32 位 ARM 或 x86 客户端需要从上表手动选择一次，此后可自动选择适配包。没有通用架构包。
 
@@ -73,6 +73,8 @@
 自动发现只列候选；连接成功后才能浏览影片。未广播的服务可以手动输入地址，普通网页不会直接当作 WebDAV 媒体库。
 
 海报、字幕的匹配方式、来源和开关见[海报与字幕](docs/media-enrichment.md)。播放格式取决于设备可用的解码器。
+
+播放器显示视频记录的真实码率；点击码率可手动选择片源已有且可播放的视频轨道或清晰度档位。单一视频轨道只有一档，不会生成转码档位。
 
 ## 放映站最近在忙什么
 
