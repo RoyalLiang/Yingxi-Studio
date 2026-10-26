@@ -20,7 +20,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import org.json.JSONArray
 import java.util.concurrent.Executors
 
-/** DV profile 5 only: software RPU decoding + libplacebo reshaping and BT.709 SDR output. */
+private val compatibilityVideoDecoders="hevc,h264,vp8,vp9,mpeg1video,mpeg2video,mpeg4,h263,wmv1,wmv2,wmv3,vc1,rv10,rv20,rv30,rv40,theora,mjpeg".split(',')
+
+/** Compatibility decoding preserves Dolby Vision RPU and uses BT.709 SDR output. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class MpvPlayer(private val context:Context,private val sourceFormat:Format,private val openInput:(Context,android.net.Uri)->MpvInput={c,u->MpvInput.open(c,u)}):SimpleBasePlayer(Looper.getMainLooper()) {
     private val handler=Handler(Looper.getMainLooper())
@@ -138,7 +140,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 mapOf("config" to "no","vo" to "gpu-next","gpu-context" to "android","gpu-api" to "opengl","opengl-es" to "yes",
                     "keepaspect" to "yes","panscan" to if(fillVideo)"1"else"0","blend-subtitles" to "no",
                     "sub-use-margins" to "yes","sub-ass-force-margins" to "yes","sub-margin-x" to subtitleMarginX.toString(),"sub-margin-y" to subtitleMarginY.toString(),
-                    "vd" to "hevc,h264,vp8,vp9,mpeg1video,mpeg2video,mpeg4,h263,wmv1,wmv2,wmv3,vc1,rv10,rv20,rv30,rv40,theora,mjpeg,-",
+                    "vd" to (compatibilityVideoDecoders.joinToString(",")+",-"),
                     "hwdec" to "no","target-prim" to "bt.709","target-trc" to "srgb","target-peak" to "100",
                     "idle" to "yes","keep-open" to "yes","pause" to "yes","force-window" to "no",
                     "cache" to "yes","demuxer-max-bytes" to "67108864","demuxer-readahead-secs" to "15",
@@ -302,7 +304,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 .setRotationDegrees(t.optInt("demux-rotation",if(selected)rotation else 0))
                 .setPixelWidthHeightRatio(t.optDouble("demux-par",if(selected)pixelRatio.toDouble()else 1.0).toFloat())
                 .setFrameRate(t.optDouble("demux-fps",if(selected)frameRate.toDouble()else -1.0).toFloat()).build()
-            groups+=Tracks.Group(TrackGroup("mpv-video-$id",format),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(selected))
+            val support=if(codec in compatibilityVideoDecoders)C.FORMAT_HANDLED else C.FORMAT_UNSUPPORTED_SUBTYPE
+            groups+=Tracks.Group(TrackGroup("mpv-video-$id",format),false,intArrayOf(support),booleanArrayOf(selected))
         }
         if(videos.isEmpty())groups+=Tracks.Group(TrackGroup("mpv-video",sourceFormat.buildUpon().setWidth(width).setHeight(height).setRotationDegrees(rotation).setPixelWidthHeightRatio(pixelRatio).setFrameRate(frameRate).build()),false,intArrayOf(C.FORMAT_HANDLED),booleanArrayOf(true))
         for(i in 0 until list.length()){
@@ -319,7 +322,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         runtime?.let{m->
             m.set("sub-visibility",if(parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))"no" else "yes")
             m.set("alang",parameters.preferredAudioLanguages.joinToString(","));m.set("slang",parameters.preferredTextLanguages.joinToString(","))
-            val video=parameters.overrides.values.firstOrNull{override->override.type==C.TRACK_TYPE_VIDEO&&tracks.groups.any{it.mediaTrackGroup==override.mediaTrackGroup}}?.mediaTrackGroup?.id?.takeIf{it.startsWith("mpv-video-")}?.removePrefix("mpv-video-")
+            val video=parameters.overrides.values.firstOrNull{override->override.type==C.TRACK_TYPE_VIDEO&&tracks.groups.any{it.mediaTrackGroup==override.mediaTrackGroup&&it.isTrackSupported(0)}}?.mediaTrackGroup?.id?.takeIf{it.startsWith("mpv-video-")}?.removePrefix("mpv-video-")
             m.set("vid",video?:"auto")
             for((type,property,prefix) in listOf(Triple(C.TRACK_TYPE_AUDIO,"aid","mpv-audio-"),Triple(C.TRACK_TYPE_TEXT,"sid","mpv-sub-"))) {
                 val id=parameters.overrides.values.firstOrNull{it.mediaTrackGroup.id.startsWith(prefix)}?.mediaTrackGroup?.id?.removePrefix(prefix)

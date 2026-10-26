@@ -106,4 +106,18 @@ class MpvVideoQualityTest {
         }finally{main{controller.stop();controller.clearMediaItems();controller.release();activity?.finish()};PlaybackRequests.remove(target.playId)}
     }
 
+    @Test fun qualityChoicesExcludeVideoDecodersNotEnabledInTheCompatibilityBackend(){
+        val player=main{MpvPlayer(ui.activity,Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).build())}
+        try{
+            val tracks=main{
+                val read=MpvPlayer::class.java.getDeclaredMethod("readTracks",String::class.java,Int::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!,Int::class.javaPrimitiveType!!,Float::class.javaPrimitiveType!!,Float::class.javaPrimitiveType!!).apply{isAccessible=true}
+                read.invoke(player,"""[{"id":1,"type":"video","codec":"h264","selected":true,"demux-w":640,"demux-h":360},{"id":2,"type":"video","codec":"av1","selected":false,"demux-w":640,"demux-h":360}]""",640,360,0,1f,24f) as Tracks
+            }
+            assertTrue(tracks.groups[0].isTrackSupported(0))
+            assertFalse("Disabled AV1 software decoding must not be offered as a playable quality",tracks.groups[1].isTrackSupported(0))
+            main{ui.activity.setContent{PlayerTheme{PlaybackQualityChoices(player,null,tracks,player.trackSelectionParameters)}}}
+            ui.onNodeWithTag("video-quality-1-0").assertDoesNotExist()
+        }finally{main{player.release()}}
+    }
+
 }
