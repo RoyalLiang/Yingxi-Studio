@@ -49,7 +49,7 @@ class UpdateRecoveryTest {
         val owner=ViewModelStore();var vm:SettingsViewModel?=null
         InstrumentationRegistry.getInstrumentation().runOnMainSync{vm=SettingsViewModel(context);owner.put("settings",vm!!)}
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-        assertNotNull(vm!!.installIntent())
+        UpdateInstaller.verify(context,vm!!.ready!!,vm!!.release!!)
         InstrumentationRegistry.getInstrumentation().runOnMainSync{owner.clear()}
         state.ready.delete();clear()
     }

@@ -673,6 +673,14 @@
         "zh": "迟灯缝好片窗旧绒条的松角，阿汐把下一只片匣放在不遮挡登记纸的桌边。",
         "en": "Chideng stitches a loose corner of the old window felt; Axi places the next film case where it leaves the register clear."
       }
+    },
+    {
+      "id": "chronicle_update_settings_064",
+      "version": "0.2.0-alpha.64",
+      "text": {
+        "zh": "阿汐给旧抄本别上窄纸条，只记来处；迟灯把纸头露在同侧，未辨清的字仍留白。",
+        "en": "Axi tabs the old transcripts with their sources. Chideng leaves both tabs on the same edge; unclear words remain blank."
+      }
     }
   ],
   "boundary": {
@@ -908,8 +916,8 @@
         "en": "Image Scavenger"
       },
       "summary": {
-        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。 试映时用纸角的抖动对照风扇与片架的响声，是迟灯和阿汐排查旧器材的小习惯，不代表新的技术或能力。 阿汐的片罐纸签把旧字和编号分作两行；看不清的字暂留空白。迟灯把片窗旧绒条的松角缝回背面，阿汐将下一只片匣靠在桌边，不遮住正在看的登记纸。",
-        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact. Chideng and Axi compare a trembling paper corner with fan and shelf noises while checking old equipment; this is an everyday habit, not a new technology or ability. Axi separates old words and tin numbers onto two label lines, leaving unreadable words blank. Chideng stitches a loose felt corner behind the projection window; Axi sets the next film case beside the desk without covering the register in use."
+        "zh": "搜集、辨认和保存散落影像的人；阿汐拥有这一身份。 辨认时保留片罐原标记；试映旁的留白票根只作临时对照，不替代原有记录。 迟灯在声轨纸签两端折浅痕，阿汐按影片编号夹回片罐旁，取还时翻动纸端作临时记号。 阿汐把未寄出的检修纸折起空白角，迟灯只在纸上记下画面抖动的时刻，片罐原标记照旧。 试映时用纸角的抖动对照风扇与片架的响声，是迟灯和阿汐排查旧器材的小习惯，不代表新的技术或能力。 阿汐的片罐纸签把旧字和编号分作两行；看不清的字暂留空白。迟灯把片窗旧绒条的松角缝回背面，阿汐将下一只片匣靠在桌边，不遮住正在看的登记纸。 阿汐给抄本别上只记来处的窄纸条，迟灯把纸头露在同侧；未辨清的字继续留白，纸签不替代原文。",
+        "en": "Someone who gathers, identifies, and preserves scattered images; this is one of Axi’s established roles. Original tin markings stay intact during identification; an unprinted ticket beside a trial screening is a temporary comparison, not a replacement record. Chideng folds both ends of an audio label; Axi clips it beside the matching film tin, turning a paper end as a temporary loan mark. Axi folds the blank corner of an unsent repair note. Chideng records when the picture shivered on the paper, leaving the tin’s original marks intact. Chideng and Axi compare a trembling paper corner with fan and shelf noises while checking old equipment; this is an everyday habit, not a new technology or ability. Axi separates old words and tin numbers onto two label lines, leaving unreadable words blank. Chideng stitches a loose felt corner behind the projection window; Axi sets the next film case beside the desk without covering the register in use. Axi tabs transcripts with their sources; Chideng leaves the tabs on the same edge. Unclear words stay blank, and the tabs never replace the originals."
       },
       "canonStatus": "confirmed"
     },
@@ -1998,6 +2006,17 @@
         "zh": "播放问题的本机快照，可预览或复制；知情同意后可在播放器内主动上报至公开仓库。收到编号只表示投递成功，不代表问题已修复或已经收到回复。",
         "en": "A local playback snapshot to preview or copy, with explicit submission from the player after informed consent. A receipt number confirms delivery to the public repository, not a repair or a reply."
       }
+    },
+    {
+      "id": "subtitle_station",
+      "name": {
+        "zh": "字幕驿站",
+        "en": "Subtitle station"
+      },
+      "meaning": {
+        "zh": "字幕来源设置的站内称呼。内置 SubHD 与射手，也可保存包含 {query} 的自定义 HTTP(S) 搜寻地址；自定义来源只备好片名链接，点按后由浏览器打开，不自动下载字幕或上传影片。",
+        "en": "The station name for subtitle sources: SubHD, Shooter, or a custom HTTP(S) search address with {query}. A custom source prepares a film-title link that opens in the browser only when tapped; it does not automatically download captions or upload video."
+      }
     }
   ],
   "canonAdoption": {
@@ -2319,6 +2338,14 @@
       "text": {
         "zh": "片架的短脚下原先塞着三层旧纸。我换上一片薄铜垫，阿汐把取出的纸抚平，留作登记纸的衬页。片匣搬空后，我们又轻推了一下架沿，才把铅笔放回铜尺旁。",
         "en": "Three layers of old paper had propped up the short leg of the film shelf. I replaced them with a thin copper shim. Axi smoothed the papers for use beneath the register. With the film cases removed, we gave the shelf another gentle push before setting the pencil beside the copper ruler."
+      }
+    },
+    {
+      "id": "diary_paper_tab_20261027",
+      "author": "axi",
+      "text": {
+        "zh": "迟灯把两张抄本摊在灯下，各别了一根窄纸条。我只在纸头记来处，辨不清的字空着。收起时，他把纸条露在同一侧，明早找原文便不用翻乱整叠纸。",
+        "en": "Chideng laid two transcripts under the lamp and slipped a narrow paper tab into each. I wrote only their sources at the top, leaving unclear words blank. He left both tabs on the same edge, so we can find the originals tomorrow without disturbing the stack."
       }
     }
   ],

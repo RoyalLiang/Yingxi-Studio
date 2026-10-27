@@ -100,7 +100,7 @@ import java.util.Locale
                     val found by OnlineSubtitles.resources.collectAsState()
                     found?.takeIf{it.first==controller.currentMediaItem?.mediaId&&onlineAllowed}?.second?.take(4)?.forEach{resource->
                         TextButton(onClick={runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(resource.page)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure{android.widget.Toast.makeText(context,"没有可打开资源页的浏览器",android.widget.Toast.LENGTH_LONG).show()}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
-                            Text("查看匹配资源 · ${resource.title}",maxLines=3,overflow=TextOverflow.Ellipsis)
+                            Text(if(resource.id=="custom")"前往字幕驿站 · ${resource.title}"else"查看匹配资源 · ${resource.title}",maxLines=3,overflow=TextOverflow.Ellipsis)
                         }
                     }
                 }

@@ -27,6 +27,11 @@ internal object PlaybackOrientationProbe {
 
     fun cached(media:MediaRef):Int?=synchronized(known){known[key(media)]}
 
+    // Unknown network metadata must not add another connection before playback starts.
+    suspend fun initial(context:Context,target:PlayTarget):Int = cached(target.media)
+        ?: (if(target.uri.isPlayerNetworkUri())null else withTimeoutOrNull(150L){resolve(context,target)})
+        ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
     suspend fun resolve(context:Context,target:PlayTarget):Int? {
         cached(target.media)?.let{return it}
         return withTimeoutOrNull(TIMEOUT_MS){

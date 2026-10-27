@@ -19,7 +19,8 @@ internal class EnrichmentPreferences(context:Context){
     var posters:Boolean get()=p.getBoolean("posters",true);set(v){p.edit{putBoolean("posters",v)}}
     var subtitles:Boolean get()=p.getBoolean("subtitles",true);set(v){p.edit{putBoolean("subtitles",v)}}
     var bilingual:Boolean get()=p.getBoolean("bilingual",false);set(v){p.edit{putBoolean("bilingual",v)}}
-    var subtitleSource:String get()=p.getString("subtitle-source","subhd").takeIf{it in setOf("subhd","shooter")}?:"subhd";set(v){require(v in setOf("subhd","shooter"));p.edit{putString("subtitle-source",v)}}
+    var subtitleSource:String get()=p.getString("subtitle-source","subhd").takeIf{it in setOf("subhd","shooter","custom")}?:"subhd";set(v){require(v in setOf("subhd","shooter","custom"));p.edit{putString("subtitle-source",v)}}
+    var customSubtitleSearch:String get()=p.getString("custom-subtitle-search","").orEmpty();set(v){subtitleSearchUrl(v,"Film");p.edit{putString("custom-subtitle-search",v.trim())}}
 }
 internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest(listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
 
@@ -226,6 +227,14 @@ internal object OnlineSubtitles {
         val media=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}?:return
         if(SealedMedia.protects(media)){status.value=id to "封存档案不进行互联网匹配";return}
         activeMedia=media
+        if(source=="custom"){
+            val identity=posterIdentity(media)
+            val query=listOfNotNull(identity.title,identity.year?.toString(),identity.season?.let{"S%02d".format(it)},identity.episode?.let{"E%02d".format(it)}).joinToString(" ")
+            val url=runCatching{subtitleSearchUrl(prefs.customSubtitleSearch,query)}.getOrNull()
+            resources.value=if(url==null)null else id to listOf(SubtitleResource("custom",identity.title,url))
+            status.value=id to if(url==null)"请先在站务填写字幕驿站的搜寻地址"else"字幕驿站已备好片名搜寻，点按后前往"
+            return
+        }
         if(!force&&(!prefs.subtitles||parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)||
             player.currentTracks.groups.any{it.type==C.TRACK_TYPE_TEXT&&it.isSupported}||item.localConfiguration?.subtitleConfigurations?.isNotEmpty()==true))return
         if(!force&&player.isPlaying&&player.bufferedPosition-player.currentPosition<5000)return
