@@ -77,7 +77,7 @@ class MainActivity:ComponentActivity(){
             else {
                     openingPlayer=true
                     try{
-                        val direction=PlaybackOrientationProbe.resolve(this@MainActivity,target)
+                        val direction=PlaybackOrientationProbe.initial(this@MainActivity,target)
                         if(!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)||(SealedMedia.protects(target.media)&&!SealedMedia.unlocked)){
                             target.release();openingPlayer=false
                         }else startActivity(PlaybackActivity.intent(this@MainActivity,target,direction),android.app.ActivityOptions.makeCustomAnimation(this@MainActivity,R.anim.player_enter,R.anim.player_exit).toBundle())

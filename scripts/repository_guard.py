@@ -19,6 +19,7 @@ EXACT.add("docs/explore-play-proposal.md")
 EXACT.add("docs/decoder-smoothness-validation.md")
 EXACT.add("docs/track-subtitle-preview-validation.md")
 EXACT.add("docs/station-ui-validation.md")
+EXACT.add("docs/current-version-review-alpha64.md")
 EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name in ("axi","chideng","mitu"))
 
 def allowed(name):

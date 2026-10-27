@@ -54,6 +54,12 @@ class InstallerFlowTest {
         ui.waitForIdle()
         Thread.sleep(2500)
         assertFalse(vm.message,vm.error)
+        ui.runOnUiThread{vm.install();vm.install()}
+        val sessions=context.packageManager.packageInstaller.mySessions.filter{it.appPackageName==context.packageName}
+        assertEquals("Repeated offers must share one install session",1,sessions.size)
+        val activities=context.packageManager.getPackageInfo(context.packageName,android.content.pm.PackageManager.GET_ACTIVITIES).activities.orEmpty()
+        assertFalse("System confirmation must not pass through a second app page",activities.any{it.name.endsWith("UpdateInstallActivity")})
+
         if(InstrumentationRegistry.getArguments().getString("holdInstaller")=="true") {
             val until=android.os.SystemClock.elapsedRealtime()+45000
             while(android.os.SystemClock.elapsedRealtime()<until) { ui.waitForIdle();Thread.sleep(100) }

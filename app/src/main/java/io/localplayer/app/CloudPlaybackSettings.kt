@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
     var next by remember{mutableStateOf(prefs.nextEpisode)}
     Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("cloud-playback-settings")) {
         Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("信号塔 · 采集频段",fontSize=18.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+            Text("信号采集频段",fontSize=18.sp,fontWeight=FontWeight.SemiBold,color=Ink)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 listOf(0 to "自动",1 to "1 路",2 to "2 路",3 to "3 路").forEach{(value,label)->
                     FilterChip(selected=workers==value,onClick={workers=value;prefs.workers=value},label={Text(label)},modifier=Modifier.testTag("cloud-workers-$value"))

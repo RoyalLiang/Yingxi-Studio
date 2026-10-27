@@ -41,13 +41,19 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     var release by mutableStateOf<AppRelease?>(null);private set
     var ready by mutableStateOf<File?>(null);private set
     var checkRevision by mutableIntStateOf(0);private set
+    var feedbackRevision by mutableIntStateOf(0);private set
+    var installing by mutableStateOf(false);private set
     var installationOffered=false
     private var job:Job?=null
     private var generation=0L
     init {
         if(injectedUpdates==null){
             UpdateDownloads.restore(app)
-            viewModelScope.launch{UpdateDownloads.state.collect{state->if(state!=null){release=state.release;busy=state.busy;progress=state.progress;ready=state.ready;message=state.message;error=state.error}}}
+            viewModelScope.launch{UpdateDownloads.state.collect{state->if(state!=null){
+                val notify=state.error&&(!error||message!=state.message)
+                release=state.release;busy=state.busy;progress=state.progress;ready=state.ready;message=state.message;error=state.error
+                if(notify)feedbackRevision++
+            }}}
         }
     }
     fun check(){
@@ -85,25 +91,22 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     fun cancel(){
         if(injectedUpdates==null&&UpdateDownloads.state.value?.busy==true){UpdateDownloads.pause(getApplication());return}
 generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"}
-    fun fail(text:String){message=text;error=true}
-    fun installMessage(text:String){message=text;error=false}
-    suspend fun installIntent():Intent? {
-        val file=ready ?: return null;val selected=release ?: return null
-        return try {
-            withContext(Dispatchers.IO){
-                val hash=file.inputStream().use { input -> val digest=java.security.MessageDigest.getInstance("SHA-256");val buffer=ByteArray(65536);while(true){val n=input.read(buffer);if(n<0)break;digest.update(buffer,0,n)};digest.digest().joinToString(""){"%02x".format(it)} }
-                require(hash==selected.sha256){"安装包校验失败，请重新下载"}
-                AppUpdates.verifyArchive(getApplication(),file,selected)
-            }
-            require(selected.version.code>installedVersion(getApplication()).code){"此安装包不是更新版本，请重新检查更新"}
-            UpdateInstallActivity.intent(getApplication(),file,selected)
-        } catch(e:Exception){fail(e.message ?: "无法打开安装包");null}
+    fun fail(text:String){message=text;error=true;installing=false;feedbackRevision++}
+    fun installMessage(text:String){message=text;error=false;installing=false;feedbackRevision++}
+    fun install(){
+        val file=ready?:return;val selected=release?:return
+        if(installing)return
+        installing=true
+        viewModelScope.launch{
+            try{withContext(Dispatchers.IO){UpdateInstaller.install(getApplication(),file,selected)}}
+            catch(e:CancellationException){installing=false;throw e}
+            catch(e:Exception){fail(e.message?:"无法准备系统安装，请重试")}
+        }
     }
 }
 
 @Composable internal fun SettingsRoute(vm:SettingsViewModel=viewModel(),onClose:()->Unit) {
     val context=LocalContext.current
-    val scope=rememberCoroutineScope()
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,vm) {
         fun consume(){UpdateInstallResult.take(context)?.let{(text,error)->if(error)vm.fail(text)else vm.installMessage(text)}}
@@ -118,9 +121,7 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     var about by rememberSaveable{mutableStateOf(false)}
     val back={if(about)about=false else onClose()}
     BackHandler(onBack=back)
-    val install={scope.launch{vm.installIntent()?.let{intent->
-        runCatching{context.startActivity(intent)}.onFailure{vm.fail("无法打开系统安装器")}
-    }};Unit}
+    val install={vm.install()}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()){
         if(context.packageManager.canRequestPackageInstalls())install()else vm.fail("未允许安装；授权后可再次点击安装")
     }
@@ -141,13 +142,29 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     var subtitles by remember{mutableStateOf(prefs.subtitles)}
     var bilingual by remember{mutableStateOf(prefs.bilingual)}
     var subtitleSource by remember{mutableStateOf(prefs.subtitleSource)}
+    var customSearch by rememberSaveable{mutableStateOf(prefs.customSubtitleSearch)}
+    var searchError by remember{mutableStateOf<String?>(null)}
+    var savedSearch by remember{mutableStateOf(prefs.customSubtitleSearch)}
+    val saveSearch={
+        runCatching{prefs.customSubtitleSearch=customSearch}.onSuccess{
+            customSearch=prefs.customSubtitleSearch;savedSearch=customSearch;searchError=null;OnlineSubtitles.preferencesChanged(context)
+        }.onFailure{searchError=it.message?:"搜寻地址无效"}
+        Unit
+    }
     Surface(modifier=Modifier.fillMaxWidth().testTag("enrichment-settings"),shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(14.dp)){
         Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
         Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;OnlineSubtitles.preferencesChanged(context)})}
         Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it;OnlineSubtitles.preferencesChanged(context)})}
         Spacer(Modifier.height(12.dp))
-        StationChoiceSetting("字幕来源",listOf("subhd" to "SubHD","shooter" to "射手"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
-        Text(if(subtitleSource=="subhd")"缺少内嵌与同目录字幕时，按片名、年份和集数查询 SubHD。网站要求验证或不提供直链时，可查看匹配资源。"else"缺少字幕时，向射手发送影片指纹和文件名匹配；不上传影片内容。",fontSize=13.sp,lineHeight=19.sp,color=Muted,modifier=Modifier.padding(top=8.dp))
+        StationChoiceSetting("字幕驿站",listOf("subhd" to "SubHD","shooter" to "射手","custom" to "自定义"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
+        if(subtitleSource=="custom"){
+            OutlinedTextField(value=customSearch,onValueChange={customSearch=it;searchError=null},singleLine=true,label={Text("搜寻地址")},
+                placeholder={Text("https://example.org/search/{query}")},isError=searchError!=null,
+                supportingText=searchError?.let{message->{Text(message)}},
+                keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Uri,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={saveSearch()}),modifier=Modifier.fillMaxWidth().padding(top=10.dp).testTag("subtitle-search-url"))
+            TextButton(onClick=saveSearch,enabled=customSearch.trim()!=savedSearch,modifier=Modifier.align(Alignment.End).heightIn(min=48.dp).testTag("save-subtitle-search")){Text("保存搜寻地址")}
+        }
     }}
 }
 
