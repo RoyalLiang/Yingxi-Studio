@@ -1,30 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="330" viewBox="0 0 960 330" role="img" aria-labelledby="title desc">
 <title id="title">映汐源码提交活跃度</title>
-<desc id="desc">最近七天提交数：[{&quot;date&quot;: &quot;2026-10-21&quot;, &quot;count&quot;: 29}, {&quot;date&quot;: &quot;2026-10-22&quot;, &quot;count&quot;: 40}, {&quot;date&quot;: &quot;2026-10-23&quot;, &quot;count&quot;: 16}, {&quot;date&quot;: &quot;2026-10-24&quot;, &quot;count&quot;: 13}, {&quot;date&quot;: &quot;2026-10-25&quot;, &quot;count&quot;: 2}, {&quot;date&quot;: &quot;2026-10-26&quot;, &quot;count&quot;: 14}, {&quot;date&quot;: &quot;2026-10-27&quot;, &quot;count&quot;: 10}]；统计截至2b6d5b8c2e71951a799b2eb205877cda2df1a348</desc>
+<desc id="desc">最近七天提交数：[{&quot;date&quot;: &quot;2026-10-22&quot;, &quot;count&quot;: 40}, {&quot;date&quot;: &quot;2026-10-23&quot;, &quot;count&quot;: 16}, {&quot;date&quot;: &quot;2026-10-24&quot;, &quot;count&quot;: 13}, {&quot;date&quot;: &quot;2026-10-25&quot;, &quot;count&quot;: 2}, {&quot;date&quot;: &quot;2026-10-26&quot;, &quot;count&quot;: 14}, {&quot;date&quot;: &quot;2026-10-27&quot;, &quot;count&quot;: 18}, {&quot;date&quot;: &quot;2026-10-28&quot;, &quot;count&quot;: 1}]；统计截至10ad328c9d0fe1c92a06e68bdf7d8d5a879a5a33</desc>
 <rect width="960" height="330" rx="24" fill="#F5F5F8"/>
 <g font-family="system-ui, sans-serif" fill="#22232A">
 <text x="32" y="42" font-size="22" font-weight="650">源码提交活跃度 · 最近 7 天</text>
-<text x="32" y="68" font-size="13" fill="#686974">截至 2026-10-27 · 2b6d5b8 · 共 154 次提交</text>
+<text x="32" y="68" font-size="13" fill="#686974">截至 2026-10-28 · 10ad328 · 共 163 次提交</text>
 <line x1="44" y1="262" x2="916" y2="262" stroke="#DCDCE4"/>
-<rect x="66" y="156.88" width="72" height="105.12" rx="7" fill="#B91E4B"/>
-<text x="102" y="147.88" font-size="15" text-anchor="middle">29</text>
-<text x="102" y="291" font-size="13" text-anchor="middle" fill="#686974">10-21</text>
-<rect x="190" y="117.0" width="72" height="145.0" rx="7" fill="#B91E4B"/>
-<text x="226" y="108.0" font-size="15" text-anchor="middle">40</text>
-<text x="226" y="291" font-size="13" text-anchor="middle" fill="#686974">10-22</text>
-<rect x="314" y="204.0" width="72" height="58.0" rx="7" fill="#B91E4B"/>
-<text x="350" y="195.0" font-size="15" text-anchor="middle">16</text>
-<text x="350" y="291" font-size="13" text-anchor="middle" fill="#686974">10-23</text>
-<rect x="438" y="214.88" width="72" height="47.12" rx="7" fill="#B91E4B"/>
-<text x="474" y="205.88" font-size="15" text-anchor="middle">13</text>
-<text x="474" y="291" font-size="13" text-anchor="middle" fill="#686974">10-24</text>
-<rect x="562" y="254.75" width="72" height="7.25" rx="7" fill="#B91E4B"/>
-<text x="598" y="245.75" font-size="15" text-anchor="middle">2</text>
-<text x="598" y="291" font-size="13" text-anchor="middle" fill="#686974">10-25</text>
-<rect x="686" y="211.25" width="72" height="50.75" rx="7" fill="#B91E4B"/>
-<text x="722" y="202.25" font-size="15" text-anchor="middle">14</text>
-<text x="722" y="291" font-size="13" text-anchor="middle" fill="#686974">10-26</text>
-<rect x="810" y="225.75" width="72" height="36.25" rx="7" fill="#B91E4B"/>
-<text x="846" y="216.75" font-size="15" text-anchor="middle">10</text>
-<text x="846" y="291" font-size="13" text-anchor="middle" fill="#686974">10-27</text>
+<rect x="66" y="117.0" width="72" height="145.0" rx="7" fill="#B91E4B"/>
+<text x="102" y="108.0" font-size="15" text-anchor="middle">40</text>
+<text x="102" y="291" font-size="13" text-anchor="middle" fill="#686974">10-22</text>
+<rect x="190" y="204.0" width="72" height="58.0" rx="7" fill="#B91E4B"/>
+<text x="226" y="195.0" font-size="15" text-anchor="middle">16</text>
+<text x="226" y="291" font-size="13" text-anchor="middle" fill="#686974">10-23</text>
+<rect x="314" y="214.88" width="72" height="47.12" rx="7" fill="#B91E4B"/>
+<text x="350" y="205.88" font-size="15" text-anchor="middle">13</text>
+<text x="350" y="291" font-size="13" text-anchor="middle" fill="#686974">10-24</text>
+<rect x="438" y="254.75" width="72" height="7.25" rx="7" fill="#B91E4B"/>
+<text x="474" y="245.75" font-size="15" text-anchor="middle">2</text>
+<text x="474" y="291" font-size="13" text-anchor="middle" fill="#686974">10-25</text>
+<rect x="562" y="211.25" width="72" height="50.75" rx="7" fill="#B91E4B"/>
+<text x="598" y="202.25" font-size="15" text-anchor="middle">14</text>
+<text x="598" y="291" font-size="13" text-anchor="middle" fill="#686974">10-26</text>
+<rect x="686" y="196.75" width="72" height="65.25" rx="7" fill="#B91E4B"/>
+<text x="722" y="187.75" font-size="15" text-anchor="middle">18</text>
+<text x="722" y="291" font-size="13" text-anchor="middle" fill="#686974">10-27</text>
+<rect x="810" y="258.38" width="72" height="3.62" rx="7" fill="#B91E4B"/>
+<text x="846" y="249.38" font-size="15" text-anchor="middle">1</text>
+<text x="846" y="291" font-size="13" text-anchor="middle" fill="#686974">10-28</text>
 </g></svg>

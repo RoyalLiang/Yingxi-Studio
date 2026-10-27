@@ -681,6 +681,14 @@
         "zh": "阿汐给旧抄本别上窄纸条，只记来处；迟灯把纸头露在同侧，未辨清的字仍留白。",
         "en": "Axi tabs the old transcripts with their sources. Chideng leaves both tabs on the same edge; unclear words remain blank."
       }
+    },
+    {
+      "id": "chronicle_playback_repair_065",
+      "version": "0.2.0-alpha.65",
+      "text": {
+        "zh": "迟灯给片架的短脚换上薄铜垫，阿汐把旧衬纸抚平。片匣搬空后，两人轻推架沿，再把铅笔放回铜尺旁。",
+        "en": "Chideng fits a copper shim beneath the shelf while Axi smooths the old paper. With the reels removed, they gently push the edge before returning the pencil beside the ruler."
+      }
     }
   ],
   "boundary": {
