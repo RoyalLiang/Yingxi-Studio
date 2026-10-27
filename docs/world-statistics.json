@@ -3,7 +3,7 @@
     "versionName": "0.2.0-alpha.63",
     "versionCode": 65
   },
-  "atlasSha256": "eb65a9e7bdd0e2c5e96c6100c7f19c9e457a79f6cb9cfeefc8e890c9273fbb0d",
+  "atlasSha256": "d7c3fba43b2e3eb9ab9fca37827822a275382abdf6940738bd63ad9e06bc8766",
   "counts": {
     "places": 6,
     "surveyedPlaces": 2,
@@ -23,7 +23,7 @@
     "adoptedTerms": 37,
     "stationHearsayTerms": 3,
     "proposalExtensions": 6,
-    "dailyNotes": 38,
+    "dailyNotes": 39,
     "surfaceNotes": 3,
     "chronicles": 40,
     "chapters": 2,
