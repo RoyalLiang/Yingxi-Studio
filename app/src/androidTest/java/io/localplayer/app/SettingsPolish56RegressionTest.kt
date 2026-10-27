@@ -27,12 +27,13 @@ class SettingsPolish56RegressionTest {
             java.io.File(ui.activity.cacheDir,name).outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()
         }
     }
-    @Test fun reportConsentIsExplicitAndPreviewRemainsLocal() {
+    @Test fun reportConsentRemainsExplicitWithoutPayloadPreview() {
         ui.activity.setContent{PlayerTheme{PlaybackReportDialog(null){}}}
         ui.onNodeWithTag("report-continue").assertIsNotEnabled()
         ui.onNodeWithTag("report-consent").assertIsOff()
-        ui.onNodeWithTag("report-preview").performClick()
-        ui.onNodeWithTag("report-payload").assertTextContains("yingxi-playback-v1",substring=true)
+        ui.onNodeWithTag("report-preview").assertDoesNotExist()
+        ui.onNodeWithTag("report-payload").assertDoesNotExist()
+        ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
         ui.onNodeWithTag("report-consent").performScrollTo().performClick()
         ui.onNodeWithTag("report-continue").assertIsEnabled()
         capture("report-dialog56.png")

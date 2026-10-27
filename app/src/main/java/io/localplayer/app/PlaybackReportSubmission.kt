@@ -3,7 +3,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Check
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,41 +75,52 @@ internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:
             }
         }
         override fun onReceivedError(view:WebView,resource:WebResourceRequest,failure:WebResourceError) {
-            if(!acknowledged&&resource.isForMainFrame)error("未能连接上报通道，请保留检修内容后稍后重试。")
+            if(!acknowledged&&resource.isForMainFrame)error("未能连接上报通道，请稍后重试。")
         }
     }
 }
 
 @Composable internal fun PlaybackReportSubmission(request:JSONObject,confirmed:(Long)->Unit,dismiss:()->Unit={}){
     var phase by remember(request.getString("id")){mutableStateOf("checking")}
-    var number by remember{mutableLongStateOf(0)}
     LaunchedEffect(phase){
         if(phase=="success"){kotlinx.coroutines.delay(1200);dismiss()}
-        else if(phase=="checking"||phase=="sending"){kotlinx.coroutines.delay(45_000);phase="error"}
+        if(phase=="checking"||phase=="sending"){kotlinx.coroutines.delay(45_000);phase="error"}
     }
+    PlaybackReportDelivery(phase,dismiss){
+        AndroidView(
+                factory={context->playbackReportWebView(context,request,confirmed={receipt->phase="success";confirmed(receipt)},phase={state->phase=if(state=="challenge")"error"else state},error={phase="error"}).apply{
+                    importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    loadUrl(PLAYBACK_REPORT_SUBMIT_PAGE)
+                }},
+                onRelease={it.stopLoading();it.destroy()},modifier=Modifier.matchParentSize().alpha(0f)
+            )
+    }
+}
+
+@Composable internal fun PlaybackReportDelivery(phase:String,dismiss:()->Unit,content:@Composable BoxScope.()->Unit={}){
     androidx.compose.ui.window.Dialog(onDismissRequest=dismiss,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)){
-        SheetGlassEffect()
-        GlassSurface(Modifier.width(264.dp).testTag("report-delivery"),dark=true,radius=26){
+        val view=androidx.compose.ui.platform.LocalView.current
+        SideEffect{(view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let{window->
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            window.setDimAmount(if(phase=="error").45f else 0f)
+            if(phase=="error")window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }}
+        if(phase=="error")GlassSurface(Modifier.width(264.dp).testTag("report-delivery"),dark=true,radius=26){
             Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){
-                Box(Modifier.fillMaxWidth().height(if(phase=="challenge")160.dp else 72.dp),contentAlignment=androidx.compose.ui.Alignment.Center){
-                    if(phase!="success"&&phase!="error")AndroidView(
-                        factory={context->playbackReportWebView(context,request,confirmed={receipt->number=receipt;phase="success";confirmed(receipt)},phase={phase=it},error={phase="error"}).apply{loadUrl(PLAYBACK_REPORT_SUBMIT_PAGE)}},
-                        onRelease={it.stopLoading();it.destroy()},modifier=Modifier.matchParentSize().testTag("report-submission")
-                    )
-                    when(phase){
-                        "checking","sending"->androidx.compose.material3.CircularProgressIndicator(Modifier.size(30.dp).testTag("report-sending"),color=PlayerAccent,strokeWidth=2.dp)
-                        "success"->androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Check,"上报成功",Modifier.size(36.dp),tint=PlayerAccent)
-                        "error"->androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.ErrorOutline,"上报未完成",Modifier.size(36.dp),tint=PlayerAccent)
-                    }
-                }
-                Text(when(phase){"challenge"->"请完成安全校验";"success"->"已上报 · #$number";"error"->"上报未完成";else->"正在上报"},Modifier.testTag(if(phase=="error")"report-send-error"else"report-delivery-status").semantics{liveRegion=LiveRegionMode.Polite},fontSize=15.sp,color=PlayerInk)
-                if(phase=="error"||phase=="challenge")androidx.compose.material3.TextButton(onClick=dismiss){Text("关闭",color=PlayerAccent)}
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.ErrorOutline,"上报未完成",Modifier.size(36.dp),tint=PlayerAccent)
+                Text("上报未完成",Modifier.testTag("report-send-error").semantics{liveRegion=LiveRegionMode.Polite},fontSize=15.sp,color=PlayerInk)
+                Text("稍后可检查上次回执",fontSize=13.sp,color=PlayerInk.copy(alpha=.72f))
+                androidx.compose.material3.TextButton(onClick=dismiss){Text("关闭",color=PlayerAccent)}
             }
+        }else Box(Modifier.size(136.dp).testTag("report-delivery"),contentAlignment=androidx.compose.ui.Alignment.Center){
+            if(phase!="success")content()
+            PlayerSignalMotion(Modifier.size(96.dp).testTag(if(phase=="success")"report-success"else"report-sending"),
+                description=if(phase=="success")"上报成功"else"正在上报",completed=phase=="success")
         }
     }
 }
 
-/** A receipt marker survives closing the dialog or process death; no diagnostic body is stored. */
 internal class PlaybackReportAttempts(context:Context){
     private val prefs=context.applicationContext.getSharedPreferences("playback-report-attempt",Context.MODE_PRIVATE)
     fun pending():String?=prefs.getString("pending",null)

@@ -49,7 +49,6 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
     player.setMediaItems(queue,index,position);player.prepare();player.playWhenReady=playing
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable internal fun CloudQualityChoices(player:Player,item:MediaItem?,loadInfo:(PlaybackLease,Cancellation)->AliyunVideoInfo={target,cancellation->AliyunCloud.videoInfo(target.source,target.path,cancellation)}) {
     val target=cloudQualityContext(item)?:return
     var revision by remember(item?.mediaId){mutableIntStateOf(0)}
@@ -70,10 +69,10 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
     }
     Column(Modifier.fillMaxWidth().testTag("cloud-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
         Text("云盘画质 · 本集",fontSize=17.sp)
-        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
             val choices=listOf("original" to "原画")+(if(info?.masterUrl!=null||info?.variants.orEmpty().size>=2)listOf("auto" to "自动")else emptyList())+info?.variants.orEmpty().map{it.template to it.template}
             choices.forEach{(value,label)->
-                FilterChip(selected=selected==value,onClick={if(selected!=value)changePlaybackQuality(player,value)},label={Text(label)},modifier=Modifier.testTag("cloud-quality-$value"))
+                TrackChoice(label,selected==value,modifier=Modifier.testTag("cloud-quality-$value")){if(selected!=value)changePlaybackQuality(player,value)}
             }
         }
         if(selected!="original"&&info==null)Text("当前：${if(selected=="auto")"自动"else selected}",fontSize=13.sp,color=PlayerInk)
@@ -115,26 +114,29 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters){
-    if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item);return}
-    val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
-    val selectable=groups.sumOf{group->(0 until group.length).count{group.isTrackSupported(it)}}>1
-    Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
-        val format=groups.firstOrNull{it.isSelected}?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
-        if(!selectable){
-            Text(format?.let{videoQualityLabel(it)}?:"正在读取视频属性…",fontSize=15.sp,color=PlayerInk)
-            if(format!=null)Text("此片源只有一个可用视频轨道",fontSize=12.sp,color=PlayerInk.copy(alpha=.65f))
-        }else{
-            val automatic=groups.none{parameters.overrides.containsKey(it.mediaTrackGroup)}
-            FilterChip(selected=automatic,onClick={player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()},label={Text(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认")},modifier=Modifier.testTag("video-quality-auto"))
-            groups.forEachIndexed{g,group->
-                (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
-                    FilterChip(selected=!automatic&&group.isTrackSelected(i),onClick={
-                        player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build()
-                    },label={Text(videoQualityLabel(group.getTrackFormat(i)))},modifier=Modifier.testTag("video-quality-$g-$i"))
-                }
-            }
-        }
-    }
+ if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item);return}
+ val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
+ val selectable=groups.sumOf{group->(0 until group.length).count{group.isTrackSupported(it)}}>1
+ Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
+ val format=groups.firstOrNull{it.isSelected}?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
+ if(!selectable){
+ if(format!=null)TrackChoice(videoQualityLabel(format),true,modifier=Modifier.testTag("video-quality-current")){
+     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()
+ }else Text("正在读取视频属性…",fontSize=15.sp,color=PlayerInk)
+ }else{
+ val automatic=groups.none{parameters.overrides.containsKey(it.mediaTrackGroup)}
+ TrackChoice(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认",automatic,modifier=Modifier.testTag("video-quality-auto")){
+     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()
+ }
+ groups.forEachIndexed{g,group->
+ (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
+ TrackChoice(videoQualityLabel(group.getTrackFormat(i)),!automatic&&group.isTrackSelected(i),modifier=Modifier.testTag("video-quality-$g-$i")){
+     player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build()
+ }
+ }
+ }
+ }
+}
 }
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun videoQualityLabel(format:androidx.media3.common.Format):String {

@@ -6,9 +6,9 @@ export function nativeReportRequest(input) {
 }
 export async function sendNativeReport(input,challenge,fetcher=fetch) {
   const request=nativeReportRequest(input);
-  if(typeof challenge!=='string'||!challenge.length||challenge.length>2048)throw Error('安全校验无效，请保留检修内容。');
+  if(typeof challenge!=='string'||!challenge.length||challenge.length>2048)throw Error('安全校验无效，请稍后重试。');
   const body=JSON.stringify({...request,challenge});
-  if(new TextEncoder().encode(body).length>32768)throw Error('报告过大，请先复制并保留检修内容。');
+  if(new TextEncoder().encode(body).length>32768)throw Error('报告过大，请稍后重试。');
   const response=await fetcher('/api/playback-report',{method:'POST',headers:{'Content-Type':'application/json'},body,signal:AbortSignal.timeout(25000)});
   return {status:response.status,result:await response.json()};
 }
@@ -29,13 +29,13 @@ if(typeof window!=='undefined'){
       if(code===201&&Number.isSafeInteger(result.number)&&result.number>0&&/^https:\/\/github\.com\/RoyalLiang\/Yingxi-Studio\/issues\/[0-9]+$/.test(result.url)){
         state('已上报，回执 #'+result.number+'。');link(result.url,'查看公开回执');
         window.location.href='yingxi-report://receipt?id='+encodeURIComponent(request.id)+'&number='+result.number;
-      }else{state(result.error||'上报未完成，请保留检修内容。',true);if(result.uncertain)link(search,'先检查仓库是否已收到');}
+      }else{state(result.error||'上报未完成，请稍后重试。',true);if(result.uncertain)link(search,'先检查仓库是否已收到');}
     }
     try{
       phase('checking');
       const response=await fetch('/api/playback-report',{cache:'no-store',signal:AbortSignal.timeout(15000)});
       const config=await response.json();
-      if(!response.ok||!config.available||!config.siteKey){state('自动上报通道尚未准备好，可先复制并保留检修内容。',true);return;}
+      if(!response.ok||!config.available||!config.siteKey){state('自动上报通道尚未准备好，请稍后重试。',true);return;}
       if(config.consentVersion!==CONSENT_VERSION){state('公开范围告知已更新，请更新应用后再上报。',true);return;}
       const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;
       script.onload=()=>{
@@ -49,14 +49,14 @@ if(typeof window!=='undefined'){
             try{const {status:code,result}=await sendNativeReport(request,token);complete(code,result);}
             catch{state('结果暂未确认，请先检查仓库，勿重复发送。',true);link(search,'检查上次回执');}
           },
-          'error-callback':()=>state('安全校验未完成，请保留内容后稍后重试。',true),
-          'expired-callback':()=>{if(!sent)state('安全校验已过期，请保留内容后稍后重试。',true);},
+          'error-callback':()=>state('安全校验未完成，请稍后重试。',true),
+          'expired-callback':()=>{if(!sent)state('安全校验已过期，请稍后重试。',true);},
           'timeout-callback':()=>{if(!sent)state('安全校验已超时，请稍后重试。',true);},
-          'unsupported-callback':()=>state('当前系统安全校验不可用，请保留检修内容。',true)
-        });}catch{state('安全校验暂不可用，请保留检修内容。',true);}
+          'unsupported-callback':()=>state('当前系统安全校验不可用，请稍后重试。',true)
+        });}catch{state('安全校验暂不可用，请稍后重试。',true);}
       };
-      script.onerror=()=>state('安全校验暂不可用，请先复制并保留检修内容。',true);
+      script.onerror=()=>state('安全校验暂不可用，请稍后重试。',true);
       document.head.append(script);
-    }catch{state('未能连接上报通道，请保留检修内容后稍后重试。',true);}
+    }catch{state('未能连接上报通道，请稍后重试。',true);}
   };
 }

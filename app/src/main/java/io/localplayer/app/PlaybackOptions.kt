@@ -65,7 +65,7 @@ import java.util.Locale
                 else{
                     item{TrackChoice("自动选择",audioAutomatic){prefs.rememberedAudioLanguage=null;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).setPreferredAudioLanguage(prefs.audioLanguage).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).build()}}
                     audio.forEachIndexed{g,group->for(i in 0 until group.length){
-                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),group.mediaTrackGroup.id.takeIf{it.contains(':')}?.substringBefore(':')?.toIntOrNull()?.takeIf{it>0}?.let{externalAudio.getOrNull(it-1)?.name}?:"音轨 ${audio.take(g).sumOf{it.length}+i+1}"),!audioAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
+                        item(key="audio-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),group.mediaTrackGroup.id.takeIf{it.contains(':')}?.substringBefore(':')?.toIntOrNull()?.takeIf{it>0}?.let{externalAudio.getOrNull(it-1)?.name}?:"音轨 ${audio.take(g).sumOf{it.length}+i+1}"),!audioAutomatic&&group.isTrackSelected(i),enabled=group.isTrackSupported(i)){
                             if(prefs.rememberManual)prefs.rememberedAudioLanguage=group.getTrackFormat(i).language
                             controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                         }}
@@ -75,7 +75,6 @@ import java.util.Locale
                 if(currentItem?.let{SidecarAudio.from(it).isNotEmpty()}==true)item{OutlinedButton(onClick={
                     controller.currentMediaItem?.let{controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(it,emptyList()))}
                 },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("移除外挂音轨")}}
-                item{Text("外挂音轨共用影片进度、暂停和倍速；不同剪辑版本需使用对应音轨。",fontSize=12.sp,color=Color(0xFFB9B9BF))}
                 }
                 if(trackType==null||trackType==C.TRACK_TYPE_TEXT){
                 if(trackType==null)item{HorizontalDivider(Modifier.padding(vertical=8.dp),color=Color(0xFF404148))}
@@ -86,33 +85,27 @@ import java.util.Locale
                 item{TrackChoice("自动选择",textAutomatic){if(prefs.rememberManual)prefs.subtitlesDisabled=false;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage(prefs.textLanguage).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()}}
                 val texts=tracks.groups.filter{it.type==C.TRACK_TYPE_TEXT}
                 texts.forEachIndexed{g,group->for(i in 0 until group.length){
-                    item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${texts.take(g).sumOf{it.length}+i+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),group.isTrackSupported(i)){
+                    item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${texts.take(g).sumOf{it.length}+i+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),enabled=group.isTrackSupported(i)){
                         if(prefs.rememberManual)prefs.subtitlesDisabled=false;if(prefs.rememberManual)prefs.textLanguage=group.getTrackFormat(i).language
                         controller.trackSelectionParameters=parameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,i)).build()
                     }}
                 }}
-                if(texts.isEmpty())item{
-                    val state by OnlineSubtitles.status.collectAsState()
-                    val message=state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.second
-                    Text(message?:if(onlineAllowed&&EnrichmentPreferences(context).subtitles)"无内嵌或同目录字幕时会自动匹配"else"自动字幕匹配已关闭",fontSize=13.sp,color=Color(0xFFB9B9BF))
-                }
                 item{
                     val found by OnlineSubtitles.resources.collectAsState()
-                    found?.takeIf{it.first==controller.currentMediaItem?.mediaId&&onlineAllowed}?.second?.take(4)?.forEach{resource->
-                        TextButton(onClick={runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(resource.page)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure{android.widget.Toast.makeText(context,"没有可打开资源页的浏览器",android.widget.Toast.LENGTH_LONG).show()}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
-                            Text(if(resource.id=="custom")"前往字幕驿站 · ${resource.title}"else"查看匹配资源 · ${resource.title}",maxLines=3,overflow=TextOverflow.Ellipsis)
+                    found?.takeIf{it.first==controller.currentMediaItem?.mediaId&&onlineAllowed}?.second?.filter{it.id=="custom"}?.take(1)?.forEach{resource->
+                        OutlinedButton(onClick={runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(resource.page)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}.onFailure{android.widget.Toast.makeText(context,"没有可打开字幕驿站的浏览器",android.widget.Toast.LENGTH_LONG).show()}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){
+                            Text("前往自定义字幕驿站",maxLines=2,overflow=TextOverflow.Ellipsis)
                         }
                     }
                 }
-                item{val state by AutomaticSidecars.status.collectAsState();state?.takeIf{it.first==controller.currentMediaItem?.mediaId}?.let{Text(it.second,fontSize=12.sp,color=Color(0xFFB9B9BF))}}
                 item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
                 }
             }
     }
 }
 
-@Composable fun TrackChoice(label:String,selected:Boolean,enabled:Boolean=true,choose:()->Unit){
-    Row(Modifier.fillMaxWidth().background(if(selected)Color(0xFF422C37)else Color(0xFF292A31),RoundedCornerShape(14.dp))
+@Composable fun TrackChoice(label:String,selected:Boolean,modifier:Modifier=Modifier,enabled:Boolean=true,choose:()->Unit){
+    Row(modifier.fillMaxWidth().background(if(selected)Color(0xFF422C37)else Color(0xFF292A31),RoundedCornerShape(14.dp))
         .selectable(selected=selected,enabled=enabled,role=Role.RadioButton,onClick=choose).heightIn(min=52.dp).padding(horizontal=16.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
         Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(enabled)PlayerInk else Color(0xFF9C9CA5))
         if(selected)Icon(Icons.Rounded.Check,null,tint=Color(0xFFFFB4C8),modifier=Modifier.size(20.dp))

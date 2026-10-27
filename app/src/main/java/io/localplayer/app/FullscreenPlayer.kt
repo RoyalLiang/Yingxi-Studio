@@ -285,7 +285,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 })
         }
         if(!compact&&(buffering||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
-            CircularProgressIndicator(Modifier.align(Alignment.Center).size(32.dp).testTag("playback-buffering"),color=PlayerInk,strokeWidth=2.dp)
+            PlayerSignalMotion(Modifier.align(Alignment.Center).size(88.dp).testTag("playback-buffering"))
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {
             if (!dragging) {

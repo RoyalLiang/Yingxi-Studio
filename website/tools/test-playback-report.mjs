@@ -5,7 +5,7 @@ import {sanitizeReport,CONSENT_VERSION} from '../public/report/schema.js';
 const origin='https://yingxi-station.pages.dev';
 const env={REPORT_GITHUB_TOKEN:'fixture-only-repository-credential',REPORT_TURNSTILE_SECRET:'fixture-only-challenge-credential',REPORT_TURNSTILE_SITE_KEY:'fixture-site-key'};
 const id='d7f30180-10c2-4cbb-a0a4-5a172a1118b0';
-const report={report:'yingxi-playback-v1',version:'0.2.0-alpha.56',model:'PLY110',source:'SFTP',sdrAvSyncMs:-92,encodedFrameRate:23.976,sdrPollMainMs:1.5,audioDecoder:'ffmpegLavc63.1.101-alac',videoCodecs:'dvhe.05.06',decoder:'mpv.hevc.libplacebo.sdr-bt709',positionMs:Infinity,path:'/private/movie',password:'do-not-forward',headers:{Authorization:'do-not-forward'},url:'https://private.invalid/film'};
+const report={report:'yingxi-playback-v1',version:'0.2.0-alpha.56',model:'PLY110',source:'SFTP',isPlaying:false,droppedFrames:0,sdrAvSyncMs:-92,encodedFrameRate:23.976,sdrPollMainMs:1.5,audioDecoder:'ffmpegLavc63.1.101-alac',videoCodecs:'dvhe.05.06',decoder:'mpv.hevc.libplacebo.sdr-bt709',positionMs:Infinity,path:'/private/movie',password:'do-not-forward',headers:{Authorization:'do-not-forward'},url:'https://private.invalid/film'};
 function body(extra={}){return {id,kind:'stutter',consent:true,consentVersion:CONSENT_VERSION,challenge:'fixture-token',report,...extra};}
 function context(payload=body(),headers={}){return {env,request:new Request(origin+'/api/playback-report',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:JSON.stringify(payload)})};}
 function verify(extra={}){return Response.json({success:true,hostname:'yingxi-station.pages.dev',action:'playback-report',cdata:id,...extra});}
@@ -40,7 +40,7 @@ test('confirmed form creates exactly one sanitized issue and returns its real UR
  let calls=0;const response=await onRequestPost(context(),async(url,options)=>{
   calls++;if(url.includes('/siteverify')){assert(!options.body.toString().includes('private/movie'));return verify();}
   assert.equal(url,'https://api.github.com/repos/RoyalLiang/Yingxi-Studio/issues');assert.equal(options.headers.Authorization,'Bearer fixture-only-repository-credential');
-  const issue=JSON.parse(options.body);assert(issue.body.includes(id));assert(issue.title.includes('PLY110'));assert(!issue.body.includes('do-not-forward'));assert(!issue.body.includes('private/movie'));assert(!issue.body.includes('private.invalid'));
+  const issue=JSON.parse(options.body);assert(issue.body.includes(id));assert(issue.title.includes('PLY110'));assert(!issue.body.includes('do-not-forward'));assert(!issue.body.includes('private/movie'));assert(!issue.body.includes('private.invalid'));assert(!issue.body.includes('用户主动提交'));assert(!issue.body.includes('报告不包含'));assert(!issue.body.includes('```'));assert(issue.body.includes('| 应用版本 |'));assert(issue.body.includes('| 正在播放 | 否 |'));assert(issue.body.includes('| 丢帧数 | 0 |'));assert(!issue.body.includes('| positionMs |'));
   return Response.json({number:123,html_url:'https://github.com/RoyalLiang/Yingxi-Studio/issues/123'},{status:201});
  });assert.equal(response.status,201);assert.equal(calls,2);assert.equal((await response.json()).number,123);
 });

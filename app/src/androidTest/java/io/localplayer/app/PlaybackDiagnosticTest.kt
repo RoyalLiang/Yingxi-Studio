@@ -1,6 +1,5 @@
 package io.localplayer.app
 
-import android.content.ClipboardManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -107,7 +106,7 @@ class PlaybackDiagnosticTest {
         }
     }
 
-    @Test fun longWaitCopyActionIsAccessibleAndFitsNarrowLargeText(){
+    @Test fun longWaitReportFormKeepsConsentAtNarrowLargeText(){
         PlaybackMetrics.reset();val pending=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,"SMB")
         val threshold=mutableLongStateOf(12_000);val show=mutableStateOf(true)
         ui.runOnUiThread{ui.activity.setContent{
@@ -123,25 +122,20 @@ class PlaybackDiagnosticTest {
             ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
             ui.runOnIdle{threshold.longValue=0}
             ui.onNodeWithText("上报播放问题").performScrollTo().performClick()
-            ui.onNodeWithTag("playback-diagnostic-copy").performScrollTo().assertIsDisplayed().performClick()
-            ui.onNodeWithText("已复制检修记录").assertExists()
-            var clipboard="";ui.runOnUiThread{clipboard=ui.activity.getSystemService(ClipboardManager::class.java).primaryClip?.getItemAt(0)?.text.toString()}
-            assertEquals("SESSION_CONNECTING",JSONObject(clipboard).getString("state"))
-            val image=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-            File(ui.activity.cacheDir,"diagnostic-wait.png").outputStream().use{image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
-            ui.onNodeWithTag("report-preview").performScrollTo().performClick()
-            val snapshot=ui.onNodeWithTag("report-payload").fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].first().text
-            ui.onNodeWithTag("report-consent").performScrollTo().performClick().assertIsOn()
+            ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
+        ui.onNodeWithTag("report-preview").assertDoesNotExist()
+        ui.onNodeWithTag("report-payload").assertDoesNotExist()
+        ui.onNodeWithTag("report-consent").performScrollTo().performClick().assertIsOn()
             android.os.SystemClock.sleep(2100)
             ui.onNodeWithTag("report-consent").assertIsOn()
-            ui.onNodeWithTag("report-payload").assertTextEquals(snapshot)
+            ui.onNodeWithTag("report-payload").assertDoesNotExist()
             ui.runOnIdle{show.value=false}
             ui.onNodeWithTag("report-continue").performScrollTo().assertIsEnabled()
-            ui.onNodeWithContentDescription("关闭问题上报").performScrollTo().performClick()
+            ui.onNodeWithContentDescription("关闭问题上报").assertIsDisplayed().performClick()
             ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
         }finally{PlaybackIoProbe.end(pending)}
     }
-    @Test fun slowOriginalReadShowsAdvisoryAndCopyAtLargeFont() {
+    @Test fun slowOriginalReadShowsAdvisoryAndReportAtLargeFont() {
         PlaybackMetrics.reset()
         val pending=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.READ,"ALIYUN")
         val transport=RemoteReadTelemetry().apply{urlRequest();rangeRequest();received(128000);downloadAdvisory(true,1048576)}
@@ -163,10 +157,11 @@ class PlaybackDiagnosticTest {
             ui.onNodeWithText("可核对账户的下载高速流量配额",substring=true).assertExists()
             ui.waitUntil(5000){ui.onAllNodesWithText("平均读取",substring=true).fetchSemanticsNodes().isNotEmpty()}
             ui.onNodeWithText("上报播放问题").performScrollTo().performClick()
-            ui.onNodeWithTag("playback-diagnostic-copy").performScrollTo().assertIsDisplayed().performClick()
-            var copied="";ui.runOnUiThread{copied=ui.activity.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()}
-            val json=JSONObject(copied)
-            assertTrue(json.getBoolean("downloadRightsNotice"))
+            ui.onNodeWithTag("playback-diagnostic-copy").assertDoesNotExist()
+        ui.onNodeWithTag("report-payload").assertDoesNotExist()
+        var frozen="";ui.runOnUiThread{frozen=playbackDiagnostic(null)}
+        val json=JSONObject(frozen)
+        assertTrue(json.getBoolean("downloadRightsNotice"))
             assertEquals(1048576L,json.getLong("signedTrafficLimitBitsPerSecond"))
             assertTrue(json.getLong("sourceBodyAverageBytesPerSecond") in 1..128000)
             assertEquals("BODY",json.getString("httpPhase"))

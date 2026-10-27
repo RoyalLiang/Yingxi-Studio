@@ -207,7 +207,7 @@ class PlaybackActivity:ComponentActivity(){
                 }
                 if(!entryReady)Surface(Modifier.fillMaxSize(),color=Color.Black){
                     Box(Modifier.fillMaxSize()){
-                        Text("正在接收画面…",Modifier.align(Alignment.Center),color=Color.White)
+                        PlayerSignalMotion(Modifier.align(Alignment.Center).size(88.dp))
                         IconButton(::leave,Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp)){
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回",tint=Color.White)
                         }

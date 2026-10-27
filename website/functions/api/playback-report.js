@@ -36,7 +36,12 @@ export async function onRequestPost({request,env},fetcher=fetch) {
   } catch{return json(503,{error:'人机校验暂时不可用，请稍后重试。'});}
   if(!verification.success||verification.hostname!==new URL(request.url).hostname||verification.action!=='playback-report'||verification.cdata!==body.id)return json(403,{error:'人机校验未通过，请刷新校验后重试。'});
   const marker=`yingxi-playback-report:${body.id}`;
-  const issue={title:`[播放回执] ${kinds[body.kind]} · ${data.version} · ${data.model||'设备未注明'}`,body:`用户主动提交并同意公开（告知版本 ${CONSENT_VERSION}）。\n\n<!-- ${marker} -->\n\n\`\`\`json\n${JSON.stringify(data,null,2)}\n\`\`\`\n\n报告不包含媒体标题、路径、信源地址或账号字段。`};
+  const labels={version:'应用版本',versionCode:'安装序号',manufacturer:'厂商',model:'设备型号',android:'Android 版本',sdk:'系统 API',source:'信源类型',state:'播放状态',decoder:'视频解码器',audioDecoder:'音频解码器',videoCodecs:'视频编码',videoMime:'视频格式',encodedWidth:'编码宽度',encodedHeight:'编码高度',videoWidth:'显示宽度',videoHeight:'显示高度',encodedFrameRate:'帧率',playbackSpeed:'播放倍速',firstFrameMs:'首帧耗时（ms）',bufferingWaitMs:'缓冲等待（ms）',droppedFrames:'丢帧数',sdrAvSyncMs:'音画差（ms）',playerError:'播放错误',isPlaying:'正在播放',playRequested:'已请求播放',videoRendererEnabled:'视频输出已启用'};
+  const details=Object.entries(data).filter(([key,value])=>key!=='report'&&value!==null).map(([key,value])=>{
+    const text=typeof value==='boolean'?(value?'是':'否'):typeof value==='object'?JSON.stringify(value):String(value);
+    return `| ${labels[key]||key} | ${text.replaceAll('|','\\|').replaceAll('\n',' ')} |`;
+  }).join('\n');
+  const issue={title:`[播放回执] ${kinds[body.kind]} · ${data.version} · ${data.model||'设备未注明'}`,body:`<!-- ${marker} -->\n\n| 项目 | 记录 |\n| --- | --- |\n${details}`};
   try {
     const response=await fetcher(API,{method:'POST',headers:{Authorization:`Bearer ${env.REPORT_GITHUB_TOKEN}`,Accept:'application/vnd.github+json','Content-Type':'application/json','User-Agent':'yingxi-playback-reports','X-GitHub-Api-Version':'2022-11-28'},body:JSON.stringify(issue),signal:AbortSignal.timeout(12000)});
     if(response.status!==201){console.warn('playback_report_repository_status',response.status);return json(502,{error:'仓库暂未接收报告，请保留内容后重试。'});}
