@@ -15,6 +15,16 @@ class OrientationProcessRecoveryTest {
         PlaybackOrientationProbe.remember(context,media,ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT)
         assertTrue(context.getSharedPreferences("video-orientation-v1",0).edit().commit())
     }
+    @Test fun directHttpEntryDoesNotOpenASecondMetadataConnection():Unit=runBlocking{
+        java.net.ServerSocket(0,1,java.net.InetAddress.getByName("127.0.0.1")).use{server->
+            server.soTimeout=250
+            val uri=android.net.Uri.parse("http://127.0.0.1:${server.localPort}/video.mp4")
+            val ref=media.copy(localUri=uri.toString())
+            assertNull(PlaybackOrientationProbe.initial(context,PlayTarget(uri,ref.title,0,ref)))
+            val connected=try{server.accept().use{true}}catch(_:java.net.SocketTimeoutException){false}
+            assertFalse("A direct HTTP entry must leave metadata reads to its player",connected)
+        }
+    }
     @Test fun recoverStoredShape():Unit=runBlocking{
         if(InstrumentationRegistry.getArguments().getString("orientationRecovery")!="true")prepareStoredShape()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,PlaybackOrientationProbe.cached(context,media))

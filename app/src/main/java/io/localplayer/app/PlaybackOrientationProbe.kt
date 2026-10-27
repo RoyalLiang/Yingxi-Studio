@@ -50,7 +50,7 @@ internal object PlaybackOrientationProbe {
 
     // Unknown network metadata is read by the player's own transport before showing its controls.
     suspend fun initial(context:Context,target:PlayTarget):Int? = cached(context,target.media)
-        ?: (if(target.uri.isPlayerNetworkUri())null else withTimeoutOrNull(150L){resolve(context,target)})
+        ?: (if(target.uri.isPlayerNetworkUri()||target.uri.scheme in setOf("http","https"))null else withTimeoutOrNull(150L){resolve(context,target)})
 
     suspend fun resolve(context:Context,target:PlayTarget):Int? {
         cached(context,target.media)?.let{return it}

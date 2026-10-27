@@ -24,11 +24,18 @@ class CompatibilityFormatsTest {
     @Test fun unknownContainerCannotBypassUnsafeDecoderBlock() {
         val file=File(ui.activity.cacheDir,"compat-av1-10.ivf");assertTrue(file.isFile)
         val player=main{CompatibilityPlayer(ui.activity,ExoPlayer.Builder(ui.activity,playbackRenderers(ui.activity)).build())}
+        // Compatibility preparation waits for the same real output used by the player window.
+        var frames=0
+        main{player.addListener(object:Player.Listener{override fun onRenderedFirstFrame(){frames++}})}
+        lateinit var surface:TextureView
+        main{ui.activity.setContent{AndroidView(factory={TextureView(it).also{view->surface=view;player.setVideoTextureView(view)}})}}
+        ui.waitForIdle()
         try {
             main{player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)));player.prepare();player.play()}
             ui.waitUntil(35000){main{player.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true&&player.playerError!=null}}
-            main{assertNotNull(player.playerError);assertEquals(0,player.videoSize.width)}
-        }finally{main{player.release()}}
+            // Demux dimensions can exist without decoding; assert that no video frame is rendered.
+            main{assertNotNull(player.playerError);assertEquals(PlaybackException.ERROR_CODE_DECODING_FAILED,player.playerError?.errorCode);assertEquals(0,frames)}
+        }finally{main{player.release();(surface.parent as? android.view.ViewGroup)?.removeView(surface)}}
     }
     @Test fun asfWmv()=play("compat-wmv.wmv")
     @Test fun realVideo()=play("compat-real.rm")
