@@ -39,6 +39,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +67,29 @@ class PlaybackActivity:ComponentActivity(){
     private var playerController:MediaController?=null
     private var directionMediaId:String?=null
     private val automaticDirection=PlaybackOrientationState()
+    internal var entryReady by mutableStateOf(false);private set
+    private var entryFailed=false
+    private var entryTimedOut=false
+    private val entryTimeout=Runnable{entryTimedOut=true;window.decorView.invalidate()}
+    private val entryDrawGate=android.view.ViewTreeObserver.OnPreDrawListener{
+        val player=playerController
+        val shapeReady=player!=null&&owns(player)&&automaticDirection.hasMetadata
+        val noVideo=player!=null&&owns(player)&&player.playbackState==Player.STATE_READY&&player.currentTracks.groups.none{it.type==C.TRACK_TYPE_VIDEO}
+        val failure=player!=null&&owns(player)&&(player.playerError!=null||player.playbackState==Player.STATE_ENDED)
+        val expected=when(requestedOrientation){
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE->Configuration.ORIENTATION_LANDSCAPE
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT->Configuration.ORIENTATION_PORTRAIT
+            else->resources.configuration.orientation
+        }
+        val ready=isFinishing||entryFailed||entryTimedOut||failure||noVideo||(shapeReady&&resources.configuration.orientation==expected)
+        if(ready){entryReady=true;releaseEntryDrawGate()}
+        true
+    }
+    private fun releaseEntryDrawGate(){
+        window.decorView.removeCallbacks(entryTimeout)
+        window.decorView.viewTreeObserver.takeIf{it.isAlive}?.removeOnPreDrawListener(entryDrawGate)
+    }
+
     private var manualDirection:Int?=null
     private var directionLocked=false
     private var foreground=false
@@ -147,6 +171,10 @@ class PlaybackActivity:ComponentActivity(){
         val title=PlaybackRequests.get(intent.getStringExtra("play-intent"))?.title ?: "视频"
         captionMediaId=savedInstanceState?.getString("caption-media")
         savedInstanceState?.getString("caption-uri")?.let{readCaption(android.net.Uri.parse(it))}
+        // Keep drawing so Back stays responsive while the real stream shape is still unknown.
+        window.decorView.viewTreeObserver.addOnPreDrawListener(entryDrawGate)
+        // shortcut: Metadata taking over 8 s uses normal loading; refine if sources need longer startup feedback.
+        window.decorView.postDelayed(entryTimeout,8000L)
         setContent{PlayerTheme{
             var controller by remember{mutableStateOf<MediaController?>(null)}
             var connectionError by remember{mutableStateOf<String?>(null)}
@@ -161,7 +189,7 @@ class PlaybackActivity:ComponentActivity(){
                     if(foreground){loadInitial(c);applyPendingCaption(c)}
                 updateVideoOrientation()
                     updatePictureInPicture()
-                    }.onFailure{connectionError="无法连接播放会话，请返回重试"}
+                    }.onFailure{entryFailed=true;connectionError="无法连接播放会话，请返回重试"}
                 },ContextCompat.getMainExecutor(this@PlaybackActivity))
                 onDispose{
                     // Compose may dispose from the pre-destroy lifecycle callback before onDestroy.
@@ -172,8 +200,20 @@ class PlaybackActivity:ComponentActivity(){
                 }
             }
             BackHandler{leave()}
-            FullscreenPlayer(controller,title,connectionError,::leave,::rotate,::lock,::chooseCaption,
-                compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView,::chooseAudio)
+            Box(Modifier.fillMaxSize()){
+                Box(Modifier.fillMaxSize().then(if(entryReady)Modifier else Modifier.clearAndSetSemantics{})){
+                    FullscreenPlayer(controller,title,connectionError,::leave,::rotate,::lock,::chooseCaption,
+                        compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView,::chooseAudio)
+                }
+                if(!entryReady)Surface(Modifier.fillMaxSize(),color=Color.Black){
+                    Box(Modifier.fillMaxSize()){
+                        Text("正在接收画面…",Modifier.align(Alignment.Center),color=Color.White)
+                        IconButton(::leave,Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp)){
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回",tint=Color.White)
+                        }
+                    }
+                }
+            }
         }}
     }
     private fun chooseCaption(){
@@ -351,6 +391,7 @@ class PlaybackActivity:ComponentActivity(){
         super.onStop()
     }
     override fun onDestroy(){
+        releaseEntryDrawGate()
         privateWindowObserver?.invoke();privateWindowObserver=null
         unregisterReceiver(pipCloseReceiver)
         if(isFinishing){
@@ -367,10 +408,10 @@ class PlaybackActivity:ComponentActivity(){
         if(directionMediaId!=id){directionMediaId=id;manualDirection=null}
         val target=PlaybackRequests.get(intent.getStringExtra("play-intent"))
         val media=if(target?.uri?.toString()==id)target.media else c.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
-        val hint=media?.let(PlaybackOrientationProbe::cached)?:if(target?.uri?.toString()==id)
+        val hint=media?.let{PlaybackOrientationProbe.cached(this,it)}?:if(target?.uri?.toString()==id)
             intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED).takeIf{it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE||it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT} else null
         val direction=automaticDirection.update(c,events,hint)
-        direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(it,orientation)}}
+        direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(this,it,orientation)}}
         if(!foreground||compact||captionPickerOpen)return
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
             manualDirection?:direction?:return

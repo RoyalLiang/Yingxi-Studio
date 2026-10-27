@@ -79,7 +79,11 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     private var gain=1f
     private var selection=TrackSelectionParameters.Builder(context).build()
     private var tracks=readTracks("[]",sourceFormat.width,sourceFormat.height)
-    private val initialVideo=if(sourceFormat.width>0&&sourceFormat.height>0)VideoSize(sourceFormat.width,sourceFormat.height,sourceFormat.rotationDegrees,sourceFormat.pixelWidthHeightRatio)else VideoSize.UNKNOWN
+    private val initialVideo=when {
+        sourceFormat.width<=0||sourceFormat.height<=0->VideoSize.UNKNOWN
+        sourceFormat.rotationDegrees%180!=0->VideoSize(sourceFormat.height,sourceFormat.width,1f/sourceFormat.pixelWidthHeightRatio)
+        else->VideoSize(sourceFormat.width,sourceFormat.height,sourceFormat.pixelWidthHeightRatio)
+    }
     private var video=initialVideo
     private var decodedWidth=0
     private var decodedHeight=0

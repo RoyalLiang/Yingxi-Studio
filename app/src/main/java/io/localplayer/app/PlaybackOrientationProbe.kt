@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
 import android.os.SystemClock
-import androidx.media3.common.VideoSize
 import io.localplayer.core.Cancellation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -21,26 +20,47 @@ internal object PlaybackOrientationProbe {
     private const val MAX_BYTES=4L*1024*1024
     private val workers=ThreadPoolExecutor(0,2,30,TimeUnit.SECONDS,SynchronousQueue(),{ task->Thread(task,"Yingxi-video-metadata").apply{isDaemon=true} })
     private val closer=Executors.newSingleThreadExecutor{task->Thread(task,"Yingxi-metadata-close").apply{isDaemon=true}}
-    private val known=object:LinkedHashMap<String,Int>(64,.75f,true){override fun removeEldestEntry(eldest:MutableMap.MutableEntry<String,Int>?)=size>64}
-    private fun key(media:MediaRef)=listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000")
-    fun remember(media:MediaRef,orientation:Int)=synchronized(known){known[key(media)]=orientation;Unit}
+    private const val MAX_CACHE_RECORDS=64
+    private val cacheLock=Any()
+    private const val CACHE_AGE_MS=24L*60*60*1000
+    private fun preferences(context:Context)=context.applicationContext.getSharedPreferences("video-orientation-v1",Context.MODE_PRIVATE)
+    private fun recordedAt(value:Any?)=runCatching{org.json.JSONObject(value as String).getLong("recordedAt")}.getOrDefault(0L)
+    fun remember(context:Context,media:MediaRef,orientation:Int){
+        if(SealedMedia.protects(media)||(media.sizeBytes?:0)<=0||orientation !in setOf(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT))return
+        synchronized(cacheLock){
+            if(cached(context,media)==orientation)return
+            val prefs=preferences(context);val id=enrichmentKey(media)
+            val others=prefs.all.filterKeys{it!=id}
+            val edit=prefs.edit().putString(id,org.json.JSONObject().put("orientation",orientation).put("recordedAt",System.currentTimeMillis()).toString())
+            others.entries.sortedBy{recordedAt(it.value)}.take((others.size-(MAX_CACHE_RECORDS-1)).coerceAtLeast(0)).forEach{edit.remove(it.key)}
+            edit.apply()
+        }
+    }
 
-    fun cached(media:MediaRef):Int?=synchronized(known){known[key(media)]}
+    fun cached(context:Context,media:MediaRef):Int?{
+        if(SealedMedia.protects(media)||(media.sizeBytes?:0)<=0)return null
+        return runCatching{
+            val record=org.json.JSONObject(preferences(context).getString(enrichmentKey(media),null)?:return null)
+            if(System.currentTimeMillis()-record.getLong("recordedAt") !in 0 until CACHE_AGE_MS)return null
+            record.getInt("orientation").takeIf{it in setOf(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT)}
+        }.getOrNull()
+    }
+    fun remove(context:Context,media:MediaRef){synchronized(cacheLock){preferences(context).edit().remove(enrichmentKey(media)).apply()}}
+    fun clear(context:Context){synchronized(cacheLock){preferences(context).edit().clear().apply()}}
 
-    // Unknown network metadata must not add another connection before playback starts.
-    suspend fun initial(context:Context,target:PlayTarget):Int = cached(target.media)
+    // Unknown network metadata is read by the player's own transport before showing its controls.
+    suspend fun initial(context:Context,target:PlayTarget):Int? = cached(context,target.media)
         ?: (if(target.uri.isPlayerNetworkUri())null else withTimeoutOrNull(150L){resolve(context,target)})
-        ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
     suspend fun resolve(context:Context,target:PlayTarget):Int? {
-        cached(target.media)?.let{return it}
+        cached(context,target.media)?.let{return it}
         return withTimeoutOrNull(TIMEOUT_MS){
             suspendCancellableCoroutine { continuation->
                 val cancellation=Cancellation()
                 val deadline=SystemClock.elapsedRealtime()+TIMEOUT_MS
                 val future=runCatching{workers.submit{
                     val value=read(context.applicationContext,target,cancellation,deadline)
-                    if(value!=null&&continuation.isActive)remember(target.media,value)
+                    if(value!=null&&continuation.isActive)remember(context,target.media,value)
                     if(continuation.isActive)continuation.resume(value)
                 }}.getOrNull()
                 if(future==null){continuation.resume(null);return@suspendCancellableCoroutine}
@@ -92,7 +112,7 @@ internal object PlaybackOrientationProbe {
             val width=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()?:return null
             val height=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()?:return null
             val rotation=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?:0
-            return videoOrientation(VideoSize(width,height,rotation,1f))
+            return videoOrientation(width,height,rotation,1f)
         }catch(_:Exception){return null}
         finally{
             runCatching{retriever?.release()}

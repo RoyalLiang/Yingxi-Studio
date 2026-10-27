@@ -141,11 +141,11 @@ class UpdateSettings64RegressionTest {
             val target=PlayTarget(uri,ref.title,0,ref)
             try{
                 val begin=android.os.SystemClock.elapsedRealtime()
-                assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,PlaybackOrientationProbe.initial(context,target))
+                assertNull(PlaybackOrientationProbe.initial(context,target))
                 val elapsed=android.os.SystemClock.elapsedRealtime()-begin
                 println("YINGXI64 network orientation decision: $elapsed ms")
                 assertTrue("Network entry must not wait for a metadata connection: $elapsed ms",elapsed<300)
-                PlaybackOrientationProbe.remember(ref,ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT)
+                PlaybackOrientationProbe.remember(context,ref,ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT)
                 assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,PlaybackOrientationProbe.initial(context,target))
             }finally{target.release()}
         }

@@ -165,7 +165,7 @@ internal object MediaThumbnails {
                         val width=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()?:0
                         val height=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()?:0
                         val rotation=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?:0
-                        videoOrientation(androidx.media3.common.VideoSize(width,height,rotation,1f))?.let{PlaybackOrientationProbe.remember(media,it)}
+                        videoOrientation(width,height,rotation,1f)?.let{PlaybackOrientationProbe.remember(context,media,it)}
                         val bitmap = retriever.embeddedPicture?.let(MediaPosters::decode)
                             ?: retriever.getScaledFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
                             ?: retriever.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
@@ -202,11 +202,11 @@ internal object MediaThumbnails {
 
     fun remove(context: Context, media: MediaRef) {
         generation.incrementAndGet()
-        worker.execute { val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); changes.update { it + 1 } }
+        worker.execute { PlaybackOrientationProbe.remove(context,media); val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); changes.update { it + 1 } }
     }
     fun clear(context: Context) {
         generation.incrementAndGet()
-        worker.execute { memory.evictAll(); failed.clear(); directory(context).listFiles()?.forEach { it.delete() }; changes.update { it + 1 } }
+        worker.execute { PlaybackOrientationProbe.clear(context); memory.evictAll(); failed.clear(); directory(context).listFiles()?.forEach { it.delete() }; changes.update { it + 1 } }
     }
     private fun trim(context: Context) {
         val files = directory(context).listFiles()?.filter { it.extension == "jpg" }?.sortedByDescending { it.lastModified() } ?: return

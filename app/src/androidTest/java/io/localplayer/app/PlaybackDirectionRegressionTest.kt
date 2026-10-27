@@ -114,7 +114,7 @@ class PlaybackDirectionRegressionTest {
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
             main{player.seekToNextMediaItem()}
             ui.waitUntil(15000){main{videoOrientation(player.currentTracks)==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT}}
-            main{assertEquals("Background metadata must reach the current clip cache before resume",android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,PlaybackOrientationProbe.cached(items[1].media))}
+            main{assertEquals("Background metadata must reach the current clip cache before resume",android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,PlaybackOrientationProbe.cached(context,items[1].media))}
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
             direction(Configuration.ORIENTATION_PORTRAIT)
         }finally{main{player.stop();player.clearMediaItems();player.release()};scenario.close();PlaybackRequests.remove(target.playId)}

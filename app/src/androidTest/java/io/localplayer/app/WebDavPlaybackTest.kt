@@ -135,9 +135,8 @@ class WebDavPlaybackTest {
 }
 
 /** A local authenticated DAV fixture; no real accounts or network services are used. */
-internal class DavFixture(private val media:File,private val chunkDelayMs:Long=40,private val headerDelayMs:Long=0):java.io.Closeable {
+internal class DavFixture(private val media:File,private val chunkDelayMs:Long=40,private val headerDelayMs:Long=0,val names:List<String> = listOf("01-海边.mp4","02-落日.mp4")):java.io.Closeable {
     val username="reader";val password=UUID.randomUUID().toString()
-    val names=listOf("01-海边.mp4","02-落日.mp4")
     val mediaProbes=java.util.concurrent.atomic.AtomicInteger()
     val previewProbes=java.util.concurrent.atomic.AtomicInteger()
     val positions=java.util.Collections.synchronizedList(mutableListOf<Long>())
