@@ -1,7 +1,7 @@
 package io.localplayer.app
 
 import android.net.Uri
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.ViewGroup
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -33,7 +33,7 @@ class MpvVideoQualityTest {
                     var tracks by remember{mutableStateOf(player.currentTracks)};var parameters by remember{mutableStateOf(player.trackSelectionParameters)}
                     DisposableEffect(player){val listener=object:Player.Listener{override fun onEvents(p:Player,e:Player.Events){tracks=p.currentTracks;parameters=p.trackSelectionParameters}};player.addListener(listener);onDispose{player.removeListener(listener)}}
                     Column{
-                        AndroidView(factory={SurfaceView(it).also(player::setVideoSurfaceView)},modifier=Modifier.height(180.dp).fillMaxWidth())
+                        AndroidView(factory={TextureView(it).also(player::setVideoTextureView)},modifier=Modifier.height(180.dp).fillMaxWidth())
                         PlaybackQualityChoices(player,player.currentMediaItem,tracks,parameters)
                     }
                 }}
@@ -41,13 +41,14 @@ class MpvVideoQualityTest {
             }
             ui.waitUntil(30000){main{player.playerError!=null||player.playbackState==Player.STATE_READY&&player.videoSize.width>0}}
             ui.waitUntil(10000){main{player.currentTracks.groups.count{it.type==C.TRACK_TYPE_VIDEO}==2}}
+            val trackJson=MpvRuntime.load(ui.activity).get("track-list")?:"[]"
+            File(ui.activity.getExternalFilesDir(null),"mpv-quality-track-list.json").writeText(trackJson)
             val choice=main{
                 assertNull(player.playerError);player.pause();player.seekTo(3000)
-                File(ui.activity.getExternalFilesDir(null),"mpv-quality-track-list.json").writeText(MpvRuntime.load(ui.activity).get("track-list")?:"[]")
                 val groups=player.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
                 assertEquals("Software playback must expose both real video tracks",2,groups.size)
                 val low=groups.indexOfFirst{it.getTrackFormat(0).width==320};assertTrue(low>=0)
-                val native=org.json.JSONArray(MpvRuntime.load(ui.activity).get("track-list"))
+                val native=org.json.JSONArray(trackJson)
                 val lowRate=(0 until native.length()).map{native.getJSONObject(it)}.first{it.optInt("demux-w")==320}.getInt("demux-bitrate")
                 assertEquals(lowRate,groups[low].getTrackFormat(0).averageBitrate)
                 "video-quality-$low-0"
@@ -80,20 +81,20 @@ class MpvVideoQualityTest {
         val controller=future.get(10,java.util.concurrent.TimeUnit.SECONDS)
         try{
             ui.waitUntil(30000){main{controller.playerError!=null||controller.playbackState==Player.STATE_READY&&controller.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true&&controller.currentTracks.groups.count{it.type==C.TRACK_TYPE_VIDEO}==2}}
-            main{
-                if(controller.playerError!=null){
+            if(main{controller.playerError!=null}){
                     val runtime=MpvRuntime.load(context)
                     val data=org.json.JSONObject()
                     for(key in listOf("vid","track-list","time-pos","pause","vo-configured","current-vo","video-out-params","video-frame-info","idle-active","eof-reached"))data.put(key,runCatching{runtime.get(key)}.getOrNull())
                     File(context.getExternalFilesDir(null),"dual-p5-failure.json").writeText(data.toString())
-                }
+            }
+            main {
                 assertNull(controller.playerError?.stackTraceToString(),controller.playerError);assertTrue(controller.currentMediaItem!!.mediaMetadata.extras!!.getBoolean("sdr-compatibility"))
                 controller.pause();controller.seekTo(3000);controller.setPlaybackSpeed(1.25f)
                 controller.trackSelectionParameters=controller.trackSelectionParameters.buildUpon().setPreferredAudioLanguage("zh").setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()
             }
             ui.onNodeWithTag("video-definition").performClick()
             ui.onNodeWithTag("video-quality-1-0").performScrollTo().performClick()
-            ui.waitUntil(10000){main{MpvRuntime.load(context).get("vid")=="2"}}
+            ui.waitUntil(10000){MpvRuntime.load(context).get("vid")=="2"}
             main{
                 assertNull(controller.playerError);assertEquals(0,controller.currentMediaItemIndex)
                 assertTrue(controller.currentPosition>=2900);assertFalse(controller.playWhenReady)
@@ -102,7 +103,7 @@ class MpvVideoQualityTest {
                 assertTrue(controller.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))
             }
             ui.onNodeWithTag("video-quality-auto").performScrollTo().performClick()
-            ui.waitUntil(10000){main{MpvRuntime.load(context).get("vid")=="1"}}
+            ui.waitUntil(10000){MpvRuntime.load(context).get("vid")=="1"}
         }finally{main{controller.stop();controller.clearMediaItems();controller.release();activity?.finish()};PlaybackRequests.remove(target.playId)}
     }
 

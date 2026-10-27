@@ -77,6 +77,28 @@ class StationExperienceTest {
         ui.onNodeWithTag("station-gear-sound").assertIsOn()
         ui.onNodeWithTag("station-gear-sound").performClick()
     }
+    @Test fun historyRestorationMergesOnceAndPreservesIndividualTimestamps() {
+        val name="inventory-batch-${UUID.randomUUID()}"
+        try {
+            val inventory=StationInventory(context,name)
+            val old=MediaRef("old","Old.mp4","Local",sizeBytes=10)
+            inventory.observe((1..511).map{MediaRef("catalog-$it","$it.mp4","Local")},0)
+            inventory.observe(listOf(old),100)
+            val history=(1..100).map { i->HistoryEntry(MediaRef("history-$i","$i.mp4","Local"),0,0,i.toLong(),false) }
+            val before=StationInventory.revision.intValue
+            val started=android.os.SystemClock.elapsedRealtime()
+            ui.runOnUiThread{assertEquals(100,inventory.restore(history+HistoryEntry(old.copy(title="Renamed.mp4"),0,0,999,false)))}
+            val elapsed=android.os.SystemClock.elapsedRealtime()-started
+            println("INVENTORY_RESTORE rows=512 history=100 elapsed_ms=$elapsed")
+            assertTrue("Batch restoration exceeded 500ms",elapsed<500)
+            assertEquals(before+1,StationInventory.revision.intValue)
+            val saved=inventory.entries().associateBy{it.media.key}
+            assertEquals(100L,saved.getValue("old").firstSeen)
+            assertEquals("Renamed.mp4",saved.getValue("old").media.title)
+            history.forEach{assertEquals(it.updatedAt,saved.getValue(it.media.key).firstSeen)}
+            assertEquals(0,inventory.restore(history));assertEquals(before+1,StationInventory.revision.intValue)
+        }finally{context.deleteSharedPreferences(name)}
+    }
     @Test fun bufferingMessageIsCenteredAndDisappearsWhenReady() {
         val buffering=mutableStateOf(true)
         ui.runOnUiThread{ui.activity.setContent{PlayerTheme{StationBuffering(buffering.value,false)}}}

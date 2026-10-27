@@ -40,7 +40,7 @@ class PlaybackService:MediaSessionService(){
         val dataSource=DefaultDataSource.Factory(this,PlaybackNetworkFactory())
  val nativePlayer=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
-            .setMediaSourceFactory(SidecarMediaSourceFactory(DefaultMediaSourceFactory(dataSource,PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()),dataSource))
+            .setMediaSourceFactory(SidecarMediaSourceFactory(DefaultMediaSourceFactory(dataSource,PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()),dataSource,this))
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(nativePlayer,renderers)
@@ -48,6 +48,7 @@ class PlaybackService:MediaSessionService(){
         cloudRecovery=CloudStreamRecovery(nativePlayer)
         cloudAdaptive=CloudAdaptiveController(nativePlayer)
         val player=CompatibilityPlayer(this,nativePlayer)
+        CompatibilityVideoOutput.register(player)
         val sidecars=AutomaticSidecars(this).also{this.sidecars=it}
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}

@@ -32,12 +32,16 @@ internal data class SidecarAudio(val uri:Uri,val name:String) {
 /** All tracks use the primary video's clock, including seek, speed, pause and resume. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class SidecarMediaSourceFactory(private val base:MediaSource.Factory,
-    private val dataSource:androidx.media3.datasource.DataSource.Factory):MediaSource.Factory by base {
+    private val dataSource:androidx.media3.datasource.DataSource.Factory,private val context:android.content.Context?=null):MediaSource.Factory by base {
     private var subtitles:androidx.media3.extractor.text.SubtitleParser.Factory=androidx.media3.extractor.text.DefaultSubtitleParserFactory()
     override fun setSubtitleParserFactory(factory:androidx.media3.extractor.text.SubtitleParser.Factory):MediaSource.Factory {
         subtitles=factory;base.setSubtitleParserFactory(factory);return this
     }
     override fun createMediaSource(item:MediaItem):MediaSource {
+        val media=item.mediaMetadata.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}
+        return if(context!=null&&media!=null&&item.mediaMetadata.extras?.getBoolean("sidecars-prepared")!=true)PreparingSidecarSource(context,item,media,::createPreparedSource) else createPreparedSource(item)
+    }
+    private fun createPreparedSource(item:MediaItem):MediaSource {
         val captions=item.localConfiguration?.subtitleConfigurations.orEmpty()
         val managed=captions.filter { subtitles.supportsFormat(Format.Builder().setSampleMimeType(it.mimeType).build()) }
         val primary=base.createMediaSource(item.buildUpon().setSubtitleConfigurations(captions.filter{it !in managed}).build())
@@ -46,25 +50,31 @@ internal class SidecarMediaSourceFactory(private val base:MediaSource.Factory,
             val media=MediaItem.Builder().setUri(it.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(it.name).build()).build()
             sources+=FilteringMediaSource(base.createMediaSource(media),C.TRACK_TYPE_AUDIO)
         }
-        managed.forEach { caption ->
-            val format=Format.Builder().setSampleMimeType(caption.mimeType).setLanguage(caption.language).setLabel(caption.label)
-                .setSelectionFlags(caption.selectionFlags).setRoleFlags(caption.roleFlags).setId(caption.id).build()
-            // A non-lazy extractor publishes the actual cue end time, including cues spanning a seek.
-            val extractors=androidx.media3.extractor.ExtractorsFactory { arrayOf(androidx.media3.extractor.text.SubtitleExtractor(subtitles.create(format),format)) }
-            sources+=androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSource,extractors)
-                .createMediaSource(MediaItem.fromUri(caption.uri))
-        }
-        if(sources.size==1&&managed.isEmpty())return primary
+        require(managed.size<=MutableSubtitleSource.CAPACITY){"Too many subtitle tracks"}
+        val text=MutableSubtitleSource(item.buildUpon().setSubtitleConfigurations(managed).build(),dataSource,subtitles)
+        sources+=text
         val merged=MergingMediaSource(true,false,*sources.toTypedArray())
         return object:androidx.media3.exoplayer.source.WrappingMediaSource(merged) {
+            @Volatile private var current=item
             private fun original(timeline:androidx.media3.common.Timeline)=object:androidx.media3.exoplayer.source.ForwardingTimeline(timeline) {
                 override fun getWindow(index:Int,window:androidx.media3.common.Timeline.Window,projection:Long):androidx.media3.common.Timeline.Window =
-                    super.getWindow(index,window,projection).also{it.mediaItem=item}
+                    super.getWindow(index,window,projection).also{it.mediaItem=current}
             }
-            override fun getMediaItem()=item
-            override fun canUpdateMediaItem(mediaItem:MediaItem)=false
+            override fun getMediaItem()=current
+            override fun canUpdateMediaItem(mediaItem:MediaItem):Boolean {
+                val unsupported=mediaItem.localConfiguration?.subtitleConfigurations.orEmpty().filterNot{it in MutableSubtitleSource.captions(mediaItem)}
+                return SidecarAudio.from(mediaItem)==SidecarAudio.from(current)&&MutableSubtitleSource.captions(mediaItem).size<=MutableSubtitleSource.CAPACITY&&
+                    unsupported==current.localConfiguration?.subtitleConfigurations.orEmpty().filterNot{it in MutableSubtitleSource.captions(current)}&&
+                    primary.canUpdateMediaItem(mediaItem.buildUpon().setSubtitleConfigurations(unsupported).build())
+            }
+            override fun updateMediaItem(mediaItem:MediaItem){
+                current=mediaItem
+                primary.updateMediaItem(mediaItem.buildUpon().setSubtitleConfigurations(mediaItem.localConfiguration?.subtitleConfigurations.orEmpty().filterNot{it in MutableSubtitleSource.captions(mediaItem)}).build())
+                text.updateMediaItem(mediaItem);refreshSourceInfo(original(mergedTimeline?:return))
+            }
+            private var mergedTimeline:androidx.media3.common.Timeline?=null
             override fun getInitialTimeline()=super.getInitialTimeline()?.let(::original)
-            override fun onChildSourceInfoRefreshed(timeline:androidx.media3.common.Timeline){refreshSourceInfo(original(timeline))}
+            override fun onChildSourceInfoRefreshed(timeline:androidx.media3.common.Timeline){mergedTimeline=timeline;refreshSourceInfo(original(timeline))}
         }
     }
 }

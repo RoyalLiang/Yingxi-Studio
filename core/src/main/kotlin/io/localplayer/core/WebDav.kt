@@ -42,7 +42,7 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
     private fun sameOrigin(url:URI) = url.scheme.equals(root.scheme,true) && url.host.equals(root.host,true) && effectivePort(url)==effectivePort(root)
     private fun effectivePort(url:URI) = if(url.port>=0)url.port else if(url.scheme=="https")443 else 80
 
-    private fun request(url:URI, method:String, range:String?=null, ownCall:((Call)->Unit)?=null):Response {
+    private fun request(url:URI, method:String, range:String?=null, validator:Pair<String,String>?=null, ownCall:((Call)->Unit)?=null):Response {
         var target=url
         repeat(6) { hop ->
             check()
@@ -55,6 +55,7 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
             if(source.referer.isNotEmpty()) builder.header("Referer",source.referer)
             if(ownOrigin && (source.username.isNotEmpty() || auth!="Basic Og==")) builder.header("Authorization",auth)
             if(range!=null)builder.header("Range",range)
+            validator?.let { (name,value) -> builder.header(name,value) }
             if(method=="PROPFIND")builder.header("Depth","1").method(method,PROPERTIES.toRequestBody("application/xml; charset=utf-8".toMediaType()))
             val call=client.newCall(builder.build());calls.add(call)
             val response=try { ownCall?.invoke(call);check();call.execute() } catch(e:Exception) { calls.remove(call);call.cancel();throw e }
@@ -74,6 +75,7 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
         if(response.code!=expected)throw IOException(when(response.code) {
             401,403 -> "WebDAV 登录失败或没有读取权限"
             404 -> "WebDAV 路径不存在；OpenList 通常使用 /dav/"
+            412 -> "远程文件已变更，请重新打开"
             429 -> "服务请求过于频繁，请稍后重试"
             else -> "WebDAV 请求失败（HTTP ${response.code}）"
         })
@@ -126,6 +128,13 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
         val initialCall=java.util.concurrent.atomic.AtomicReference<Call?>()
         val initial=request(url,"GET","bytes=$position-",ownCall={initialCall.set(it)})
         val size=try { contentRange(initial,position).third } catch(e:Exception) { release(initial);throw e }
+        val etag=initial.header("ETag")
+        val modified=initial.header("Last-Modified")
+        val validator=when {
+            etag!=null && etag.startsWith('"') && etag.endsWith('"') -> "If-Match" to etag
+            modified!=null -> "If-Unmodified-Since" to modified
+            else -> null
+        }
         return object:RemoteFile {
             override val size=size
             @Volatile private var response:Response?=initial
@@ -142,11 +151,17 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
                     var active=response
                     if(cursor!=position || active==null) {
                         release(active);response=null
-                        val next=request(url,"GET","bytes=$position-",ownCall={call->
+                        val next=request(url,"GET","bytes=$position-",validator,ownCall={call->
                             currentCall.set(call)
                             if(done.get()){call.cancel();throw InterruptedIOException("读取已关闭")}
                         })
-                        try {ensureOpen();if(contentRange(next,position).third!=size)throw IOException("远程文件已变更，请重新打开")}
+                        try {
+                            ensureOpen()
+                            if(contentRange(next,position).third!=size ||
+                                etag!=null && next.header("ETag")!=etag ||
+                                modified!=null && next.header("Last-Modified")!=modified)
+                                throw IOException("远程文件已变更，请重新打开")
+                        }
                         catch(e:Exception){release(next);throw e}
                         response=next;active=next;cursor=position
                     }

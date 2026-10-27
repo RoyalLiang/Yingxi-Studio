@@ -35,10 +35,10 @@ class NetworkSidecarPlaybackTest {
             val player=future.get(10,TimeUnit.SECONDS);controller=player
             ui.waitUntil(30000){main{player.playerError!=null||(player.isPlaying&&SidecarAudio.from(player.currentMediaItem!!).size==1&&player.currentTracks.groups.count{it.type==C.TRACK_TYPE_AUDIO}>=2)}}
             main{assertNull(player.playerError);assertTrue(player.currentMediaItem!!.mediaMetadata.extras!!.getBoolean("sdr-compatibility"));audioUri=SidecarAudio.from(player.currentMediaItem!!).single().uri}
-            ui.waitUntil(10000){main{MpvRuntime.load(context).get("sub-text")?.contains("SFTP attached")==true}}
+            ui.waitUntil(10000){MpvRuntime.load(context).get("sub-text")?.contains("SFTP attached")==true}
             val dub=main{player.currentTracks.groups.last{it.type==C.TRACK_TYPE_AUDIO}}
             main{player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setOverrideForType(TrackSelectionOverride(dub.mediaTrackGroup,0)).build()}
-            ui.waitUntil(5000){main{MpvRuntime.load(context).get("aid")==dub.getTrackFormat(0).id}}
+            ui.waitUntil(5000){MpvRuntime.load(context).get("aid")==dub.getTrackFormat(0).id}
             main{player.seekTo(6000);player.setPlaybackSpeed(1.5f);player.play()}
             ui.waitUntil(10000){main{player.currentPosition>6500&&player.isPlaying}}
             main{player.pause();assertNull(player.playerError);assertEquals(1.5f,player.playbackParameters.speed,.01f);player.stop();player.clearMediaItems()}

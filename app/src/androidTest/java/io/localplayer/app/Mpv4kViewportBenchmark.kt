@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
-import android.view.SurfaceView
+import android.view.TextureView
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit
 class Mpv4kViewportBenchmark {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private fun <T> main(block:()->T):T {var result:Result<T>?=null;ui.runOnUiThread{result=runCatching(block)};return result!!.getOrThrow()}
-    private fun surface(view:View):SurfaceView? {
-        if(view is SurfaceView)return view
+    private fun surface(view:View):TextureView? {
+        if(view is TextureView)return view
         if(view is ViewGroup)for(i in 0 until view.childCount)surface(view.getChildAt(i))?.let{return it}
         return null
     }
@@ -44,18 +44,20 @@ class Mpv4kViewportBenchmark {
             catch(e:Throwable){android.util.Log.i("Polish55State",main{playbackDiagnostic(c)});throw e}
             main{assertNull(c.playerError);assertTrue(PlaybackMetrics.snapshot().decoder?.startsWith("mpv.")==true);c.play()}
             val start=SystemClock.elapsedRealtime();Thread.sleep(3000)
-            main {
-                c.pause()
+            main{c.pause()}
+            val m=MpvRuntime.load(context)
+            assertEquals("no",m.get("hwdec"));assertEquals("yes",m.get("vd-queue-enable"));assertEquals("2",m.get("vd-queue-max-samples"))
+            assertEquals("bt.709",m.get("target-prim"));assertEquals("srgb",m.get("target-trc"))
+            val source=org.json.JSONObject(m.get("video-params")?:"{}")
+            assertEquals(3840,source.optInt("w"));assertEquals(2160,source.optInt("h"))
+            val viewport=main {
                 activity=ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<PlaybackActivity>().firstOrNull()
-                val root=activity!!.window.decorView;val output=surface(root)!!;val m=MpvRuntime.load(context)
-                assertEquals("no",m.get("hwdec"));assertEquals("yes",m.get("vd-queue-enable"))
-                assertEquals("2",m.get("vd-queue-max-samples"))
-                assertEquals("bt.709",m.get("target-prim"));assertEquals("srgb",m.get("target-trc"))
-                val source=org.json.JSONObject(m.get("video-params")?:"{}")
-                assertEquals(3840,source.optInt("w"));assertEquals(2160,source.optInt("h"))
-                android.util.Log.i("Sdr4kBenchmark","wall_ms=${SystemClock.elapsedRealtime()-start} position_ms=${c.currentPosition} drop=${m.get("frame-drop-count")} decoder_drop=${m.get("decoder-frame-drop-count")} avsync=${m.get("avsync")} surface=${output.width}x${output.height} window=${root.width}x${root.height} sdr=${c.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")} resize=${(output.parent as? androidx.media3.ui.AspectRatioFrameLayout)?.resizeMode} panscan=${m.get("panscan")}")
+                val root=activity!!.window.decorView;val output=surface(root)!!
                 assertTrue("P5 must not rasterize a surface outside the visible window",output.width<=root.width+2&&output.height<=root.height+2)
+                "position_ms=${c.currentPosition} surface=${output.width}x${output.height} window=${root.width}x${root.height} sdr=${c.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")} resize=${(output.parent as? androidx.media3.ui.AspectRatioFrameLayout)?.resizeMode}"
             }
+            android.util.Log.i("Sdr4kBenchmark","wall_ms=${SystemClock.elapsedRealtime()-start} $viewport drop=${m.get("frame-drop-count")} decoder_drop=${m.get("decoder-frame-drop-count")} avsync=${m.get("avsync")} panscan=${m.get("panscan")}")
+
         } finally {main{controller?.let{it.stop();it.clearMediaItems();it.release()};activity?.finish()};PlaybackRequests.remove(target.playId);prefs.subtitles=online}
     }
 }

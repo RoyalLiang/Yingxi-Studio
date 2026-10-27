@@ -14,6 +14,20 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class PosterPersistenceTest {
+    @Test fun bitmapIsReusedAcrossStoreInstancesAndEvictedOnReplacementAndRemoval() {
+        val key=UUID.randomUUID().toString();val store=PosterStore(context)
+        fun save(color:Int){store.save(key,Bitmap.createBitmap(40,60,Bitmap.Config.ARGB_8888).apply{eraseColor(color)},JSONObject())}
+        try {
+            save(android.graphics.Color.RED)
+            val old=store.metadata(key)!!;val first=store.image(old)!!
+            assertSame(first,PosterStore(context).image(old))
+            save(android.graphics.Color.BLUE)
+            assertNull(store.image(old))
+            val current=store.metadata(key)!!;val replacement=store.image(current)!!
+            assertNotSame(first,replacement);assertColor(android.graphics.Color.BLUE,replacement.getPixel(0,0))
+            store.remove(key);assertNull(store.image(current))
+        } finally {store.remove(key)}
+    }
     private val context get()=InstrumentationRegistry.getInstrumentation().targetContext
     @Test fun sourceRootAndDocumentVolumeUseTheActualShowDirectory() {
         val source=Source(label="Shows",protocol=Protocol.WEBDAV,host="example.invalid",root="/漫长的季节")

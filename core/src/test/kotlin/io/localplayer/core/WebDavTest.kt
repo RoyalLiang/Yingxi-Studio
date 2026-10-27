@@ -167,6 +167,33 @@ class WebDavTest {
         }
     }
 
+    @Test fun seekRejectsSameLengthReplacementAndSendsTheOriginalValidator() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(206).addHeader("Content-Range","bytes 0-31/32").addHeader("ETag","\"first\"").setBody("A".repeat(32)))
+            server.enqueue(MockResponse().setResponseCode(206).addHeader("Content-Range","bytes 8-31/32").addHeader("ETag","\"second\"").setBody("B".repeat(24)))
+            WebDavConnector().connect(source(server),Credentials("secret")).use { session -> session.open("film.mp4").use { file ->
+                assertEquals(1,file.readAt(0,ByteArray(1),0,1))
+                assertFailsWith<IOException>{file.readAt(8,ByteArray(1),0,1)}
+                server.takeRequest()
+                assertEquals("\"first\"",server.takeRequest().getHeader("If-Match"))
+            } }
+        }
+    }
+    @Test fun seekUsesLastModifiedWhenStrongEtagIsUnavailable() {
+        MockWebServer().use { server ->
+            val date="Wed, 21 Oct 2015 07:28:00 GMT"
+            server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 0-31/32").setHeader("ETag","W/\"weak\"").setHeader("Last-Modified",date).setBody("A".repeat(32)))
+            server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 8-31/32").setHeader("ETag","W/\"weak\"").setHeader("Last-Modified",date).setBody("A".repeat(24)))
+            WebDavConnector().connect(source(server),Credentials("secret")).use { session ->
+                session.open("film.mp4").use { file ->
+                    assertEquals(1,file.readAt(0,ByteArray(1),0,1));assertEquals(1,file.readAt(8,ByteArray(1),0,1))
+                    server.takeRequest();val request=server.takeRequest()
+                    assertEquals(date,request.getHeader("If-Unmodified-Since"));assertNull(request.getHeader("If-Match"))
+                }
+            }
+        }
+    }
+
     @Test fun addressParsingPreservesEncodedNamesAndRejectsInlineCredentials() {
         val source=Source(label="",protocol=Protocol.WEBDAV,host="")
         val parsed=source.withWebDavAddress("https://cloud.example/dav/%E6%B5%B7%20%E8%BE%B9/")

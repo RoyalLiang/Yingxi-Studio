@@ -87,9 +87,11 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
             val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"))} }
         }.getOrDefault(emptyList())
     }
-    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis()):Int = synchronized(lock) {
+    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis()):Int = observeFindings(media.take(512).map{StationFinding(it,seen)})
+    fun restore(history:List<HistoryEntry>):Int = observeFindings(history.asReversed().take(512).map{StationFinding(it.media,it.updatedAt)})
+    private fun observeFindings(findings:List<StationFinding>):Int = synchronized(lock) {
         val old=entries();val byKey=old.associateBy{it.media.key}.toMutableMap();var added=0
-        media.take(512).forEach { ref->val previous=byKey[ref.key]
+        findings.forEach { finding->val ref=finding.media;val seen=finding.firstSeen;val previous=byKey[ref.key]
             if(previous==null||(previous.media.location!=null&&previous.media.location!=ref.location)||(previous.media.sizeBytes!=null&&ref.sizeBytes!=null&&previous.media.sizeBytes!=ref.sizeBytes)){byKey[ref.key]=StationFinding(ref,seen);added++}
             else if(previous.media!=ref)byKey[ref.key]=previous.copy(media=ref)
         }

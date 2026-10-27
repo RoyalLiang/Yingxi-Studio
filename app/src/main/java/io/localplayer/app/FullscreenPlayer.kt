@@ -225,14 +225,16 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     Box(Modifier.fillMaxSize().onGloballyPositioned { playerBounds=it.boundsInRoot() }.background(Color(0xFF101113)).pointerInput(Unit) {
         awaitPointerEventScope { while(true) { val event=awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial);if(event.changes.any{it.pressed&&!it.previousPressed})interaction++ } }
     }) {
-        AndroidView(factory = { ctx -> PlayerView(ctx).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true)
+        val compatibilityOutput=softwareSdr
+        key(compatibilityOutput) { AndroidView(factory = { ctx -> (if(compatibilityOutput)android.view.LayoutInflater.from(ctx).inflate(R.layout.player_compatibility,null) as PlayerView else PlayerView(ctx)).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true)
             subtitleView?.let { subtitles ->
                 (subtitles.parent as? android.view.ViewGroup)?.removeView(subtitles)
                 overlayFrameLayout?.addView(subtitles,android.widget.FrameLayout.LayoutParams(-1,-1))
             } }.also(videoView) },
-            update = { it.player = controller; it.resizeMode = if(softwareSdr)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+            update = { if(compatibilityOutput){it.player=null;CompatibilityVideoOutput.attach(it.videoSurfaceView as android.view.TextureView)}else it.player=controller
+            it.resizeMode = if(compatibilityOutput)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
             it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,subtitleBottom+subtitleGutter) },
-            onRelease = { it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit"))
+            onRelease = { if(compatibilityOutput)CompatibilityVideoOutput.detach(it.videoSurfaceView as android.view.TextureView);it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit")) }
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { visible = !visible }

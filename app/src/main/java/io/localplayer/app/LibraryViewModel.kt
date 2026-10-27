@@ -102,9 +102,9 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     val plays=playChannel.receiveAsFlow()
     init { refreshHistory()
         val inventory=StationInventory(app)
-        history.filter { h->h.media.sourceId?.let{id->sources.any{it.id==id&& (h.media.location==null||mediaLocation(it)==h.media.location)}}
+        inventory.restore(history.filter { h->h.media.sourceId?.let{id->sources.any{it.id==id&& (h.media.location==null||mediaLocation(it)==h.media.location)}}
             ?: h.media.localUri?.let{runCatching{app.checkUriPermission(Uri.parse(it),android.os.Process.myPid(),android.os.Process.myUid(),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}.getOrDefault(false)} ?: false
-        }.asReversed().forEach{inventory.observe(listOf(it.media),it.updatedAt)}
+        })
     }
 
     fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{historyRows=it}.onFailure{error=it.message}}

@@ -9,6 +9,8 @@ class SegmentCache(private val directory: File, private val maxBytes: Long = 256
                    private val maxAgeMs: Long = 7L * 24 * 60 * 60 * 1000,
                    private val now: () -> Long = System::currentTimeMillis) {
     init { require(maxBytes > 0 && maxAgeMs > 0) }
+    @Volatile private var generation = 0L
+    @Synchronized fun generation(): Long = generation
     private fun name(identity: String, start: Long, length: Int) = digest("$identity:$start:$length".toByteArray()) + ".part"
     @Synchronized fun get(identity: String, start: Long, length: Int): ByteArray? {
         val file = File(directory, name(identity, start, length))
@@ -25,7 +27,8 @@ class SegmentCache(private val directory: File, private val maxBytes: Long = 256
             content
         } catch (_: IOException) { null }
     }
-    @Synchronized fun put(identity: String, start: Long, bytes: ByteArray) {
+    @Synchronized fun put(identity: String, start: Long, bytes: ByteArray, expectedGeneration: Long = generation) {
+        if (expectedGeneration != generation) return
         if (bytes.size.toLong() + 32 > maxBytes) return
         var temporary: File? = null
         try {
@@ -40,7 +43,7 @@ class SegmentCache(private val directory: File, private val maxBytes: Long = 256
         } catch (_: IOException) { /* A full or evicted cache must not interrupt playback. */ }
         finally { temporary?.delete() }
     }
-    @Synchronized fun clear() { files().forEach { it.delete() } }
+    @Synchronized fun clear() { generation++; files().forEach { it.delete() } }
     @Synchronized fun bytes(): Long { trim(0); return files().sumOf { it.length() } }
     private fun files() = directory.listFiles()?.filter { it.isFile && (it.name.endsWith(".part") || it.name.startsWith("pending-")) }.orEmpty()
     private fun trim(reserve: Long) {

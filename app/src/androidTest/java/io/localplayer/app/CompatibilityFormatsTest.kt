@@ -1,7 +1,7 @@
 package io.localplayer.app
 
 import android.net.Uri
-import android.view.SurfaceView
+import android.view.TextureView
 import androidx.activity.compose.setContent
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -62,23 +62,14 @@ class CompatibilityFormatsTest {
         })}
         val native=main{ExoPlayer.Builder(ui.activity,factory).build()}
         val player=main{CompatibilityPlayer(ui.activity,native)}
-        lateinit var surface:SurfaceView
-        main{ui.activity.setContent{AndroidView(factory={SurfaceView(it).also{view->surface=view;player.setVideoSurfaceView(view)}})}}
+        lateinit var surface:TextureView
+        main{ui.activity.setContent{AndroidView(factory={TextureView(it).also{view->surface=view;player.setVideoTextureView(view)}})}}
         ui.waitForIdle()
         try {
             main{player.volume=0f;player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)));player.prepare();player.play()}
             ui.waitUntil(30000){main{player.playerError!=null||(player.currentMediaItem?.mediaMetadata?.extras?.getBoolean("sdr-compatibility")==true&&player.currentPosition>700&&player.videoSize.width>0)}}
             main{assertNull("$name ${playbackDiagnostic(player)} cause=${player.playerError?.cause}",player.playerError);assertTrue(player.currentMediaItem!!.mediaMetadata.extras!!.getBoolean("sdr-compatibility"));player.pause()}
-            val image=android.graphics.Bitmap.createBitmap(160,90,android.graphics.Bitmap.Config.ARGB_8888)
-            var status=-1
-            val until=android.os.SystemClock.elapsedRealtime()+5000
-            do {
-                val done=java.util.concurrent.CountDownLatch(1)
-                main{android.view.PixelCopy.request(surface.holder.surface,image,{status=it;done.countDown()},android.os.Handler(android.os.Looper.getMainLooper()))}
-                assertTrue(done.await(3,java.util.concurrent.TimeUnit.SECONDS))
-                if(status!=android.view.PixelCopy.SUCCESS)Thread.sleep(50)
-            }while(status!=android.view.PixelCopy.SUCCESS&&android.os.SystemClock.elapsedRealtime()<until)
-            assertEquals(android.view.PixelCopy.SUCCESS,status)
+            val image=main{surface.getBitmap(160,90)}!!
             val pixels=IntArray(160*90);image.getPixels(pixels,0,160,0,0,160,90);image.recycle();assertTrue(pixels.toSet().size>24)
             main{player.seekTo(1500);player.setPlaybackSpeed(1.5f);player.play()}
             ui.waitUntil(15000){main{player.playerError!=null||player.currentPosition>2300}}

@@ -30,7 +30,7 @@ internal class SegmentedRemoteFile(
     private val ownership = java.io.Closeable { close() }.also(cancellation::own)
 
     private class Slot(val start: Long, val length: Int, val cancellation: Cancellation,
-                       val alignedStart:Long=start,val alignedLength:Int=length) {
+                       val cacheGeneration:Long, val alignedStart:Long=start,val alignedLength:Int=length) {
         val monitor = Object()
         val bytes = ByteArray(length)
         var available = 0
@@ -70,7 +70,7 @@ internal class SegmentedRemoteFile(
             stale = if (seek) slots.values.toList().also { slots.clear() } else emptyList()
             slot = if(!seek&&candidate!=null)candidate else {
                 // A cold request starts at the requested byte, never at an unused window prefix.
-                Slot(position,(alignedStart+alignedCount-position).toInt(),Cancellation().also(cancellation::own),alignedStart,alignedCount)
+                Slot(position,(alignedStart+alignedCount-position).toInt(),Cancellation().also(cancellation::own),options.cache?.generation() ?: 0,alignedStart,alignedCount)
                     .also{slots[it.start]=it}
             }
         }
@@ -81,7 +81,7 @@ internal class SegmentedRemoteFile(
             repeat(options.workers-1) {
                 if (next < size) {
                     val (start, count) = segment(next)
-                    val lookahead = slots.getOrPut(start) { Slot(start,count,Cancellation().also(cancellation::own)) }
+                    val lookahead = slots.getOrPut(start) { Slot(start,count,Cancellation().also(cancellation::own),options.cache?.generation() ?: 0) }
                     schedule(lookahead)
                     next = start + count
                 }
@@ -148,7 +148,7 @@ internal class SegmentedRemoteFile(
                 }
             }
             // A complete segment remains valid after a seek cancels further lookahead.
-            options.cache?.put(identity,slot.start,slot.bytes)
+            options.cache?.put(identity,slot.start,slot.bytes,slot.cacheGeneration)
         } catch (error: Exception) {
             synchronized(slot.monitor) { slot.error = if(error is IOException)error else IOException("无法读取视频分段",error) }
         } finally {

@@ -130,6 +130,30 @@ class SegmentedRemoteFileTest {
             assertTrue(entered.await(2,TimeUnit.SECONDS));parent.close();assertTrue(read.get(2,TimeUnit.SECONDS))
         }finally{file.close();release.countDown();pool.shutdownNow()}
     }
+    @Test fun clearingCacheInvalidatesAnInFlightPublicationButAllowsNewReads() {
+        val directory=kotlin.io.path.createTempDirectory("segment-clear-").toFile()
+        val cache=SegmentCache(directory);val size=1024*1024L
+        val closing=CountDownLatch(1);val release=CountDownLatch(1)
+        val file=remote(size,Cancellation(),1,cache){_,_,c->object:RemoteFile by source(size,c) {
+            override fun close(){closing.countDown();check(release.await(5,TimeUnit.SECONDS))}
+        }}
+        try {
+            assertTrue(file.readAt(0,ByteArray(1),0,1)>0)
+            assertTrue(closing.await(5,TimeUnit.SECONDS));cache.clear();release.countDown()
+            // The single worker's next segment starts only after the first publication finishes.
+            val deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2)
+            while(cache.bytes()==0L&&System.nanoTime()<deadline)Thread.sleep(5)
+            assertEquals(0L,cache.bytes(),"Pre-clear downloads must not republish cleared bytes")
+            remote(size,Cancellation(),1,cache){_,_,c->source(size,c)}.use { fresh ->
+                val out=ByteArray(size.toInt());var at=0
+                while(at<out.size)at+=fresh.readAt(at.toLong(),out,at,out.size-at)
+                val until=System.nanoTime()+TimeUnit.SECONDS.toNanos(2)
+                while(cache.bytes()==0L&&System.nanoTime()<until)Thread.sleep(5)
+                assertTrue(cache.bytes()>0,"Post-clear reads may cache again")
+            }
+        } finally {release.countDown();file.close();directory.deleteRecursively()}
+    }
+
     @Test fun completedSegmentsSurviveAReaderRestartAndCorruptCacheIsRejected() {
         val directory=kotlin.io.path.createTempDirectory("segment-contract-").toFile()
         try {

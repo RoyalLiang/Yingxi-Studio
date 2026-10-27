@@ -37,6 +37,7 @@ private final class RangeWork:NSObject,URLSessionDataDelegate,@unchecked Sendabl
     private var refreshing=false,renewed=false,accepted=false,closed=false
     private var renewal:Task<Void,Never>?
     private var session:URLSession?
+    private var sessionIdentity:ObjectIdentifier?
     private var task:URLSessionDataTask?
     private var progress:RangeProgress
     private var validator:String?
@@ -60,9 +61,16 @@ private final class RangeWork:NSObject,URLSessionDataDelegate,@unchecked Sendabl
             req.setValue("bytes=\(progress.offset)-\(progress.offset+length-1)",forHTTPHeaderField:"Range")
             req.setValue("identity",forHTTPHeaderField:"Accept-Encoding")
             if let validator,validator.hasPrefix("\""){req.setValue(validator,forHTTPHeaderField:"If-Range")}
-            let config=URLSessionConfiguration.ephemeral;config.httpCookieStorage=nil;config.urlCredentialStorage=nil
-            let callbacks=OperationQueue();callbacks.maxConcurrentOperationCount=1;callbacks.underlyingQueue=queue
-            accepted=false;session=URLSession(configuration:config,delegate:self,delegateQueue:callbacks)
+            if session==nil {
+                let config=URLSessionConfiguration.ephemeral;config.httpCookieStorage=nil;config.urlCredentialStorage=nil
+                let callbacks=OperationQueue();callbacks.maxConcurrentOperationCount=1;callbacks.underlyingQueue=queue
+                session=URLSession(configuration:config,delegate:self,delegateQueue:callbacks)
+            }
+            accepted=false
+            if let session {
+                assert(sessionIdentity==nil || sessionIdentity==ObjectIdentifier(session),"A range transfer must reuse its HTTP session")
+                sessionIdentity=ObjectIdentifier(session)
+            }
             task=session?.dataTask(with:req);task?.resume()
         }catch{finish(error)}
     }
@@ -83,7 +91,7 @@ private final class RangeWork:NSObject,URLSessionDataDelegate,@unchecked Sendabl
         do{try progress.receive(Int64(data.count));request.dataRequest?.respond(with:data);if progress.nextLength==nil{finish()}}catch{finish(error)}
     }
     func urlSession(_ session:URLSession,task:URLSessionTask,didCompleteWithError error:Error?){
-        guard !closed else{return};session.finishTasksAndInvalidate();self.session=nil;self.task=nil
+        guard !closed else{return};self.task=nil
         if refreshing,let renew{
             refreshing=false
             renewal=Task{do{let updated=try await renew();try Task.checkCancellation();self.queue.async{guard !self.closed else{return};self.url=updated;self.next()}}catch{self.queue.async{self.finish(error)}}}

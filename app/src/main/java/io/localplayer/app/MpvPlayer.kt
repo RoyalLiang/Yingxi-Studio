@@ -10,8 +10,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
+import android.graphics.SurfaceTexture
 import androidx.media3.common.*
 import androidx.media3.common.util.Size
 import com.google.common.collect.ImmutableList
@@ -27,6 +27,24 @@ private val compatibilityVideoDecoders="hevc,h264,vp8,vp9,mpeg1video,mpeg2video,
 internal class MpvPlayer(private val context:Context,private val sourceFormat:Format,private val openInput:(Context,android.net.Uri)->MpvInput={c,u->MpvInput.open(c,u)}):SimpleBasePlayer(Looper.getMainLooper()) {
     private val handler=Handler(Looper.getMainLooper())
     private var runtime:MpvRuntime?=null
+    private class Engine(val runtime:MpvRuntime){var alive=true;var surface:Surface?=null}
+    private var engine:Engine?=null
+    private var pendingLoad:(()->Unit)?=null
+    private fun enqueue(action:(MpvRuntime)->Unit){
+        val owner=engine?:return
+        worker.execute { if(owner.alive)try{action(owner.runtime)}catch(error:Exception){handler.post{
+            if(!released&&engine===owner){failure=PlaybackException("SDR 兼容播放中断",error,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false;syncPlay();invalidateState()}
+        }} }
+    }
+    private class Texture(val texture:SurfaceTexture){
+        val surface=Surface(texture)
+        @Volatile var retired=false
+        private var detached=false
+        private var destroyed=false
+        @Synchronized fun destroyed():Boolean {if(detached)return true;destroyed=true;return false}
+        @Synchronized fun release(){surface.release();detached=true;if(destroyed)texture.release()}
+    }
+    private var texture:Texture?=null
     private var pollGeneration:Int?=null
     private var sampleRevision=0
     private var fillVideo=false
@@ -34,7 +52,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     private var subtitleMarginY=22
     internal fun setVideoLayout(fill:Boolean,marginX:Int,marginY:Int) {
         fillVideo=fill;subtitleMarginX=marginX;subtitleMarginY=marginY
-        runtime?.let { it.set("panscan",if(fill)"1"else"0");it.set("sub-margin-x",marginX.toString());it.set("sub-margin-y",marginY.toString()) }
+        enqueue { it.set("panscan",if(fill)"1"else"0");it.set("sub-margin-x",marginX.toString());it.set("sub-margin-y",marginY.toString()) }
     }
 
     private var input:MpvInput?=null
@@ -72,8 +90,6 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     private var firstFrame=false
     private var firstFrameEvent=false
     private var output:Any?=null
-    private var surface:Surface?=null
-    private var attachedSurface:Surface?=null
     private var surfaceSize=Size.UNKNOWN
     private var suppressed=false
     private var focusHeld=false
@@ -90,10 +106,20 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         },handler).build()
     private val noisy=object:BroadcastReceiver(){override fun onReceive(c:Context?,i:Intent?){if(i?.action==AudioManager.ACTION_AUDIO_BECOMING_NOISY)pause()}}
     init {context.registerReceiver(noisy,IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),Context.RECEIVER_NOT_EXPORTED)}
-    private val surfaceCallback=object:SurfaceHolder.Callback {
-        override fun surfaceCreated(holder:SurfaceHolder){attach(holder.surface,holder.surfaceFrame.width(),holder.surfaceFrame.height())}
-        override fun surfaceChanged(holder:SurfaceHolder,format:Int,width:Int,height:Int){attach(holder.surface,width,height)}
-        override fun surfaceDestroyed(holder:SurfaceHolder){detach();surfaceSize=Size.ZERO;invalidateState()}
+    private val retiring=java.util.IdentityHashMap<SurfaceTexture,Texture>()
+    private fun textureCallback(view:TextureView)=object:TextureView.SurfaceTextureListener {
+        override fun onSurfaceTextureAvailable(value:SurfaceTexture,width:Int,height:Int){
+            if(output!==view)return
+            retireTexture();texture=Texture(value);attach(width,height)
+        }
+        override fun onSurfaceTextureSizeChanged(value:SurfaceTexture,width:Int,height:Int){if(output===view&&texture?.texture===value)attach(width,height)}
+        override fun onSurfaceTextureUpdated(value:SurfaceTexture){}
+        override fun onSurfaceTextureDestroyed(value:SurfaceTexture):Boolean {
+            val owned=texture?.takeIf{it.texture===value}?:retiring.remove(value)?:return true
+            val releaseByView=owned.destroyed()
+            if(texture===owned){retireTexture();surfaceSize=Size.ZERO;invalidateState()}
+            return releaseByView
+        }
     }
     private val poll=object:Runnable {override fun run(){if(released||runtime==null)return;refresh();handler.postDelayed(this,150)}}
 
@@ -154,11 +180,13 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 engine.init()
                 handler.post {
                     if(released||generation!=current)return@post
-                    runtime=engine;input=opened;opening=null;openingSince=android.os.SystemClock.elapsedRealtime()
-                    surface?.takeIf{it.isValid}?.let{attach(it,surfaceSize.width,surfaceSize.height)}
-                    engine.command("loadfile",opened.path,"replace","-1","start=${position/1000.0}")
-                    engine.set("speed",speed.speed.toString());engine.set("volume",(gain*100).toString());handleSetTrackSelectionParameters(selection)
-                    handler.post(poll)
+                    runtime=engine;this.engine=Engine(engine);input=opened;opening=null;openingSince=android.os.SystemClock.elapsedRealtime()
+                    pendingLoad={
+                        val start=position;val rate=speed.speed;val volume=gain
+                        enqueue{it.command("loadfile",opened.path,"replace","-1","start=${start/1000.0}");it.set("speed",rate.toString());it.set("volume",(volume*100).toString())}
+                        handleSetTrackSelectionParameters(selection);handler.post(poll)
+                    }
+                    attach(surfaceSize.width,surfaceSize.height)
                 }
             }catch(e:Throwable){
                 resources.close()
@@ -170,21 +198,23 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     internal fun updateAttachments(mediaItems:List<MediaItem>) {
         items=mediaItems.map{softwareSdrItem(it,true)}
         runtime?.let { engine ->
-            generation++
+            sampleRevision++
             val item=items.getOrNull(index)
             val keep=item?.localConfiguration?.subtitleConfigurations.orEmpty().map{ "sub-add" to it.uri }.toSet()+
                 item?.let{SidecarAudio.from(it).map{audio->"audio-add" to audio.uri}}.orEmpty()
-            val list=runCatching{JSONArray(engine.get("track-list")?:"[]")}.getOrDefault(JSONArray())
             val removed=externalInputs.filterKeys{it !in keep}
-            removed.forEach { (key,input) ->
-                for(i in 0 until list.length()) {
-                    val track=list.getJSONObject(i)
-                    if(track.optBoolean("external")&&track.optString("external-filename")==input.path)
-                        engine.command(if(key.first=="sub-add")"sub-remove"else"audio-remove",track.optInt("id").toString())
+            removed.keys.forEach(externalInputs::remove)
+            enqueue { m ->
+                val list=runCatching{JSONArray(m.get("track-list")?:"[]")}.getOrDefault(JSONArray())
+                removed.forEach { (key,input) ->
+                    for(i in 0 until list.length()) {
+                        val track=list.getJSONObject(i)
+                        if(track.optBoolean("external")&&track.optString("external-filename")==input.path)
+                            m.command(if(key.first=="sub-add")"sub-remove"else"audio-remove",track.optInt("id").toString())
+                    }
+                    input.close()
                 }
-                externalInputs.remove(key)
             }
-            worker.execute{removed.values.forEach{it.close()}}
             subtitleRequested=false;nextMetadataPoll=0
         }
         invalidateState()
@@ -201,8 +231,11 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 val opened=MpvInput.open(context,file.uri)
                 handler.post {
                     if(released||generation!=current||runtime!==engine){worker.execute{opened.close()};return@post}
+                    val item=items.getOrNull(index)
+                    val retained=if(file.command=="sub-add")item?.localConfiguration?.subtitleConfigurations.orEmpty().any{it.uri==file.uri}else item?.let{SidecarAudio.from(it).any{it.uri==file.uri}}==true
+                    if(!retained){worker.execute{opened.close()};return@post}
                     externalInputs[file.command to file.uri]=opened;nextMetadataPoll=0
-                    engine.command(file.command,opened.path,file.select,file.label,file.language)
+                    enqueue{it.command(file.command,opened.path,file.select,file.label,file.language)}
                 }
             } catch(_:Exception) { handler.post {
                 if(!released&&generation==current)AutomaticSidecars.status.value=item.mediaId to "外挂轨道无法读取，可重新选择文件"
@@ -319,10 +352,11 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     }
     override fun handleSetTrackSelectionParameters(parameters:TrackSelectionParameters):ListenableFuture<*> {
         selection=parameters;nextMetadataPoll=0
-        runtime?.let{m->
+        val available=tracks
+        enqueue{m->
             m.set("sub-visibility",if(parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))"no" else "yes")
             m.set("alang",parameters.preferredAudioLanguages.joinToString(","));m.set("slang",parameters.preferredTextLanguages.joinToString(","))
-            val video=parameters.overrides.values.firstOrNull{override->override.type==C.TRACK_TYPE_VIDEO&&tracks.groups.any{it.mediaTrackGroup==override.mediaTrackGroup&&it.isTrackSupported(0)}}?.mediaTrackGroup?.id?.takeIf{it.startsWith("mpv-video-")}?.removePrefix("mpv-video-")
+            val video=parameters.overrides.values.firstOrNull{override->override.type==C.TRACK_TYPE_VIDEO&&available.groups.any{it.mediaTrackGroup==override.mediaTrackGroup&&it.isTrackSupported(0)}}?.mediaTrackGroup?.id?.takeIf{it.startsWith("mpv-video-")}?.removePrefix("mpv-video-")
             m.set("vid",video?:"auto")
             for((type,property,prefix) in listOf(Triple(C.TRACK_TYPE_AUDIO,"aid","mpv-audio-"),Triple(C.TRACK_TYPE_TEXT,"sid","mpv-sub-"))) {
                 val id=parameters.overrides.values.firstOrNull{it.mediaTrackGroup.id.startsWith(prefix)}?.mediaTrackGroup?.id?.removePrefix(prefix)
@@ -338,51 +372,75 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         if(!active&&focusHeld){audio.abandonAudioFocusRequest(focus);focusHeld=false;suppressed=false}
         val playing=wanted&&!suppressed&&state!=Player.STATE_IDLE&&state!=Player.STATE_ENDED
         val pause=!(playing&&firstFrame)
-        if(pauseApplied!=pause)runtime?.let{it.set("pause",if(pause)"yes"else"no");pauseApplied=pause}
+        if(pauseApplied!=pause&&runtime!=null){enqueue{it.set("pause",if(pause)"yes"else"no")};pauseApplied=pause}
         if(playing&&!wake.isHeld)wake.acquire(30*60*1000L)else if(!playing&&wake.isHeld)wake.release()
     }
-    override fun handleSetPlaybackParameters(playbackParameters:PlaybackParameters):ListenableFuture<*>{speed=playbackParameters;runtime?.set("speed",speed.speed.toString());return done()}
-    override fun handleSetVolume(volume:Float):ListenableFuture<*>{gain=volume;runtime?.set("volume",(gain*100).toString());return done()}
+    override fun handleSetPlaybackParameters(playbackParameters:PlaybackParameters):ListenableFuture<*>{speed=playbackParameters;enqueue{it.set("speed",playbackParameters.speed.toString())};return done()}
+    override fun handleSetVolume(volume:Float):ListenableFuture<*>{gain=volume;enqueue{it.set("volume",(volume*100).toString())};return done()}
     override fun handleSeek(mediaItemIndex:Int,positionMs:Long,seekCommand:Int):ListenableFuture<*>{
-        if(mediaItemIndex==index){sampleRevision++;nextMetadataPoll=0;position=positionMs.coerceAtLeast(0);runtime?.command("seek",(position/1000.0).toString(),"absolute+exact");if(state==Player.STATE_ENDED)state=Player.STATE_READY}
+        if(mediaItemIndex==index){sampleRevision++;nextMetadataPoll=0;position=positionMs.coerceAtLeast(0);enqueue{it.command("seek",(positionMs.coerceAtLeast(0)/1000.0).toString(),"absolute+exact")};if(state==Player.STATE_ENDED)state=Player.STATE_READY}
         return done()
     }
     override fun handleSetVideoOutput(videoOutput:Any):ListenableFuture<*> {
+        // Only TextureView can transfer destruction ownership without blocking the UI thread.
+        require(videoOutput is TextureView){"SDR compatibility requires TextureView"}
         clearOutput();output=videoOutput
-        when(videoOutput){
-            is SurfaceView->{videoOutput.holder.addCallback(surfaceCallback);attach(videoOutput.holder.surface,videoOutput.width,videoOutput.height)}
-            is SurfaceHolder->{videoOutput.addCallback(surfaceCallback);attach(videoOutput.surface,videoOutput.surfaceFrame.width(),videoOutput.surfaceFrame.height())}
-            is Surface->attach(videoOutput,1,1)
-        }
+        val callback=textureCallback(videoOutput);videoOutput.surfaceTextureListener=callback
+        if(videoOutput.isAvailable)videoOutput.surfaceTexture?.let{callback.onSurfaceTextureAvailable(it,videoOutput.width,videoOutput.height)}
         return done()
     }
     override fun handleClearVideoOutput(videoOutput:Any?):ListenableFuture<*>{if(videoOutput==null||videoOutput===output)clearOutput();return done()}
-    private fun attach(value:Surface,width:Int,height:Int){
-        if(!value.isValid)return
-        val changed=attachedSurface!==value
-        if(changed&&attachedSurface!=null)detach()
-        surface=value;surfaceSize=Size(width.coerceAtLeast(1),height.coerceAtLeast(1));nextMetadataPoll=0
-        runtime?.let{
-            if(changed){it.attach(value);attachedSurface=value}
-            it.set("android-surface-size","${surfaceSize.width}x${surfaceSize.height}")
-            if(changed){it.set("vo","gpu-next");it.set("force-window","yes")}
+    private fun attach(width:Int,height:Int){
+        val owned=texture?:return
+        surfaceSize=Size(width.coerceAtLeast(1),height.coerceAtLeast(1));nextMetadataPoll=0
+        val owner=engine?:return
+        val size=surfaceSize
+        worker.execute {
+            if(!owner.alive||owned.retired)return@execute
+            val m=owner.runtime
+            if(owner.surface!==owned.surface){
+                if(owner.surface!=null){m.set("vo","null");m.detach()}
+                m.attach(owned.surface);owner.surface=owned.surface
+                m.set("vo","gpu-next");m.set("force-window","yes")
+            }
+            m.set("android-surface-size","${size.width}x${size.height}")
+        }
+        pendingLoad?.also{pendingLoad=null}?.invoke()
+    }
+    private fun retireTexture(){
+        val owned=texture?:return;texture=null;owned.retired=true
+        retiring[owned.texture]=owned
+        val owner=engine
+        worker.execute {
+            try { if(owner?.alive==true&&owner.surface===owned.surface){owner.runtime.set("vo","null");owner.runtime.detach();owner.surface=null} }
+            finally {owned.release();handler.post{retiring.remove(owned.texture)}}
         }
     }
-    private fun detach(){runtime?.let{it.set("vo","null");if(attachedSurface!=null)it.detach()};attachedSurface=null;surface=null}
-    private fun clearOutput(){when(val value=output){is SurfaceView->value.holder.removeCallback(surfaceCallback);is SurfaceHolder->value.removeCallback(surfaceCallback)};output=null;detach()}
+    private fun clearOutput(){
+        val view=output as? TextureView;val listener=view?.surfaceTextureListener
+        output=null;retireTexture()
+        // Keep the listener until native detaches; a disappearing view transfers its texture here.
+        worker.execute {handler.post{if(view!=null&&view.surfaceTextureListener===listener&&output!==view){view.surfaceTextureListener=null}}}
+    }
+    internal fun afterVideoDetached(callback:()->Unit){worker.execute{handler.post(callback)}}
     override fun handleStop():ListenableFuture<*>{stopRuntime();state=Player.STATE_IDLE;syncPlay();return done()}
     override fun handleRelease():ListenableFuture<*>{released=true;clearOutput();stopRuntime();wanted=false;syncPlay();runCatching{context.unregisterReceiver(noisy)};return done()}
     private fun stopRuntime(){
+        pendingLoad=null
         generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null
-        if(attachedSurface!=null){runtime?.let{it.set("vo","null");it.detach()}}
-        attachedSurface=null;firstFrame=false;firstFrameEvent=false;subtitleRequested=false
+        val owner=engine;engine=null
+        firstFrame=false;firstFrameEvent=false;subtitleRequested=false
         val m=runtime;val source=input;val pending=opening;val captions=externalInputs.values.toList();externalInputs.clear();runtime=null;input=null;opening=null
-        worker.execute{pending?.close();source?.close();captions.forEach{it.close()};runCatching{m?.destroy()}}
+        closer.execute{pending?.input?.close();source?.close();captions.forEach{it.close()}}
+        worker.execute{pending?.close();source?.close();captions.forEach{it.close()};runCatching{
+            if(owner?.alive==true){if(owner.surface!=null){m?.set("vo","null");m?.detach();owner.surface=null};m?.destroy();owner.alive=false}
+        }}
     }
     private fun done():ListenableFuture<*> = Futures.immediateVoidFuture()
     companion object {
         private val worker=Executors.newSingleThreadExecutor()
         private val attachments=Executors.newSingleThreadExecutor()
+        private val closer=Executors.newCachedThreadPool()
     }
 }
 

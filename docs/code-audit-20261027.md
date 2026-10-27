@@ -106,3 +106,7 @@
 建议先对 1、2、5 复现并处理，再修复已复现的 3、4；6、7、8 以解码次数、启动 trace、连接数作为整改前后对照。此次交付为审查证据与最小修复方向，尚未修复上述产品问题。
 
 代码定位约定：Android Kotlin 文件位于 `app/src/main/java/io/localplayer/app/`，`core/...` 位于 `core/src/main/kotlin/io/localplayer/core/`；所有行号绑定上面的主审 SHA。
+
+## 修复跟踪
+
+本报告保留审查时的原始证据与边界；后续实现、回归及环境缺口见[8项问题修复与验证](code-audit-fixes-20261027.md)。

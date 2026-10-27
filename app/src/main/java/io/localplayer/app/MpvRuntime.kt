@@ -11,8 +11,11 @@ import java.security.MessageDigest
 
 /** Only signed, build-pinned code is loaded. The child owns a separate FFmpeg namespace. */
 internal class MpvRuntime private constructor(private val bridge:Class<*>) {
-    private val methods=bridge.methods.associateBy{it.name}
-    private fun call(name:String,vararg args:Any?):Any?=methods.getValue(name).invoke(null,*args)
+    private val methods=java.util.concurrent.ConcurrentHashMap(bridge.methods.associateBy{it.name})
+    private fun call(name:String,vararg args:Any?):Any? {
+        check(android.os.Looper.myLooper()!=android.os.Looper.getMainLooper()){"Native mpv calls must use the playback worker"}
+        return methods.getValue(name).invoke(null,*args)
+    }
     fun create(context:Context){call("create",context.applicationContext)}
     fun init(){call("init")}
     fun destroy(){call("destroy")}
