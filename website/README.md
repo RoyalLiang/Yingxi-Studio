@@ -91,7 +91,7 @@ node website/tools/check.mjs --atlas app/src/main/res/raw/world_atlas.json
 
 ## 播放问题回执
 
-Android 的「上报播放问题」直接在播放器内完成。用户预览并主动勾选公开同意后，点一次「同意并上报」；受限 WebView 负责 Turnstile 安全校验与同源接收端 `functions/api/playback-report.js` 的提交，成功后显示实际仓库回执编号。报告者无需 GitHub 登录、复制 JSON 或切换到外部浏览器。
+Android 的「上报播放问题」直接在播放器内完成。弹窗说明公开字段，用户主动勾选同意后点一次「上报」；受限 WebView 在后台完成 Turnstile 校验与同源接收端 `functions/api/playback-report.js` 的提交。等待使用信号动画，收到真实仓库回执后显示透明对勾并自动收起；不显示原始 JSON、复制入口或人工校验控件。报告者无需 GitHub 登录或切换到外部浏览器。
 
 `/report/submit`（源码 `public/report/submit.html`）只在原生按钮操作后接收冻结的快照，不从页面地址或 URL fragment 读取报告，也不因单独打开页面就提交。原生端不添加 JavaScript 原生对象接口，禁用文件/内容访问，只允许精确的 HTTPS 主页面；完成通知只接受当前请求 ID 和确认的正数编号。本机仅保存尚未确认尝试的 UUID，不保存诊断正文；关闭或进程中断后重开会先提示检查旧回执，用户明确开始新的上报才会重新生成请求。
 
@@ -104,6 +104,8 @@ Android 的「上报播放问题」直接在播放器内完成。用户预览并
 | `REPORT_GITHUB_TOKEN` | Secret | 有仓库权限的 GitHub 账号生成的细粒度 token；仅选择 RoyalLiang/Yingxi-Studio，Repository permissions 只开 Issues: Read and write（Metadata 只读为平台必需）。不用 Contents、Actions 或账号管理权限。 |
 | `REPORT_TURNSTILE_SECRET` | Secret | Turnstile widget 的服务端 Secret key。 |
 | `REPORT_TURNSTILE_SITE_KEY` | 普通变量 | 同一 widget 的公开 Site key；widget 域名允许 yingxi-station.pages.dev。 |
+
+**发布前配置：** 当前原生上报使用全程后台校验，现有 Turnstile widget 必须在 Cloudflare 控制台改为 **Invisible** 模式，保留相同 widget 的 Site key、Secret 与域名限制。`appearance: interaction-only` 不能把 Managed widget 变成 Invisible；仅隐藏 WebView 也不能消除人工挑战。尚未切换时，新客户端收到人工挑战会结束为未完成，不会绕过校验提交。先切换并验证控件模式，再分发此候选。服务端仍须保留 Siteverify，不能直接删除唯一的公开写入保护。参见 [Cloudflare 模式说明](https://developers.cloudflare.com/turnstile/concepts/widget/)；本站隐私页已补充 [Turnstile Privacy Addendum](https://www.cloudflare.com/turnstile-privacy-policy/)。配置切换与生产部署不属于本地测试的完成证据。
 
 不要把 Secret 写进源码、客户端、命令参数、日志或聊天。令牌需要设置有效期，并在到期前由维护者轮换。保存环境变量后重新部署，`GET /api/playback-report` 只返回公开 Site key 与可用状态；没有任何一个配置时提交会关闭，不假装回传成功。
 
