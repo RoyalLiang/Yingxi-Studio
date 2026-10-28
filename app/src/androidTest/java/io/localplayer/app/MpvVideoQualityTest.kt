@@ -102,6 +102,7 @@ class MpvVideoQualityTest {
                 assertEquals(listOf("zh"),controller.trackSelectionParameters.preferredAudioLanguages)
                 assertTrue(controller.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT))
             }
+            ui.onNodeWithTag("video-definition").performClick()
             ui.onNodeWithTag("video-quality-auto").performScrollTo().performClick()
             ui.waitUntil(10000){MpvRuntime.load(context).get("vid")=="1"}
         }finally{main{controller.stop();controller.clearMediaItems();controller.release();activity?.finish()};PlaybackRequests.remove(target.playId)}

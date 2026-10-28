@@ -3,6 +3,7 @@ package io.localplayer.app
 import android.os.SystemClock
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 
 /** Bounded local counters. Never records media paths, addresses or credentials. */
@@ -81,6 +82,8 @@ object PlaybackMetrics {
    android.util.Log.i("YingxiPlayback","suppressionReason=$reason")
   }
   override fun onRenderedFirstFrame(eventTime:AnalyticsListener.EventTime,output:Any,renderTimeMs:Long){
+   if(eventTime.windowIndex in 0 until eventTime.timeline.windowCount)
+    PlaybackFrames.rendered(eventTime.timeline.getWindow(eventTime.windowIndex,Timeline.Window()).mediaItem)
    synchronized(this@PlaybackMetrics){if(firstFrame==null&&started>0)firstFrame=SystemClock.elapsedRealtime()-started;played=true}
   }
   override fun onPlaybackStateChanged(eventTime:AnalyticsListener.EventTime,state:Int){

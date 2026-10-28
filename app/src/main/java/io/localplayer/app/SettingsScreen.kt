@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -158,12 +159,12 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
         Spacer(Modifier.height(12.dp))
         StationChoiceSetting("字幕驿站",listOf("subhd" to "SubHD","shooter" to "射手","custom" to "自定义"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
         if(subtitleSource=="custom"){
-            OutlinedTextField(value=customSearch,onValueChange={customSearch=it;searchError=null},singleLine=true,label={Text("搜寻地址")},
+            OutlinedTextField(shape=RoundedCornerShape(16.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Berry,focusedLabelColor=Berry,unfocusedBorderColor=Ink.copy(alpha=.18f)),value=customSearch,onValueChange={customSearch=it;searchError=null},singleLine=true,label={Text("搜寻地址")},
                 placeholder={Text("https://example.org/search/{query}")},isError=searchError!=null,
                 supportingText=searchError?.let{message->{Text(message)}},
+                trailingIcon={IconButton(onClick=saveSearch,enabled=customSearch.trim()!=savedSearch,modifier=Modifier.testTag("save-subtitle-search")){Icon(Icons.Rounded.Check,"保存搜寻地址")}},
                 keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Uri,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
                 keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={saveSearch()}),modifier=Modifier.fillMaxWidth().padding(top=10.dp).testTag("subtitle-search-url"))
-            TextButton(onClick=saveSearch,enabled=customSearch.trim()!=savedSearch,modifier=Modifier.align(Alignment.End).heightIn(min=48.dp).testTag("save-subtitle-search")){Text("保存搜寻地址")}
         }
     }}
 }
@@ -178,21 +179,21 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
 
 @Composable internal fun StationChoiceSetting(title:String,values:List<Pair<String,String>>,selected:String,tag:String,select:(String)->Unit) {
     var expanded by remember{mutableStateOf(false)}
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val compact=maxWidth<300.dp||androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(title,Modifier.weight(1f),fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Text(title,fontSize=17.sp,fontWeight=FontWeight.SemiBold,color=Ink)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val compact=maxWidth<300.dp||androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
             if(compact)Box {
-                OutlinedButton(onClick={expanded=true},shape=RoundedCornerShape(14.dp),modifier=Modifier.heightIn(min=48.dp).testTag("$tag-selector")) {
-                    Text(values.first{it.first==selected}.second,maxLines=1)
+                OutlinedButton(onClick={expanded=true},shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("$tag-selector")) {
+                    Text(values.first{it.first==selected}.second,Modifier.weight(1f),maxLines=1)
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight,null,Modifier.size(18.dp))
                 }
                 DropdownMenu(expanded,onDismissRequest={expanded=false}) {
                     values.forEach{(value,label)->DropdownMenuItem(text={Text(label)},onClick={select(value);expanded=false},modifier=Modifier.testTag("$tag-$value"))}
                 }
-            } else SingleChoiceSegmentedButtonRow(Modifier.testTag("$tag-options")) {
+            } else SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("$tag-options")) {
                 values.forEachIndexed{index,(value,label)->
-                    SegmentedButton(selected=selected==value,onClick={select(value)},shape=SegmentedButtonDefaults.itemShape(index,values.size),icon={},modifier=Modifier.testTag("$tag-$value")){Text(label,maxLines=1)}
+                    SegmentedButton(colors=SegmentedButtonDefaults.colors(activeContainerColor=Berry.copy(alpha=.10f),activeContentColor=Berry,inactiveContainerColor=androidx.compose.ui.graphics.Color.Transparent,inactiveContentColor=Ink,activeBorderColor=Berry.copy(alpha=.25f),inactiveBorderColor=Ink.copy(alpha=.14f)),selected=selected==value,onClick={select(value)},shape=SegmentedButtonDefaults.itemShape(index,values.size),icon={},modifier=Modifier.weight(1f).testTag("$tag-$value")){Text(label,maxLines=1)}
                 }
             }
         }

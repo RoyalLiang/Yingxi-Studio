@@ -83,10 +83,16 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var visible by rememberSaveable { mutableStateOf(true) }
     var locked by rememberSaveable { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
+    var qualityOpen by remember { mutableStateOf(false) }
     var trackType by remember { mutableIntStateOf(C.TRACK_TYPE_VIDEO) }
     var diagnosticsOpen by remember { mutableStateOf(false) }
     var diagnosticsWait by remember { mutableStateOf<Long?>(null) }
     var queue by remember { mutableStateOf(false) }
+    var pendingEpisode by remember(controller){mutableStateOf<Pair<String,Long>?>(null)}
+    val renderedFrame by PlaybackFrames.last.collectAsState()
+    LaunchedEffect(renderedFrame,pendingEpisode){
+        pendingEpisode?.let{(key,after)->if(renderedFrame.key==key&&renderedFrame.sequence>after)pendingEpisode=null}
+    }
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val portrait=configuration.screenWidthDp<configuration.screenHeightDp
     var moreOpen by remember { mutableStateOf(false) }
@@ -142,6 +148,19 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         controller?.sendCustomCommand(CompatibilityPlayer.VIDEO_LAYOUT,args)
     }
     val touchExploration = remember { context.getSystemService(AccessibilityManager::class.java).isTouchExplorationEnabled }
+    fun selectEpisode(chosen:Int){
+        controller?:return
+        if(chosen !in 0 until controller.mediaItemCount)return
+        if(chosen!=controller.currentMediaItemIndex){
+            val destination=controller.getMediaItemAt(chosen)
+            pendingEpisode=PlaybackFrames.key(destination) to PlaybackFrames.last.value.sequence
+            currentTitle=playbackItemTitle(destination,title)
+            position=0;buffered=0;duration=0;dragging=false;frame=null;error=null
+        }
+        controller.seekTo(chosen,0)
+        if(controller.playbackState==Player.STATE_IDLE)controller.prepare()
+    }
+
     DisposableEffect(previews) { onDispose { previews.close() } }
     DisposableEffect(activity) { onDispose { activity.window.attributes=activity.window.attributes.apply{screenBrightness=originalBrightness} } }
     DisposableEffect(lifecycle,previews) {
@@ -172,6 +191,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 val format=selectedVideo?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
                 bitrate=playbackBitrateLabel(format)
             error = controller.playerError?.let(::playbackFailure)
+            if(error!=null)pendingEpisode=null
             if(error==null&&controller.playbackState==Player.STATE_READY){
                 val video=controller.currentTracks.groups.filter{it.type==C.TRACK_TYPE_VIDEO}
                 if(unsupportedVideo(controller.currentTracks)){
@@ -202,9 +222,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             }
         }
     }
-    LaunchedEffect(compact,previews) { if (compact) { settings = false; queue = false; speedOpen = false; moreOpen = false; dragging = false; previews.releaseReader() } else visible = true }
-    LaunchedEffect(visible, playing, dragging, locked, settings, queue, speedOpen, moreOpen, interaction) {
-        if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !speedOpen && !moreOpen))) { delay(3000); visible = false }
+    LaunchedEffect(compact,previews) { if (compact) { settings = false; qualityOpen=false; queue = false; speedOpen = false; moreOpen = false; dragging = false; previews.releaseReader() } else visible = true }
+    LaunchedEffect(visible, playing, dragging, locked, settings, queue, qualityOpen, speedOpen, moreOpen, interaction) {
+        if (visible && !touchExploration && (locked || (playing && !dragging && !settings && !queue && !qualityOpen && !speedOpen && !moreOpen))) { delay(3000); visible = false }
     }
     LaunchedEffect(hudRevision) { if (hud != null) { delay(1400); hud = null } }
     LaunchedEffect(currentUri,previews) { frame = null;previews.releaseReader() }
@@ -235,6 +255,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             it.resizeMode = if(compatibilityOutput)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
             it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,subtitleBottom+subtitleGutter) },
             onRelease = { if(compatibilityOutput)CompatibilityVideoOutput.detach(it.videoSurfaceView as android.view.TextureView);it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit")) }
+        if(pendingEpisode!=null)Box(Modifier.fillMaxSize().background(Color(0xFF101113)).testTag("episode-loading-cover"))
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { visible = !visible }
@@ -272,8 +293,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         }
                     }, onDragEnd = {
                     if(gesture==4&&abs(total.y)>maxOf(threshold*4,size.height*.12f))controller?.takeIf{it.currentMediaItemIndex==startIndex}?.let{player->
-                        if(total.y<0&&startIndex<items.lastIndex)player.seekToNextMediaItem()
-                        else if(total.y>0&&startIndex>0)player.seekToPreviousMediaItem()
+                        if(total.y<0&&startIndex<items.lastIndex)selectEpisode(startIndex+1)
+                        else if(total.y>0&&startIndex>0)selectEpisode(startIndex-1)
                     }
                     if (gesture == 1 && dragging) { controller?.seekTo(target); position = target }; dragging = false; gesture = 0
                 },
@@ -284,8 +305,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact&&(buffering||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
-            PlayerSignalMotion(Modifier.align(Alignment.Center).size(88.dp).testTag("playback-buffering"))
+        if(!compact&&(buffering||pendingEpisode!=null||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
+            PlayerLoadingMotion(Modifier.align(Alignment.Center).size(88.dp).testTag("playback-buffering"))
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {
             if (!dragging) {
@@ -294,10 +315,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PlayerIcon(Icons.AutoMirrored.Rounded.ArrowBack, "返回", back)
                     Text(currentTitle, Modifier.weight(1f).padding(start = 8.dp), color = PlayerInk, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                TextButton(enabled=controller!=null,onClick={trackType=C.TRACK_TYPE_VIDEO;settings=true},modifier=Modifier.heightIn(min=48.dp).testTag("video-definition")
+                    Box {
+                TextButton(enabled=controller!=null,onClick={qualityOpen=true},modifier=Modifier.heightIn(min=48.dp).testTag("video-definition")
                     .semantics{contentDescription="画质，${bitrate?:videoDefinition(videoWidth,videoHeight)?:"原片"}"}){
                     Text(bitrate?:videoDefinition(videoWidth,videoHeight)?:"画质",color=PlayerInk,fontSize=12.sp,maxLines=1)
                 }
+                        if(controller!=null)PlaybackQualityMenu(controller,qualityOpen){qualityOpen=false}
+                    }
                     if(portrait)Box {
                         PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
@@ -320,13 +344,13 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 PlayerIcon(Icons.Rounded.Subtitles,"字幕",{trackType=C.TRACK_TYPE_TEXT;settings=true},controller!=null,Modifier.testTag("player-subtitles").background(Color(0x66101113),CircleShape))
             }
             if (!portrait && !speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { controller?.seekToPreviousMediaItem() }, index > 0)
+                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { selectEpisode((controller?.currentMediaItemIndex?:index)-1) }, index > 0)
                     PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
                     IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(if(portrait)64.dp else 72.dp).background(Color(0x8C101113), CircleShape)) {
                         Icon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", tint = PlayerInk, modifier = Modifier.size(38.dp))
                     }
                     PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
-                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { controller?.seekToNextMediaItem() }, index < items.lastIndex)
+                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { selectEpisode((controller?.currentMediaItemIndex?:index)+1) }, index < items.lastIndex)
                 }
             }
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onGloballyPositioned{controlsHeight=it.size.height}
@@ -337,7 +361,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                     change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
                 if(portrait)PortraitPlaybackToolbar(
                     position=shown,duration=duration,speed=speed,index=index,count=items.size,playRequested=playRequested,enabled=controller!=null,onPlay={if(playRequested)controller?.pause()else controller?.play()},
-                    onSpeed={speedOpen=true},onQueue={queue=true},onPrevious={controller?.seekToPreviousMediaItem()},onNext={controller?.seekToNextMediaItem()},
+                    onSpeed={speedOpen=true},onQueue={queue=true},onPrevious={selectEpisode((controller?.currentMediaItemIndex?:index)-1)},onNext={selectEpisode((controller?.currentMediaItemIndex?:index)+1)},
                     onRotate=rotate
                 ) else Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
                     if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})
@@ -390,7 +414,9 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
         }
         if (!compact && locked && (visible || touchExploration)) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
-        if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen -> controller.seekTo(chosen, 0); controller.play(); queue = false; visible = true }
+        if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen ->
+            selectEpisode(chosen);controller.play();queue=false;visible=true
+        }
         if(diagnosticsOpen)PlaybackReportDialog(controller,diagnosticsWait){diagnosticsOpen=false}
         if (settings && controller != null) PlaybackOptions(controller, { settings = false }, externalCaption,externalAudio,trackType)
         (error ?: connectionError)?.let { message -> Column(Modifier.align(Alignment.Center).background(PlayerPanel).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(message, color = PlayerInk); PlaybackIssueAction{diagnosticsWait=null;diagnosticsOpen=true}

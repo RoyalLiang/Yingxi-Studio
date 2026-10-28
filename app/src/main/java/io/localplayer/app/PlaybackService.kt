@@ -67,6 +67,8 @@ class PlaybackService:MediaSessionService(){
                 requestIds=next
             }
             override fun onEvents(player:Player,events:Player.Events){
+                if((events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)||events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)||events.contains(Player.EVENT_TRACKS_CHANGED))&&
+                    player.playbackState==Player.STATE_READY&&player.currentTracks.groups.none{it.type==C.TRACK_TYPE_VIDEO})PlaybackFrames.rendered(player.currentMediaItem)
                 val live=(0 until player.mediaItemCount).map{player.getMediaItemAt(it).mediaId}.toSet()
                 sidecars.retain((0 until player.mediaItemCount).map(player::getMediaItemAt))
                 durations.keys.retainAll(live);completedItems.retainAll(live)

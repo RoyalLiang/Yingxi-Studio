@@ -305,7 +305,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                     values["avsync"]?.toDoubleOrNull()?.let{(it*1000).toLong()})
             }
             if(!firstFrame&&!values["video-frame-info/picture-type"].isNullOrBlank()&&values["vo-configured"]=="yes"){
-                firstFrame=true;firstFrameEvent=true;nextMetadataPoll=0;PlaybackMetrics.sdrFrame()
+                firstFrame=true;firstFrameEvent=true;nextMetadataPoll=0;PlaybackFrames.rendered(items.getOrNull(index));PlaybackMetrics.sdrFrame()
             }
             if(firstFrame&&!subtitleRequested){subtitleRequested=true;items.getOrNull(index)?.let{loadAttachments(it,m,generation)}}
             state=if(!firstFrame||values["paused-for-cache"]=="yes")Player.STATE_BUFFERING else Player.STATE_READY

@@ -8,6 +8,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,7 +56,7 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
     player.setMediaItems(queue,index,position);player.prepare();player.playWhenReady=playing
 }
 
-@Composable internal fun CloudQualityChoices(player:Player,item:MediaItem?,loadInfo:(PlaybackLease,Cancellation)->AliyunVideoInfo={target,cancellation->AliyunCloud.videoInfo(target.source,target.path,cancellation)}) {
+@Composable internal fun CloudQualityChoices(player:Player,item:MediaItem?,onSelected:()->Unit={},loadInfo:(PlaybackLease,Cancellation)->AliyunVideoInfo={target,cancellation->AliyunCloud.videoInfo(target.source,target.path,cancellation)}) {
     val target=cloudQualityContext(item)?:return
     var revision by remember(item?.mediaId){mutableIntStateOf(0)}
     val cancellation=remember(item?.mediaId,target.source,target.path,revision){Cancellation()}
@@ -72,7 +79,7 @@ internal fun reloadPlaybackSource(player:Player,replacement:MediaItem?=null){
         Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
             val choices=listOf("original" to "原画")+(if(info?.masterUrl!=null||info?.variants.orEmpty().size>=2)listOf("auto" to "自动")else emptyList())+info?.variants.orEmpty().map{it.template to it.template}
             choices.forEach{(value,label)->
-                TrackChoice(label,selected==value,modifier=Modifier.testTag("cloud-quality-$value")){if(selected!=value)changePlaybackQuality(player,value)}
+                QualityChoice(label,selected==value,modifier=Modifier.testTag("cloud-quality-$value")){if(selected!=value)changePlaybackQuality(player,value);onSelected()}
             }
         }
         if(selected!="original"&&info==null)Text("当前：${if(selected=="auto")"自动"else selected}",fontSize=13.sp,color=PlayerInk)
@@ -113,25 +120,25 @@ internal class CloudStreamRecovery(private val player:Player):java.io.Closeable 
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-@Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters){
- if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item);return}
+@Composable internal fun PlaybackQualityChoices(player:Player,item:MediaItem?,tracks:androidx.media3.common.Tracks,parameters:androidx.media3.common.TrackSelectionParameters,onSelected:()->Unit={}){
+ if(cloudQualityContext(item)!=null){CloudQualityChoices(player,item,onSelected);return}
  val groups=tracks.groups.filter{it.type==androidx.media3.common.C.TRACK_TYPE_VIDEO}
  val selectable=groups.sumOf{group->(0 until group.length).count{group.isTrackSupported(it)}}>1
  Column(Modifier.fillMaxWidth().testTag("video-quality-options"),verticalArrangement=Arrangement.spacedBy(8.dp)){
  val format=groups.firstOrNull{it.isSelected}?.let{group->(0 until group.length).firstOrNull{group.isTrackSelected(it)}?.let(group::getTrackFormat)}
  if(!selectable){
- if(format!=null)TrackChoice(videoQualityLabel(format),true,modifier=Modifier.testTag("video-quality-current")){
-     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()
+ if(format!=null)QualityChoice(videoQualityLabel(format),true,modifier=Modifier.testTag("video-quality-current")){
+     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build();onSelected()
  }else Text("正在读取视频属性…",fontSize=15.sp,color=PlayerInk)
  }else{
  val automatic=groups.none{parameters.overrides.containsKey(it.mediaTrackGroup)}
- TrackChoice(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认",automatic,modifier=Modifier.testTag("video-quality-auto")){
-     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build()
+ QualityChoice(if(groups.any{it.isAdaptiveSupported&&it.length>1})"自动"else"默认",automatic,modifier=Modifier.testTag("video-quality-auto")){
+     player.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO).build();onSelected()
  }
  groups.forEachIndexed{g,group->
  (0 until group.length).filter{group.isTrackSupported(it)}.sortedByDescending{group.getTrackFormat(it).height}.forEach{i->
- TrackChoice(videoQualityLabel(group.getTrackFormat(i)),!automatic&&group.isTrackSelected(i),modifier=Modifier.testTag("video-quality-$g-$i")){
-     player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build()
+ QualityChoice(videoQualityLabel(group.getTrackFormat(i)),!automatic&&group.isTrackSelected(i),modifier=Modifier.testTag("video-quality-$g-$i")){
+     player.trackSelectionParameters=parameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,i)).build();onSelected()
  }
  }
  }
@@ -153,4 +160,27 @@ internal fun playbackBitrateLabel(format:androidx.media3.common.Format?):String?
     val prefix=if(average!=null)""else"峰值 "
     return prefix+if(rate>=1_000_000)String.format(java.util.Locale.ROOT,"%.1f Mbps",rate/1_000_000)
         else String.format(java.util.Locale.ROOT,"%.0f Kbps",rate/1000)
+}
+
+@Composable private fun QualityChoice(label:String,chosen:Boolean,modifier:Modifier=Modifier,onClick:()->Unit){
+    DropdownMenuItem(text={Text(label,maxLines=2)},onClick=onClick,
+        trailingIcon={if(chosen)Icon(Icons.Rounded.Check,null,tint=PlayerAccent)},
+        modifier=modifier.fillMaxWidth().semantics{selected=chosen;role=Role.RadioButton})
+}
+
+@Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+internal fun PlaybackQualityMenu(player:Player,expanded:Boolean,dismiss:()->Unit){
+    var revision by remember(player){mutableIntStateOf(0)}
+    DisposableEffect(player){
+        val listener=object:Player.Listener{override fun onEvents(player:Player,events:Player.Events){revision++}}
+        player.addListener(listener);onDispose{player.removeListener(listener)}
+    }
+    revision
+    MaterialTheme(colorScheme=darkColorScheme(surface=androidx.compose.ui.graphics.Color(0xFF202326),onSurface=PlayerInk)){
+        DropdownMenu(expanded,onDismissRequest=dismiss,shape=RoundedCornerShape(18.dp),
+            modifier=Modifier.width(264.dp).heightIn(max=320.dp).testTag("video-quality-popup")){
+            PlaybackQualityChoices(player,player.currentMediaItem,player.currentTracks,player.trackSelectionParameters,dismiss)
+        }
+    }
 }

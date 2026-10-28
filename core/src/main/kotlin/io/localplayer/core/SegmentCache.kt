@@ -2,6 +2,7 @@ package io.localplayer.core
 
 import java.io.File
 import java.io.IOException
+import java.io.DataInputStream
 import java.security.MessageDigest
 
 /** Only complete, verified original-byte segments enter this private, bounded cache. */
@@ -20,9 +21,15 @@ class SegmentCache(private val directory: File, private val maxBytes: Long = 256
             if (now() - file.lastModified() > maxAgeMs || file.length() != length.toLong() + 32) {
                 file.delete(); return null
             }
-            val bytes = file.readBytes()
-            val content = bytes.copyOfRange(32, bytes.size)
-            if (!MessageDigest.isEqual(bytes.copyOf(32), sha(content))) { file.delete(); return null }
+            val expected = ByteArray(32)
+            val content = ByteArray(length)
+            DataInputStream(file.inputStream()).use { input ->
+                input.readFully(expected)
+                input.readFully(content)
+            }
+            if (!MessageDigest.isEqual(expected, sha(content))) {
+                file.delete(); return null
+            }
             file.setLastModified(now())
             content
         } catch (_: IOException) { null }

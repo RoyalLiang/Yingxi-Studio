@@ -115,7 +115,7 @@ internal fun playbackReportWebView(context:Context,request:JSONObject,confirmed:
             }
         }else Box(Modifier.size(136.dp).testTag("report-delivery"),contentAlignment=androidx.compose.ui.Alignment.Center){
             if(phase!="success")content()
-            PlayerSignalMotion(Modifier.size(96.dp).testTag(if(phase=="success")"report-success"else"report-sending"),
+            PlayerLoadingMotion(Modifier.size(96.dp).testTag(if(phase=="success")"report-success"else"report-sending"),
                 description=if(phase=="success")"上报成功"else"正在上报",completed=phase=="success")
         }
     }
