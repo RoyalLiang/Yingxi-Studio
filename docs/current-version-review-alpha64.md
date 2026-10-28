@@ -66,3 +66,14 @@ Debug、测试包与 R8 优化包构建成功；最终本地开发签名的 R8 �
 与上线有关的未闭环项：当前公开接收端只有 Turnstile 作为写入 GitHub 的安全保护，不能只删 Siteverify。原生端已移除人工挑战入口，发布前须将现有 Cloudflare widget 的模式改为 **Invisible**。Managed 模式仍可能要求点击，`appearance: interaction-only` 无法改变 widget 模式；旧模式若发起人工挑战，本候选会显示未完成，不会伪报成功。该模式属于线上配置，本轮未修改。依据 [Cloudflare 控件模式说明](https://developers.cloudflare.com/turnstile/concepts/widget/)补齐站点隐私说明及 [Turnstile Privacy Addendum](https://www.cloudflare.com/turnstile-privacy-policy/)链接；具体切换步骤记录于 `website/README.md`。
 
 验证：28 个相关 Android 用例全部实际通过，包含真实双视频轨、HLS 清晰度切换、字幕与音轨入口、检修明确同意及回执校验、透明动画、横竖屏布局和首次方向识别；模拟上报测试没有向公开仓库创建测试问题。12 个 Node 接收端/原生网页协议测试及 74 个脚本测试通过，网站 56 页本地链接、锚点和素材检查通过。横竖屏画质、检修及等待/成功动画已截图复核。最终本地开发签名的 R8 优化候选已验证非调试构建、冷启动与站务页；Lint 为 0 error、99 warning（未增加存量警告），源码交付门禁在提交前核对；签名分发、线上 Invisible 配置和真机验收不包含在这些测试结果中。前述 OnePlus 4K P5、真实 NAS 与物理 HDR 限制继续成立。
+
+
+## 2026-10-28：alpha.66 正式发布验收
+
+前述候选阶段的线上配置和分发待办已完成。正式版本为 `0.2.0-alpha.66 / versionCode 68`，标签 `v0.2.0-alpha.66` 固定于 `a6e36310db97501973d26683a9a465def899ea57`；其源码树与用户批准的 `66ad5ee` 完全相同。官网先部署检修网页及隐私说明，再将既有 Turnstile 控件保存为 Invisible；域名限制与密钥不变，预清除保持关闭。后续发现下载按钮仍指向 alpha.52，已单独更新到 alpha.66；线上首页和隐私页均与部署源码逐字节一致。
+
+[签名发布流水线](https://github.com/RoyalLiang/Yingxi-Studio/actions/runs/40620271926)及[最终官网流水线](https://github.com/RoyalLiang/Yingxi-Studio/actions/runs/40622932108)成功，[正式发布页](https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.66)提供四种架构 APK 与源码 ZIP。五个附件均完整下载，并匹配 GitHub 公开 SHA256；四个 APK 均为非调试构建、版本 66/code68、对应 ABI，正式签名仍为 `3d9a4ca9727eb3389e3fa43e43888ad07575d6447b19efa7d7419e08e2c81da8`。源码归档 555 个文件与标签 blob 核对一致，仅 `gradlew.bat` 按已提交的 `eol=crlf` 属性导出；源码及 APK 未发现平台元数据条目。
+
+真实生产控件在 Android WebView 中自动产出校验结果，没有请求人工挑战。测试在 JavaScript 和原生两层拦截公开 Issue POST，只验证实际控件与客户端提交流程，没有创建公开测试 Issue。另在空白 Android 16 ARM64 模拟器中安装正式 alpha.65，再以 `adb install -r` 覆盖为正式 alpha.66，实际设置页版本、相同 UID 与已选择的守夜偏好均核验通过；没有卸载或清除数据。
+
+本轮未做真实 GitHub Issue 写入，也未在 OnePlus 真机复验 4K P5、长时间温控、真实 NAS 和物理 HDR；这些限制继续成立。CI 私有 mapping/audit 包未在本机下载，不能将公开制品核验写成已在本机检查完整私有审计内容。
