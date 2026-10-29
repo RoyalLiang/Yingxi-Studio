@@ -72,6 +72,7 @@ internal class MediaDataSession(private val context:Context,private val historyN
     fun targetReleased(id:String)=synchronized(gate){targets.remove(id);changes++;Unit}
     fun close()=synchronized(gate){helper.close()}
     fun isCommitted()=synchronized(gate){committed()}
+    fun requireIdle()=synchronized(gate){check(players==0&&targets.isEmpty()){ "请先结束放映并关闭待播影片，再恢复行囊" }}
     private fun hash(key:String)=MediaDataMigration.digest(key)
     private fun long(db:SQLiteDatabase,name:String)=db.rawQuery("SELECT value FROM metadata WHERE name=?",arrayOf(name)).use{if(it.moveToFirst())it.getString(0).toLong()else 0L}
     private fun token(db:SQLiteDatabase,key:String)=HistoryToken(long(db,"history-clear"),db.rawQuery("SELECT revision FROM history_revisions WHERE legacy_key=?",arrayOf(hash(key))).use{if(it.moveToFirst())it.getLong(0)else 0L},1)

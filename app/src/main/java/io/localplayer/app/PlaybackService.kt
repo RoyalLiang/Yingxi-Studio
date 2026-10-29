@@ -54,14 +54,14 @@ class PlaybackService:MediaSessionService(){
         val sidecars=AutomaticSidecars(this).also{this.sidecars=it}
         sourceObserver=PlaybackRegistry.observeInvalidation{sourceId,mediaId->handler.post{
             session?.player?.let{active->
-                val stale=(0 until active.mediaItemCount).any{index->active.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{raw->
+                val stale=(0 until active.mediaItemCount).filter{index->active.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{raw->
                     runCatching{
                         val ref=MediaRef.parse(raw)
                         val affected=(sourceId==null&&mediaId==null&&ref.localUri!=null)||(sourceId!=null&&ref.sourceId==sourceId)||(mediaId!=null&&ref.mediaId==mediaId)
                         affected&&runCatching{MediaDataMigration.session(this).checkLocator(ref);check(SourceBindingEpochs.acceptsWrite(this,ref,allowUnregistered=true))}.isFailure
                     }.getOrDefault(true)
                 }==true}
-                if(stale){active.pause();active.stop();active.clearMediaItems()}
+                if(active.currentMediaItemIndex in stale){active.pause();active.stop();active.clearMediaItems()}else stale.asReversed().forEach{active.removeMediaItem(it)}
             }
         }}
 

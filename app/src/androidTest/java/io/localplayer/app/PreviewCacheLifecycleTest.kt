@@ -48,4 +48,17 @@ class PreviewCacheLifecycleTest {
         try{repeat(7){assertNotNull(loader.get(uri,it*1000L))};assertTrue(cache.size()<=24*1024*1024);assertNull(loader.cached(uri,0))}
         finally{loader.close()}
     }
+    @Test fun everyPreviewEntryRejectsRevokedAuthority():Unit=runBlocking {
+        val uri=Uri.parse("content://fixture/revoked-preview");var allowed=true
+        val frames=PreviewFrames(PreviewFrames.memoryCache(),"revoked",{check(allowed)}){object:PreviewDecoder{
+            override fun frame(timeMs:Long)=Bitmap.createBitmap(32,18,Bitmap.Config.ARGB_8888)
+            override fun close(){}
+        }}
+        try{
+            assertNotNull(frames.get(uri,5000));assertNotNull(frames.nearest(uri,6000));assertNotNull(frames.latest(uri))
+            allowed=false
+            assertNull(frames.cached(uri,5000));assertNull(frames.nearest(uri,6000));assertNull(frames.latest(uri));assertNull(frames.get(uri,5000))
+        }finally{frames.close()}
+    }
+
 }

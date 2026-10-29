@@ -64,4 +64,22 @@ class ThumbnailCancellationTest {
             withTimeout(500){queued.cancelAndJoin()}
         }finally{release.countDown();first.join()}
     }
+    @Test fun localRevocationRejectsAnAlreadyOpenThumbnail():Unit=runBlocking {
+        val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val context=instrumentation.targetContext;val resolver=context.contentResolver
+        val uri=android.provider.DocumentsContract.buildDocumentUri(FixtureDocumentsProvider.AUTHORITY,"thumbnail-revoke")
+        context.startActivity(android.content.Intent().setClassName(instrumentation.context.packageName,GrantFixtureActivity::class.java.name)
+            .putExtra("tree",uri.toString()).putExtra("target",context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        withTimeout(2000){while(context.checkUriPermission(uri,android.os.Process.myPid(),android.os.Process.myUid(),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)!=android.content.pm.PackageManager.PERMISSION_GRANTED)delay(10)}
+        resolver.call(uri,"thumbnail-reset",null,null)
+        val media=MediaRef("revoke-thumbnail-${java.util.UUID.randomUUID()}","旧片.mp4","本机",localUri=uri.toString(),bindingEpoch=LocalBindingEpochs.current(context,uri))
+        val result=async(Dispatchers.IO){MediaThumbnails.load(context,media)}
+        try{
+            withTimeout(2000){while(resolver.call(uri,"thumbnail-state",null,null)?.getBoolean("entered")!=true)delay(10)}
+            LocalBindingEpochs.revoke(context,uri);resolver.call(uri,"thumbnail-release",null,null)
+            assertNull(withTimeout(5000){result.await()});assertNull(MediaThumbnails.load(context,media))
+            assertFalse(java.io.File(context.cacheDir,"media-thumbnails-v1/${enrichmentKey(media)}.jpg").exists())
+        }finally{resolver.call(uri,"thumbnail-release",null,null);result.cancelAndJoin();MediaThumbnails.remove(context,media)}
+    }
+
 }

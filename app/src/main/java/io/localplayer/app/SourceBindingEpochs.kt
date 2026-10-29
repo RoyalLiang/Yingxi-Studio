@@ -37,7 +37,7 @@ internal object SourceBindingEpochs {
     fun acceptsWrite(context:Context,ref:MediaRef,allowUnregistered:Boolean):Boolean {
         if(!LocalBindingEpochs.accepts(context,ref))return false
         val sourceId=ref.sourceId?:return true
-        val source=SourceStore(context).load().firstOrNull{it.id==sourceId}
+        val source=SourceStore(context).configured().firstOrNull{it.id==sourceId}
         if(source==null)return synchronized(lock){allowUnregistered&&!prefs(context).contains("epoch:$sourceId")}
         return runCatching{matches(context,source,ref)&&ref.path?.let{io.localplayer.core.SourceRoot(source.initialPath).contains(it)}==true}.getOrDefault(false)
     }

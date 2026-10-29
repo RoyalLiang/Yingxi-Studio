@@ -74,8 +74,7 @@ import androidx.compose.ui.unit.sp
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GroupedSurface).clickable(onClick=onLibrary).padding(18.dp).testTag("home-film-library"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
                 Icon(Icons.Rounded.VideoLibrary,null,tint=Berry,modifier=Modifier.size(26.dp))
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                    Text(if(zh)"常驻片架"else"Your film shelves",fontSize=18.sp,fontWeight=FontWeight.Medium)
-                    Text(if(zh)"影片档案 · 自己的片单与片段札记"else"Film dossiers, collections and moment notes",fontSize=12.sp,color=Muted)
+                    Text(if(zh)"片匣总录"else"Film catalog",fontSize=18.sp,fontWeight=FontWeight.Medium)
                 }
                 Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
             }

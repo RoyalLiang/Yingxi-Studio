@@ -6,6 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.lifecycle.Lifecycle
@@ -38,10 +43,12 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
 
 // Native Compose; existing mist/berry palette, paper labels and quiet, functional motion.
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun FilmLibraryScreen(vm:LibraryViewModel,databaseName:String=MEDIA_DATABASE,back:()->Unit){
+@Composable internal fun FilmLibraryScreen(vm:LibraryViewModel,databaseName:String=MEDIA_DATABASE,onSources:()->Unit={},back:()->Unit){
     val context=LocalContext.current.applicationContext
     val zh=LocalConfiguration.current.locales[0].language=="zh"
     fun words(cn:String,en:String)=if(zh)cn else en
+    var tool by rememberSaveable{mutableStateOf<String?>(null)}
+    if(tool!=null){LibraryToolsScreen(vm,databaseName,tool!!,onSources){tool=null};return}
     val scope=rememberCoroutineScope()
     var revision by remember{mutableIntStateOf(0)}
     var view by remember{mutableStateOf(FilmLibraryView())}
@@ -50,6 +57,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     var query by rememberSaveable{mutableStateOf("")}
     var shelf by rememberSaveable{mutableStateOf<String?>(null)}
     var selected by rememberSaveable{mutableStateOf<String?>(null)}
+    var pendingPlaylist by remember{mutableStateOf(false)}
     var newShelf by remember{mutableStateOf(false)}
     var editShelf by remember{mutableStateOf(false)}
     var renameWork by remember{mutableStateOf(false)}
@@ -90,10 +98,14 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick={if(selected!=null)selected=null else back()}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,words("返回","Back"))}
             Column(Modifier.weight(1f)){
-                Text(if(work!=null)words("影片档案","Film dossier")else words("常驻片架","Your film shelves"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
-                if(LocalConfiguration.current.fontScale<1.4f)Text(words("自己的影片，慢慢归位。","A place for the films you keep."),fontSize=12.sp,color=Muted)
+                Text(if(work!=null)words("影片档案","Film dossier")else words("片匣总录","Film catalog"),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             }
             IconButton(onClick={revision++},modifier=Modifier.testTag("film-library-refresh")){Icon(Icons.Rounded.Refresh,words("刷新已浏览影片","Refresh browsed films"))}
+        }
+        if(selected==null)Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)){
+            TextButton(onClick={tool="index"},modifier=Modifier.testTag("catalog-index")){Text(words("收录目录","Index folders"))}
+            TextButton(onClick={tool="backup"},modifier=Modifier.testTag("catalog-backup")){Text(words("行囊备份","Travel backup"))}
+            TextButton(onClick={tool="repair"},modifier=Modifier.testTag("catalog-repair")){Text(words("检修台","Repair bench"))}
         }
         if(migration.state!="Committed"||migration.quarantined>0)Column(Modifier.padding(horizontal=24.dp,vertical=8.dp).testTag("data-migration-state")){
             Text(if(migration.state=="Committed")words("旧记录已归位，${migration.quarantined} 项仍需核对，原件已保留。","Old records are in place; ${migration.quarantined} need review. Originals were retained.")else words("旧记录正在归位；此时仍沿用原记录。若未完成，可稍后重试。","Old records are being moved into place. Original storage remains in use until completion; retry if needed."),fontSize=13.sp,color=Muted,lineHeight=20.sp)
@@ -105,32 +117,40 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=24.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 FilterChip(shelf==null,{shelf=null},label={Text(words("全部影片","All films"))})
                 view.shelves.forEach{item->FilterChip(shelf==item.id,{shelf=item.id},label={Text(item.name)})}
-                AssistChip(onClick={label="";newShelf=true},label={Text(words("新建片架","New shelf"))},leadingIcon={Icon(Icons.Rounded.Add,null,Modifier.size(18.dp))})
+                AssistChip(onClick={label="";newShelf=true},label={Text(words("新建放映单","New screening list"))},leadingIcon={Icon(Icons.Rounded.Add,null,Modifier.size(18.dp))})
             }
-            if(shelf!=null)TextButton(onClick={label=view.shelves.firstOrNull{it.id==shelf}?.name.orEmpty();editShelf=true},modifier=Modifier.padding(start=16.dp)){Text(words("整理这座片架","Manage this shelf"))}
-            LazyColumn(Modifier.weight(1f).testTag("film-library-list"),contentPadding=PaddingValues(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-                item{Text(words("收录已经浏览过的影片；不会自动扫描其他目录。","Films from folders you have browsed. Other folders are not scanned."),fontSize=13.sp,lineHeight=20.sp,color=Muted)}
-                if(loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-                if(!loading&&shown.isEmpty())item{Column(Modifier.padding(vertical=36.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-                    Text(words("片架上还留着空位","There is room on the shelf"),fontSize=21.sp,fontWeight=FontWeight.Medium)
-                    Text(words("先去本机或信源浏览影片，再回来整理。查找不到时，也可以清除搜索条件。","Browse your local files or a source, then return to arrange them. Clear the search to see more."),color=Muted,lineHeight=22.sp)
-                }}
-                items(shown,key={if(shelf==null)it.id else it.films.first().id}){item->
-                    Surface(color=GroupedSurface,shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable{selected=item.id}.testTag("film-work:${item.id}")){
-                        Row(Modifier.padding(14.dp),horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically){
-                            MediaThumbnail(item.films.first().media,Modifier.size(60.dp,82.dp).clip(RoundedCornerShape(8.dp)))
-                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
-                                Text(item.title,fontSize=17.sp,fontWeight=FontWeight.Medium)
-                                Text(item.films.map{it.media.sourceLabel}.distinct().joinToString(" · "),fontSize=12.sp,color=Muted)
-                                Text(if(item.films.size>1)words("${item.films.size} 份版本 · 各自保留进度","${item.films.size} versions · separate progress")else words("打开档案，收藏或留下札记","Open the dossier to collect and annotate"),fontSize=12.sp,color=Muted)
-                            }
-                            Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
-                        }
+            if(shelf!=null)TextButton(onClick={label=view.shelves.firstOrNull{it.id==shelf}?.name.orEmpty();editShelf=true},modifier=Modifier.padding(start=16.dp)){Text(words("整理放映单","Manage this shelf"))}
+        if(shelf!=null)Row(Modifier.fillMaxWidth().padding(horizontal=24.dp),verticalAlignment=Alignment.CenterVertically){
+            Text(words("${shown.sumOf{it.films.size}} 份影片","${shown.sumOf{it.films.size}} films"),Modifier.weight(1f),color=Muted)
+            Button(onClick={pendingPlaylist=true},enabled=shown.isNotEmpty(),modifier=Modifier.testTag("playlist-play")){Text(words("放映整单","Play list"))}
+        }
+        val config=LocalConfiguration.current
+        val columns=if(shelf!=null)1 else if(config.screenWidthDp<360||config.fontScale>=1.4f)2 else 3
+        LazyVerticalGrid(GridCells.Fixed(columns),Modifier.weight(1f).testTag("film-library-list"),contentPadding=PaddingValues(24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(20.dp)){
+            if(loading)item(span={GridItemSpan(maxLineSpan)}){LinearProgressIndicator(Modifier.fillMaxWidth())}
+            if(!loading&&shown.isEmpty())item(span={GridItemSpan(maxLineSpan)}){
+                Column(Modifier.fillMaxWidth().padding(vertical=32.dp),horizontalAlignment=Alignment.CenterHorizontally){
+                    Icon(Icons.Rounded.VideoLibrary,null,Modifier.size(40.dp),tint=Muted)
+                    Spacer(Modifier.height(16.dp));Text(if(query.isNotBlank())words("没有找到影片","No matching films")else words("片匣还空着","The catalog is empty"),fontSize=20.sp)
+                    if(query.isBlank())TextButton(onClick={tool="index"}){Text(words("选择目录，收录影片","Choose folders to index"))}
+                }
+            }
+            items(shown,key={if(shelf==null)it.id else it.films.first().id}){item->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable{selected=item.id}.testTag("film-work:${item.id}")){
+                    if(shelf==null){
+                        MediaThumbnail(item.films.first().media,Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(10.dp)))
+                        Spacer(Modifier.height(8.dp));Text(item.title,fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
+                        Text(item.films.map{it.media.sourceLabel}.distinct().joinToString(" · "),fontSize=11.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    }else Row(Modifier.fillMaxWidth().background(GroupedSurface).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
+                        MediaThumbnail(item.films.first().media,Modifier.size(48.dp,68.dp).clip(RoundedCornerShape(6.dp)))
+                        Column(Modifier.weight(1f)){Text(item.title,fontSize=16.sp,maxLines=2,overflow=TextOverflow.Ellipsis);Text(item.films.first().media.sourceLabel,fontSize=12.sp,color=Muted)}
+                        Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
                     }
                 }
             }
+        }
         }else{
-            LazyColumn(Modifier.weight(1f).testTag("film-dossier"),contentPadding=PaddingValues(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+        LazyColumn(Modifier.weight(1f).testTag("film-dossier"),contentPadding=PaddingValues(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
                 item{Text(work.title,fontSize=28.sp,fontWeight=FontWeight.SemiBold)}
                 item{TextButton(onClick={label=work.title;renameWork=true}){Text(words("更正显示片名","Edit display title"))}}
                 item{Text(words("版本与信源","Versions and sources"),fontSize=18.sp,fontWeight=FontWeight.Medium)}
@@ -141,11 +161,11 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
                         Text(words("记录了文件位置与尺寸，内容版本仍待核对。播放时会检查访问权限；失联不会删除档案。","Location and size recorded; content version unverified. Access is checked when opening. An unavailable source does not erase the dossier."),fontSize=12.sp,lineHeight=19.sp,color=Muted)
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             Button(onClick={vm.resume(HistoryEntry(film.media,0,0,film.firstSeen,false))},modifier=Modifier.testTag("film-play:${film.id}")){Text(words("继续放映","Play"))}
-                            OutlinedButton(onClick={shelfFilm=film}){Text(words("放进片架","Add to shelf"))}
+                            OutlinedButton(onClick={shelfFilm=film}){Text(words("加入放映单","Add to screening list"))}
                             TextButton(onClick={relinkFilm=film;relinkTarget=null}){Text(words("关联新位置","Relink location"))}
                             TextButton(onClick={groupFilm=film}){Text(words("归入另一份档案","Group with another film"))}
                             if(all.firstOrNull{it.id==film.workId}?.films.orEmpty().size>1)TextButton(onClick={change{it.separateFilm(film.id)};selected=null}){Text(words("单独成档","Separate dossier"))}
-                            if(shelf!=null&&shown.any{item->item.films.any{it.id==film.id}})TextButton(onClick={change{it.removeFromShelf(shelf!!,film.id)}}){Text(words("移出片架","Remove from shelf"))}
+                            if(shelf!=null&&shown.any{item->item.films.any{it.id==film.id}})TextButton(onClick={change{it.removeFromShelf(shelf!!,film.id)}}){Text(words("移出放映单","Remove from shelf"))}
                         }
                         if(shelf!=null)Row{
                             TextButton(onClick={change{it.moveInShelf(shelf!!,film.id,-1)}}){Text(words("向前摆","Move earlier"))}
@@ -166,6 +186,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
             }
         }
     }
+    if(pendingPlaylist)AlertDialog(onDismissRequest={pendingPlaylist=false},title={Text(words("按单放映","Play in list order"))},text={Text(words("无法访问、版本变化或封存的影片会跳过。最多载入 200 份，放映中的队列按本次顺序保留。","Unavailable, changed or sealed films will be skipped. Up to 200 films are loaded; the active queue keeps this order."))},confirmButton={TextButton(onClick={pendingPlaylist=false;vm.playCatalog(shown.flatMap{it.films})}){Text(words("开始放映","Start screening"))}},dismissButton={TextButton(onClick={pendingPlaylist=false}){Text(words("取消","Cancel"))}})
     pendingMoment?.let{(film,moment)->AlertDialog(
         onDismissRequest={pendingMoment=null},
         title={Text(words("核对这一份影片","Check this version"))},
@@ -175,7 +196,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     )}
     if(newShelf||editShelf||renameWork||editMoment!=null)AlertDialog(
         onDismissRequest={newShelf=false;editShelf=false;renameWork=false;editMoment=null},
-        title={Text(when{editMoment!=null->words("侧签上的一行","A line on the label");renameWork->words("更正片名","Edit title");editShelf->words("整理片架","Manage shelf");else->words("给片架起个名字","Name this shelf")})},
+        title={Text(when{editMoment!=null->words("侧签上的一行","A line on the label");renameWork->words("更正片名","Edit title");editShelf->words("整理放映单","Manage list");else->words("给放映单起个名字","Name this shelf")})},
         text={OutlinedTextField(label,{label=it},modifier=Modifier.fillMaxWidth().testTag("film-library-label"),minLines=if(editMoment!=null)3 else 1,maxLines=if(editMoment!=null)8 else 3)},
         confirmButton={val focus=LocalFocusManager.current;val keyboard=LocalSoftwareKeyboardController.current;TextButton(onClick={
             val moment=editMoment;val title=label;val chosenShelf=shelf;val workId=work?.id;val isRenameWork=renameWork;val isEditShelf=editShelf;val isNewShelf=newShelf
@@ -186,7 +207,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
         }){Text(words("保存","Save"))}},
         dismissButton={Row{
             if(editMoment!=null){val moment=editMoment!!;TextButton(onClick={change{it.deleteMoment(moment.id)};editMoment=null}){Text(words("删除札记","Delete note"))}}
-            if(editShelf){val chosen=shelf;TextButton(onClick={if(chosen!=null)change{it.deleteShelf(chosen)};shelf=null;editShelf=false}){Text(words("删除片架","Delete shelf"))}}
+            if(editShelf){val chosen=shelf;TextButton(onClick={if(chosen!=null)change{it.deleteShelf(chosen)};shelf=null;editShelf=false}){Text(words("删除放映单","Delete screening list"))}}
             TextButton(onClick={newShelf=false;editShelf=false;renameWork=false;editMoment=null}){Text(words("取消","Cancel"))}
         }}
     )
@@ -195,20 +216,20 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
             val origin=relinkFilm!!;val target=relinkTarget
             if(target==null){
                 Text(words("仅手动选择同一信源中已浏览的新位置。片名相同不代表内容相同；不同剪辑请分别保留。","Choose a browsed location from the same source. Matching titles do not prove matching content; keep different edits separate."),fontSize=13.sp,color=Muted)
-                val candidates=all.flatMap{it.films}.filter{it.id!=origin.id&&it.media.sourceId==origin.media.sourceId&&(origin.media.location==null||it.media.location==origin.media.location)&&(it.media.bindingEpoch?:0)==(origin.media.bindingEpoch?:0)}
+                val candidates=all.flatMap{it.films}.filter{it.id!=origin.id&&(origin.media.key.startsWith("restored:")||(it.media.sourceId==origin.media.sourceId&&(origin.media.location==null||it.media.location==origin.media.location)&&(it.media.bindingEpoch?:0)==(origin.media.bindingEpoch?:0)))}
                 if(candidates.isEmpty())Text(words("先从信源或本机目录浏览新位置，再回来关联。","Browse the new source or local folder first, then return here."),fontSize=13.sp)
                 candidates.forEach{candidate->TextButton(onClick={relinkTarget=candidate}){Text(candidate.media.title+"\n"+(candidate.media.path?:candidate.media.localUri.orEmpty()))}}
             }else{
                 Text(words("原位置：","Old location: ")+(origin.media.path?:origin.media.localUri.orEmpty()),fontSize=13.sp)
                 Text(words("新位置：","New location: ")+(target.media.path?:target.media.localUri.orEmpty()),fontSize=13.sp)
-                Text(words("确认这仍是同一版本后，保留档案身份、片架顺序、进度与札记。关联不会移动文件；播放时仍核验权限和文件。","Confirm this is the same version to retain its identity, shelf order, progress and notes. Relinking does not move files; opening still checks access and the file."),fontSize=13.sp,color=Muted)
+                Text(words("确认这仍是同一版本后，保留档案身份、放映单顺序、进度与札记。关联不会移动文件；播放时仍核验权限和文件。","Confirm this is the same version to retain its identity, shelf order, progress and notes. Relinking does not move files; opening still checks access and the file."),fontSize=13.sp,color=Muted)
             }
         }},
         confirmButton={if(relinkTarget!=null)TextButton(onClick={val origin=relinkFilm!!;val target=relinkTarget!!;change{it.rebindFilm(origin.id,target.media,true)};relinkFilm=null;relinkTarget=null}){Text(words("确认同一版本并关联","Confirm and relink"))}},
         dismissButton={TextButton(onClick={relinkFilm=null;relinkTarget=null}){Text(words("取消","Cancel"))}}
     )
-    if(shelfFilm!=null)AlertDialog(onDismissRequest={shelfFilm=null},title={Text(words("放进片架","Add to shelf"))},text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())){
-        if(view.shelves.isEmpty())Text(words("先返回列表新建一座片架。","Create a shelf from the list first."))
+    if(shelfFilm!=null)AlertDialog(onDismissRequest={shelfFilm=null},title={Text(words("加入放映单","Add to screening list"))},text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())){
+        if(view.shelves.isEmpty())Text(words("先返回列表新建一张放映单。","Create a shelf from the list first."))
         view.shelves.forEach{item->TextButton(onClick={val film=shelfFilm!!;change{it.addToShelf(item.id,film.id)};shelfFilm=null}){Text(item.name)}}
     }},confirmButton={TextButton(onClick={shelfFilm=null}){Text(words("返回","Back"))}})
     if(groupFilm!=null)AlertDialog(onDismissRequest={groupFilm=null},title={Text(words("选择影片档案","Choose a film dossier"))},text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())){

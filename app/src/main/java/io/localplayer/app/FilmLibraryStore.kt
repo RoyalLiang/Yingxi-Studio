@@ -47,7 +47,7 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
                 }
             }}catch(_:CatalogChanged){/* Discard the detached result before taking a fresh snapshot. */}
         }
-        throw java.io.IOException("片架记录已变化，请重试")
+        throw java.io.IOException("片匣记录已变化，请重试")
     }
     private fun visibleFilm(db:SQLiteDatabase,id:String,ref:MediaRef):Boolean {
         if(!visible(ref))return false
@@ -69,6 +69,7 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
     }
     /** One transaction imports catalog observations only. Never clears or rewrites the legacy stores. */
     fun registerLegacy(history:List<HistoryEntry>,findings:List<StationFinding>):Int=transaction(history.map{it.media}+findings.map{it.media}){db->
+        if(db.rawQuery("SELECT 1 FROM metadata WHERE name='portable-restore'",null).use{it.moveToFirst()})return@transaction 0
         val before=count(db,"films")
         findings.forEach{observe(db,it.media,it.firstSeen,historical=true,observedAt=it.lastObserved)}
         history.forEach{observe(db,it.media,it.updatedAt,historical=true)}
@@ -93,11 +94,11 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         result.filter{work->query.isBlank()||work.title.contains(query,true)||work.films.any{it.media.title.contains(query,true)||it.media.sourceLabel.contains(query,true)}}
     }
     fun createShelf(name:String):String=transaction{db->
-        val label=name.trim();require(label.isNotEmpty()&&label.length<=60){"片架名称请填写 1–60 个字"}
+        val label=name.trim();require(label.isNotEmpty()&&label.length<=60){"放映单名称请填写 1–60 个字"}
         val shelfId=id();put(db,"shelves","id" to shelfId,"name" to label);shelfId
     }
     fun renameShelf(shelfId:String,name:String)=transaction{db->
-        val label=name.trim();require(label.isNotEmpty()&&label.length<=60){"片架名称请填写 1–60 个字"}
+        val label=name.trim();require(label.isNotEmpty()&&label.length<=60){"放映单名称请填写 1–60 个字"}
         db.update("shelves",ContentValues().apply{put("name",label)},"id=?",arrayOf(shelfId));Unit
     }
     fun deleteShelf(shelfId:String)=transaction{db->db.delete("shelves","id=?",arrayOf(shelfId));Unit}
@@ -138,12 +139,14 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         transaction{db->
         require(confirmedSameVersion){"请先确认这是同一版本"}
         require(visible(newLocation)){"新位置当前不可访问"}
-        require((original.media.bindingEpoch?:0L)==(newLocation.bindingEpoch?:0L)&&(original.media.location==null||original.media.location==newLocation.location)&&original.media.sourceId==newLocation.sourceId&&((original.media.localUri==null)==(newLocation.localUri==null))){"信源身份不同，请分别保留影片版本"}
+        if(!isPending(filmId))require((original.media.bindingEpoch?:0L)==(newLocation.bindingEpoch?:0L)&&(original.media.location==null||original.media.location==newLocation.location)&&original.media.sourceId==newLocation.sourceId&&((original.media.localUri==null)==(newLocation.localUri==null))){"信源身份不同，请分别保留影片版本"}
         require(original.media.sizeBytes==null||newLocation.sizeBytes==null||original.media.sizeBytes==newLocation.sizeBytes){"影片尺寸不同，请分别保留影片版本"}
         if(source!=null){
-            require(SourceBindingEpochs.matches(app,source,original.media)&&SourceBindingEpochs.matches(app,source,newLocation)){"信源身份已变更，请分别保留影片版本"}
+            require((isPending(filmId)||SourceBindingEpochs.matches(app,source,original.media))&&SourceBindingEpochs.matches(app,source,newLocation)){"信源身份已变更，请分别保留影片版本"}
         }
+        require(SourceBindingEpochs.acceptsWrite(app,newLocation,false)){"新位置授权已变化"}
         CatalogIdentity.rebind(db,filmId,newLocation)
+        db.delete("metadata","name=?",arrayOf("restore-pending:$filmId"))
         PlaybackRegistry.invalidateMedia(filmId)
         }
         history?.token(requireNotNull(readFilm(helper.readableDatabase,filmId)).media)
@@ -173,5 +176,15 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         require(filmId!=null&&readFilm(db,filmId)!=null){"这条札记当前不可访问"}
         db.delete("moments","id=?",arrayOf(momentId));Unit
     }
+    internal fun <T> withDatabase(action:(SQLiteDatabase,Set<String>)->T):T=access {
+        action(helper.writableDatabase,works().flatMap{it.films}.map{it.id}.toSet())
+    }
+    fun catalogEpoch():Long=access{helper.readableDatabase.rawQuery("SELECT value FROM metadata WHERE name='catalog-epoch'",null).use{if(it.moveToFirst())it.getString(0).toLong()else 0L}}
+    fun observeBatch(refs:List<MediaRef>,epoch:Long):Int=transaction(refs){db->
+        check(catalogEpoch()==epoch){"片匣已更新，请重新收录"}
+        refs.forEach{require(SourceBindingEpochs.acceptsWrite(app,it,false)){"信源授权已变化，请重新选择"}}
+        refs.count{observe(db,it,System.currentTimeMillis())!=null}
+    }
+    fun isPending(filmId:String):Boolean=access{helper.readableDatabase.rawQuery("SELECT 1 FROM metadata WHERE name=?",arrayOf("restore-pending:$filmId")).use{it.moveToFirst()}}
     override fun close(){synchronized(lock){closed=true;helper.close()}}
 }

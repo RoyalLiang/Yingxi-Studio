@@ -25,14 +25,15 @@ class SourceStore(context: Context) {
     private val presentation = MigratingPreferences.open(context,"source-presentation-v1")
     private companion object { val orderLock=Any() }
     fun pinnedIds(): Set<String> = presentation.getStringSet("pinned",emptySet())?.toSet() ?: emptySet()
-    fun load(): List<Source> = runCatching {
+    internal fun configured(): List<Source> = runCatching {
         val a = JSONArray(prefs.getString("sources", "[]"))
         (0 until a.length()).map { i -> a.getJSONObject(i).let { o -> Source(
             id=o.getString("id"), label=o.getString("label"), protocol=Protocol.valueOf(o.getString("protocol")),
             host=o.getString("host"), port=o.getInt("port"), root=o.getString("root"), username=o.optString("username"),
             domain=o.optString("domain"), trustedKey=o.optString("trustedKey").takeIf(String::isNotBlank),
             trustedAuthority=o.optString("trustedAuthority").takeIf(String::isNotBlank),initialPath=o.optString("initialPath"),secure=o.optBoolean("secure",true),userAgent=o.optString("userAgent"),referer=o.optString("referer")) } }
-    }.getOrDefault(emptyList()).sortedBy { if(it.id in pinnedIds())0 else 1 }
+    }.getOrDefault(emptyList())
+    fun load():List<Source> {val pinned=pinnedIds();return configured().sortedBy{if(it.id in pinned)0 else 1}}
     fun togglePinned(id:String):Boolean = synchronized(orderLock) {
         val existing=load().map{it.id}.toSet()
         if(id !in existing)return@synchronized false

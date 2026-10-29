@@ -133,7 +133,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     var bitrate by remember { mutableStateOf<String?>(null) }
     var softwareSdr by remember { mutableStateOf(false) }
     var fill by rememberSaveable(portrait) { mutableStateOf(!portrait) }
-    val previews = remember(controller,previewScope) { PreviewFrames(context.applicationContext,previewScope) }
+    val previews = remember(controller,previewScope) { PreviewFrames(context.applicationContext,previewScope,controller?.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()}) }
     val originalBrightness = remember { activity.window.attributes.screenBrightness }
     val layoutDirection=androidx.compose.ui.platform.LocalLayoutDirection.current
     val safeInsets=WindowInsets.safeDrawing

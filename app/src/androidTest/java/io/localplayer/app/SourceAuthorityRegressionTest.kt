@@ -107,7 +107,7 @@ class SourceAuthorityRegressionTest {
             PlaybackOrientationProbe.remember(context,media,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT)
             assertEquals(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(context,target)})
             SourceStore(context).updatePresentation(source.id,"片箱","series","剧集")
-            assertNull(kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(context,target)});assertEquals(0,opens.get())
+            assertNull(kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.resolve(context,target)});assertNull(kotlinx.coroutines.runBlocking{PlaybackOrientationProbe.initial(context,target)});assertEquals(0,opens.get())
         }finally{target.release()}
     }}
     @Test fun revokedOrientationReadCannotReturnOrCacheOldMetadata(){fixture{context,source,_,_->

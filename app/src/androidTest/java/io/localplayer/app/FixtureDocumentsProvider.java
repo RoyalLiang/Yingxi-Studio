@@ -15,11 +15,13 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
     private volatile java.util.concurrent.CountDownLatch childEntered;
 
     public static final String AUTHORITY = "io.localplayer.app.test.documents";
+    private volatile java.util.concurrent.CountDownLatch thumbnailRelease;
     private volatile boolean thumbnailEntered;
     private volatile boolean thumbnailCancelled;
     private volatile boolean thumbnailHasSignal;
     @Override public android.os.Bundle call(String method, String arg, android.os.Bundle extras) {
-        if (method.equals("thumbnail-reset")) { thumbnailEntered=false;thumbnailCancelled=false; }
+        if (method.equals("thumbnail-reset")) { thumbnailEntered=false;thumbnailCancelled=false;thumbnailRelease=new java.util.concurrent.CountDownLatch(1); }
+        if (method.equals("thumbnail-release") && thumbnailRelease!=null)thumbnailRelease.countDown();
         if (method.startsWith("thumbnail-")) {
             android.os.Bundle result=new android.os.Bundle();result.putBoolean("entered",thumbnailEntered);result.putBoolean("cancelled",thumbnailCancelled);result.putBoolean("signal",thumbnailHasSignal);return result;
         }
@@ -95,6 +97,11 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
         return cursor;
     }
     @Override public ParcelFileDescriptor openDocument(String id, String mode, CancellationSignal signal) throws FileNotFoundException {
+        if (id.equals("thumbnail-revoke")) {
+            thumbnailEntered=true;
+            try { if(thumbnailRelease!=null)thumbnailRelease.await(5,java.util.concurrent.TimeUnit.SECONDS); } catch(InterruptedException error){Thread.currentThread().interrupt();}
+            id="clip";
+        }
         if (id.equals("thumbnail-block")) {
             thumbnailHasSignal=signal!=null;
             java.util.concurrent.CountDownLatch released=new java.util.concurrent.CountDownLatch(1);

@@ -93,7 +93,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
     }
     if(filmLibraryOpen){
         Box(Modifier.fillMaxSize()){
-            FilmLibraryScreen(vm){filmLibraryOpen=false}
+            FilmLibraryScreen(vm,onSources={filmLibraryOpen=false;tab=AppTab.Sources}){filmLibraryOpen=false}
             SourceDialogs(vm,requestNearby)
             SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))
         };return

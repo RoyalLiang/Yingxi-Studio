@@ -26,7 +26,7 @@ internal object PlaybackOrientationProbe {
     private fun preferences(context:Context)=context.applicationContext.getSharedPreferences("video-orientation-v1",Context.MODE_PRIVATE)
     private fun recordedAt(value:Any?)=runCatching{org.json.JSONObject(value as String).getLong("recordedAt")}.getOrDefault(0L)
     fun remember(context:Context,media:MediaRef,orientation:Int){
-        if(SealedMedia.protects(media)||(media.sizeBytes?:0)<=0||orientation !in setOf(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT))return
+        if(runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure||SealedMedia.protects(media)||(media.sizeBytes?:0)<=0||orientation !in setOf(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT))return
         synchronized(cacheLock){
             if(cached(context,media)==orientation)return
             val prefs=preferences(context);val id=enrichmentKey(media)
@@ -38,7 +38,7 @@ internal object PlaybackOrientationProbe {
     }
 
     fun cached(context:Context,media:MediaRef):Int?{
-        if(SealedMedia.protects(media)||(media.sizeBytes?:0)<=0)return null
+        if(runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure||SealedMedia.protects(media)||(media.sizeBytes?:0)<=0)return null
         return runCatching{
             val record=org.json.JSONObject(preferences(context).getString(enrichmentKey(media),null)?:return null)
             if(System.currentTimeMillis()-record.getLong("recordedAt") !in 0 until CACHE_AGE_MS)return null
@@ -49,9 +49,10 @@ internal object PlaybackOrientationProbe {
     fun clear(context:Context){synchronized(cacheLock){preferences(context).edit().clear().apply()}}
 
     // Unknown network metadata is read by the player's own transport before showing its controls.
-    suspend fun initial(context:Context,target:PlayTarget):Int? = cached(context,target.media)
-        ?: (if(target.uri.isPlayerNetworkUri()||target.uri.scheme in setOf("http","https"))null else withTimeoutOrNull(150L){resolve(context,target)})
-
+    suspend fun initial(context:Context,target:PlayTarget):Int? {
+        if(runCatching{verify(context,target)}.isFailure)return null
+        return cached(context,target.media) ?: (if(target.uri.isPlayerNetworkUri()||target.uri.scheme in setOf("http","https"))null else withTimeoutOrNull(150L){resolve(context,target)})
+    }
 
     private fun verify(context:Context,target:PlayTarget){
         MediaDataMigration.session(context).checkLocator(target.media)

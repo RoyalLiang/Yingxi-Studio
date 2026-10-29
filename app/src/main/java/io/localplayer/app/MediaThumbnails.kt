@@ -168,7 +168,8 @@ internal object MediaThumbnails {
                         val width=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()?:0
                         val height=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()?:0
                         val rotation=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?:0
-                        videoOrientation(width,height,rotation,1f)?.let{PlaybackOrientationProbe.remember(context,media,it)}
+                        MediaDataMigration.session(context).checkLocator(media)
+            videoOrientation(width,height,rotation,1f)?.let{PlaybackOrientationProbe.remember(context,media,it)}
                         val bitmap = retriever.embeddedPicture?.let(MediaPosters::decode)
                             ?: retriever.getScaledFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
                             ?: retriever.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
@@ -176,13 +177,13 @@ internal object MediaThumbnails {
                         cancellation.check()
                         caller.ensureActive()
                         // Clearing/removing history while extraction runs must not resurrect its private frame.
-                        if (history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) return@extract null
+                        if (runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure || history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) return@extract null
                         val temporary = File(target.parentFile, "$cacheKey.tmp")
                         try {
                             temporary.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 85, it)) }
                             if (!temporary.renameTo(target)) throw IOException("Cannot save thumbnail")
                         } finally { temporary.delete() }
-                        if (history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) { target.delete(); return@extract null }
+                        if (runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure || history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) { target.delete(); return@extract null }
                         memory.put(cacheKey, bitmap)
                         failed.remove(cacheKey)
                         trim(context)

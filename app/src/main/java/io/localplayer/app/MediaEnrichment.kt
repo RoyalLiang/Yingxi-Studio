@@ -56,7 +56,7 @@ internal object MediaPosters {
     private const val recheckMs=7L*24*60*60*1000
     private fun identity(media:MediaRef,source:Source?)=posterIdentity(media,source).let{listOf(it.title,it.year,it.season,it.series).joinToString("|")}
     private fun source(context:Context,media:MediaRef)=media.sourceId?.let{id->SourceStore(context).load().firstOrNull{it.id==id}}
-    private fun allowed(context:Context,media:MediaRef,source:Source?)=!SealedMedia.protects(media)&&EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)&&runCatching{SourceBindingEpochs.matches(context,source,media)&&media.path?.let{SourceRoot(source.initialPath).contains(it)}==true}.getOrDefault(false)))
+    private fun allowed(context:Context,media:MediaRef,source:Source?)=runCatching{MediaDataMigration.session(context).checkLocator(media)}.isSuccess&&!SealedMedia.protects(media)&&EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)&&runCatching{SourceBindingEpochs.matches(context,source,media)&&media.path?.let{SourceRoot(source.initialPath).contains(it)}==true}.getOrDefault(false)))
     private fun record(context:Context,media:MediaRef,source:Source?)=PosterStore(context).metadata(enrichmentKey(media))?.takeIf{it.optString("identity")==identity(media,source)}
     fun credit(context:Context,media:MediaRef):Pair<String,String>?=runCatching {
         val source=source(context,media)
@@ -137,18 +137,18 @@ internal object MediaPosters {
                     if(previous!=null&&old?.optString("imageUrl")==match.imageUrl)previous else decode(imageDownload(match.imageUrl,c))
                 }
                 ensureActive();c.check()
-                if(!valid())return@withContext previous
+                if(!valid())return@withContext null
                 if(bitmap==null){if(valid())failed[id]=System.currentTimeMillis();return@withContext previous}
                 val data=org.json.JSONObject().put("credit",credit).put("url",url).put("imageUrl",imageUrl).put("confidence",confidence)
                     .put("policy",policy).put("identity",identity(media,source)).put("title",media.title).put("fetchedAt",System.currentTimeMillis()).put("checkedAt",System.currentTimeMillis())
                 synchronized(writes){
-                    if(!valid())return@withContext previous
+                    if(!valid())return@withContext null
                     if(bitmap===previous&&old!=null)store.update(id,data.put("image",old.getString("image"))) else store.save(id,bitmap,data)
                 }
                 failed.remove(id)
                 if(refresh)changes.update{it+1}
                 bitmap
-            }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&valid())failed[id]=System.currentTimeMillis();previous}
+            }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&valid())failed[id]=System.currentTimeMillis();previous?.takeIf{valid()}}
             finally{watcher.cancel(false);owner.dispose();protectedRequests.remove(c);c.close()}
         }finally{lock.unlock()}
     }

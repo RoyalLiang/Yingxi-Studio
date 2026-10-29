@@ -427,6 +427,46 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         }catch(e:CancellationException){throw e}
         catch(e:Exception){if(request==generation){preparingKey=null;error=if(saved.protocol==Protocol.ALIYUN)"网盘凭据无法读取，请在信源配置重新授权"else"无法读取保存的凭据，请重新输入";if(saved.protocol!=Protocol.ALIYUN)access=SourceAccess(saved,path=ref.path?.substringBeforeLast('/',"") ?: "")else{pendingReplay=null;endPreparation()}}}}
     }
+    internal fun endCatalogScreening(){
+        cancelOperation()
+        while(true){val pending=playChannel.tryReceive().getOrNull()?:break;pending.release()}
+        getApplication<Application>().stopService(android.content.Intent(getApplication(),PlaybackService::class.java))
+    }
+    internal fun catalogCredentials(saved:Source):Credentials? {
+        val password=credentials?.password?.takeIf{source?.id==saved.id}?:store.password(saved.id)
+        return if(password!=null||saved.username.isBlank())Credentials(password?:"") else null
+    }
+    internal fun playCatalog(films:List<LibraryFilm>){
+        cancelOperation();val request=generation;preparationLease=MediaDataMigration.preparation(getApplication());val lease=preparationLease
+        val snapshot=films.filter{SealedMedia.visible(it.media)}.take(PlaybackRequests.MAX_ITEMS)
+        preparingKey="catalog-playlist"
+        job=viewModelScope.launch {
+            val queue=mutableListOf<QueuedMedia>();var sent=false
+            try{
+                withContext(Dispatchers.IO){
+                    val passwords=HashMap<String,Credentials?>()
+                    for(film in snapshot){
+                        ensureActive();val ref=film.media
+                        if(!SealedMedia.visible(ref))continue
+                        val saved=ref.sourceId?.let{id->store.load().firstOrNull{it.id==id}}
+                        val password=saved?.let{passwords.getOrPut(it.id){catalogCredentials(it)}}
+                        if(LibraryRepair.inspect(getApplication(),ref,password,sourceConnector)!=FilmAccess.READY)continue
+                        ensureActive();MediaDataMigration.session(getApplication()).checkLocator(ref)
+                        val uri=if(ref.localUri!=null)Uri.parse(ref.localUri)else PlaybackRegistry.add(requireNotNull(saved),password?:Credentials(""),requireNotNull(ref.path),ref.title,sourceConnector,getApplication(),ref.bindingEpoch,ref)
+                        queue+=QueuedMedia(uri,ref,historyStore.token(ref))
+                    }
+                }
+                if(request!=generation)return@launch
+                require(queue.isNotEmpty()){ "本单暂时没有可放映的影片，请到检修台核对位置与授权" }
+                val first=queue.first();val resume=historyStore.resumePosition(first.media,0)
+                val target=PlayTarget(first.uri,first.media.title,resume,first.media,first.token,queue=queue.toList(),truncated=films.size>snapshot.size)
+                try{playChannel.send(target);sent=true}catch(e:Exception){target.release();throw e}
+                val skipped=snapshot.size-queue.size
+                if(skipped>0)notifySuccess("已跳过 $skipped 份暂不可访问的影片")
+            }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)error=e.message?:"放映单暂时无法打开"}
+            finally{if(!sent)queue.forEach{PlaybackRegistry.remove(it.uri)};lease?.close();if(preparationLease===lease)preparationLease=null;if(request==generation)preparingKey=null}
+        }
+    }
     fun playLocal(uri:Uri,fromStart:Boolean=false,siblings:List<LocalEntry> = emptyList(),parentUri:Uri?=null,privatePlayback:Boolean=false,positionMs:Long?=null,expectedMedia:MediaRef?=null){
         cancelOperation();preparationLease=MediaDataMigration.preparation(getApplication());val lease=preparationLease;pendingReplay=null;val request=generation;preparingKey=uri.toString()
         val original=try{expectedMedia?.let(historyStore::reference)}catch(_:Exception){endPreparation();preparingKey=null;error="片档暂时无法写入，请保留原记录后重试";return}

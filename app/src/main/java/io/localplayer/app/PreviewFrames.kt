@@ -33,7 +33,10 @@ internal interface PreviewDecoder : Closeable { fun prepare() {}; fun frame(time
 internal data class PreviewFrame(val bitmap: Bitmap, val timeMs: Long)
 
 class PreviewFrames internal constructor(private val cache:LruCache<String,Bitmap> = memoryCache(),private val scope:String="",private val checkAuthority:(Uri)->Unit={},private val openDecoder:(Uri)->PreviewDecoder) : Closeable {
-    constructor(context:Context,scope:String=""):this(playbackCache,scope,{uri->if(uri.isPlayerNetworkUri())PlaybackRegistry.get(uri)},{uri->AndroidPreviewDecoder(context,uri)})
+    constructor(context:Context,scope:String="",media:MediaRef?=null):this(playbackCache,scope,{uri->
+        if(uri.isPlayerNetworkUri())PlaybackRegistry.get(uri)
+        if(media!=null)MediaDataMigration.session(context).checkLocator(media)
+    },{uri->AndroidPreviewDecoder(context,uri)})
     internal companion object {
         private val closer=java.util.concurrent.Executors.newSingleThreadExecutor()
         private val cacheRevision=java.util.concurrent.atomic.AtomicLong()
@@ -60,7 +63,7 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
     internal fun latest(uri: Uri): PreviewFrame? = if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)null else lastFrame?.takeIf { it.first == uri }?.second
 
     internal fun nearest(uri:Uri,timeMs:Long):PreviewFrame? {
-        if(closed.get())return null
+        if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)return null
         val prefix="$scope\u0000$uri:"
         return cache.snapshot().entries.mapNotNull{(key,bitmap)->
             key.takeIf{it.startsWith(prefix)}?.removePrefix(prefix)?.toLongOrNull()?.let{PreviewFrame(bitmap,it)}
