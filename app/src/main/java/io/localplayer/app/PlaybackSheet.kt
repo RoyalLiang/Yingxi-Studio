@@ -33,19 +33,19 @@ import androidx.compose.ui.window.DialogProperties
                 systemBarsBehavior=androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         }}
-        SheetGlassEffect()
-        MaterialTheme(colorScheme=darkColorScheme(primary=PlayerAccent,onPrimary=Color(0xFF281820),surface=Color(0xFF202326),onSurface=PlayerInk,secondaryContainer=PlayerAccent.copy(alpha=.18f),onSecondaryContainer=PlayerInk)){
+        MaterialTheme(colorScheme=darkColorScheme(primary=PlayerAccent,onPrimary=Color(0xFF281820),surface=PlayerPanel,onSurface=PlayerInk,secondaryContainer=PlayerAccent.copy(alpha=.18f),onSecondaryContainer=PlayerInk)){
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)){
                 val portrait=maxHeight>maxWidth
                 val backdrop=when(tag){"playback-queue-drawer"->"queue-dismiss-backdrop";"audio-subtitle-panel"->"settings-dismiss-backdrop";else->"$tag-dismiss-backdrop"}
                 Box(Modifier.fillMaxSize().testTag(backdrop).clickable(interactionSource=remember{MutableInteractionSource()},indication=null,onClick=dismiss))
-                val width=minOf(maxWidth-24.dp,if(portrait)480.dp else 380.dp).coerceAtLeast(1.dp)
-                GlassSurface(Modifier.align(if(portrait)Alignment.BottomCenter else Alignment.CenterEnd).padding(12.dp).width(width)
-                    .heightIn(max=maxHeight*(if(portrait).76f else .9f)).testTag(tag).pointerInput(Unit){detectTapGestures(onTap={})},dark=true,radius=28){
+                val width=minOf(maxWidth-(if(portrait)0.dp else 24.dp),if(portrait)480.dp else 380.dp).coerceAtLeast(1.dp)
+                Surface(Modifier.align(if(portrait)Alignment.BottomCenter else Alignment.CenterEnd).padding(if(portrait)0.dp else 12.dp).width(width)
+                    .heightIn(max=maxHeight*(if(portrait).76f else .9f)).testTag(tag).pointerInput(Unit){detectTapGestures(onTap={})},
+                    shape=RoundedCornerShape(topStart=22.dp,topEnd=22.dp,bottomStart=if(portrait)0.dp else 22.dp,bottomEnd=if(portrait)0.dp else 22.dp),color=PlayerPanel){
                     Column(Modifier.fillMaxWidth()){
                         if(portrait)Box(Modifier.align(Alignment.CenterHorizontally).padding(top=10.dp).size(32.dp,4.dp).background(PlayerInk.copy(alpha=.25f),RoundedCornerShape(2.dp)))
                         Row(Modifier.fillMaxWidth().padding(start=20.dp,end=8.dp,top=4.dp,bottom=4.dp),verticalAlignment=Alignment.CenterVertically){
-                            Text(title,Modifier.weight(1f),fontSize=21.sp,fontWeight=FontWeight.SemiBold,color=PlayerInk)
+                            Text(title,Modifier.weight(1f),fontSize=19.sp,fontWeight=FontWeight.SemiBold,color=PlayerInk)
                             IconButton(onClick=dismiss,modifier=Modifier.size(48.dp)){Icon(Icons.Rounded.Close,closeLabel,tint=PlayerInk)}
                         }
                         content()

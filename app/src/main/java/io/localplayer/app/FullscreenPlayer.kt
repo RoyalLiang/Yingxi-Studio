@@ -65,9 +65,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-internal val PlayerInk = Color(0xFFF7F7F6)
-internal val PlayerAccent = Color(0xFFFF9AB6)
-private val PlayerPanel = Color(0xF5202326)
+internal val PlayerInk = Color(0xFFFAFAF8)
+internal val PlayerAccent = Color(0xFFFFADBF)
+internal val PlayerPanel = Color(0xFF25282B)
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)

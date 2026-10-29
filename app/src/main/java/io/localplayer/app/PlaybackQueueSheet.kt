@@ -30,7 +30,7 @@ import androidx.media3.common.MediaItem
         LazyColumn(state=state,modifier=Modifier.fillMaxWidth().weight(1f,fill=false),contentPadding=PaddingValues(start=12.dp,end=12.dp,top=8.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
             itemsIndexed(items,key={index,item->"$index:${item.mediaId}"}){index,item->
                 val selected=index==current
-                Row(Modifier.fillMaxWidth().background(if(selected)PlayerAccent.copy(alpha=.14f)else Color.Transparent,RoundedCornerShape(16.dp))
+                Row(Modifier.fillMaxWidth().background(if(selected)PlayerInk.copy(alpha=.035f)else Color.Transparent,RoundedCornerShape(12.dp))
                     .selectable(selected=selected,role=Role.RadioButton,onClick={if(selected)dismiss()else select(index)}).heightIn(min=64.dp).padding(12.dp).testTag("queue-item-$index"),verticalAlignment=Alignment.CenterVertically){
                     if(selected)Icon(Icons.Rounded.GraphicEq,"当前集",Modifier.width(24.dp),tint=PlayerAccent)
                     else Text("${index+1}",Modifier.width(24.dp),fontSize=13.sp,color=PlayerInk.copy(alpha=.6f))

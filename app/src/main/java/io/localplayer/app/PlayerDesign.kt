@@ -67,10 +67,10 @@ fun PlayerTheme(content: @Composable () -> Unit) {
             secondary=Color(0xFFBBC0B4),secondaryContainer=Color(0xFF383F37),onSecondaryContainer=Color(0xFFE3E7DA),
             surfaceVariant=Color(0xFF30372F),onSurfaceVariant=Color(0xFFBBC0B4),outline=Color(0xFF8D9788).copy(alpha=.30f)
         ) else lightColorScheme(
-            primary=Color(0xFFB91E4B),onPrimary=Color.White,primaryContainer=Color(0xFFF9E6EC),onPrimaryContainer=Color(0xFF721831),
-            background=Color(0xFFF3EFE6),surface=Color(0xFFFCF9F2),onSurface=Color(0xFF2B302D),onBackground=Color(0xFF2B302D),
-            secondary=Color(0xFF65685F),secondaryContainer=Color(0xFFE6E4D9),onSecondaryContainer=Color(0xFF2B302D),
-            surfaceVariant=Color(0xFFEDE9DF),onSurfaceVariant=Color(0xFF65685F),outline=Color(0xFF868B7B).copy(alpha=.15f)
+            primary=Color(0xFFB52251),onPrimary=Color.White,primaryContainer=Color(0xFFF4E5E9),onPrimaryContainer=Color(0xFF721831),
+            background=Color(0xFFF3F1ED),surface=Color(0xFFFFFCF6),onSurface=Color(0xFF26302C),onBackground=Color(0xFF26302C),
+            secondary=Color(0xFF656C66),secondaryContainer=Color(0xFFE6E4D9),onSecondaryContainer=Color(0xFF26302C),
+            surfaceVariant=Color(0xFFEDECE6),onSurfaceVariant=Color(0xFF656C66),outline=Color(0xFF868B7B).copy(alpha=.15f)
         ),
         typography = Typography(
             headlineLarge = TextStyle(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp),

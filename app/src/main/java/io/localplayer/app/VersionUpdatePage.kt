@@ -130,18 +130,28 @@ import androidx.compose.ui.unit.sp
 
 @Composable private fun UpdateFooter(vm:SettingsViewModel,install:()->Unit,download:()->Unit){
     val transfer=vm.release!=null
+    val downloading=vm.busy&&transfer
+    val progress=(vm.progress?:0f).coerceIn(0f,1f)
     Column(Modifier.fillMaxWidth().background(Paper).testTag("update-footer")){
         Button(enabled=!vm.installing&&(!vm.busy||transfer),onClick={when{vm.busy->vm.cancel();vm.ready!=null->install();transfer->download();else->vm.check()}},
-            colors=ButtonDefaults.buttonColors(containerColor=Berry,contentColor=GroupedSurface),
+            colors=ButtonDefaults.buttonColors(containerColor=if(downloading)Ink.copy(alpha=.08f)else Berry,contentColor=if(downloading)Ink else GroupedSurface),contentPadding=PaddingValues(0.dp),
             modifier=Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal+WindowInsetsSides.Bottom))
                 .padding(horizontal=24.dp,vertical=12.dp).fillMaxWidth().heightIn(min=50.dp).testTag(if(transfer)"download-update" else "check-updates"),shape=RoundedCornerShape(16.dp)){
-            if(vm.installing||(vm.busy&&!transfer)){CircularProgressIndicator(Modifier.size(18.dp),color=GroupedSurface,strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
-            Text(when{vm.installing->"正在准备安装…";vm.busy&&transfer->"暂停下载 ${((vm.progress?:0f)*100).toInt()}%";vm.busy->"正在检查…";
-                vm.ready!=null->"安装更新";transfer&&(vm.progress?:0f)>0f->"继续下载";transfer->"下载更新";
-                vm.message=="当前没有可用更新"->"已是最新版本";else->"检查更新"},modifier=Modifier.testTag("update-status"))
+            Box(Modifier.fillMaxWidth().heightIn(min=50.dp)){
+                if(downloading)Box(Modifier.matchParentSize()){
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(Berry.copy(alpha=.10f)))
+                }
+                Row(Modifier.align(Alignment.Center).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
+                    if(vm.installing||(vm.busy&&!transfer)){CircularProgressIndicator(Modifier.size(18.dp),color=GroupedSurface,strokeWidth=2.dp);Spacer(Modifier.width(8.dp))}
+                    Text(when{vm.installing->"正在准备安装…";downloading->"暂停下载 ${(progress*100).toInt()}%";vm.busy->"正在检查…";
+                        vm.ready!=null->"安装更新";transfer&&(vm.progress?:0f)>0f->"继续下载";transfer->"下载更新";
+                        vm.message=="当前没有可用更新"->"已是最新版本";else->"检查更新"},modifier=Modifier.testTag("update-status"))
+                }
+            }
         }
     }
 }
+
 @Composable private fun CurrentLetter(language:String,expand:()->Unit,modifier:Modifier) {
     Column(modifier) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).testTag("current-letter-scroll").padding(bottom=24.dp)) {

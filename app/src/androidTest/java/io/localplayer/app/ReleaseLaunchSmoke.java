@@ -170,7 +170,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
             Rect button=new Rect();await("检查更新").getBoundsInScreen(button);
             Bitmap image=getUiAutomation().takeScreenshot();
             if(image==null||button.bottom<image.getHeight()*3/4)throw new AssertionError("Update button is not at bottom");
-            if(image.getPixel(4,button.centerY())!=0xFFF3EFE6)throw new AssertionError("Footer background mismatch");
+            if(image.getPixel(4,button.centerY())!=0xFFF3F1ED)throw new AssertionError("Footer background mismatch");
             image.recycle();passed.put("Production R8 rules: launch, settings and fixed footer");
             if(args!=null&&"media".equals(args.getString("mode"))){
                 for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:args.getString("clip")==null?new String[]{"r8-avc","r8-hevc"}:new String[]{args.getString("clip")})playback(source,clip);

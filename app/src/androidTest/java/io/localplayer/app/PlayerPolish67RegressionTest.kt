@@ -112,9 +112,11 @@ class PlayerPolish67RegressionTest {
  @Test fun delayedNativeFrameRetainsTheEventTimelinesIdentity(){
   val player=main{androidx.media3.exoplayer.ExoPlayer.Builder(ui.activity).build()}
   try{main{
-   val old=MediaItem.Builder().setMediaId("frame-old67").setUri("file:///old.mp4").build()
-   val next=MediaItem.Builder().setMediaId("frame-next67").setUri("file:///next.mp4").build()
-   player.setMediaItem(old);val oldTimeline=player.currentTimeline
+   val metadata=MediaMetadata.Builder().setExtras(android.os.Bundle().apply{putString("play-intent","shared-queue67")}).build()
+            val old=MediaItem.Builder().setMediaId("frame-old67").setUri("file:///old.mp4").setMediaMetadata(metadata).build()
+            val next=MediaItem.Builder().setMediaId("frame-next67").setUri("file:///next.mp4").setMediaMetadata(metadata).build()
+            assertNotEquals(PlaybackFrames.key(old),PlaybackFrames.key(next))
+            player.setMediaItem(old);val oldTimeline=player.currentTimeline
    player.setMediaItem(next)
    val event=androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime(0,oldTimeline,0,null,0,player.currentTimeline,0,null,0,0)
    PlaybackMetrics.listener().onRenderedFirstFrame(event,Any(),0)
@@ -145,7 +147,7 @@ class PlayerPolish67RegressionTest {
    }
   }
   val uris=listOf("red67.mp4",destination).map{PlaybackRegistry.add(source,Credentials(""),it,it,connector)}
-  val items=uris.mapIndexed{index,uri->MediaItem.Builder().setMediaId(uri.toString()).setUri(uri).setMediaMetadata(MediaMetadata.Builder().setTitle(if(index==0)"Red first" else "Blue second").build()).build()}
+  val items=uris.mapIndexed{index,uri->MediaItem.Builder().setMediaId(uri.toString()).setUri(uri).setMediaMetadata(MediaMetadata.Builder().setTitle(if(index==0)"Red first" else "Blue second").setExtras(android.os.Bundle().apply{putString("play-intent","shared-queue67")}).build()).build()}
    try{
     main{c.setMediaItems(items)};show(c);main{c.prepare();c.play()};ready(c)
     ui.waitUntil(5000){colorFraction(true)>.5}

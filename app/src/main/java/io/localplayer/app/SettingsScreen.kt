@@ -152,21 +152,32 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
         }.onFailure{searchError=it.message?:"搜寻地址无效"}
         Unit
     }
-    Surface(modifier=Modifier.fillMaxWidth().testTag("enrichment-settings"),shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.padding(14.dp)){
-        Row(verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
-        Row(verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;OnlineSubtitles.preferencesChanged(context)})}
-        Row(verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it;OnlineSubtitles.preferencesChanged(context)})}
-        Spacer(Modifier.height(12.dp))
-        StationChoiceSetting("字幕驿站",listOf("subhd" to "SubHD","shooter" to "射手","custom" to "自定义"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
-        if(subtitleSource=="custom"){
-            OutlinedTextField(shape=RoundedCornerShape(16.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Berry,focusedLabelColor=Berry,unfocusedBorderColor=Ink.copy(alpha=.18f)),value=customSearch,onValueChange={customSearch=it;searchError=null},singleLine=true,label={Text("搜寻地址")},
-                placeholder={Text("https://example.org/search/{query}")},isError=searchError!=null,
-                supportingText=searchError?.let{message->{Text(message)}},
-                trailingIcon={IconButton(onClick=saveSearch,enabled=customSearch.trim()!=savedSearch,modifier=Modifier.testTag("save-subtitle-search")){Icon(Icons.Rounded.Check,"保存搜寻地址")}},
-                keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Uri,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
-                keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={saveSearch()}),modifier=Modifier.fillMaxWidth().padding(top=10.dp).testTag("subtitle-search-url"))
+    Column(Modifier.fillMaxWidth().testTag("enrichment-settings"),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface){Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp)){
+            Row(Modifier.heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically){Text("自动获取海报",Modifier.weight(1f));SettingsSwitch(posters,{posters=it;prefs.posters=it;MediaThumbnails.changes.value++})}
+            HorizontalDivider(color=Ink.copy(alpha=.08f))
+            Row(Modifier.heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically){Text("自动匹配字幕",Modifier.weight(1f));SettingsSwitch(subtitles,{subtitles=it;prefs.subtitles=it;OnlineSubtitles.preferencesChanged(context)})}
+            HorizontalDivider(color=Ink.copy(alpha=.08f))
+            Row(Modifier.heightIn(min=52.dp),verticalAlignment=Alignment.CenterVertically){Text("优先双语字幕",Modifier.weight(1f));SettingsSwitch(bilingual,{bilingual=it;prefs.bilingual=it;OnlineSubtitles.preferencesChanged(context)})}
+        }}
+        Surface(shape=RoundedCornerShape(22.dp),color=GroupedSurface,modifier=Modifier.fillMaxWidth().testTag("subtitle-station-settings")){
+            Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                StationChoiceSetting("字幕驿站",listOf("subhd" to "SubHD","shooter" to "射手","custom" to "自定义"),subtitleSource,"subtitle-source"){subtitleSource=it;prefs.subtitleSource=it;OnlineSubtitles.preferencesChanged(context)}
+                if(subtitleSource=="custom"){
+                    Text("搜寻地址",fontSize=14.sp,fontWeight=FontWeight.Medium,color=Ink)
+                    OutlinedTextField(value=customSearch,onValueChange={customSearch=it;searchError=null},singleLine=true,
+                        shape=RoundedCornerShape(16.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Berry,unfocusedBorderColor=Ink.copy(alpha=.15f)),
+                        placeholder={Text("https://example.org/search/{query}")},isError=searchError!=null,
+                        supportingText=searchError?.let{message->{Text(message)}},
+                        trailingIcon={FilledTonalIconButton(onClick=saveSearch,enabled=customSearch.trim()!=savedSearch,shape=RoundedCornerShape(12.dp),
+                            colors=IconButtonDefaults.filledTonalIconButtonColors(containerColor=Berry.copy(alpha=.10f),contentColor=Berry,disabledContainerColor=Berry.copy(alpha=.04f),disabledContentColor=Berry.copy(alpha=.4f)),
+                            modifier=Modifier.size(48.dp).testTag("save-subtitle-search")){Icon(Icons.Rounded.Check,"保存搜寻地址")}},
+                        keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(keyboardType=androidx.compose.ui.text.input.KeyboardType.Uri,imeAction=androidx.compose.ui.text.input.ImeAction.Done),
+                        keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={saveSearch()}),modifier=Modifier.fillMaxWidth().testTag("subtitle-search-url"))
+                }
+            }
         }
-    }}
+    }
 }
 
 @Composable internal fun SettingsSwitch(checked:Boolean,onCheckedChange:(Boolean)->Unit,modifier:Modifier=Modifier,enabled:Boolean=true){

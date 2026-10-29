@@ -10,6 +10,10 @@ internal object PlaybackFrames {
     private val rendered=MutableStateFlow(Frame())
     val last=rendered.asStateFlow()
     fun rendered(item:MediaItem?){rendered.value=Frame(rendered.value.sequence+1,key(item))}
-    fun key(item:MediaItem?):String=item?.mediaMetadata?.extras?.getString("play-intent")
-        ?:item?.mediaId?.takeIf{it.isNotEmpty()}?:item?.localConfiguration?.uri?.toString().orEmpty()
+    fun key(item:MediaItem?):String{
+        if(item==null)return ""
+        val media=item.mediaId.takeIf{it.isNotEmpty()}?:item.localConfiguration?.uri?.toString().orEmpty()
+        val request=item.mediaMetadata.extras?.getString("play-intent").orEmpty()
+        return "$request\u0000$media"
+    }
 }

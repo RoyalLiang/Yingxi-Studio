@@ -9,7 +9,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -53,7 +53,7 @@ import java.util.Locale
         controller.addListener(listener);onDispose{controller.removeListener(listener)}
     }
     PlaybackSheet(when(trackType){C.TRACK_TYPE_AUDIO->"音轨";C.TRACK_TYPE_TEXT->"字幕";C.TRACK_TYPE_VIDEO->"画质";else->"播放选项"},"audio-subtitle-panel",onDismiss,closeLabel="关闭播放选项"){
-        LazyColumn(modifier=Modifier.weight(1f,fill=false).testTag("playback-settings-list"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+        LazyColumn(modifier=Modifier.weight(1f,fill=false).testTag("playback-settings-list"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
 
                 if(trackType==null||trackType==C.TRACK_TYPE_VIDEO)item{PlaybackQualityChoices(controller,currentItem,tracks,parameters)}
                 if(trackType==null||trackType==C.TRACK_TYPE_AUDIO){
@@ -71,7 +71,7 @@ import java.util.Locale
                         }}
                     }}
                 }
-                item{OutlinedButton(onClick={onDismiss();onAudioExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入音轨文件")}}
+                item{HorizontalDivider(color=PlayerInk.copy(alpha=.08f));TextButton(onClick={onDismiss();onAudioExternal()},colors=ButtonDefaults.textButtonColors(contentColor=PlayerAccent),modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Icon(Icons.Rounded.InsertDriveFile,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("载入音轨文件")}}
                 if(currentItem?.let{SidecarAudio.from(it).isNotEmpty()}==true)item{OutlinedButton(onClick={
                     controller.currentMediaItem?.let{controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(it,emptyList()))}
                 },modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("移除外挂音轨")}}
@@ -81,8 +81,8 @@ import java.util.Locale
                 if(trackType==null)item{Text("字幕",fontSize=17.sp,fontWeight=FontWeight.Medium)}
                 val disabled=parameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
                 val textAutomatic=!disabled&&parameters.overrides.keys.none{it.type==C.TRACK_TYPE_TEXT}
-                item{TrackChoice("关闭字幕",disabled){if(prefs.rememberManual)prefs.subtitlesDisabled=true;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}}
                 item{TrackChoice("自动选择",textAutomatic){if(prefs.rememberManual)prefs.subtitlesDisabled=false;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage(prefs.textLanguage).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()}}
+                item{TrackChoice("关闭字幕",disabled){if(prefs.rememberManual)prefs.subtitlesDisabled=true;controller.trackSelectionParameters=parameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}}
                 val texts=tracks.groups.filter{it.type==C.TRACK_TYPE_TEXT}
                 texts.forEachIndexed{g,group->for(i in 0 until group.length){
                     item(key="text-$g-$i"){TrackChoice(trackLabel(group.getTrackFormat(i),"字幕 ${texts.take(g).sumOf{it.length}+i+1}"),!disabled&&!textAutomatic&&group.isTrackSelected(i),enabled=group.isTrackSupported(i)){
@@ -98,20 +98,21 @@ import java.util.Locale
                         }
                     }
                 }
-                item{OutlinedButton(onClick={onDismiss();onExternal()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text("载入字幕文件")}}
+                item{HorizontalDivider(color=PlayerInk.copy(alpha=.08f));TextButton(onClick={onDismiss();onExternal()},colors=ButtonDefaults.textButtonColors(contentColor=PlayerAccent),modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Icon(Icons.Rounded.InsertDriveFile,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text("载入字幕文件")}}
                 }
             }
     }
 }
 
 @Composable fun TrackChoice(label:String,selected:Boolean,modifier:Modifier=Modifier,enabled:Boolean=true,choose:()->Unit){
-    Row(modifier.fillMaxWidth().background(if(selected)Color(0xFF422C37)else Color(0xFF292A31),RoundedCornerShape(14.dp))
-        .selectable(selected=selected,enabled=enabled,role=Role.RadioButton,onClick=choose).heightIn(min=52.dp).padding(horizontal=16.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
-        Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(enabled)PlayerInk else Color(0xFF9C9CA5))
-        if(selected)Icon(Icons.Rounded.Check,null,tint=Color(0xFFFFB4C8),modifier=Modifier.size(20.dp))
-        if(!enabled)Text("不支持",fontSize=12.sp,color=Color(0xFF9C9CA5))
+    Row(modifier.fillMaxWidth().background(if(selected)PlayerInk.copy(alpha=.035f)else Color.Transparent,RoundedCornerShape(12.dp))
+        .selectable(selected=selected,enabled=enabled,role=Role.RadioButton,onClick=choose).heightIn(min=52.dp).padding(horizontal=12.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
+        Text(label,Modifier.weight(1f).padding(end=12.dp),fontSize=15.sp,lineHeight=21.sp,maxLines=3,overflow=TextOverflow.Ellipsis,color=if(!enabled)PlayerInk.copy(alpha=.45f)else if(selected)PlayerAccent else PlayerInk)
+        RadioButton(selected=selected,onClick=null,enabled=enabled,colors=RadioButtonDefaults.colors(selectedColor=PlayerAccent,unselectedColor=PlayerInk.copy(alpha=.45f)),modifier=Modifier.size(20.dp))
+        if(!enabled)Text("不支持",fontSize=12.sp,color=PlayerInk.copy(alpha=.45f))
     }
 }
+
 fun speedLabel(value:Float)=if(value==value.toInt().toFloat())"${value.toInt()}×"else"${value}×"
 private fun trackLabel(format:Format,fallback:String):String{
     val language=normalizedTrackLanguage(format.language)?:sidecarLanguage(format.label.orEmpty())?:sidecarLanguage(fallback)

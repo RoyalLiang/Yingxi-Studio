@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -165,7 +167,8 @@ internal fun playbackBitrateLabel(format:androidx.media3.common.Format?):String?
 @Composable private fun QualityChoice(label:String,chosen:Boolean,modifier:Modifier=Modifier,onClick:()->Unit){
     DropdownMenuItem(text={Text(label,maxLines=2)},onClick=onClick,
         trailingIcon={if(chosen)Icon(Icons.Rounded.Check,null,tint=PlayerAccent)},
-        modifier=modifier.fillMaxWidth().semantics{selected=chosen;role=Role.RadioButton})
+        colors=MenuDefaults.itemColors(textColor=if(chosen)PlayerAccent else PlayerInk),
+        modifier=modifier.fillMaxWidth().background(if(chosen)PlayerInk.copy(alpha=.035f)else Color.Transparent).semantics{selected=chosen;role=Role.RadioButton})
 }
 
 @Composable
@@ -177,8 +180,8 @@ internal fun PlaybackQualityMenu(player:Player,expanded:Boolean,dismiss:()->Unit
         player.addListener(listener);onDispose{player.removeListener(listener)}
     }
     revision
-    MaterialTheme(colorScheme=darkColorScheme(surface=androidx.compose.ui.graphics.Color(0xFF202326),onSurface=PlayerInk)){
-        DropdownMenu(expanded,onDismissRequest=dismiss,shape=RoundedCornerShape(18.dp),
+    MaterialTheme(colorScheme=darkColorScheme(surface=PlayerPanel,onSurface=PlayerInk)){
+        DropdownMenu(expanded,onDismissRequest=dismiss,shape=RoundedCornerShape(16.dp),
             modifier=Modifier.width(264.dp).heightIn(max=320.dp).testTag("video-quality-popup")){
             PlaybackQualityChoices(player,player.currentMediaItem,player.currentTracks,player.trackSelectionParameters,dismiss)
         }
