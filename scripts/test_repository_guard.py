@@ -15,7 +15,7 @@ class RepositoryGuardTest(unittest.TestCase):
         self.assertTrue(inspect("scripts/example.py", bytes.fromhex("00051607")))
 
     def test_plans_cannot_be_published_even_when_force_staged(self):
-        for name in ("docs/beta-capability-plan.md", "docs/apple-platform-plan.md", "docs/explore-play-proposal.md", "plans/next.md", "ios/docs/design.md", "docs/roadmap.md", "website/DESIGN.md"):
+        for name in ("docs/beta-capability-plan.md", "docs/world-integration.md", "docs/apple-platform-plan.md", "docs/explore-play-proposal.md", "plans/next.md", "ios/docs/design.md", "docs/roadmap.md", "website/DESIGN.md"):
             self.assertTrue(inspect(name, b"local planning"), name)
         self.assertFalse(inspect("docs/worldbook.md", b"World setting"))
 

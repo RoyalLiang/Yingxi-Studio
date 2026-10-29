@@ -7,6 +7,7 @@ import android.provider.DocumentsContract
 import io.localplayer.core.*
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.job
 
 internal data class CatalogRoot(val id:String,val label:String,val source:Source?=null,val tree:Uri?=null)
@@ -23,7 +24,7 @@ internal object CatalogIndex {
     @OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
     suspend fun scan(context:Context,root:CatalogRoot,credentials:Credentials?,progress:(CatalogScan)->Unit={},connector:Connector=AppConnectors()):CatalogScan {
         val coroutine=currentCoroutineContext();val cancellation=Cancellation();val signal=CancellationSignal()
-        val finish=coroutine.job.invokeOnCompletion(onCancelling=true,invokeImmediately=true){cancellation.close();signal.cancel()}
+        val finish=coroutine.job.invokeOnCompletion(onCancelling=true,invokeImmediately=true){kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch{cancellation.close();signal.cancel()}}
         val policy=SealedMedia.version()
         var folders=0;var films=0
         FilmLibraryStore(context).use{store->
@@ -33,7 +34,7 @@ internal object CatalogIndex {
             fun check(){coroutine.ensureActive();cancellation.check();signal.throwIfCanceled();check(SealedMedia.version()==policy){"封存范围已变化，请重新收录"}
                 if(source!=null)SourceBindingEpochs.verifyLease(context,source,binding) else check(LocalBindingEpochs.current(context,requireNotNull(root.tree))==binding){"文件夹授权已变化"}
             }
-            fun record(refs:List<MediaRef>){check();films+=store.observeBatch(refs,epoch);progress(CatalogScan(folders,films))}
+            fun record(refs:List<MediaRef>){check();require(refs.size<=50000-films){"本次收录达到上限，请选择更小的目录"};films+=store.observeBatch(refs,epoch);progress(CatalogScan(folders,films))}
             try {
                 if(source!=null){
                     val pending=ArrayDeque<String>();pending.add(source.initialPath);val seen=HashSet<String>();val fence=SourceRoot(source.initialPath)
@@ -61,7 +62,7 @@ internal object CatalogIndex {
                                 check();val child=rows.getString(0);val uri=DocumentsContract.buildDocumentUriUsingTree(tree,child);val name=rows.getString(1)?:"未命名影片"
                                 if(SealedMedia.protectsLocalUri(uri))continue
                                 if(rows.getString(2)==DocumentsContract.Document.MIME_TYPE_DIR)pending.add(child to (ancestors+parent.toString()))
-                                else if(rows.getString(2).orEmpty().startsWith("video/")||Entry(name,child,false,0).isVideo)refs+=MediaRef(uri.toString(),name,root.label,localUri=uri.toString(),sizeBytes=if(rows.isNull(3))null else rows.getLong(3),localParentUri=parent.toString(),localAncestors=ancestors+parent.toString(),bindingEpoch=binding)
+                                else if(rows.getString(2).orEmpty().startsWith("video/")||Entry(name,child,false,0).isVideo){require(refs.size<50000-films){"本次收录达到上限，请选择更小的目录"};refs+=MediaRef(uri.toString(),name,root.label,localUri=uri.toString(),sizeBytes=if(rows.isNull(3))null else rows.getLong(3),localParentUri=parent.toString(),localAncestors=ancestors+parent.toString(),bindingEpoch=binding)}
                             }
                         }?:throw java.io.IOException("文件夹暂时无法读取")
                         record(refs)

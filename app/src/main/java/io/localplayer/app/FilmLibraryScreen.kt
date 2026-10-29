@@ -39,7 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val shown:List<LibraryWork> = emptyList(),val shelves:List<LibraryShelf> = emptyList(),val moments:Map<String,List<LibraryMoment>> = emptyMap())
+private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val shown:List<LibraryWork> = emptyList(),val shelves:List<LibraryShelf> = emptyList(),val moments:Map<String,List<LibraryMoment>> = emptyMap(),val loadedAt:Int=-1)
 
 // Native Compose; existing mist/berry palette, paper labels and quiet, functional motion.
 @OptIn(ExperimentalLayoutApi::class)
@@ -80,9 +80,9 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
         fun current()=revision==requestedRevision&&shelf==requestedShelf&&query==requestedQuery&&selected==requestedSelected
         loading=true
         runCatching{withContext(Dispatchers.IO){FilmLibraryStore(context,databaseName).use{store->
-            store.registerLegacy(HistoryStore(context).entries(),StationInventory(context).entries())
-            val all=store.works();val moments=all.firstOrNull{it.id==selected}?.films?.associate{it.id to store.moments(it.id)}?:emptyMap()
-            FilmLibraryView(all,store.works(query,shelf),store.shelves(),moments)
+            if(view.loadedAt!=requestedRevision)store.registerLegacy(HistoryStore(context).entries(),StationInventory(context).entries())
+            val all=if(view.loadedAt==requestedRevision)view.all else store.works();val moments=all.firstOrNull{it.id==selected}?.films?.associate{it.id to store.moments(it.id)}?:emptyMap()
+            FilmLibraryView(all,if(query.isBlank()&&shelf==null)all else store.works(query,shelf),if(view.loadedAt==requestedRevision)view.shelves else store.shelves(),moments,requestedRevision)
         }}}.onSuccess{if(current()){view=it;error=null}}.onFailure{if(it is CancellationException)throw it;if(current())error=it.message}
         if(current())loading=false
     }
@@ -139,11 +139,11 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable{selected=item.id}.testTag("film-work:${item.id}")){
                     if(shelf==null){
                         MediaThumbnail(item.films.first().media,Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(10.dp)))
-                        Spacer(Modifier.height(8.dp));Text(item.title,fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(8.dp));Text(io.localplayer.core.mediaDisplayTitle(item.title),fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
                         Text(item.films.map{it.media.sourceLabel}.distinct().joinToString(" · "),fontSize=11.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                     }else Row(Modifier.fillMaxWidth().background(GroupedSurface).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
                         MediaThumbnail(item.films.first().media,Modifier.size(48.dp,68.dp).clip(RoundedCornerShape(6.dp)))
-                        Column(Modifier.weight(1f)){Text(item.title,fontSize=16.sp,maxLines=2,overflow=TextOverflow.Ellipsis);Text(item.films.first().media.sourceLabel,fontSize=12.sp,color=Muted)}
+                        Column(Modifier.weight(1f)){Text(io.localplayer.core.mediaDisplayTitle(item.title),fontSize=16.sp,maxLines=2,overflow=TextOverflow.Ellipsis);Text(item.films.first().media.sourceLabel,fontSize=12.sp,color=Muted)}
                         Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
                     }
                 }

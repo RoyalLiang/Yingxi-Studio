@@ -9,7 +9,7 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.m
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
          "app/build.gradle.kts", "app/proguard-rules.pro", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
-         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/apple-platform-plan.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/playback-format-support.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/world-integration.md", "docs/world-statistics.md", "docs/world-statistics.json", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
+         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/playback-format-support.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/world-statistics.md", "docs/world-statistics.json", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
 
 
 EXACT.add("third_party/mpv-bridge/MPVLib.java")
@@ -17,7 +17,6 @@ EXACT.add("app/src/main/res/raw/world_atlas.json")
 EXACT.add("assets/artwork.json")
 EXACT.add("app/src/androidTest/assets/upgrade-resume.mp4")
 EXACT.add("docs/wasteland-copy-audit-2026-10-22.md")
-EXACT.add("docs/explore-play-proposal.md")
 EXACT.add("docs/decoder-smoothness-validation.md")
 EXACT.add("docs/track-subtitle-preview-validation.md")
 EXACT.add("docs/station-ui-validation.md")
@@ -31,6 +30,7 @@ EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name i
 def allowed(name):
     if re.search(r"(?:^|[/_.-])(?:plans?|proposals?|roadmaps?|specs?|designs?|research)(?:[/_.-]|$)", name, re.I):
         return False
+    if name == "docs/world-integration.md": return False
     p = Path(name)
     if any(part.startswith("._") or part in {".DS_Store", "__MACOSX", ".AppleDouble", "build", ".build", "DerivedData", "xcuserdata", "__pycache__"} for part in p.parts): return False
     if name in EXACT: return True

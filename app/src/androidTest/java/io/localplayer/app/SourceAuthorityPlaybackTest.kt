@@ -20,7 +20,7 @@ class SourceAuthorityPlaybackTest {
         val app=ui.activity.application;val source=Source(label="撤销回归",protocol=Protocol.SFTP,host="fixture.invalid",root="/",initialPath="movies");SourceStore(app).save(source,"",false)
         val h=HistoryStore(app);val ref=h.reference(MediaRef("${source.id}:movies/one.mp4","one.mp4",source.label,source.id,"movies/one.mp4",sizeBytes=100,location=mediaLocation(source),bindingEpoch=0))
         assertTrue(h.update(ref,h.token(ref),42000,130000,false))
-        val sample=File(app.cacheDir,"beta-control.mp4");assertTrue(sample.isFile)
+        val sample=betaPlaybackFixture(app);assertTrue(sample.isFile)
         val target=PlayTarget(Uri.fromFile(sample),ref.title,42000,ref,h.token(ref))
         val controller=main{MediaController.Builder(app,SessionToken(app,ComponentName(app,PlaybackService::class.java))).buildAsync()}.get(10,TimeUnit.SECONDS)
         try{

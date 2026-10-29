@@ -155,7 +155,7 @@ internal class LibraryParcel(private val context:Context,private val databaseNam
                 preferenceKeys.forEach{(scope,keys)->keys.forEach{db.delete("preferences","scope=? AND name=?",arrayOf(scope,it))}}
                 list(root,"preferences",32).forEach{put(db,"preferences",it)}
                 db.execSQL("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE name='history-clear'")
-                db.execSQL("INSERT OR REPLACE INTO metadata(name,value) VALUES('portable-restore','1')")
+                db.execSQL("INSERT OR REPLACE INTO metadata(name,value) VALUES('portable-restore',?)",arrayOf(System.currentTimeMillis().toString()))
                 db.execSQL("INSERT OR REPLACE INTO metadata(name,value) VALUES('catalog-epoch',?)",arrayOf((store.catalogEpoch()+1).toString()))
             }
             (notifications.keys+preferenceKeys.keys).forEach{scope->MigratingPreferences.notifyRestored(context,scope,notifications[scope].orEmpty()+preferenceKeys[scope].orEmpty())}
@@ -178,6 +178,7 @@ internal class LibraryParcel(private val context:Context,private val databaseNam
                 rows(db,"preferences").filter{it.getString("name") !in preferenceKeys[it.getString("scope")].orEmpty()}.forEach{db.delete("preferences","scope=? AND name=?",arrayOf(it.getString("scope"),it.getString("name")))}
                 retainedPreferences.forEach{put(db,"preferences",it)}
                 retained.forEach{(table,records)->db.delete(table,null,null);records.forEach{put(db,table,it)}}
+                db.execSQL("INSERT OR REPLACE INTO metadata(name,value) VALUES('portable-restore',?)",arrayOf(System.currentTimeMillis().toString()))
             }
             preferenceKeys.forEach{(scope,keys)->MigratingPreferences.notifyRestored(context,scope,keys)}
         }}

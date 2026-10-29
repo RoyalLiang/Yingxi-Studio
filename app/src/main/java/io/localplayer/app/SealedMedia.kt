@@ -43,6 +43,7 @@ internal data class SealedItem(
 internal object SealedMedia {
     private val policyLock=Any()
     private var policyVersion=0L
+    internal fun hasProtection():Boolean=synchronized(policyLock){damaged||rows.isNotEmpty()}
     internal fun version():Long=synchronized(policyLock){policyVersion}
     internal fun <T> withVersion(version:Long,action:()->T):T=synchronized(policyLock){
         if(version!=policyVersion)throw java.io.IOException("封存范围已变化，请重试")

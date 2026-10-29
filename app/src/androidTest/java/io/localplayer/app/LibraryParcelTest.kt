@@ -28,7 +28,7 @@ class LibraryParcelTest {
         assertEquals(1,parcel.preview(text).films)
     }}
     @Test fun foreignRestoreKeepsIdentityAndRequiresManualLocation(){test{context,store,parcel->
-        val film=seed(store);val text=parcel.export()
+        val film=seed(store);assertTrue(HistoryStore(context).update(film.media,HistoryStore(context).token(film.media),42000,60000,false));val text=parcel.export()
         val foreign=IsolatedMediaContext(context.baseContext)
         try{
             MediaDataMigration.session(foreign).migrate();val other=LibraryParcel(foreign)
@@ -36,6 +36,16 @@ class LibraryParcelTest {
             FilmLibraryStore(foreign).use{restored->
                 val copy=restored.works().single().films.single();assertEquals(film.id,copy.id);assertNull(copy.media.localUri);assertTrue(restored.isPending(copy.id));assertEquals("下次从这里开始",restored.moments(copy.id).single().note)
                 assertEquals(FilmAccess.UNBOUND,kotlinx.coroutines.runBlocking{LibraryRepair.inspect(foreign,copy.media,null)})
+                val source=io.localplayer.core.Source(label="新片箱",protocol=io.localplayer.core.Protocol.SFTP,host="new-fixture.invalid")
+                SourceStore(foreign).save(source,"",false)
+                val location=MediaRef("${source.id}:moved.mp4","重排后的片名.mp4",source.label,source.id,"moved.mp4",sizeBytes=100,location=mediaLocation(source),bindingEpoch=0)
+                restored.observeBatch(listOf(location),restored.catalogEpoch())
+                restored.rebindFilm(copy.id,location,true)
+                val linked=restored.film(copy.id)!!
+                assertFalse(restored.isPending(copy.id));assertEquals(location.path,linked.media.path)
+                assertEquals(42000L,HistoryStore(foreign).resumePosition(linked.media))
+                assertEquals("下次从这里开始",restored.moments(copy.id).single().note)
+
             }
         }finally{foreign.dispose()}
     }}
@@ -82,6 +92,26 @@ class LibraryParcelTest {
             assertTrue(runCatching{parcel.recover()}.isFailure)
         }finally{SealedMedia.unlock();SealedMedia.unseal(added.media.key);SealedMedia.lock()}
         assertNotNull(store.film(added.id))
+    }}
+
+    @Test fun oldInventoryStaysOutButFreshBrowsingStillEntersAfterRestore(){test{context,store,parcel->
+        val old=seed(store);val text=parcel.export()
+        val empty=JSONObject(text).apply{listOf("works","films","lists","members","moments","positions").forEach{put(it,org.json.JSONArray())}}.toString()
+        parcel.restore(parcel.preview(empty))
+        store.registerLegacy(emptyList(),listOf(StationFinding(old.media,1,lastObserved=1)))
+        assertTrue(store.works().isEmpty())
+        val fresh=old.media.copy(key="fresh-observation",title="新片.mp4",mediaId=null,locatorId=null,contentRevisionId=null)
+        StationInventory(context).observe(listOf(fresh),seen=1)
+        store.registerLegacy(emptyList(),StationInventory(context).entries())
+        assertEquals("新片.mp4",store.works().single().title)
+    }}
+    @Test fun fractionalOverflowingAndNegativeValuesAreRejected(){test{_,store,parcel->
+        seed(store);val text=parcel.export()
+        for(value in listOf(-.5,1.5,Double.MAX_VALUE,-1)){
+            val changed=JSONObject(text);changed.getJSONArray("films").getJSONObject(0).put("size",value)
+            assertTrue(value.toString(),runCatching{parcel.preview(changed.toString())}.isFailure)
+        }
+        val changed=JSONObject(text).put("version",1.5);assertTrue(runCatching{parcel.preview(changed.toString())}.isFailure)
     }}
 
 }

@@ -34,7 +34,7 @@ class FilmLibraryUiTest {
         val (models,id)=screen()
         try{
             capture("library")
-            ui.onNodeWithText("新建片架").performClick();ui.onNodeWithTag("film-library-label").performTextInput("雨天");ui.onNodeWithText("保存").performClick()
+            ui.onNodeWithText("新建放映单").performClick();ui.onNodeWithTag("film-library-label").performTextInput("雨天");ui.onNodeWithText("保存").performClick()
             ui.waitUntil(5000){ui.onAllNodesWithText("雨天").fetchSemanticsNodes().isNotEmpty()}
             ui.onNodeWithTag("film-work:$id").performClick()
             ui.onNodeWithText("更正显示片名").performClick();ui.onNodeWithTag("film-library-label").performTextReplacement("桥边的风");ui.onNodeWithText("保存").performClick()
@@ -57,7 +57,7 @@ class FilmLibraryUiTest {
         val oldLine=prefs.getString("diary-line",null);val oldAt=prefs.getLong("diary-at",0)
         val models=ViewModelStore()
         try{
-            val line=StationWorld.load(context).dailyLines.first{it.id=="diary_027"}
+            val line=StationWorld.load(context).dailyLines.first{it.id=="diary_inner_bag_slips_20261029"}
             prefs.edit().putString("diary-line",line.id).putLong("diary-at",System.currentTimeMillis()).commit()
             ui.runOnUiThread{
                 val vm=LibraryViewModel(ui.activity.application as Application);models.put("diary",vm)
@@ -69,7 +69,7 @@ class FilmLibraryUiTest {
     }
     @Test fun englishScreenShowsRealFunctionNames(){
         val(models,id)=screen(true)
-        try{ui.onNodeWithText("Your film shelves").assertIsDisplayed();capture("english");ui.onNodeWithTag("film-work:$id").performClick();ui.onNodeWithText("Film dossier").assertIsDisplayed();ui.onNodeWithText("Versions and sources").assertIsDisplayed();capture("english-dossier")}
+        try{ui.onNodeWithText("Film catalog").assertIsDisplayed();capture("english");ui.onNodeWithTag("film-work:$id").performClick();ui.onNodeWithText("Film dossier").assertIsDisplayed();ui.onNodeWithText("Versions and sources").assertIsDisplayed();capture("english-dossier")}
         finally{ui.runOnUiThread{models.clear()};ui.activity.deleteDatabase(databaseName)}
     }
     @Test fun oldSlipConfirmationAppearsFromHomeAndCanBeDismissed(){
@@ -84,6 +84,24 @@ class FilmLibraryUiTest {
             ui.onNodeWithText("核对旧片签").assertIsDisplayed();ui.onNodeWithText("确认同一版本").assertIsDisplayed();capture("old-slip-confirmation")
             ui.onNodeWithText("暂不关联").performClick();ui.onNodeWithText("核对旧片签").assertDoesNotExist();assertNull(vm.legacyReplay)
         }finally{ui.runOnUiThread{models.clear()}}
+    }
+
+    @Test fun backupShowsExportPreviewBeforeOpeningExternalStorage(){
+        val (models,_)=screen()
+        try{
+            ui.onNodeWithTag("catalog-backup").performClick()
+            ui.onNodeWithText("行囊备份").assertIsDisplayed()
+            capture("backup")
+            ui.onNodeWithTag("parcel-export").performClick()
+            ui.waitUntil(5000){ui.onAllNodesWithTag("parcel-export-confirm").fetchSemanticsNodes().isNotEmpty()}
+            ui.onNodeWithText("核对随行片签").assertIsDisplayed();ui.onNodeWithTag("parcel-export-confirm").assertIsDisplayed()
+            capture("export-preview");ui.onNodeWithText("取消").performClick()
+        }finally{ui.runOnUiThread{models.clear()};ui.activity.deleteDatabase(databaseName)}
+    }
+    @Test fun repairBenchIsReachableWithoutStartingPlayback(){
+        val (models,_)=screen()
+        try{ui.onNodeWithTag("catalog-repair").performClick();ui.onNodeWithText("检修台").assertIsDisplayed();ui.onAllNodesWithText("尚未核对").onFirst().assertIsDisplayed();ui.onNodeWithTag("repair-inspect").assertIsDisplayed();capture("repair")}
+        finally{ui.runOnUiThread{models.clear()};ui.activity.deleteDatabase(databaseName)}
     }
 
 }

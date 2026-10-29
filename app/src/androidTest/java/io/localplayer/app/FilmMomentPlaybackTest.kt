@@ -28,7 +28,7 @@ class FilmMomentPlaybackTest {
         val expected=if(orientation==android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)android.content.res.Configuration.ORIENTATION_PORTRAIT else android.content.res.Configuration.ORIENTATION_LANDSCAPE
         ui.waitUntil(5000){ui.activity.resources.configuration.orientation==expected}
         val context=ui.activity.applicationContext
-        val sample=File(context.cacheDir,"beta-control.mp4");assertTrue("local fixture must be staged",sample.isFile)
+        val sample=betaPlaybackFixture(context);assertTrue("local fixture must be staged",sample.isFile)
         val ref=MediaRef("beta-playback-${System.nanoTime()}","灯下的刻度.mp4","本机片箱",localUri=Uri.fromFile(sample).toString(),sizeBytes=sample.length())
         val controller=main{MediaController.Builder(context,SessionToken(context,ComponentName(context,PlaybackService::class.java))).buildAsync()}.get(10,TimeUnit.SECONDS)
         try{

@@ -3,6 +3,7 @@ package io.localplayer.app
 import androidx.test.platform.app.InstrumentationRegistry
 import io.localplayer.core.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -46,4 +47,37 @@ class CatalogIndexTest {
             assertTrue(FilmLibraryStore(context).use{it.works().isEmpty()})
         }finally{context.dispose()}
     }
+    @Test fun oversizedSingleDirectoryDoesNotWriteBeyondTheLimit():Unit=runBlocking {
+        val context=IsolatedMediaContext(InstrumentationRegistry.getInstrumentation().targetContext)
+        val source=Source(label="大目录",protocol=Protocol.SMB,host="fixture.invalid",root="share")
+        val connector=object:Connector{override fun connect(source:Source,credentials:Credentials,cancellation:Cancellation)=object:RemoteSession{
+            override fun list(path:String)=(0..50000).map{Entry("$it.mp4","$it.mp4",false,100)}
+            override fun open(path:String):RemoteFile=error("Not needed")
+            override fun close(){}
+        }}
+        try{SourceStore(context).save(source,"",false);MediaDataMigration.session(context).migrate()
+            assertTrue(runCatching{CatalogIndex.scan(context,CatalogRoot(source.id,source.label,source),Credentials(""),connector=connector)}.isFailure)
+            assertTrue(FilmLibraryStore(context).use{it.works().isEmpty()})
+        }finally{context.dispose()}
+    }
+    @Test fun mainThreadCancelDoesNotWaitForTransportClose():Unit=runBlocking {
+        val context=IsolatedMediaContext(InstrumentationRegistry.getInstrumentation().targetContext)
+        val source=Source(label="慢连接",protocol=Protocol.SFTP,host="fixture.invalid")
+        val entered=java.util.concurrent.CountDownLatch(1);val release=java.util.concurrent.CountDownLatch(1)
+        val connector=object:Connector{override fun connect(source:Source,credentials:Credentials,cancellation:Cancellation):RemoteSession{
+            cancellation.own(java.io.Closeable{release.await(5,java.util.concurrent.TimeUnit.SECONDS)})
+            return object:RemoteSession{
+                override fun list(path:String):List<Entry>{entered.countDown();release.await(5,java.util.concurrent.TimeUnit.SECONDS);return emptyList()}
+                override fun open(path:String):RemoteFile=error("Not needed")
+                override fun close(){}
+            }
+        }}
+        try{SourceStore(context).save(source,"",false);MediaDataMigration.session(context).migrate()
+            val job=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch{CatalogIndex.scan(context,CatalogRoot(source.id,source.label,source),Credentials(""),connector=connector)}
+            assertTrue(entered.await(2,java.util.concurrent.TimeUnit.SECONDS))
+            var elapsed=0L;InstrumentationRegistry.getInstrumentation().runOnMainSync{val start=System.nanoTime();job.cancel();elapsed=(System.nanoTime()-start)/1_000_000}
+            assertTrue("cancel blocked for $elapsed ms",elapsed<250);release.countDown();job.join()
+        }finally{release.countDown();context.dispose()}
+    }
+
 }

@@ -73,7 +73,7 @@ internal class StationPreferences(context:Context,name:String="station-experienc
     fun seekClick(context:Context){if(gearSound)context.getSystemService(AudioManager::class.java)?.playSoundEffect(AudioManager.FX_KEY_CLICK,.18f)}
 }
 
-internal data class StationFinding(val media:MediaRef,val firstSeen:Long,val lastObserved:Long=0)
+internal data class StationFinding(val media:MediaRef,val firstSeen:Long,val lastObserved:Long=0,val observedEpoch:Long=0)
 internal fun stationPath(media:MediaRef):String = media.path ?: media.localUri?.let { value->
     runCatching { DocumentsContract.getDocumentId(Uri.parse(value)) }.getOrNull()
 } ?: media.title
@@ -81,22 +81,23 @@ internal fun archiveIdentity(media:MediaRef)=ArchiveIdentity.parse(media.title,s
 
 /** A bounded local catalog of files actually observed through user-granted sources. No credentials. */
 internal class StationInventory(context:Context,name:String="station-inventory-v1") {
+    private val app=context.applicationContext
     private val p=MigratingPreferences.open(context,name)
     companion object { val revision=mutableIntStateOf(0);private val lock=Any() }
     fun entries():List<StationFinding> = synchronized(lock) {
         runCatching { val raw=p.getString("items","[]") ?: "[]";if(raw.length>2_097_152)return@runCatching emptyList()
-            val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"),it.optLong("observed",0))} }
+            val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"),it.optLong("observed",0),it.optLong("observedEpoch",0))} }
         }.getOrDefault(emptyList())
     }
     fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis(),actualObservation:Boolean=true):Int =
-        observeFindings(media.take(512).map{StationFinding(it,seen,if(actualObservation)seen else 0)},actualObservation)
+        observeFindings(media.take(512).map{StationFinding(it,seen,if(actualObservation)seen else 0,if(actualObservation)MediaDataMigration.session(app).catalogEpoch()else 0)},actualObservation)
     fun restore(history:List<HistoryEntry>):Int =
         observeFindings(history.asReversed().take(512).map{StationFinding(it.media,it.updatedAt,0)},false)
     private fun observeFindings(findings:List<StationFinding>,actualObservation:Boolean):Int = synchronized(lock) {
         val old=entries();val byKey=old.associateBy{it.media.key}.toMutableMap();var added=0
         findings.forEach { finding->val ref=finding.media;val seen=finding.firstSeen;val previous=byKey[ref.key]
             if(previous==null||(previous.media.location!=null&&previous.media.location!=ref.location)||(previous.media.sizeBytes!=null&&ref.sizeBytes!=null&&previous.media.sizeBytes!=ref.sizeBytes)){byKey[ref.key]=finding;added++}
-            else if(actualObservation)byKey[ref.key]=previous.copy(media=ref,lastObserved=maxOf(previous.lastObserved,seen))
+            else if(actualObservation)byKey[ref.key]=previous.copy(media=ref,lastObserved=maxOf(previous.lastObserved,seen),observedEpoch=finding.observedEpoch)
             else if(previous.lastObserved==0L&&previous.media!=ref)byKey[ref.key]=previous.copy(media=ref)
 
         }
@@ -109,7 +110,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     fun removeTree(tree:Uri)=synchronized(lock){save(entries().filterNot { f->f.media.localUri?.let{u->runCatching{
         val uri=Uri.parse(u);uri.authority==tree.authority&&DocumentsContract.getTreeDocumentId(uri)==DocumentsContract.getTreeDocumentId(tree)
     }.getOrDefault(false)}==true })}
-    private fun save(items:List<StationFinding>){val a=JSONArray();items.forEach{a.put(JSONObject().put("media",it.media.json()).put("seen",it.firstSeen).put("observed",it.lastObserved))};p.edit().putString("items",a.toString()).apply();revision.intValue++}
+    private fun save(items:List<StationFinding>){val a=JSONArray();items.forEach{a.put(JSONObject().put("media",it.media.json()).put("seen",it.firstSeen).put("observed",it.lastObserved).put("observedEpoch",it.observedEpoch))};p.edit().putString("items",a.toString()).apply();revision.intValue++}
     fun today():List<StationFinding> { val start=LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();return entries().filter{it.firstSeen>=start} }
 }
 

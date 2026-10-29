@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +31,7 @@ import kotlinx.coroutines.*
     val context=LocalContext.current.applicationContext
     val zh=LocalConfiguration.current.locales[0].language=="zh"
     fun words(cn:String,en:String)=if(zh)cn else en
+    val dialogHeight=(LocalConfiguration.current.screenHeightDp*.55f).dp
     val scope=rememberCoroutineScope();val parcel=remember(context,databaseName){LibraryParcel(context,databaseName)}
     var message by remember{mutableStateOf<String?>(null)}
     var busy by remember{mutableStateOf(false)}
@@ -39,6 +42,7 @@ import kotlinx.coroutines.*
     var scan by remember{mutableStateOf(CatalogScan(0,0))}
     var preview by remember{mutableStateOf<ParcelPreview?>(null)}
     var exportText by remember{mutableStateOf<String?>(null)}
+    var exportPreview by remember{mutableStateOf<ParcelPreview?>(null)}
     var recoverConfirm by remember{mutableStateOf(false)}
     var recovery by remember{mutableStateOf(parcel.hasRecovery())}
     fun work(action:suspend ()->Unit){
@@ -50,7 +54,7 @@ import kotlinx.coroutines.*
         roots=CatalogIndex.roots(context)
         films=FilmLibraryStore(context,databaseName).use{it.works().flatMap{w->w.films}}
     }}
-    DisposableEffect(Unit){val remove=SealedMedia.observe{worker?.cancel();films=emptyList();findings=emptyMap();preview=null;exportText=null};onDispose{worker?.cancel();remove()}}
+    DisposableEffect(Unit){val remove=SealedMedia.observe{worker?.cancel();films=emptyList();findings=emptyMap();preview=null;exportPreview=null;exportText=null};onDispose{worker?.cancel();remove()}}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP){if(tool!="backup")worker?.cancel()}
     BackHandler{worker?.cancel();back()}
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->
@@ -100,8 +104,7 @@ import kotlinx.coroutines.*
                 "backup"->{
                     item{Text(words("把片签带在身边","Carry your film records"),fontSize=23.sp,fontWeight=FontWeight.Medium)}
                     item{Button(enabled=!busy,onClick={work{
-                        exportText=withContext(Dispatchers.IO){parcel.export()}
-                        export.launch("yingxi-library.json")
+                        exportPreview=withContext(Dispatchers.IO){parcel.preview(parcel.export())}
                     }},modifier=Modifier.fillMaxWidth().testTag("parcel-export")){Text(words("打包行囊","Export backup"))}}
                     item{OutlinedButton(enabled=!busy,onClick={import.launch(arrayOf("application/json","text/plain","application/octet-stream"))},modifier=Modifier.fillMaxWidth().testTag("parcel-import")){Text(words("打开行囊","Open backup"))}}
                     item{Text(words("只带走普通影片的档案、放映单、札记、进度与播放偏好。封存内容、文件位置、密码与访问授权留在本机。","Includes ordinary film records, lists, notes, progress and playback preferences. Sealed content, locations, passwords and access grants stay on this device."),fontSize=14.sp,lineHeight=22.sp,color=Muted)}
@@ -137,7 +140,12 @@ import kotlinx.coroutines.*
             }
         }
     }
-    preview?.let{p->AlertDialog(onDismissRequest={if(!busy)preview=null},title={Text(words("核对这只行囊","Preview backup"))},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+    exportPreview?.let{p->AlertDialog(onDismissRequest={exportPreview=null},title={Text(words("核对随行片签","Preview export"))},text={Column(Modifier.heightIn(max=dialogHeight).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Row(Modifier.fillMaxWidth()){ParcelCount(words("影片","Films"),p.films,Modifier.weight(1f));ParcelCount(words("放映单","Lists"),p.lists,Modifier.weight(1f))}
+        Row(Modifier.fillMaxWidth()){ParcelCount(words("札记","Notes"),p.moments,Modifier.weight(1f));ParcelCount(words("进度","Positions"),p.positions,Modifier.weight(1f))}
+        Text(words("行囊是可阅读的明文文件，请存放在可信位置。封存影片及其共用档案、关联放映单不导出；文件位置、密码与授权也不随行。","This is a readable, unencrypted file. Save it somewhere trusted. Sealed films and their shared dossiers and lists are excluded, along with locations, passwords and grants."),fontSize=14.sp,lineHeight=21.sp)
+    }},confirmButton={TextButton(onClick={exportText=p.text;exportPreview=null;export.launch("yingxi-library.json")},modifier=Modifier.testTag("parcel-export-confirm")){Text(words("选择存放位置","Choose where to save"))}},dismissButton={TextButton(onClick={exportPreview=null}){Text(words("取消","Cancel"))}})}
+    preview?.let{p->AlertDialog(onDismissRequest={if(!busy)preview=null},title={Text(words("核对这只行囊","Preview backup"))},text={Column(Modifier.heightIn(max=dialogHeight).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth()){ParcelCount(words("影片","Films"),p.films,Modifier.weight(1f));ParcelCount(words("放映单","Lists"),p.lists,Modifier.weight(1f))}
         Row(Modifier.fillMaxWidth()){ParcelCount(words("札记","Notes"),p.moments,Modifier.weight(1f));ParcelCount(words("进度","Positions"),p.positions,Modifier.weight(1f))}
         Text(words("将替换本机 ${p.replacing} 份普通影片记录与播放偏好。封存关联资料保留；无法确认的文件位置需手动接回。恢复前会创建本机恢复点，请先结束当前放映。","Replaces ${p.replacing} ordinary film records and playback preferences. Sealed records are retained; unresolved locations require manual relinking. A local recovery point is saved first. End the current screening before restoring."),fontSize=14.sp,lineHeight=21.sp)

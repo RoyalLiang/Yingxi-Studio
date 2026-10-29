@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import io.localplayer.core.*
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 
 internal enum class FilmAccess { READY, UNBOUND, SOURCE_REMOVED, AUTHORITY_CHANGED, PERMISSION, MISSING, VERSION_CHANGED, TRUST_REQUIRED, UNKNOWN }
 
@@ -16,7 +17,7 @@ internal object LibraryRepair {
         if(!SourceBindingEpochs.acceptsWrite(context,ref,false))return if(ref.localUri!=null)FilmAccess.PERMISSION else FilmAccess.AUTHORITY_CHANGED
         val coroutine=kotlinx.coroutines.currentCoroutineContext()
         val cancellation=Cancellation();val signal=android.os.CancellationSignal()
-        val watcher=coroutine[kotlinx.coroutines.Job]!!.invokeOnCompletion(onCancelling=true,invokeImmediately=true){cancellation.close();signal.cancel()}
+        val watcher=coroutine[kotlinx.coroutines.Job]!!.invokeOnCompletion(onCancelling=true,invokeImmediately=true){kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch{cancellation.close();signal.cancel()}}
         return try {
             MediaDataMigration.session(context).checkLocator(ref)
             val size=if(ref.localUri!=null){

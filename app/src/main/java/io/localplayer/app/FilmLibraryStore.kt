@@ -24,35 +24,43 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
     private var closed=false
     private data class VisibilityKey(val key:String,val source:String?,val path:String?,val uri:String?,val location:String?,val parent:String?,val ancestors:List<String>)
     private fun visibilityKey(ref:MediaRef)=VisibilityKey(ref.key,ref.sourceId,ref.path,ref.localUri,ref.location,ref.localParentUri,ref.localAncestors)
-    private val allowed=ThreadLocal<Set<VisibilityKey>>()
-    private fun visible(ref:MediaRef)=visibilityKey(ref) in checkNotNull(allowed.get())
+    private data class VisibilityScope(val keys:Set<VisibilityKey>,val denied:Set<String>,val unrestricted:Boolean=false)
+    private val allowed=ThreadLocal<VisibilityScope>()
+    private fun visible(ref:MediaRef)=checkNotNull(allowed.get()).let{it.unrestricted||visibilityKey(ref) in it.keys}
     private fun snapshot(db:SQLiteDatabase):List<String> = buildList {
         db.rawQuery("SELECT id,media FROM films ORDER BY id",null).use{c->while(c.moveToNext()){add("film:"+c.getString(0));add(c.getString(1))}}
-        db.rawQuery("SELECT id,current,media FROM locators ORDER BY id",null).use{c->while(c.moveToNext()){add("locator:"+c.getString(0)+":"+c.getInt(1));add(c.getString(2))}}
+        db.rawQuery("SELECT id,current,media,film_id FROM locators ORDER BY id",null).use{c->while(c.moveToNext()){add("locator:"+c.getString(3)+":"+c.getString(0)+":"+c.getInt(1));add(c.getString(2))}}
     }
     /** Provider IPC uses detached values; only SQL and a policy fence run inside the shared gate. */
     private class CatalogChanged:java.io.IOException()
     private fun <T> access(extra:List<MediaRef> = emptyList(),action:()->T):T {
         if(allowed.get()!=null)return action()
+        val policy=SealedMedia.version()
+        if(!SealedMedia.hasProtection())return synchronized(lock){
+            check(!closed)
+            SealedMedia.withVersion(policy){
+                allowed.set(VisibilityScope(emptySet(),emptySet(),unrestricted=true))
+                try{action()}finally{allowed.remove()}
+            }
+        }
         repeat(3){
             val (before,policy)=synchronized(lock){check(!closed);snapshot(helper.readableDatabase) to SealedMedia.version()}
-            val refs=before.filterIndexed{index,_->index%2==1}.map(MediaRef::parse)+extra
+            val parsed=before.filterIndexed{index,_->index%2==1}.distinct().associateWith(MediaRef::parse)
+            val refs=parsed.values+extra
             val visible=refs.distinctBy(::visibilityKey).filter{ref->SealedMedia.visible(ref)&&(ref.localUri?.let{!SealedMedia.protectsLocalUri(android.net.Uri.parse(it))}?:true)}.map(::visibilityKey).toSet()
             try{return synchronized(lock){
                 check(!closed)
                 if(snapshot(helper.readableDatabase)!=before)throw CatalogChanged()
                 SealedMedia.withVersion(policy){
-                    allowed.set(visible)
+                    val denied=before.chunked(2).filter{visibilityKey(parsed.getValue(it[1])) !in visible}.map{it[0].split(':')[1]}.toSet()
+                    allowed.set(VisibilityScope(visible,denied))
                     try{action()}finally{allowed.remove()}
                 }
             }}catch(_:CatalogChanged){/* Discard the detached result before taking a fresh snapshot. */}
         }
         throw java.io.IOException("片匣记录已变化，请重试")
     }
-    private fun visibleFilm(db:SQLiteDatabase,id:String,ref:MediaRef):Boolean {
-        if(!visible(ref))return false
-        return db.rawQuery("SELECT media FROM locators WHERE film_id=?",arrayOf(id)).use{c->var allowed=true;while(c.moveToNext())if(!visible(MediaRef.parse(c.getString(0))))allowed=false;allowed}
-    }
+    private fun visibleFilm(id:String,ref:MediaRef):Boolean=visible(ref)&&id !in checkNotNull(allowed.get()).denied
     private fun <T> transaction(extra:List<MediaRef> = emptyList(),action:(SQLiteDatabase)->T):T=access(extra){
         val db=helper.writableDatabase;db.beginTransaction()
         try{action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
@@ -65,29 +73,40 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         if(!visible(ref))return null
         if(!historical&&!CatalogIdentity.isCurrent(db,ref))return null
         val identified=CatalogIdentity.register(db,ref,seen,historical,observedAt)
-        return identified.mediaId?.takeIf{visibleFilm(db,it,identified)}
+        return identified.mediaId?.takeIf{visibleFilm(it,identified)}
     }
     /** One transaction imports catalog observations only. Never clears or rewrites the legacy stores. */
     fun registerLegacy(history:List<HistoryEntry>,findings:List<StationFinding>):Int=transaction(history.map{it.media}+findings.map{it.media}){db->
-        if(db.rawQuery("SELECT 1 FROM metadata WHERE name='portable-restore'",null).use{it.moveToFirst()})return@transaction 0
+        val restoredAt=db.rawQuery("SELECT value FROM metadata WHERE name='portable-restore'",null).use{if(it.moveToFirst())it.getString(0).toLongOrNull()?.takeIf{v->v>1_000_000_000_000L}?:Long.MAX_VALUE else 0L}
         val before=count(db,"films")
-        findings.forEach{observe(db,it.media,it.firstSeen,historical=true,observedAt=it.lastObserved)}
-        history.forEach{observe(db,it.media,it.updatedAt,historical=true)}
+        findings.filter{restoredAt==0L||it.observedEpoch>=catalogEpoch()}.forEach{observe(db,it.media,it.firstSeen,historical=true,observedAt=it.lastObserved)}
+        history.filter{restoredAt==0L}.forEach{observe(db,it.media,it.updatedAt,historical=true)}
         db.insertWithOnConflict("metadata",null,ContentValues().apply{put("name","legacy-catalog-v1");put("value","committed")},SQLiteDatabase.CONFLICT_REPLACE)
         count(db,"films")-before
     }
     private fun count(db:SQLiteDatabase,table:String)=db.rawQuery("SELECT COUNT(*) FROM $table",null).use{it.moveToFirst();it.getInt(0)}
     private fun readFilm(db:SQLiteDatabase,filmId:String):LibraryFilm?=db.rawQuery("SELECT id,work_id,media,first_seen FROM films WHERE id=?",arrayOf(filmId)).use{c->
-        if(!c.moveToFirst())null else LibraryFilm(c.getString(0),c.getString(1),CatalogIdentity.current(db,c.getString(0),c.getString(2)),c.getLong(3)).takeIf{visibleFilm(db,it.id,it.media)}
+        if(!c.moveToFirst())null else LibraryFilm(c.getString(0),c.getString(1),CatalogIdentity.current(db,c.getString(0),c.getString(2)),c.getLong(3)).takeIf{visibleFilm(it.id,it.media)}
     }
     fun film(filmId:String):LibraryFilm?=access{readFilm(helper.readableDatabase,filmId)}
     fun works(query:String="",shelfId:String?=null):List<LibraryWork> = access{
         val db=helper.readableDatabase
-        val sql=if(shelfId==null)"SELECT f.id,f.work_id,f.media,f.first_seen,w.title FROM films f JOIN works w ON w.id=f.work_id ORDER BY f.last_seen DESC,f.id" else
-            "SELECT f.id,f.work_id,f.media,f.first_seen,w.title FROM shelf_films s JOIN films f ON f.id=s.film_id JOIN works w ON w.id=f.work_id WHERE s.shelf_id=? ORDER BY s.position,f.id"
+        val arguments=mutableListOf<String>()
+        val base=if(shelfId==null)"FROM films f JOIN works w ON w.id=f.work_id" else "FROM shelf_films s JOIN films f ON f.id=s.film_id JOIN works w ON w.id=f.work_id"
+        val conditions=mutableListOf<String>()
+        if(shelfId!=null){conditions+="s.shelf_id=?";arguments+=shelfId}
+        // SQLite's case folding covers ASCII; keep Kotlin matching for other cased alphabets.
+        if(query.isNotBlank()&&query.none{it.code>127&&it.lowercaseChar()!=it.uppercaseChar()}){
+            conditions+="f.work_id IN (SELECT f2.work_id FROM films f2 JOIN works w2 ON w2.id=f2.work_id WHERE instr(lower(w2.title),lower(?))>0 OR instr(lower(f2.media),lower(?))>0)"
+            arguments+=query;arguments+=org.json.JSONObject.quote(query).let{it.substring(1,it.length-1)}
+        }
+        val where=if(conditions.isEmpty())""else " WHERE "+conditions.joinToString(" AND ")
+        val order=if(shelfId==null)"f.last_seen DESC,f.id"else "s.position,f.id"
+        val sql="SELECT f.id,f.work_id,f.media,f.first_seen,w.title,l.media,l.id,f.revision_id $base LEFT JOIN locators l ON l.film_id=f.id AND l.current=1$where ORDER BY $order"
         val rows=mutableListOf<Pair<String,LibraryFilm>>()
-        db.rawQuery(sql,shelfId?.let{arrayOf(it)}).use{c->while(c.moveToNext()){
-            val ref=CatalogIdentity.current(db,c.getString(0),c.getString(2));if(visibleFilm(db,c.getString(0),ref))rows+=c.getString(4) to LibraryFilm(c.getString(0),c.getString(1),ref,c.getLong(3))
+        db.rawQuery(sql,arguments.toTypedArray()).use{c->while(c.moveToNext()){
+            val ref=if(c.isNull(5))MediaRef.parse(c.getString(2)).copy(mediaId=c.getString(0))else MediaRef.parse(c.getString(5)).copy(mediaId=c.getString(0),locatorId=c.getString(6),contentRevisionId=c.getString(7))
+            if(visibleFilm(c.getString(0),ref))rows+=c.getString(4) to LibraryFilm(c.getString(0),c.getString(1),ref,c.getLong(3))
         }}
         val result=if(shelfId!=null)rows.map{(title,film)->LibraryWork(film.workId,title,listOf(film))}
             else rows.groupBy{it.second.workId}.map{(workId,items)->LibraryWork(workId,items.first().first,items.map{it.second})}
@@ -183,6 +202,8 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
     fun observeBatch(refs:List<MediaRef>,epoch:Long):Int=transaction(refs){db->
         check(catalogEpoch()==epoch){"片匣已更新，请重新收录"}
         refs.forEach{require(SourceBindingEpochs.acceptsWrite(app,it,false)){"信源授权已变化，请重新选择"}}
+        val additions=refs.distinctBy{Triple(it.key,CatalogIdentity.binding(it),CatalogIdentity.version(it))}.count{CatalogIdentity.find(db,it)==null}
+        require(count(db,"films")+additions<=50000){"片匣已达初版收录上限，请先整理资料"}
         refs.count{observe(db,it,System.currentTimeMillis())!=null}
     }
     fun isPending(filmId:String):Boolean=access{helper.readableDatabase.rawQuery("SELECT 1 FROM metadata WHERE name=?",arrayOf("restore-pending:$filmId")).use{it.moveToFirst()}}
