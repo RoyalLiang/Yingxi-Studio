@@ -50,6 +50,11 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             default: throw new FileNotFoundException(id);
         }
     }
+    private long clipSize() throws FileNotFoundException {
+        try(java.io.InputStream input=getContext().getAssets().open("upgrade-resume.mp4")){
+            long size=0;byte[] buffer=new byte[8192];int count;while((count=input.read(buffer))>0)size+=count;return size;
+        }catch(java.io.IOException error){throw new FileNotFoundException(error.toString());}
+    }
     private void row(MatrixCursor cursor, String id) throws FileNotFoundException {
         String name = title(id);
         Object[] values = new Object[cursor.getColumnCount()];
@@ -59,7 +64,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
                 case Document.COLUMN_DOCUMENT_ID: values[i] = id; break;
                 case Document.COLUMN_DISPLAY_NAME: values[i] = name; break;
                 case Document.COLUMN_MIME_TYPE: values[i] = id.equals("subtitle42") ? "application/x-subrip" : id.equals("clip") || id.equals("video42") || id.startsWith("episode") ? "video/mp4" : Document.MIME_TYPE_DIR; break;
-                case Document.COLUMN_SIZE: values[i] = id.equals("clip") ? 1024L : 0L; break;
+                case Document.COLUMN_SIZE: values[i] = id.equals("clip") ? clipSize() : 0L; break;
                 case Document.COLUMN_FLAGS: values[i] = 0; break;
             }
         }

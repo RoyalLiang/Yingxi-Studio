@@ -289,6 +289,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
         load(s,c,Paths.clean(newPath),false,false,playMovie)
     }
     private fun load(s:Source,c:Credentials,newPath:String,remember:Boolean,save:Boolean,playMovie:Boolean=false){
+        val operationEpoch=MediaDataMigration.session(getApplication()).catalogEpoch()
         val registering=save&&sources.none{it.id==s.id}
         if(pendingReplay?.entry?.media?.sourceId==s.id){prepareReplay(s,c,remember,save);return}
         val folderName=if(newPath.isEmpty())"信源根目录"else
@@ -306,7 +307,7 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
                 if(id!=generation)return@launch
                 source=s;openingSource=null;credentials=c;path=newPath;currentFolderName=folderName;directoryEntries=result;draft=null;access=null;sources=store.load()
                 StationInventory(getApplication()).reconcileSource(s)
-                StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),bindingEpoch=SourceBindingEpochs.current(getApplication(),s),posterPathHint=posterHint(s,e)) })
+                StationInventory(getApplication()).observe(result.filter{!it.directory&&it.isVideo}.map { e->MediaRef("${s.id}:${e.path}",e.name,s.label,s.id,e.path,sizeBytes=e.size,location=mediaLocation(s),bindingEpoch=SourceBindingEpochs.current(getApplication(),s),posterPathHint=posterHint(s,e)) },operationEpoch=operationEpoch)
                 if(registering)notifyRegistration() else if(save)notifySuccess("信源已保存")
                 if(playMovie)io.localplayer.core.singleMovieEntry(folderName,entries)?.let{play(it)}
             }catch(e:CancellationException){throw e}

@@ -89,8 +89,13 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
             val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"),it.optLong("observed",0),it.optLong("observedEpoch",0))} }
         }.getOrDefault(emptyList())
     }
-    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis(),actualObservation:Boolean=true):Int =
-        observeFindings(media.take(512).map{StationFinding(it,seen,if(actualObservation)seen else 0,if(actualObservation)MediaDataMigration.session(app).catalogEpoch()else 0)},actualObservation)
+    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis(),actualObservation:Boolean=true,operationEpoch:Long=MediaDataMigration.session(app).catalogEpoch()):Int=synchronized(lock){
+        val session=MediaDataMigration.session(app)
+        synchronized(session.gate){
+            if(actualObservation&&session.catalogEpoch()!=operationEpoch)0
+            else observeFindings(media.take(512).map{StationFinding(it,seen,if(actualObservation)seen else 0,if(actualObservation)operationEpoch else 0)},actualObservation)
+        }
+    }
     fun restore(history:List<HistoryEntry>):Int =
         observeFindings(history.asReversed().take(512).map{StationFinding(it.media,it.updatedAt,0)},false)
     private fun observeFindings(findings:List<StationFinding>,actualObservation:Boolean):Int = synchronized(lock) {

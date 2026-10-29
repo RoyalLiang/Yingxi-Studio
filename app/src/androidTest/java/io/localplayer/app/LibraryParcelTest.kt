@@ -114,4 +114,12 @@ class LibraryParcelTest {
         val changed=JSONObject(text).put("version",1.5);assertTrue(runCatching{parcel.preview(changed.toString())}.isFailure)
     }}
 
+    @Test fun callbackCapturedBeforeRestoreCannotBecomeAFreshObservation(){test{context,store,parcel->
+        val old=seed(store);val before=MediaDataMigration.session(context).catalogEpoch()
+        parcel.restore(parcel.preview(parcel.export()))
+        assertEquals(0,StationInventory(context).observe(listOf(old.media.copy(key="late-old-result")),operationEpoch=before))
+        assertFalse(StationInventory(context).entries().any{it.media.key=="late-old-result"})
+        assertEquals(1,StationInventory(context).observe(listOf(old.media.copy(key="fresh-result"))))
+    }}
+
 }

@@ -103,6 +103,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     fun refresh(){val folder=active;if(folder==null)refreshFolders()else load(folder,trail)}
     fun cancel(){generation++;signal?.cancel();signal=null;job?.cancel();job=null;busy=false}
     private fun load(folder:LocalFolder,target:List<LocalDirectory>,onMovie:((LocalEntry,List<LocalEntry>)->Unit)?=null){
+        val operationEpoch=MediaDataMigration.session(getApplication()).catalogEpoch()
         cancel();val id=++generation;val cancellation=CancellationSignal();signal=cancellation;busy=true;error=null
         job=viewModelScope.launch{
             try{
@@ -124,7 +125,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                     rows.sortedWith(Comparator { a,b -> b.directory.compareTo(a.directory).takeIf { it != 0 } ?: io.localplayer.core.MediaOrdering.compare(a.name,null,a.uri.toString(),b.name,null,b.uri.toString()) })
                 }
                 if(id==generation&&folder in folders){active=folder;trail=target;directoryEntries=result
-                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris,bindingEpoch=e.bindingEpoch)})
+                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris,bindingEpoch=e.bindingEpoch)},operationEpoch=operationEpoch)
                 }
                 if(id==generation&&folder in folders&&onMovie!=null){
                     val visible=entries

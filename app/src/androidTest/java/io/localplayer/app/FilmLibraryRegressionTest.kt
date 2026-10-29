@@ -114,4 +114,11 @@ class FilmLibraryRegressionTest {
             FilmLibraryStore(context,name).use{store->assertEquals(film,store.works(shelfId=shelf).single().films.single().id);assertEquals("回头再看",store.moments(film).single().note)}
         }finally{context.deleteDatabase(name)}
     }
+    @Test fun asciiQueriesRetainUnicodeCaseMatchesAndQuotedLabels(){database{store->
+        listOf("İstanbul.mp4","Kelvin.mp4","a\"b.mp4").forEachIndexed{i,title->store.addMoment(ref("unicode-$i").copy(title=title),10)}
+        assertEquals("İstanbul.mp4",store.works("istanbul").single().title)
+        assertEquals("Kelvin.mp4",store.works("kelvin").single().title)
+        assertEquals("a\"b.mp4",store.works("a\"b").single().title)
+    }}
+
 }

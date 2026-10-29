@@ -97,7 +97,8 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         if(shelfId!=null){conditions+="s.shelf_id=?";arguments+=shelfId}
         // SQLite's case folding covers ASCII; keep Kotlin matching for other cased alphabets.
         if(query.isNotBlank()&&query.none{it.code>127&&it.lowercaseChar()!=it.uppercaseChar()}){
-            conditions+="f.work_id IN (SELECT f2.work_id FROM films f2 JOIN works w2 ON w2.id=f2.work_id WHERE instr(lower(w2.title),lower(?))>0 OR instr(lower(f2.media),lower(?))>0)"
+            val unicode=if(query.any{it in 'a'..'z'||it in 'A'..'Z'})" OR w2.title GLOB '*[^ -~]*' OR f2.media GLOB '*[^ -~]*'" else ""
+            conditions+="f.work_id IN (SELECT f2.work_id FROM films f2 JOIN works w2 ON w2.id=f2.work_id WHERE instr(lower(w2.title),lower(?))>0 OR instr(lower(f2.media),lower(?))>0$unicode)"
             arguments+=query;arguments+=org.json.JSONObject.quote(query).let{it.substring(1,it.length-1)}
         }
         val where=if(conditions.isEmpty())""else " WHERE "+conditions.joinToString(" AND ")
