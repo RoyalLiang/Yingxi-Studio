@@ -428,6 +428,14 @@
   ],
   "chronicles": [
     {
+      "id": "chronicle_beta_library_001",
+      "version": "0.2.0-beta.1",
+      "text": {
+        "zh": "阿汐把片匣登记纸归进同一册，迟灯将修好的册脊压在铜尺下。装进行囊的抄页另留一份，未辨清来处的纸条仍夹在原处。",
+        "en": "Axi gathers the film-case slips into one register while Chideng presses its repaired spine beneath a copper ruler. They keep a second copy of the pages packed in the satchel; slips with uncertain sources stay where they were."
+      }
+    },
+    {
       "version": "0.2.0-alpha.18",
       "text": {
         "zh": "守夜人把锁扣收进口袋，让影像占回幕布。",
