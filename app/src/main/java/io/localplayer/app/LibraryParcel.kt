@@ -89,7 +89,7 @@ internal class LibraryParcel(private val context:Context,private val databaseNam
     }}
     fun preview(text:String):ParcelPreview {
         val root=parse(text)
-        return FilmLibraryStore(context,databaseName).use{it.withDatabase{db,visible->ParcelPreview(text,MediaDataMigration.digest(text),fingerprint(db),root.getJSONArray("films").length(),root.getJSONArray("lists").length(),root.getJSONArray("moments").length(),root.getJSONArray("positions").length(),visible.size)}}
+        return FilmLibraryStore(context,databaseName).use{it.withDatabase{db,visible->ParcelPreview(text,MediaDataMigration.digest(text),fingerprint(db),root.getJSONArray("films").length(),root.getJSONArray("lists").length(),root.getJSONArray("moments").length(),root.getJSONArray("positions").length(),(visible-protectedIds(db,visible)).size)}}
     }
     private val recovery get()=File(context.noBackupFilesDir,"library-parcel/recovery.json")
     fun hasRecovery()=recovery.isFile

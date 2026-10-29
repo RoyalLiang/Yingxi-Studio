@@ -122,4 +122,12 @@ class LibraryParcelTest {
         assertEquals(1,StationInventory(context).observe(listOf(old.media.copy(key="fresh-result"))))
     }}
 
+    @Test fun previewCountExcludesPublicFilmsSharingASealedDossier(){test{_,store,parcel->
+        val public=seed(store,"shared-public.mp4");val private=seed(store,"shared-private.mp4")
+        store.groupFilm(public.id,private.workId)
+        try{SealedMedia.unlock();SealedMedia.seal(SealedItem(private.media,false));SealedMedia.lock()
+            assertEquals(0,parcel.preview(parcel.export()).replacing)
+        }finally{SealedMedia.unlock();SealedMedia.unseal(private.media.key);SealedMedia.lock()}
+    }}
+
 }
