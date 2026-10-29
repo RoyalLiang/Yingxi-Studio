@@ -113,7 +113,7 @@ jobs:
           YINGXI_SIGNER_SHA256: ${{ vars.YINGXI_SIGNER_SHA256 }}
         run: python3 scripts/release_tools.py prepare --tag "$TAG" --output "$RUNNER_TEMP/release-assets"
       - name: Retain CI audit artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: yingxi-release-audit-${{ needs.plan.outputs.tag }}
           path: ${{ runner.temp }}/release-assets/*
