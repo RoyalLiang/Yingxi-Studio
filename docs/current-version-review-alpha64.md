@@ -103,3 +103,16 @@ Debug、测试包与 R8 优化包构建成功；最终本地开发签名的 R8 �
 追加检查发现真实队列的 `play-intent` 被各集共用，因此首帧收据还需包含媒体身份。回归夹具现使用相同请求标识和不同媒体标识；修改前确定失败，组合请求与媒体标识后通过。收据仅用于内存中的加载层判断，不写入诊断或持久化。
 
 本次最终相关 Android 回归 42 项全部通过、无跳过，另有夜间模式下的大字体地址输入与更新进度 2 项通过。截图来自 API 36 ARM64 模拟器，覆盖横竖屏、1.8 倍字体与夜间模式。Debug、开发签名 R8 构建与 74 项脚本测试通过；Lint 为 0 error、99 warning。新增证据位于本地 `.agent-runtime/player-ui67/design-a/`。本段不替代物理设备、真实协议链路、长时温控或 HDR 验收，alpha.67 尚未发布。
+
+
+### alpha.67 正式发布验收（2026-10-29）
+
+用户明确授权发布后，候选 `f0117b5f42a7b4becc941f2cf05355dc5c19bcdf` 已快进到主分支，正式标签 `v0.2.0-alpha.67` 与该提交一致。官方版本为 `0.2.0-alpha.67 / code69`。签名发布流程 [40809964328](https://github.com/RoyalLiang/Yingxi-Studio/actions/runs/40809964328) 的 plan、verify 与 release 均成功，主分支 Android CI 亦成功。
+
+已从正式版本页下载 arm64-v8a、armeabi-v7a、x86_64、x86 四个非 debuggable APK 和独立源码归档。5 个下载文件的 SHA256 均与 GitHub 公开摘要一致，四个包的版本、架构、官方签名证书一致；源码归档中 559 个文件与标签提交逐文件核对，仅 `gradlew.bat` 有仓库声明的换行转换。未把本地开发签名包作为正式附件发布。
+
+使用独立克隆的 API 36 ARM64 模拟器，先安装官方 alpha.66 并通过实际设置界面保存守夜模式、中文音轨偏好，再用官方 alpha.67 执行覆盖安装。安装成功，前后安装 UID 相同，两项偏好选中状态保留；冷启动、设置版本与版本页安装序号均通过。该验证不代表物理设备上的硬解、HDR、真实 NAS/网盘吞吐与长时温控验收。
+
+官网入口变更提交为 `babc825aa34fd3b78fe8b9e41d3e6e7026f538a6`。[网站流程 40813215327](https://github.com/RoyalLiang/Yingxi-Studio/actions/runs/40813215327) 的 check 与生产 deploy 均成功；生产主页实际下载链接已指向 [alpha.67](https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-alpha.67)。本次仅同步正式下载入口，官网既有演示截图仍明确标注为 alpha.52，未替换为新版宣传素材。既有 Invisible 配置未变更，本轮未创建公开测试 Issue。
+
+本地发布证据位于 `.agent-runtime/release67/`，包含官方摘要、附件/源码核验、覆盖升级、CI 与生产网站记录。GitHub API 受限和本机 curl 到 Pages 的 SSL 路由失败时，已使用公开浏览器页面核对实际结果；未新增凭据或扩大权限。
