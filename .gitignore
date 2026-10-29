@@ -24,17 +24,14 @@
 !/website/package-lock.json
 !/website/wrangler.jsonc
 !/website/README.md
-!/website/DESIGN.md
 !/third_party/
 !/.github/
 !/docs/
 /docs/*
 !/docs/releasing.md
 !/docs/file-navigation.md
-!/docs/explore-play-proposal.md
 !/docs/player-controls.md
 !/docs/network-settings.md
-!/docs/apple-platform-plan.md
 !/docs/cloud-integrations.md
 !/docs/media-enrichment.md
 !/docs/playback-format-support.md
@@ -47,7 +44,6 @@
 !/docs/adr-playback-io-20261027.md
 !/docs/worldbook.md
 !/docs/world-glossary.md
-!/docs/world-integration.md
 !/docs/world-statistics.md
 !/docs/world-statistics.json
 !/docs/wasteland-copy-audit-2026-10-22.md
