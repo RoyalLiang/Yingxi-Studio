@@ -14,7 +14,7 @@ import java.util.Locale
 
 data class LocalFolder(val tree:Uri,val name:String)
 data class LocalDirectory(val uri:Uri,val name:String)
-data class LocalEntry(val uri:Uri,val name:String,val directory:Boolean,val video:Boolean,val size:Long,val parentUri:Uri?=null,val ancestorUris:List<String> = emptyList())
+data class LocalEntry(val uri:Uri,val name:String,val directory:Boolean,val video:Boolean,val size:Long,val parentUri:Uri?=null,val ancestorUris:List<String> = emptyList(),val bindingEpoch:Long=0)
 
 /** Reads only document trees the user explicitly grants through Android SAF. */
 class LocalFilesViewModel(app:Application):AndroidViewModel(app){
@@ -70,6 +70,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
     }
     fun remove(folder:LocalFolder){
         cancel()
+        LocalBindingEpochs.revoke(getApplication(),folder.tree)
         StationInventory(getApplication()).removeTree(folder.tree)
         if(active?.tree==folder.tree)root()
         runCatching{resolver.releasePersistableUriPermission(folder.tree,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)}
@@ -106,6 +107,7 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
         job=viewModelScope.launch{
             try{
                 val result=withContext(Dispatchers.IO){
+                    val epoch=LocalBindingEpochs.current(getApplication(),folder.tree)
                     val parent=target.last().uri
                     val children=DocumentsContract.buildChildDocumentsUriUsingTree(folder.tree,DocumentsContract.getDocumentId(parent))
                     val columns=arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_MIME_TYPE,DocumentsContract.Document.COLUMN_SIZE)
@@ -116,13 +118,13 @@ class LocalFilesViewModel(app:Application):AndroidViewModel(app){
                             val name=cursor.getString(1)?:"未命名文件"
                             val mime=cursor.getString(2).orEmpty();val directory=mime==DocumentsContract.Document.MIME_TYPE_DIR
                             val video=mime.startsWith("video/")||io.localplayer.core.Entry(name,name,false,0).isVideo
-                            rows+=LocalEntry(DocumentsContract.buildDocumentUriUsingTree(folder.tree,cursor.getString(0)),name,directory,video,if(cursor.isNull(3))0L else cursor.getLong(3),parent,target.map{it.uri.toString()})
+                            rows+=LocalEntry(DocumentsContract.buildDocumentUriUsingTree(folder.tree,cursor.getString(0)),name,directory,video,if(cursor.isNull(3))0L else cursor.getLong(3),parent,target.map{it.uri.toString()},epoch)
                         }
                     }?:throw java.io.IOException("文件夹无法读取")
                     rows.sortedWith(Comparator { a,b -> b.directory.compareTo(a.directory).takeIf { it != 0 } ?: io.localplayer.core.MediaOrdering.compare(a.name,null,a.uri.toString(),b.name,null,b.uri.toString()) })
                 }
                 if(id==generation&&folder in folders){active=folder;trail=target;directoryEntries=result
-                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris)})
+                    registration=StationInventory(getApplication()).observe(result.filter{it.video&&!it.directory}.map{e->MediaRef(e.uri.toString(),e.name,folder.name,path=(target.map{it.name}+e.name).joinToString("/"),localUri=e.uri.toString(),sizeBytes=e.size,localParentUri=e.parentUri?.toString(),localAncestors=e.ancestorUris,bindingEpoch=e.bindingEpoch)})
                 }
                 if(id==generation&&folder in folders&&onMovie!=null){
                     val visible=entries

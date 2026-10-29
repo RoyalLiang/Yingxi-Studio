@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 import kotlinx.coroutines.launch
 
-internal data class WorldText(val zh:String,val en:String) { fun inLanguage(language:String)=if(language=="zh")zh else en }
+internal data class WorldText(val zh:String,val en:String,val id:String?=null) { fun inLanguage(language:String)=if(language=="zh")zh else en }
 internal data class WorldPlace(val id:String,val name:WorldText,val kind:WorldText,val description:WorldText,val x:Float,val y:Float,val known:Boolean,val mapLabel:WorldText?=null)
 internal data class WorldPerson(val id:String,val name:WorldText,val role:WorldText,val description:WorldText,val home:String,val portrait:String,val quotes:List<WorldText>,val personality:WorldText)
 internal data class WorldEdge(val from:String,val to:String,val known:Boolean)
@@ -49,7 +49,7 @@ internal data class StationWorld(val chapter:WorldText,val premise:WorldText,val
             fun JSONObject.objects(key:String)=getJSONArray(key).let{a->(0 until a.length()).map(a::getJSONObject)}
             return StationWorld(root.words("chapter"),root.words("premise"),root.words("boundary"),
                 root.objects("nodes").map{WorldPlace(it.getString("id"),it.words("name"),it.words("kind"),it.words("description"),it.getDouble("x").toFloat(),it.getDouble("y").toFloat(),it.getBoolean("known"),if(it.has("mapLabel"))it.words("mapLabel")else null)},
-                root.objects("characters").map{p->WorldPerson(p.getString("id"),p.words("name"),p.words("role"),p.words("description"),p.getString("home"),p.getString("portrait"),p.objects("quotes").map{WorldText(it.getString("zh"),it.getString("en"))},p.words("personality"))},
+                root.objects("characters").map{p->WorldPerson(p.getString("id"),p.words("name"),p.words("role"),p.words("description"),p.getString("home"),p.getString("portrait"),p.objects("quotes").map{WorldText(it.getString("zh"),it.getString("en"),it.optString("id").takeIf(String::isNotBlank))},p.words("personality"))},
                 root.objects("edges").map{WorldEdge(it.getString("from"),it.getString("to"),it.getBoolean("known"))},
                 root.objects("chronicles").map{WorldChronicle(it.getString("version"),it.words("text"))},
                 root.objects("lexicon").map{WorldTerm(it.getString("id"),it.getString("status"),it.words("category"),it.words("name"),it.words("summary"),if(it.has("proposal"))it.words("proposal")else null,it.getString("canonStatus"))},

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 
 // finesse · register=product · home=B-gallery · palette=mist+berry · motion=press+fade
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}, onSealed: () -> Unit = {}) {
+@Composable internal fun HomeScreen(vm: LibraryViewModel, openLocal: () -> Unit, onSettings: () -> Unit, onHistory: () -> Unit, onArchives: () -> Unit = {}, onSealed: () -> Unit = {}, onLibrary: () -> Unit = {}) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){MediaPosters.retryMissing()}
     val context = androidx.compose.ui.platform.LocalContext.current
     val station = remember(context) { StationPreferences(context) }
@@ -68,6 +68,18 @@ import androidx.compose.ui.unit.sp
                 StationNotice("映汐放映站 · 值班札记", "拾荒者日记 · 相伴第 ${station.day} 天", diary.text.inLanguage(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
                     modifier=Modifier.testTag("station-diary"),onArchives=onArchives,person=station.diaryAuthor(diary),onRefresh={diary=station.diary(force=true)})
             }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            val zh=androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language=="zh"
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GroupedSurface).clickable(onClick=onLibrary).padding(18.dp).testTag("home-film-library"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){
+                Icon(Icons.Rounded.VideoLibrary,null,tint=Berry,modifier=Modifier.size(26.dp))
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
+                    Text(if(zh)"常驻片架"else"Your film shelves",fontSize=18.sp,fontWeight=FontWeight.Medium)
+                    Text(if(zh)"影片档案 · 自己的片单与片段札记"else"Film dossiers, collections and moment notes",fontSize=12.sp,color=Muted)
+                }
+                Icon(Icons.Rounded.ChevronRight,null,tint=Muted)
+            }
+        }
             continuing?.let { entry ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -104,7 +116,7 @@ import androidx.compose.ui.unit.sp
                         TextButton(onClick = onHistory) { Text("全部", maxLines = 1) }
                     }
                 }
-                items(recent, key = { it.media.key }) { entry ->
+                items(recent, key = { it.media.mediaId?:it.media.key }) { entry ->
                     RecentFilm(entry, vm.preparingKey == entry.media.key, vm.selectedHistoryKey==entry.media.key, columns > 1, { vm.resume(entry) }, { vm.resume(entry, true) }, { vm.removeHistory(entry) },{vm.sealMedia(entry.media)})
                 }
             }

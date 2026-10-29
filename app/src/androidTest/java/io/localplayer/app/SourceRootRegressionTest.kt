@@ -73,7 +73,7 @@ class SourceRootRegressionTest {
         try{
             ui.runOnIdle{
                 vm=LibraryViewModel(app,connector);models.put("queue-root",vm)
-                vm.resume(HistoryEntry(MediaRef("${source.id}:${inside.path}",inside.name,source.label,source.id,inside.path),0,0,0,false))
+                vm.resume(HistoryEntry(MediaRef("${source.id}:${inside.path}",inside.name,source.label,source.id,inside.path,sizeBytes=inside.size,location=mediaLocation(source)),0,0,0,false))
             }
             target=runBlocking{withTimeout(5000){vm.plays.first()}}
             assertEquals(listOf(inside.path),target.queue.map{it.media.path})

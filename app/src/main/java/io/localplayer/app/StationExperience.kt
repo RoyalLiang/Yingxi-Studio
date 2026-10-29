@@ -33,7 +33,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 internal class StationPreferences(context:Context,name:String="station-experience-v1") {
-    private val p=context.getSharedPreferences(name,Context.MODE_PRIVATE)
+    private val p=MigratingPreferences.open(context,name)
     init { if(!p.contains("first-day"))p.edit().putString("first-day",runCatching{java.time.Instant.ofEpochMilli(context.packageManager.getPackageInfo(context.packageName,0).firstInstallTime).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()}.getOrDefault(LocalDate.now().toString())).apply() }
     val day:Long get()=runCatching{ChronoUnit.DAYS.between(LocalDate.parse(p.getString("first-day",null)),LocalDate.now()).coerceAtLeast(0)+1}.getOrDefault(1)
     var greetings:Boolean get()=p.getBoolean("greetings",true);set(v){p.edit().putBoolean("greetings",v).apply()}
@@ -48,12 +48,13 @@ internal class StationPreferences(context:Context,name:String="station-experienc
     private val world by lazy { StationWorld.load(appContext) }
     val dailyLines:List<WorldDiaryLine> by lazy {
         (world.dailyLines+world.people.flatMap { person->person.quotes.mapIndexed { index,text->
-            WorldDiaryLine("quote:${person.id}:$index",person.id,text)
-        }}).distinctBy{it.author to it.text}
+            WorldDiaryLine(text.id?:"quote:${person.id}:$index",person.id,text)
+        }}).distinctBy{Triple(it.author,it.text.zh,it.text.en)}
     }
     // Refresh at home entry/resume, never on a timer while somebody is reading.
     fun diary(now:Long=System.currentTimeMillis(),force:Boolean=false):WorldDiaryLine {
-        val current=dailyLines.firstOrNull{it.id==p.getString("diary-line",null)}
+        val previous=p.getString("diary-line",null)
+        val current=dailyLines.firstOrNull{it.id==(previous?.let{LegacyQuoteAliases.resolve(it)}?:previous)}
         val last=p.getLong("diary-at",0)
         if(!force&&current!=null&&now>=last&&now-last<30*60_000L)return current
         val authors=dailyLines.map{it.author}.distinct()
@@ -72,7 +73,7 @@ internal class StationPreferences(context:Context,name:String="station-experienc
     fun seekClick(context:Context){if(gearSound)context.getSystemService(AudioManager::class.java)?.playSoundEffect(AudioManager.FX_KEY_CLICK,.18f)}
 }
 
-internal data class StationFinding(val media:MediaRef,val firstSeen:Long)
+internal data class StationFinding(val media:MediaRef,val firstSeen:Long,val lastObserved:Long=0)
 internal fun stationPath(media:MediaRef):String = media.path ?: media.localUri?.let { value->
     runCatching { DocumentsContract.getDocumentId(Uri.parse(value)) }.getOrNull()
 } ?: media.title
@@ -80,20 +81,24 @@ internal fun archiveIdentity(media:MediaRef)=ArchiveIdentity.parse(media.title,s
 
 /** A bounded local catalog of files actually observed through user-granted sources. No credentials. */
 internal class StationInventory(context:Context,name:String="station-inventory-v1") {
-    private val p=context.getSharedPreferences(name,Context.MODE_PRIVATE)
+    private val p=MigratingPreferences.open(context,name)
     companion object { val revision=mutableIntStateOf(0);private val lock=Any() }
     fun entries():List<StationFinding> = synchronized(lock) {
         runCatching { val raw=p.getString("items","[]") ?: "[]";if(raw.length>2_097_152)return@runCatching emptyList()
-            val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"))} }
+            val a=JSONArray(raw);(0 until minOf(a.length(),512)).map { i->a.getJSONObject(i).let{StationFinding(MediaRef.parse(it.getString("media")),it.getLong("seen"),it.optLong("observed",0))} }
         }.getOrDefault(emptyList())
     }
-    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis()):Int = observeFindings(media.take(512).map{StationFinding(it,seen)})
-    fun restore(history:List<HistoryEntry>):Int = observeFindings(history.asReversed().take(512).map{StationFinding(it.media,it.updatedAt)})
-    private fun observeFindings(findings:List<StationFinding>):Int = synchronized(lock) {
+    fun observe(media:List<MediaRef>,seen:Long=System.currentTimeMillis(),actualObservation:Boolean=true):Int =
+        observeFindings(media.take(512).map{StationFinding(it,seen,if(actualObservation)seen else 0)},actualObservation)
+    fun restore(history:List<HistoryEntry>):Int =
+        observeFindings(history.asReversed().take(512).map{StationFinding(it.media,it.updatedAt,0)},false)
+    private fun observeFindings(findings:List<StationFinding>,actualObservation:Boolean):Int = synchronized(lock) {
         val old=entries();val byKey=old.associateBy{it.media.key}.toMutableMap();var added=0
         findings.forEach { finding->val ref=finding.media;val seen=finding.firstSeen;val previous=byKey[ref.key]
-            if(previous==null||(previous.media.location!=null&&previous.media.location!=ref.location)||(previous.media.sizeBytes!=null&&ref.sizeBytes!=null&&previous.media.sizeBytes!=ref.sizeBytes)){byKey[ref.key]=StationFinding(ref,seen);added++}
-            else if(previous.media!=ref)byKey[ref.key]=previous.copy(media=ref)
+            if(previous==null||(previous.media.location!=null&&previous.media.location!=ref.location)||(previous.media.sizeBytes!=null&&ref.sizeBytes!=null&&previous.media.sizeBytes!=ref.sizeBytes)){byKey[ref.key]=finding;added++}
+            else if(actualObservation)byKey[ref.key]=previous.copy(media=ref,lastObserved=maxOf(previous.lastObserved,seen))
+            else if(previous.lastObserved==0L&&previous.media!=ref)byKey[ref.key]=previous.copy(media=ref)
+
         }
         val next=byKey.values.sortedByDescending{it.firstSeen}.take(512)
         if(next!=old)save(next)
@@ -104,7 +109,7 @@ internal class StationInventory(context:Context,name:String="station-inventory-v
     fun removeTree(tree:Uri)=synchronized(lock){save(entries().filterNot { f->f.media.localUri?.let{u->runCatching{
         val uri=Uri.parse(u);uri.authority==tree.authority&&DocumentsContract.getTreeDocumentId(uri)==DocumentsContract.getTreeDocumentId(tree)
     }.getOrDefault(false)}==true })}
-    private fun save(items:List<StationFinding>){val a=JSONArray();items.forEach{a.put(JSONObject().put("media",it.media.json()).put("seen",it.firstSeen))};p.edit().putString("items",a.toString()).apply();revision.intValue++}
+    private fun save(items:List<StationFinding>){val a=JSONArray();items.forEach{a.put(JSONObject().put("media",it.media.json()).put("seen",it.firstSeen).put("observed",it.lastObserved))};p.edit().putString("items",a.toString()).apply();revision.intValue++}
     fun today():List<StationFinding> { val start=LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();return entries().filter{it.firstSeen>=start} }
 }
 

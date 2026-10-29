@@ -41,6 +41,13 @@ internal data class SealedItem(
 
 /** An app visibility/access policy. Original media files are neither moved nor encrypted. */
 internal object SealedMedia {
+    private val policyLock=Any()
+    private var policyVersion=0L
+    internal fun version():Long=synchronized(policyLock){policyVersion}
+    internal fun <T> withVersion(version:Long,action:()->T):T=synchronized(policyLock){
+        if(version!=policyVersion)throw java.io.IOException("封存范围已变化，请重试")
+        action()
+    }
     private lateinit var context:Context
     private var rows by mutableStateOf<List<SealedItem>>(emptyList())
     var unlocked by mutableStateOf(false);private set
@@ -72,11 +79,12 @@ internal object SealedMedia {
                     (0 until trail.length()).map{trail.getJSONObject(it).let{d->LocalDirectory(Uri.parse(d.getString("uri")),d.getString("name"))}},
                     (0 until aliases.length()).map{aliases.getString(it)}.toSet(),o.optBoolean("ignoreCase"))
             }
-        }.onSuccess{rows=it;damaged=false}.onFailure{damaged=true;rows=emptyList();lock()}
+        }.onSuccess{next->synchronized(policyLock){rows=next;damaged=false;policyVersion++}}.onFailure{synchronized(policyLock){damaged=true;rows=emptyList();policyVersion++};lock()}
     }
     fun items():List<SealedItem> = if(unlocked)rows else emptyList()
-    fun unlock(){check(!damaged){"封存记录无法读取，原记录已保留"};unlocked=true}
-    fun lock(){unlocked=false;PreviewFrames.clearPlaybackCache();changes.toList().forEach{it()}}
+    fun unlock(){synchronized(policyLock){check(!damaged){"封存记录无法读取，原记录已保留"};unlocked=true;policyVersion++}}
+    fun lock(){synchronized(policyLock){unlocked=false;policyVersion++};PreviewFrames.clearPlaybackCache();changes.toList().forEach{it()}}
+
     fun observe(change:()->Unit):()->Unit{changes+=change;return{changes-=change}}
     fun protects(ref:MediaRef):Boolean=damaged||rows.any{it.covers(ref)}
     fun protects(source:Source,path:String)=protects(MediaRef("${source.id}:$path","",source.label,source.id,path,location=mediaLocation(source)))
@@ -96,7 +104,8 @@ internal object SealedMedia {
             a.put(JSONObject().put("media",item.media.json()).put("directory",item.directory).put("tree",item.tree).put("trail",trail).put("aliases",JSONArray(item.aliases.toList())).put("ignoreCase",item.ignoreCase))
         }
         check(preferences.edit().putString("items",a.toString()).commit()){"封存记录未能保存，请重试"}
-        rows=next;MediaPosters.cancelProtected();OnlineSubtitles.cancelProtected();changes.toList().forEach{it()}
+        synchronized(policyLock){rows=next;policyVersion++}
+        MediaPosters.cancelProtected();OnlineSubtitles.cancelProtected();changes.toList().forEach{it()}
     }
     /** Call on IO: handles document providers whose document IDs are opaque. */
     fun protectsLocalUri(uri:Uri):Boolean {

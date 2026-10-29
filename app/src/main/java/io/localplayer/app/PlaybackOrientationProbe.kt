@@ -52,15 +52,23 @@ internal object PlaybackOrientationProbe {
     suspend fun initial(context:Context,target:PlayTarget):Int? = cached(context,target.media)
         ?: (if(target.uri.isPlayerNetworkUri()||target.uri.scheme in setOf("http","https"))null else withTimeoutOrNull(150L){resolve(context,target)})
 
+
+    private fun verify(context:Context,target:PlayTarget){
+        MediaDataMigration.session(context).checkLocator(target.media)
+        if(target.uri.isPlayerNetworkUri())PlaybackRegistry.get(target.uri)
+    }
     suspend fun resolve(context:Context,target:PlayTarget):Int? {
+        if(runCatching{verify(context,target)}.isFailure)return null
         cached(context,target.media)?.let{return it}
+
         return withTimeoutOrNull(TIMEOUT_MS){
             suspendCancellableCoroutine { continuation->
                 val cancellation=Cancellation()
                 val deadline=SystemClock.elapsedRealtime()+TIMEOUT_MS
                 val future=runCatching{workers.submit{
-                    val value=read(context.applicationContext,target,cancellation,deadline)
+                    val value=read(context.applicationContext,target,cancellation,deadline)?.takeIf{runCatching{verify(context,target)}.isSuccess}
                     if(value!=null&&continuation.isActive)remember(context,target.media,value)
+
                     if(continuation.isActive)continuation.resume(value)
                 }}.getOrNull()
                 if(future==null){continuation.resume(null);return@suspendCancellableCoroutine}
@@ -78,7 +86,7 @@ internal object PlaybackOrientationProbe {
         var retriever:MediaMetadataRetriever?=null
         var preview:PlaybackLease?=null
         try {
-            cancellation.check()
+            cancellation.check();verify(context,target)
             retriever=MediaMetadataRetriever()
             if(target.uri.isPlayerNetworkUri()){
                 preview=PlaybackRegistry.preview(target.uri)
@@ -96,23 +104,26 @@ internal object PlaybackOrientationProbe {
                 if(target.media.sizeBytes!=null&&file.size!=target.media.sizeBytes)return null
                 retriever.setDataSource(object:MediaDataSource(){
                     @Synchronized override fun readAt(position:Long,buffer:ByteArray,offset:Int,size:Int):Int {
-                        cancellation.check()
+                        cancellation.check();preview?.checkCurrent();verify(context,target)
                         if(SystemClock.elapsedRealtime()>=deadline||bytes>=MAX_BYTES)throw IOException("Video metadata budget exceeded")
                         if(position<0)throw IOException("Invalid video metadata position")
                         if(size==0)return 0
                         if(position>=file.size)return -1
                         val count=minOf(size.toLong(),file.size-position,128L*1024,MAX_BYTES-bytes).toInt()
-                        return file.readAt(position,buffer,offset,count)
+                        return file.readAt(position,buffer,offset,count).also{preview?.checkCurrent();verify(context,target);if(it>0)bytes+=it}
+
                     }
-                    override fun getSize()=file.size
+                    override fun getSize():Long {preview?.checkCurrent();verify(context,target);return file.size.also{preview?.checkCurrent();verify(context,target)}}
                     override fun close(){file.close()}
                 })
             }else retriever.setDataSource(context,target.uri)
-            cancellation.check()
+            cancellation.check();preview?.checkCurrent();verify(context,target)
             val width=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()?:return null
             val height=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()?:return null
             val rotation=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()?:0
+            preview?.checkCurrent();verify(context,target)
             return videoOrientation(width,height,rotation,1f)
+
         }catch(_:Exception){return null}
         finally{
             runCatching{retriever?.release()}

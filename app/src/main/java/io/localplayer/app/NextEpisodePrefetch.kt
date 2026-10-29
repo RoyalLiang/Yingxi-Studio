@@ -28,7 +28,7 @@ internal class NextEpisodePrefetch(private val context:Context):java.io.Closeabl
         if(target.source.protocol!=Protocol.ALIYUN)return
         attempted=item.mediaId
         future=worker.submit {
-            val lease=PlaybackLease(target.source,target.credentials,target.path,AliyunCloud.connector(target.source,1))
+            val lease=runCatching{target.freshTransport(connector=AliyunCloud.connector(target.source,1))}.getOrNull()?:return@submit
             active.set(lease)
             try {
                 lease.open().use { file ->
@@ -38,7 +38,9 @@ internal class NextEpisodePrefetch(private val context:Context):java.io.Closeabl
                     val buffer=ByteArray(64*1024);var at=0L
                     while(at<limit) {
                         if(Thread.currentThread().isInterrupted)break
+                        lease.checkCurrent()
                         val n=file.readAt(at,buffer,0,minOf(buffer.size.toLong(),limit-at).toInt())
+                        lease.checkCurrent()
                         if(n<=0)break
                         at+=n
                     }

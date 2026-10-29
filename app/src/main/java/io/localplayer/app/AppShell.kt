@@ -55,9 +55,15 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
 
 @Composable fun AppShell(vm:LibraryViewModel,localFiles:LocalFilesViewModel,pickLocalFile:()->Unit,addLocalFolder:()->Unit,requestNearby:()->Unit){
     SourceFeedbackLifetime(vm)
+    val legacyChinese=androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language=="zh"
+    fun legacyWords(zh:String,en:String)=if(legacyChinese)zh else en
+    vm.legacyReplay?.let{entry->AlertDialog(onDismissRequest=vm::dismissLegacyReplay,
+        title={Text(legacyWords("核对旧片签","Check the old film slip"))},text={Column(Modifier.heightIn(max=360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())){Text(entry.media.title);Text(legacyWords("这条旧记录缺少位置或版本线索。请确认当前文件仍是当时观看的同一版本，再关联原进度与札记。尺寸相同也不能证明内容相同。","This old record lacks location or version details. Confirm that the current file is the same version before linking its progress and notes. Matching sizes alone do not prove matching content."))}},
+        confirmButton={TextButton(onClick=vm::confirmLegacyReplay){Text(legacyWords("确认同一版本","Confirm same version"))}},dismissButton={TextButton(onClick=vm::dismissLegacyReplay){Text(legacyWords("暂不关联","Keep separate"))}})}
     var localOpen by rememberSaveable{mutableStateOf(false)}
     var settingsOpen by rememberSaveable{mutableStateOf(false)}
     var archivesOpen by rememberSaveable{mutableStateOf(false)}
+    var filmLibraryOpen by rememberSaveable{mutableStateOf(false)}
     var practiceOpen by rememberSaveable{mutableStateOf(false)}
     val readingContext = androidx.compose.ui.platform.LocalContext.current
     var readingOpen by rememberSaveable{mutableStateOf(false)}
@@ -85,6 +91,13 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
         SourceDialogs(vm,requestNearby)
         return
     }
+    if(filmLibraryOpen){
+        Box(Modifier.fillMaxSize()){
+            FilmLibraryScreen(vm){filmLibraryOpen=false}
+            SourceDialogs(vm,requestNearby)
+            SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))
+        };return
+    }
     if(archivesOpen){BackHandler{archivesOpen=false};StationWorldPage{archivesOpen=false};return}
     if(settingsOpen){SettingsRoute{settingsOpen=false};return}
     if(localOpen){Box(Modifier.fillMaxSize()){LocalFilesScreen(localFiles,vm,{localOpen=false},addLocalFolder,pickLocalFile);SourceDialogs(vm,requestNearby);SourceFeedback(vm,Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom=16.dp))};return}
@@ -105,7 +118,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
                 fadeIn(tween(220)) togetherWith fadeOut(tween(140))
             },label="page fade"){page->
                 states.SaveableStateProvider(page.name){when(page){
-                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed=verifyCabinet)
+                    AppTab.Home->HomeScreen(vm,openLocal,{vm.stopDiscovery();vm.cancelOperation();settingsOpen=true},{tab=AppTab.History},{vm.stopDiscovery();vm.cancelOperation();archivesOpen=true},onSealed=verifyCabinet,onLibrary={vm.stopDiscovery();vm.cancelOperation();filmLibraryOpen=true})
                     AppTab.Sources->CompositionLocalProvider(LocalGlassBackdrop provides scene){LibraryScreen(vm,openLocal,requestNearby)}
                     AppTab.History->HistoryScreen(vm,openLocal,{vm.closeSource();tab=AppTab.Sources})
                     AppTab.Explore->StationWorldPage(embedded=true,openPractice={vm.stopDiscovery();vm.cancelOperation();practiceOpen=true},openTuning={vm.stopDiscovery();vm.cancelOperation();tuningOpen=true},openReading={place->
@@ -179,7 +192,7 @@ private enum class AppTab(val label:String,val icon:ImageVector){Home("放映站
         }else LazyColumn(Modifier.testTag("history-list"),contentPadding=PaddingValues(bottom=112.dp)){
             vm.history.groupBy{historyDay(it.updatedAt)}.forEach{(day,entries)->
                 item(key="day-$day"){Text(day,Modifier.padding(start=24.dp,top=12.dp,bottom=10.dp),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Muted)}
-                items(entries,key={it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)},{vm.sealMedia(e.media)})}
+                items(entries,key={it.media.mediaId?:it.media.key}){e->HistoryRow(e,{vm.resume(e)},{vm.resume(e,true)},{vm.removeHistory(e)},{vm.sealMedia(e.media)})}
             }
         }
     }

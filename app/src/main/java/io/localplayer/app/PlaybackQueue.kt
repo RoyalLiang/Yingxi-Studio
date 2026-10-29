@@ -14,7 +14,8 @@ data class QueuedMedia(val uri:Uri,val media:MediaRef,val token:HistoryToken)
 data class PlayTarget(val uri:Uri,val title:String,val resume:Long,val media:MediaRef,
     val historyToken:HistoryToken?=null,val playId:String=java.util.UUID.randomUUID().toString(),
     val queue:List<QueuedMedia> = emptyList(),val truncated:Boolean=false){
-    fun release(){(queue.map{it.uri}+uri).distinct().forEach{PlaybackRegistry.remove(it)}}
+    init{MediaDataMigration.targetCreated(playId)}
+    fun release(){MediaDataMigration.targetReleased(playId);(queue.map{it.uri}+uri).distinct().forEach{PlaybackRegistry.remove(it)}}
 }
 
 internal fun playbackItemTitle(item:MediaItem?,fallback:String):String{
@@ -41,11 +42,12 @@ object PlaybackRequests {
     }
     fun items(context:Context,target:PlayTarget):List<MediaItem>{
         val history=HistoryStore(context)
-        val queue=target.queue.ifEmpty{listOf(QueuedMedia(target.uri,target.media,target.historyToken ?: history.token(target.media.key)))}
+        val queue=target.queue.ifEmpty{listOf(QueuedMedia(target.uri,target.media,target.historyToken ?: history.token(target.media)))}
         return queue.map{entry->
+            MediaDataMigration.session(context).checkLocator(entry.media)
             val extras=Bundle().apply{
-                putString("media-ref",entry.media.json());putLong("history-clear",entry.token.clearRevision)
-                putLong("history-item",entry.token.itemRevision);putString("play-intent",target.playId)
+                putString("media-ref",entry.media.copy(mediaId=entry.token.mediaId?:entry.media.mediaId,contentRevisionId=entry.token.contentRevisionId?:entry.media.contentRevisionId).json());putLong("history-clear",entry.token.clearRevision)
+                putLong("history-item",entry.token.itemRevision);putLong("history-generation",entry.token.generation);putString("history-media",entry.token.mediaId);putString("history-content",entry.token.contentRevisionId);putString("play-intent",target.playId)
                 putBoolean("queue-truncated",target.truncated)
             }
             MediaItem.Builder().setUri(entry.uri).setMediaId(entry.uri.toString())

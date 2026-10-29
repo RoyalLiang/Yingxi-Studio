@@ -21,7 +21,7 @@ import java.util.Locale
 class RouteReadingRegressionTest {
     @get:Rule val ui = createAndroidComposeRule<MainActivity>()
     @Before fun cleanOnlyThisPractice() {
-        ui.activity.getSharedPreferences("station-reading-v1", Context.MODE_PRIVATE).edit().clear().commit()
+        MigratingPreferences.open(ui.activity,"station-reading-v1").edit().clear().commit()
     }
     private fun fixture(language: String = "zh", scale: Float = 1f, narrow: Boolean = false) {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
@@ -109,10 +109,10 @@ class RouteReadingRegressionTest {
         assertEquals(1, saved().choices.size)
         tap("reading-reset"); ui.onNodeWithTag("reading-reset-confirm").performClick()
         assertTrue(saved().choices.isEmpty()); assertTrue(saved().revealed.isEmpty())
-        ui.activity.getSharedPreferences("station-reading-v1", Context.MODE_PRIVATE).edit().putString("progress", "broken").commit()
+        MigratingPreferences.open(ui.activity,"station-reading-v1").edit().putString("progress", "broken").commit()
         assertTrue(store.restore(RouteRecords.load(ui.activity)).second)
         for (bad in listOf("\"1\"", "1.5", "true", "-1")) {
-            ui.activity.getSharedPreferences("station-reading-v1", Context.MODE_PRIVATE).edit().putString("progress",
+            MigratingPreferences.open(ui.activity,"station-reading-v1").edit().putString("progress",
                 """{"round":"route_reading_01","revision":$bad,"choices":{},"revealed":[]}""").commit()
             assertNull(store.read()); assertTrue(store.restore(RouteRecords.load(ui.activity)).second)
         }

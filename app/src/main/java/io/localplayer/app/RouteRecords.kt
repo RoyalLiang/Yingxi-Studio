@@ -38,7 +38,7 @@ internal object RouteRecords {
 }
 
 internal class RouteReadingStore(context: Context) {
-    private val prefs = context.getSharedPreferences("station-reading-v1", Context.MODE_PRIVATE)
+    private val prefs = MigratingPreferences.open(context,"station-reading-v1")
     fun read(): RouteProgress? = runCatching {
         val item = JSONObject(prefs.getString("progress", null) ?: return null)
         val revision = item.get("revision")

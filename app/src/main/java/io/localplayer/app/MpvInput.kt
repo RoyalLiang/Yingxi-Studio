@@ -38,25 +38,31 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                     runCatching{lease.close()};runCatching{file.close()};thread.quitSafely()
                 }}
                 val callback=object:ProxyFileDescriptorCallback(){
-                    override fun onGetSize()=file.size
+                    override fun onGetSize():Long=try{
+                        lease.checkCurrent();file.size.also{lease.checkCurrent()}
+                    }catch(e:Exception){failed.compareAndSet(null,e);throw ErrnoException("media size",OsConstants.EIO,e)}
                     override fun onRead(offset:Long,size:Int,data:ByteArray):Int {
-                        if(offset>=file.size)return 0
                         val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.READ,lease.source.protocol.name)
                         val start=System.nanoTime()
                         PlaybackIoProbe.attach(probe,file.readTelemetry)
                         var failure:Throwable?=null
                         try {
+                            lease.checkCurrent()
+                            if(offset>=file.size)return 0
                             val required=minOf(size.toLong(),file.size-offset).toInt()
                             var count=0
                             // FUSE may zero-fill the rest of a short filesystem read. SFTP can
                             // return smaller packets, so fill this request before replying.
                             while(count<required){
+                                lease.checkCurrent()
                                 val read=file.readAt(offset+count,data,count,required-count)
+                                lease.checkCurrent()
                                 if(read<=0)throw java.io.EOFException("远程文件读取中断")
                                 count+=read
                                 PlaybackIoProbe.progress(probe,read)
                             }
                             PlaybackMetrics.read(count,System.nanoTime()-start)
+                            lease.checkCurrent()
                             return count
                         }catch(e:Exception){failure=e;failed.compareAndSet(null,e);throw ErrnoException("media read",OsConstants.EIO,e)}
                         finally{PlaybackIoProbe.end(probe,failure)}
@@ -64,7 +70,13 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                     override fun onRelease(){cleanup()}
                 }
                 val fd=context.getSystemService(StorageManager::class.java).openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,callback,Handler(thread.looper))
-                return MpvInput(fd,{cleanup()},failed)
+                var removeObserver:()->Unit={}
+                val input=MpvInput(fd,{removeObserver();cleanup()},failed)
+                removeObserver=PlaybackRegistry.observeInvalidation{sourceId,mediaId->
+                    if(sourceId==lease.source.id||(mediaId!=null&&mediaId==lease.mediaId))input.close()
+                }
+                try{lease.checkCurrent()}catch(e:Exception){input.close();throw e}
+                return input
             }catch(e:Exception){PlaybackRegistry.closeAsync(lease);thread.quitSafely();throw e}
         }
     }

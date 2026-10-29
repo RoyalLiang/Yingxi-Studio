@@ -29,18 +29,20 @@ class PlaybackService:MediaSessionService(){
     private var current:android.net.Uri?=null
     private val durations=mutableMapOf<String,Long>()
     private val completedItems=mutableSetOf<String>()
+    private var sourceObserver:(()->Unit)?=null
     private val handler=Handler(Looper.getMainLooper())
     private val checkpoint=object:Runnable{
         override fun run(){session?.player?.let{if(it.isPlaying)persist();nextEpisode?.consider(it)};handler.postDelayed(this,5000)}
     }
     override fun onCreate(){
-        super.onCreate();store=SourceStore(this);history=HistoryStore(this)
+        super.onCreate();MediaDataMigration.playbackStarted(this);store=SourceStore(this);history=HistoryStore(this)
         val prefs=PlaybackPreferences(this)
         val renderers=playbackRenderers(this)
         val dataSource=DefaultDataSource.Factory(this,PlaybackNetworkFactory())
  val nativePlayer=ExoPlayer.Builder(this,renderers)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder().setBufferDurationsMs(10000,45000,750,1500).setTargetBufferBytes(64*1024*1024).setPrioritizeTimeOverSizeThresholds(false).build())
-            .setMediaSourceFactory(SidecarMediaSourceFactory(DefaultMediaSourceFactory(dataSource,PlaybackExtractors(this)).setLoadErrorHandlingPolicy(CloudStreamErrorPolicy()),dataSource,this))
+            .setMediaSourceFactory(PlaybackSourcesFactory(this))
+
             .setAudioAttributes(AudioAttributes.Builder().setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).setUsage(C.USAGE_MEDIA).build(),true)
             .setHandleAudioBecomingNoisy(true).setWakeMode(C.WAKE_MODE_LOCAL).build()
         videoRecovery=VideoDecoderRecovery(nativePlayer,renderers)
@@ -50,6 +52,19 @@ class PlaybackService:MediaSessionService(){
         val player=CompatibilityPlayer(this,nativePlayer)
         CompatibilityVideoOutput.register(player)
         val sidecars=AutomaticSidecars(this).also{this.sidecars=it}
+        sourceObserver=PlaybackRegistry.observeInvalidation{sourceId,mediaId->handler.post{
+            session?.player?.let{active->
+                val stale=(0 until active.mediaItemCount).any{index->active.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{raw->
+                    runCatching{
+                        val ref=MediaRef.parse(raw)
+                        val affected=(sourceId==null&&mediaId==null&&ref.localUri!=null)||(sourceId!=null&&ref.sourceId==sourceId)||(mediaId!=null&&ref.mediaId==mediaId)
+                        affected&&runCatching{MediaDataMigration.session(this).checkLocator(ref);check(SourceBindingEpochs.acceptsWrite(this,ref,allowUnregistered=true))}.isFailure
+                    }.getOrDefault(true)
+                }==true}
+                if(stale){active.pause();active.stop();active.clearMediaItems()}
+            }
+        }}
+
         privateObserver=SealedMedia.observe{
             val protected=(0 until player.mediaItemCount).any{index->player.getMediaItemAt(index).mediaMetadata.extras?.getString("media-ref")?.let{runCatching{SealedMedia.protects(MediaRef.parse(it))}.getOrDefault(true)}==true}
             if(protected){player.pause();player.stop();player.clearMediaItems()}
@@ -160,19 +175,21 @@ class PlaybackService:MediaSessionService(){
         if(completed)completedItems.add(item.mediaId)else completedItems.remove(item.mediaId)
         val extras=item.mediaMetadata.extras
         val ref=extras?.getString("media-ref")?.let{runCatching{MediaRef.parse(it)}.getOrNull()} ?: return
-        val token=HistoryToken(extras.getLong("history-clear"),extras.getLong("history-item"))
+        val token=HistoryToken(extras.getLong("history-clear"),extras.getLong("history-item"),if(extras.containsKey("history-generation"))extras.getLong("history-generation")else -1,extras.getString("history-media"),extras.getString("history-content"))
         val saved=runCatching{history.update(ref,token,position,duration,completed)}.getOrDefault(false)
         if(saved)store.rememberPosition(ref.key,if(completed)0L else position)
     }
     override fun onGetSession(controllerInfo:MediaSession.ControllerInfo)=session
     override fun onDestroy(){
         sidecars?.close();sidecars=null
+        sourceObserver?.invoke();sourceObserver=null
+
         privateObserver?.invoke();privateObserver=null
         val owned=requestIds
         OnlineSubtitles.cancel();nextEpisode?.close();nextEpisode=null;cloudRecovery?.close();cloudRecovery=null;cloudAdaptive?.close();cloudAdaptive=null;persist();handler.removeCallbacksAndMessages(null);videoRecovery?.close();videoRecovery=null;session?.player?.release();session?.release();session=null
         // A later Activity may already have registered its pending request.
         // This service only releases requests actually adopted by its timeline.
         PlaybackRequests.retainActive(emptySet());owned.forEach(PlaybackRequests::remove)
-        PlaybackRegistry.releaseConnection(current);super.onDestroy()
+        PlaybackRegistry.releaseConnection(current);MediaDataMigration.playbackStopped(this);super.onDestroy()
     }
 }

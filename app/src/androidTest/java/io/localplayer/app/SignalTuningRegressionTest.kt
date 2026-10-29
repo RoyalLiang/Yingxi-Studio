@@ -30,7 +30,7 @@ import kotlin.math.sin
 
 class SignalTuningRegressionTest {
     @get:Rule val ui = createAndroidComposeRule<MainActivity>()
-    @Before fun cleanTuningOnly() { ui.activity.getSharedPreferences("station-tuning-v1", Context.MODE_PRIVATE).edit().clear().commit() }
+    @Before fun cleanTuningOnly() { MigratingPreferences.open(ui.activity,"station-tuning-v1").edit().clear().commit() }
     private fun fixture(language: String = "zh", scale: Float = 1f, narrow: Boolean = false, open: (String) -> Unit = {}) {
         ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
             val d = LocalDensity.current

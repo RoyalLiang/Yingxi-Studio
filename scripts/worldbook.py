@@ -18,10 +18,16 @@ def validate(root):
         for key in ['name','kind','description']:text(p[key])
         if 'mapLabel' in p:text(p['mapLabel'])
         if not all(0<=p[k]<=1 for k in ['x','y']):raise ValueError('World node outside map')
+    quote_ids=set()
     for p in world['characters']:
         for key in ['name','role','description','personality']:text(p[key])
         if p['home'] not in places or p['portrait'] not in ['scavenger','keeper','wayfinder'] or not p['quotes']:raise ValueError('Incomplete character')
-        for q in p['quotes']:text(q)
+        for q in p['quotes']:
+            if set(q) != {'id','zh','en'}:raise ValueError('World quote requires identity and complete Chinese and English')
+            ident=q.get('id')
+            if not isinstance(ident,str) or not ident.strip() or ident in quote_ids:raise ValueError('Invalid or duplicate quote identity')
+            quote_ids.add(ident)
+            text({key:q[key] for key in ['zh','en']})
     lexicon=world.get('lexicon')
     if not isinstance(lexicon,list) or not lexicon:raise ValueError('World lexicon must be nonempty')
     term_ids=set()

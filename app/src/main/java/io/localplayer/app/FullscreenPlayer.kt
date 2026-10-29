@@ -61,6 +61,9 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -76,6 +79,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     rotate: () -> Unit, lock: (Boolean) -> Unit, externalCaption: () -> Unit, compact: Boolean,
     smallWindow: (() -> Unit)?, background: () -> Unit, videoView: (PlayerView) -> Unit, externalAudio: () -> Unit = {}) {
     val context = LocalContext.current
+    val momentScope = rememberCoroutineScope()
     val activity = context as Activity
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val density = LocalDensity.current
@@ -322,6 +326,19 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                 }
                         if(controller!=null)PlaybackQualityMenu(controller,qualityOpen){qualityOpen=false}
                     }
+PlayerIcon(Icons.Rounded.BookmarkAdd, if(androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language=="zh")"记住此刻"else"Remember this moment", {
+                    val raw=controller?.currentMediaItem?.mediaMetadata?.extras?.getString("media-ref")
+                    val position=controller?.currentPosition
+                    if(raw!=null&&position!=null&&position>=0){
+                        val ref=runCatching{MediaRef.parse(raw)}.getOrNull()
+                        if(ref!=null)momentScope.launch{
+                            val message=runCatching{withContext(Dispatchers.IO){FilmLibraryStore(context).use{it.addMoment(ref,position)}}}
+                                .fold({if(context.resources.configuration.locales[0].language=="zh")"已记下 ${momentClock(position)}，可在片架补写札记"else"Saved ${momentClock(position)}. Add a note from your film shelf."},{if(it is kotlinx.coroutines.CancellationException)throw it;it.message?:"无法保存札记"})
+                            withContext(Dispatchers.Main.immediate){android.widget.Toast.makeText(context,message,android.widget.Toast.LENGTH_SHORT).show()}
+                        }
+                    }
+                }, enabled=controller!=null, modifier=Modifier.testTag("remember-film-moment"))
+
                     if(portrait)Box {
                         PlayerIcon(Icons.Rounded.MoreHoriz, "更多播放操作", { moreOpen = true })
                         MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {

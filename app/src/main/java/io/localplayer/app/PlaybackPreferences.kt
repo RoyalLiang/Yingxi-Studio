@@ -2,7 +2,7 @@ package io.localplayer.app
 import android.content.Context
 
 class PlaybackPreferences(context:Context,name:String="playback-settings-v1"){
-    private val prefs=context.getSharedPreferences(name,Context.MODE_PRIVATE)
+    private val prefs=MigratingPreferences.open(context,name)
     var rememberManual:Boolean
         get()=prefs.getBoolean("remember-manual",true)
         set(value){prefs.edit().putBoolean("remember-manual",value).apply()}

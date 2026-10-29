@@ -32,8 +32,8 @@ internal interface PreviewDecoder : Closeable { fun prepare() {}; fun frame(time
 
 internal data class PreviewFrame(val bitmap: Bitmap, val timeMs: Long)
 
-class PreviewFrames internal constructor(private val cache:LruCache<String,Bitmap> = memoryCache(),private val scope:String="",private val openDecoder:(Uri)->PreviewDecoder) : Closeable {
-    constructor(context:Context,scope:String=""):this(playbackCache,scope,{uri->AndroidPreviewDecoder(context,uri)})
+class PreviewFrames internal constructor(private val cache:LruCache<String,Bitmap> = memoryCache(),private val scope:String="",private val checkAuthority:(Uri)->Unit={},private val openDecoder:(Uri)->PreviewDecoder) : Closeable {
+    constructor(context:Context,scope:String=""):this(playbackCache,scope,{uri->if(uri.isPlayerNetworkUri())PlaybackRegistry.get(uri)},{uri->AndroidPreviewDecoder(context,uri)})
     internal companion object {
         private val closer=java.util.concurrent.Executors.newSingleThreadExecutor()
         private val cacheRevision=java.util.concurrent.atomic.AtomicLong()
@@ -55,9 +55,9 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
     private fun cacheKey(uri:Uri,timeMs:Long)="$scope\u0000$uri:${bucket(timeMs)}"
     private fun evictOwnedCache(){if(cache!==playbackCache)cache.evictAll()}
     private fun bucket(timeMs: Long) = timeMs.coerceAtLeast(0) / 1000 * 1000
-    internal fun cached(uri: Uri, timeMs: Long): PreviewFrame? = if(closed.get())null else
+    internal fun cached(uri: Uri, timeMs: Long): PreviewFrame? = if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)null else
         cache.get(cacheKey(uri,timeMs))?.let { PreviewFrame(it, bucket(timeMs)) }
-    internal fun latest(uri: Uri): PreviewFrame? = if(closed.get())null else lastFrame?.takeIf { it.first == uri }?.second
+    internal fun latest(uri: Uri): PreviewFrame? = if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)null else lastFrame?.takeIf { it.first == uri }?.second
 
     internal fun nearest(uri:Uri,timeMs:Long):PreviewFrame? {
         if(closed.get())return null
@@ -132,10 +132,10 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
     }
 
     suspend fun get(uri: Uri, timeMs: Long): Bitmap? {
-        if (closed.get()) return null
+        if (closed.get()||runCatching{checkAuthority(uri)}.isFailure) return null
         cached(uri,timeMs)?.let { return it.bitmap }
         return mutex.withLock {
-            if (closed.get()) return@withLock null
+            if (closed.get()||runCatching{checkAuthority(uri)}.isFailure) return@withLock null
             val revision=cacheRevision.get()
             val position = bucket(timeMs)
             val key = cacheKey(uri,position)
@@ -159,7 +159,9 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
                             decoder = session?.decoder ?: openDecoder(uri).also { session = Session(uri,it) }
                             resource.set(decoder); active = decoder
                             if (closed.get() || !continuation.isActive) { if(continuation.isActive)continuation.resumeWith(Result.success(null));return@submit }
+                            checkAuthority(uri)
                             val bitmap = decoder.frame(position)
+                            checkAuthority(uri)
                             if (continuation.isActive && !closed.get()) {
                                 val valid=synchronized(cache){
                                 if(cache!==playbackCache||revision==cacheRevision.get()){
@@ -204,7 +206,7 @@ private class AndroidPreviewDecoder(private val context: Context, private val ur
     private var prepared = false
     private val data = if (uri.isPlayerNetworkUri()) RemotePreviewData(PlaybackRegistry.preview(uri)) else null
     override fun prepare() {
-        check(!closed.get())
+        check(!closed.get());data?.checkCurrent()
         if(!prepared)try {
             if(data!=null)retriever.setDataSource(data)else retriever.setDataSource(context,uri)
             prepared=true
@@ -212,7 +214,8 @@ private class AndroidPreviewDecoder(private val context: Context, private val ur
     }
     override fun frame(timeMs: Long): Bitmap? {
         prepare()
-        return retriever.getScaledFrameAtTime(timeMs*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,320,180)
+        val frame=retriever.getScaledFrameAtTime(timeMs*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,320,180)
+        data?.checkCurrent();return frame
     }
     override fun close() {
         if (closed.compareAndSet(false, true)) {
@@ -225,7 +228,9 @@ private class AndroidPreviewDecoder(private val context: Context, private val ur
 private class RemotePreviewData(private val lease: PlaybackLease) : MediaDataSource() {
     private val closed = AtomicBoolean(false)
     @Volatile private var file: RemoteFile? = null
+    fun checkCurrent(){try{lease.checkCurrent()}catch(e:Exception){close();throw e}}
     private fun opened(): RemoteFile {
+        checkCurrent()
         if (closed.get()) throw IOException("预览已取消")
         file?.let { return it }
         val result = ReadAheadFile(lease.open(), 128 * 1024)
@@ -234,7 +239,7 @@ private class RemotePreviewData(private val lease: PlaybackLease) : MediaDataSou
         return result
     }
     override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int =
-        if (size == 0) 0 else opened().readAt(position, buffer, offset, size)
+        run{checkCurrent();val count=if(size==0)0 else opened().readAt(position,buffer,offset,size);checkCurrent();count}
     override fun getSize() = opened().size
     override fun close() {
         if (closed.compareAndSet(false, true)) {

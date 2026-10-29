@@ -28,7 +28,7 @@ internal object PracticeCases {
 
 /** A single atomic preference entry; no files, history, network or account identifiers. */
 internal class PracticeStore(context: Context) {
-    private val prefs = context.getSharedPreferences("station-practice-v1", Context.MODE_PRIVATE)
+    private val prefs = MigratingPreferences.open(context,"station-practice-v1")
     fun read(): CaseProgress? = runCatching {
         val value = prefs.getString("progress", null) ?: return null
         val item = JSONObject(value)

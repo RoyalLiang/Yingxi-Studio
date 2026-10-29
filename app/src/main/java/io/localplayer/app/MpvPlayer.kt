@@ -165,7 +165,9 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         val resources=Opening();opening=resources
         worker.execute {
             try {
+                checkItemAuthority(item)
                 val opened=openInput(context,uri).also{resources.input=it}
+                checkItemAuthority(item)
                 val engine=MpvRuntime.load(context);engine.create(context);resources.engine=engine
                 mapOf("config" to "no","vo" to "gpu-next","gpu-context" to "android","gpu-api" to "opengl","opengl-es" to "yes",
                     "keepaspect" to "yes","panscan" to if(fillVideo)"1"else"0","blend-subtitles" to "no",
@@ -184,6 +186,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 engine.init()
                 handler.post {
                     if(released||generation!=current)return@post
+                    if(runCatching{checkItemAuthority(item)}.isFailure){resources.close();opening=null;state=Player.STATE_IDLE;wanted=false;invalidateState();return@post}
                     runtime=engine;this.engine=Engine(engine);input=opened;opening=null;openingSince=android.os.SystemClock.elapsedRealtime()
                     pendingLoad={
                         val start=position;val rate=speed.speed;val volume=gain
@@ -198,6 +201,13 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             }
         }
         return done()
+    }
+    private fun checkItemAuthority(item:MediaItem){
+        item.mediaMetadata.extras?.getString("media-ref")?.let{raw->
+            val ref=MediaRef.parse(raw)
+            MediaDataMigration.session(context).checkLocator(ref)
+            check(SourceBindingEpochs.acceptsWrite(context,ref,true)){"片匣访问已变化，请重新核验"}
+        }
     }
     internal fun updateAttachments(mediaItems:List<MediaItem>) {
         items=mediaItems.map{softwareSdrItem(it,true)}
@@ -232,9 +242,11 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         if(files.isEmpty())return
         attachments.execute {
             files.forEach { file -> try {
-                val opened=MpvInput.open(context,file.uri)
+                checkItemAuthority(item)
+                    val opened=MpvInput.open(context,file.uri)
+                    try{checkItemAuthority(item)}catch(e:Exception){opened.close();throw e}
                 handler.post {
-                    if(released||generation!=current||runtime!==engine){worker.execute{opened.close()};return@post}
+                    if(released||generation!=current||runtime!==engine||runCatching{checkItemAuthority(item)}.isFailure){worker.execute{opened.close()};return@post}
                     val item=items.getOrNull(index)
                     val retained=if(file.command=="sub-add")item?.localConfiguration?.subtitleConfigurations.orEmpty().any{it.uri==file.uri}else item?.let{SidecarAudio.from(it).any{it.uri==file.uri}}==true
                     if(!retained){worker.execute{opened.close()};return@post}

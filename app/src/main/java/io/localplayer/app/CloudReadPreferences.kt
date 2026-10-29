@@ -10,7 +10,7 @@ import java.io.File
 /** Video bytes stay in Android's private, automatically evictable cache directory. */
 internal class CloudReadPreferences(context: Context) {
     private val app=context.applicationContext
-    private val prefs=app.getSharedPreferences("cloud-playback",Context.MODE_PRIVATE)
+    private val prefs=MigratingPreferences.open(app,"cloud-playback")
     var workers:Int
         get()=prefs.getInt("workers",0).coerceIn(0,3)
         set(value){require(value in 0..3);prefs.edit().putInt("workers",value).apply()}

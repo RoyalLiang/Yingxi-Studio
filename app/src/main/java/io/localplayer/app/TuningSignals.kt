@@ -23,7 +23,7 @@ internal object TuningSignals {
 }
 
 internal class TuningStore(context: Context) {
-    private val prefs = context.getSharedPreferences("station-tuning-v1", Context.MODE_PRIVATE)
+    private val prefs = MigratingPreferences.open(context,"station-tuning-v1")
     fun read(): SignalProgress? = runCatching {
         val item = JSONObject(prefs.getString("progress", null) ?: return null)
         SignalProgress(item.getString("round"), item.getInt("revision"), item.getInt("position"), item.getBoolean("revealed"))

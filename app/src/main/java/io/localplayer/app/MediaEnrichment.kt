@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import io.localplayer.core.SourceRoot
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -15,14 +17,14 @@ import java.io.File
 import java.security.MessageDigest
 
 internal class EnrichmentPreferences(context:Context){
-    private val p=context.getSharedPreferences("media-enrichment-v1",0)
+    private val p=MigratingPreferences.open(context,"media-enrichment-v1")
     var posters:Boolean get()=p.getBoolean("posters",true);set(v){p.edit{putBoolean("posters",v)}}
     var subtitles:Boolean get()=p.getBoolean("subtitles",true);set(v){p.edit{putBoolean("subtitles",v)}}
     var bilingual:Boolean get()=p.getBoolean("bilingual",false);set(v){p.edit{putBoolean("bilingual",v)}}
     var subtitleSource:String get()=p.getString("subtitle-source","subhd").takeIf{it in setOf("subhd","shooter","custom")}?:"subhd";set(v){require(v in setOf("subhd","shooter","custom"));p.edit{putString("subtitle-source",v)}}
     var customSubtitleSearch:String get()=p.getString("custom-subtitle-search","").orEmpty();set(v){subtitleSearchUrl(v,"Film");p.edit{putString("custom-subtitle-search",v.trim())}}
 }
-internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest(listOf(media.key,media.location,media.sizeBytes,media.localUri).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
+internal fun enrichmentKey(media:MediaRef)=MessageDigest.getInstance("SHA-256").digest((listOf(media.key,media.location,media.sizeBytes,media.localUri)+if((media.bindingEpoch?:0)>0)listOf("epoch:${media.bindingEpoch}")else emptyList()).joinToString("\u0000").toByteArray()).joinToString(""){"%02x".format(it)}
 
 private fun posterPath(media:MediaRef,source:Source?)=media.posterPathHint?:media.path?.let{listOfNotNull(source?.root?.takeIf{it.isNotBlank()},it).joinToString("/")}
     ?:media.localUri?.let{raw->runCatching{val uri=raw.toUri();if("document" in uri.pathSegments)android.provider.DocumentsContract.getDocumentId(uri).substringAfter(':') else uri.path}.getOrNull()}
@@ -54,7 +56,7 @@ internal object MediaPosters {
     private const val recheckMs=7L*24*60*60*1000
     private fun identity(media:MediaRef,source:Source?)=posterIdentity(media,source).let{listOf(it.title,it.year,it.season,it.series).joinToString("|")}
     private fun source(context:Context,media:MediaRef)=media.sourceId?.let{id->SourceStore(context).load().firstOrNull{it.id==id}}
-    private fun allowed(context:Context,media:MediaRef,source:Source?)=!SealedMedia.protects(media)&&EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)))
+    private fun allowed(context:Context,media:MediaRef,source:Source?)=!SealedMedia.protects(media)&&EnrichmentPreferences(context).posters&&(media.sourceId==null||(source!=null&&media.location==mediaLocation(source)&&runCatching{SourceBindingEpochs.matches(context,source,media)&&media.path?.let{SourceRoot(source.initialPath).contains(it)}==true}.getOrDefault(false)))
     private fun record(context:Context,media:MediaRef,source:Source?)=PosterStore(context).metadata(enrichmentKey(media))?.takeIf{it.optString("identity")==identity(media,source)}
     fun credit(context:Context,media:MediaRef):Pair<String,String>?=runCatching {
         val source=source(context,media)
@@ -81,7 +83,7 @@ internal object MediaPosters {
         if(localOnly)null else fetch(app,media)
     }
     private fun migrate(context:Context,media:MediaRef,source:Source?,store:PosterStore):Bitmap?=runCatching {
-        val generation=revision.get();val token=HistoryStore(context).token(media.key)
+        val generation=revision.get();val token=HistoryStore(context).token(media)
         // Movie covers from the previous identity policy remain useful, including expired ones.
         if(posterIdentity(media,source)!=MediaIdentity.parse(media.title))return@runCatching null
         val id=enrichmentKey(media);val dir=File(context.cacheDir,"media-posters-v1")
@@ -89,7 +91,7 @@ internal object MediaPosters {
         if(data.optInt("policy")!=2||data.optString("title")!=media.title)return@runCatching null
         val bitmap=decode(File(dir,"$id.jpg").readBytes())?:return@runCatching null
         synchronized(writes){
-            if(revision.get()!=generation||HistoryStore(context).token(media.key)!=token||!allowed(context,media,source(context,media)))return@runCatching null
+            if(revision.get()!=generation||HistoryStore(context).token(media)!=token||!allowed(context,media,source(context,media)))return@runCatching null
             store.save(id,bitmap,data.put("identity",identity(media,source)).put("policy",2).put("checkedAt",0).put("confidence",.96))
         }
         bitmap
@@ -121,11 +123,11 @@ internal object MediaPosters {
             val age=System.currentTimeMillis()-(old?.optLong("checkedAt")?:0)
             if(previous!=null&&old?.optInt("policy")==policy&&age in 0 until recheckMs)return@withContext previous
             if(System.currentTimeMillis()-(failed[id]?:0)<6*60*60*1000)return@withContext previous
-            val token=HistoryStore(context).token(media.key);val generation=revision.get()
+            val token=HistoryStore(context).token(media);val generation=revision.get()
             protectedRequests[c]=media
         val watcher=EnrichmentDeadlines.timer.schedule({c.close()},20,java.util.concurrent.TimeUnit.SECONDS)
             val owner=coroutineContext.job.invokeOnCompletion{if(it!=null)c.close()}
-            fun valid()=revision.get()==generation&&HistoryStore(context).token(media.key)==token&&allowed(context,media,source(context,media))
+            fun valid()=revision.get()==generation&&HistoryStore(context).token(media)==token&&allowed(context,media,source(context,media))
             try{
                 var credit="目录海报";var url="";var imageUrl="";var confidence=1.0
                 val local=runCatching{sidecar(context,media,source,c)}.getOrNull()?.let(::decode)

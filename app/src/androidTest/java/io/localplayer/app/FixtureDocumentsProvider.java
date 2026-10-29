@@ -11,6 +11,9 @@ import java.io.FileNotFoundException;
 
 /** The test APK's standalone provider cannot depend on the target APK's Kotlin runtime. */
 public final class FixtureDocumentsProvider extends DocumentsProvider {
+    private volatile java.util.concurrent.CountDownLatch childRelease;
+    private volatile java.util.concurrent.CountDownLatch childEntered;
+
     public static final String AUTHORITY = "io.localplayer.app.test.documents";
     private volatile boolean thumbnailEntered;
     private volatile boolean thumbnailCancelled;
@@ -20,7 +23,12 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
         if (method.startsWith("thumbnail-")) {
             android.os.Bundle result=new android.os.Bundle();result.putBoolean("entered",thumbnailEntered);result.putBoolean("cancelled",thumbnailCancelled);result.putBoolean("signal",thumbnailHasSignal);return result;
         }
-        return super.call(method,arg,extras);
+        android.os.Bundle result = new android.os.Bundle();
+        if (method.equals("fixture:block-child")) { childEntered = new java.util.concurrent.CountDownLatch(1); childRelease = new java.util.concurrent.CountDownLatch(1); }
+        else if (method.equals("fixture:child-entered")) result.putBoolean("entered", childEntered != null && childEntered.getCount() == 0);
+        else if (method.equals("fixture:release-child")) { if (childRelease != null) childRelease.countDown(); childRelease = null; }
+        else return super.call(method,arg,extras);
+        return result;
     }
     private static final String[] COLUMNS = {Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE};
     @Override public boolean onCreate() { return true; }
@@ -96,6 +104,14 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             if(signal!=null)signal.throwIfCanceled();
             throw new FileNotFoundException("Blocked fixture was not cancelled");
         }
+        if (id.equals("clip") && mode.equals("r")) {
+            java.io.File file = new java.io.File(getContext().getCacheDir(), "upgrade-resume.mp4");
+            try (java.io.InputStream input = getContext().getAssets().open("upgrade-resume.mp4"); java.io.FileOutputStream output = new java.io.FileOutputStream(file)) {
+                byte[] buffer = new byte[8192]; int count; while ((count = input.read(buffer)) > 0) output.write(buffer, 0, count);
+            } catch (java.io.IOException error) { throw new FileNotFoundException(error.toString()); }
+            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+
+        }
         if (!id.equals("subtitle42") || !mode.equals("r")) throw new FileNotFoundException("No media content in navigation fixture");
         java.io.File file = new java.io.File(getContext().getCacheDir(), "opaque-id-subtitle.srt");
         try (java.io.FileOutputStream output = new java.io.FileOutputStream(file)) {
@@ -104,6 +120,8 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
     }
     @Override public boolean isChildDocument(String parent, String child) {
+        java.util.concurrent.CountDownLatch release = childRelease;
+        if (release != null) { childEntered.countDown(); try { if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("Fixture timeout"); } catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); } }
         if (parent.equals("sidecars")) return child.equals("video42") || child.equals("subtitle42");
         if (parent.equals("series")) return child.startsWith("episode");
         if (parent.equals("root")) return child.equals("movies") || child.equals("shorts") || child.equals("clip");

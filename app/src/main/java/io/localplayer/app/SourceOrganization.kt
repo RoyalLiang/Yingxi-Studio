@@ -13,7 +13,7 @@ data class SourceBookmark(val sourceId: String, val path: String, val label: Str
 
 /** Display organization only. Passwords and source identity remain owned by SourceStore. */
 class SourceOrganization(context: Context) {
-    private val prefs = context.getSharedPreferences("source-organization-v1", Context.MODE_PRIVATE)
+    private val prefs = MigratingPreferences.open(context,"source-organization-v1")
     fun groups(): List<SourceGroup> = JSONArray(prefs.getString("groups", "[]")).let { a ->
         (0 until a.length()).map { a.getJSONObject(it) }.map { SourceGroup(it.getString("id"), it.getString("name")) }
     }

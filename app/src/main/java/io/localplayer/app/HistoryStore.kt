@@ -15,15 +15,15 @@ fun mediaLocation(source:Source):String {
 
 /** Stable media identity only; no credentials or temporary playback tokens. */
 data class MediaRef(val key:String,val title:String,val sourceLabel:String,val sourceId:String?=null,
-    val path:String?=null,val localUri:String?=null,val sizeBytes:Long?=null,val location:String?=null,val localParentUri:String?=null,val posterPathHint:String?=null,val localAncestors:List<String> = emptyList()) {
+    val path:String?=null,val localUri:String?=null,val sizeBytes:Long?=null,val location:String?=null,val localParentUri:String?=null,val posterPathHint:String?=null,val localAncestors:List<String> = emptyList(),val mediaId:String?=null,val locatorId:String?=null,val contentRevisionId:String?=null,val bindingEpoch:Long?=null) {
     fun json()=JSONObject().put("key",key).put("title",title).put("sourceLabel",sourceLabel)
-        .put("sourceId",sourceId).put("path",path).put("localUri",localUri).put("sizeBytes",sizeBytes).put("location",location).put("localParentUri",localParentUri).put("posterPathHint",posterPathHint).put("localAncestors",JSONArray(localAncestors)).toString()
+        .put("sourceId",sourceId).put("path",path).put("localUri",localUri).put("sizeBytes",sizeBytes).put("location",location).put("localParentUri",localParentUri).put("posterPathHint",posterPathHint).put("localAncestors",JSONArray(localAncestors)).put("mediaId",mediaId).put("locatorId",locatorId).put("contentRevisionId",contentRevisionId).put("bindingEpoch",bindingEpoch).toString()
     companion object {
         fun parse(text:String):MediaRef { val o=JSONObject(text)
             fun optional(name:String)=o.optString(name).takeIf { it.isNotBlank()&&it!="null" }
             return MediaRef(o.getString("key"),o.getString("title"),o.getString("sourceLabel"),
                 optional("sourceId"),optional("path"),optional("localUri"),
-                if(o.has("sizeBytes")&&!o.isNull("sizeBytes"))o.getLong("sizeBytes")else null,optional("location"),optional("localParentUri"),optional("posterPathHint"),o.optJSONArray("localAncestors")?.let{a->(0 until a.length()).map{a.getString(it)}}?:emptyList())
+                if(o.has("sizeBytes")&&!o.isNull("sizeBytes"))o.getLong("sizeBytes")else null,optional("location"),optional("localParentUri"),optional("posterPathHint"),o.optJSONArray("localAncestors")?.let{a->(0 until a.length()).map{a.getString(it)}}?:emptyList(),optional("mediaId"),optional("locatorId"),optional("contentRevisionId"),if(o.has("bindingEpoch")&&!o.isNull("bindingEpoch"))o.getLong("bindingEpoch")else null)
         }
     }
 }
@@ -31,9 +31,9 @@ data class HistoryEntry(val media:MediaRef,val positionMs:Long,val durationMs:Lo
     val resumeMs get()=if(completed)0L else positionMs.coerceAtLeast(0)
     val progress get()=if(durationMs>0)(positionMs.toFloat()/durationMs).coerceIn(0f,1f)else 0f
 }
-data class HistoryToken(val clearRevision:Long,val itemRevision:Long)
+data class HistoryToken(val clearRevision:Long,val itemRevision:Long,val generation:Long=0,val mediaId:String?=null,val contentRevisionId:String?=null)
 
-class HistoryStore(context:Context,name:String="history-v1") {
+internal class LegacyHistoryStore(context:Context,name:String="history-v1") {
     private val prefs=context.getSharedPreferences(name,Context.MODE_PRIVATE)
     companion object { private val lock=Any() }
     fun entries():List<HistoryEntry> { synchronized(lock) {

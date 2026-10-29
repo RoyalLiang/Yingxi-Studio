@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.sp
 
 internal enum class LibraryAppearance(val label:String) { SYSTEM("跟随系统"),DAY("日间"),NIGHT("守夜") }
 internal class AppearancePreferences(context:Context) {
-    internal val store=context.applicationContext.getSharedPreferences("library-appearance",Context.MODE_PRIVATE)
+    internal val store=MigratingPreferences.open(context.applicationContext,"library-appearance")
     var mode:LibraryAppearance
         get()=LibraryAppearance.entries.firstOrNull{it.name==store.getString("mode",null)}?:LibraryAppearance.SYSTEM
         set(value){store.edit().putString("mode",value.name).apply()}

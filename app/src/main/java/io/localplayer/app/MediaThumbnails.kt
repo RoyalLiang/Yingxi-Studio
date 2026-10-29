@@ -59,10 +59,7 @@ internal object MediaThumbnails {
     private const val MAX_DISK_BYTES = 24L * 1024 * 1024
     private const val MAX_REMOTE_BYTES = 16L * 1024 * 1024
     private fun directory(context: Context) = File(context.cacheDir, "media-thumbnails-v1").apply { mkdirs() }
-    private fun key(media: MediaRef): String {
-        val identity = listOf(media.key, media.location, media.sizeBytes, media.localUri).joinToString("\u0000")
-        return MessageDigest.getInstance("SHA-256").digest(identity.toByteArray()).joinToString("") { "%02x".format(it) }
-    }
+    private fun key(media:MediaRef)=enrichmentKey(media)
 
     fun warm(context: Context, media: MediaRef, activeUri: Uri) {
         scope.launch { load(context.applicationContext, media, activeUri) }
@@ -96,11 +93,12 @@ internal object MediaThumbnails {
         if(SealedMedia.protects(media)&&!SealedMedia.unlocked)return@withContext null
         val cacheKey = key(media)
         val history = HistoryStore(context)
-        val token = history.token(media.key)
+        val token = history.token(media)
         val store = SourceStore(context)
         // An edited server, principal or host key cannot reuse a prior server's frame.
         val source = if (media.sourceId != null) runCatching { store.load() }.getOrDefault(emptyList()).firstOrNull { it.id == media.sourceId } else null
-        if (media.sourceId != null && activeUri == null && (source == null || media.location != mediaLocation(source))) return@withContext null
+        if(runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure)return@withContext null
+        if (media.sourceId != null && (source == null || !SourceBindingEpochs.matches(context,source,media) || media.path?.let{io.localplayer.core.SourceRoot(source.initialPath).contains(it)}!=true)) return@withContext null
         val target=File(directory(context),"$cacheKey.jpg")
         var decode=false
         val cached=extract(Cancellation()) {
@@ -139,7 +137,10 @@ internal object MediaThumbnails {
                                 // Never open an authentication UI or bypass SFTP trust to obtain artwork.
                                 val password = store.password(saved.id)
                                 if (saved.username.isNotBlank() && password == null) return@extract null
-                                PlaybackLease(saved, Credentials(password ?: ""), path, prefetch=false)
+                                PlaybackLease(saved, Credentials(password ?: ""), path, prefetch=false,authority={
+                        SourceBindingEpochs.verifyLease(context,saved,media.bindingEpoch?:0)
+                        MediaDataMigration.session(context).checkLocator(media)
+                    })
                             }
                             if (media.sourceId != preview.source.id || (media.location != null && media.location != mediaLocation(preview.source))) throw IOException("Media source changed")
                             cancellation.own(preview)
@@ -153,7 +154,9 @@ internal object MediaThumbnails {
                                     if (position >= file.size) return -1
                                     if (read >= MAX_REMOTE_BYTES) throw IOException("Thumbnail read budget exceeded")
                                     val length = minOf(size.toLong(), 256L * 1024, MAX_REMOTE_BYTES - read).toInt()
-                                    val n = file.readAt(position, buffer, offset, length)
+                                    preview?.checkCurrent()
+                                val n = file.readAt(position, buffer, offset, length)
+                                preview?.checkCurrent()
                                     if (n > 0) read += n
                                     return n
                                 }
@@ -173,13 +176,13 @@ internal object MediaThumbnails {
                         cancellation.check()
                         caller.ensureActive()
                         // Clearing/removing history while extraction runs must not resurrect its private frame.
-                        if (history.token(media.key) != token || generation.get()!=cacheGeneration) return@extract null
+                        if (history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) return@extract null
                         val temporary = File(target.parentFile, "$cacheKey.tmp")
                         try {
                             temporary.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.JPEG, 85, it)) }
                             if (!temporary.renameTo(target)) throw IOException("Cannot save thumbnail")
                         } finally { temporary.delete() }
-                        if (history.token(media.key) != token || generation.get()!=cacheGeneration) { target.delete(); return@extract null }
+                        if (history.token(media) != token || generation.get()!=cacheGeneration || runCatching{preview?.checkCurrent()}.isFailure) { target.delete(); return@extract null }
                         memory.put(cacheKey, bitmap)
                         failed.remove(cacheKey)
                         trim(context)

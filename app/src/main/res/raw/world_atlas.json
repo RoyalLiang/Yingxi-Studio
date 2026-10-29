@@ -190,59 +190,73 @@
       "quotes": [
         {
           "zh": "先别说它坏了。给我一盏灯。",
-          "en": "Don’t call it broken yet. Bring me a lamp."
+          "en": "Don’t call it broken yet. Bring me a lamp.",
+          "id": "quote_axi_4af777fe83"
         },
         {
           "zh": "带回来的不只是片子，还有回去的路。",
-          "en": "We bring back more than films. We bring a way home."
+          "en": "We bring back more than films. We bring a way home.",
+          "id": "quote_axi_14caf5cef2"
         },
         {
           "zh": "这一格修好了。今晚应该能早一点开场。",
-          "en": "That part is fixed. We might start a little earlier tonight."
+          "en": "That part is fixed. We might start a little earlier tonight.",
+          "id": "quote_axi_c4d9dc4c9f"
         },
         {
           "zh": "哟，回来了。今天淘着啥好货了？",
-          "en": "Back again? What good finds did you bring today?"
+          "en": "Back again? What good finds did you bring today?",
+          "id": "quote_axi_470fcf9220"
         },
         {
           "zh": "这批影像登记好了，片架给你留了位置。",
-          "en": "These images are logged. There is room for them on the shelf."
+          "en": "These images are logged. There is room for them on the shelf.",
+          "id": "quote_axi_3f33249c50"
         },
         {
           "zh": "字放清楚些。路还长，慢慢读。",
-          "en": "Keep the writing clear. There is a long road ahead; take your time reading."
+          "en": "Keep the writing clear. There is a long road ahead; take your time reading.",
+          "id": "quote_axi_e36345e967"
         },
         {
           "zh": "片罐的标签写在侧面。盖子磨花了，名字也不会跟着丢。",
-          "en": "Put the label on the side of the film can. A worn lid should not take its name with it."
+          "en": "Put the label on the side of the film can. A worn lid should not take its name with it.",
+          "id": "quote_axi_f66684691c"
         },
         {
           "zh": "收到的信先压平。纸上的事，还要一件件核实。",
-          "en": "Flatten the letter first. What it says still needs checking, one thing at a time."
+          "en": "Flatten the letter first. What it says still needs checking, one thing at a time.",
+          "id": "quote_axi_91b302aef5"
         },
         {
           "zh": "登记簿的夹页别抽走。两边的来信各有去处，回头才找得到。",
-          "en": "Leave the dividers in the logbook. Each bundle of letters has its place; we need to find them again."
+          "en": "Leave the dividers in the logbook. Each bundle of letters has its place; we need to find them again.",
+          "id": "quote_axi_b9c88d5b58"
         },
         {
           "zh": "沉没档案馆的自进化孢子倒是懂事，把文明纪元的铁盒裹得严严实实，一滴潮水都没漏进去。",
-          "en": "The self-evolving spores in the Drowned Archive know their job—wrapped those Civilization Era tins so tight not a drop of tidewater got in."
+          "en": "The self-evolving spores in the Drowned Archive know their job—wrapped those Civilization Era tins so tight not a drop of tidewater got in.",
+          "id": "quote_axi_9788d620a3"
         },
         {
           "zh": "不管是理想城捎来的精密零件，还是聚落变种人兄弟扛来的旧硬盘，进了放映站，都得先登记上册。",
-          "en": "Whether it is a precision part from Ideal City or an old drive hauled in by our mutant friends from the settlement, everything gets logged at the counter first."
+          "en": "Whether it is a precision part from Ideal City or an old drive hauled in by our mutant friends from the settlement, everything gets logged at the counter first.",
+          "id": "quote_axi_26d8fe186e"
         },
         {
           "zh": "核火烧掉了旧世界的街牌，但只要片头字幕还能亮起来，那些日子就不算彻底消失。",
-          "en": "Nuclear fire burned away the old world's street signs, but as long as the opening credits still light up, those days are not truly gone."
+          "en": "Nuclear fire burned away the old world's street signs, but as long as the opening credits still light up, those days are not truly gone.",
+          "id": "quote_axi_cdd2ad7ae2"
         },
         {
           "zh": "同一只片匣，纸条夹在一起。别翻一页，就重抄一遍。",
-          "en": "Keep the slips for one film case together. Turning a page should not mean copying them all again."
+          "en": "Keep the slips for one film case together. Turning a page should not mean copying them all again.",
+          "id": "quote_axi_874a956560"
         },
         {
           "zh": "路牌写清来处，细账夹进簿里。找片匣的人，不必先读完一页告示。",
-          "en": "Put the way in plain sight and keep the fine print in the ledger. No one should need a page of notices to find a film case."
+          "en": "Put the way in plain sight and keep the fine print in the ledger. No one should need a page of notices to find a film case.",
+          "id": "quote_axi_2f18c998dc"
         }
       ],
       "personality": {
@@ -269,71 +283,88 @@
       "quotes": [
         {
           "zh": "灯亮着，就还有人知道往哪儿走。",
-          "en": "While the light is on, someone still knows the way."
+          "en": "While the light is on, someone still knows the way.",
+          "id": "quote_chideng_d66bf31aab"
         },
         {
           "zh": "锁扣收好了。幕布是留给影像的。",
-          "en": "The clasp is put away. The screen belongs to the picture."
+          "en": "The clasp is put away. The screen belongs to the picture.",
+          "id": "quote_chideng_7540b1c4f5"
         },
         {
           "zh": "别急，先听它转完这一圈。",
-          "en": "No hurry. Listen until it makes one full turn."
+          "en": "No hurry. Listen until it makes one full turn.",
+          "id": "quote_chideng_a405d5ffe0"
         },
         {
           "zh": "先把设备调顺，今晚安心看。",
-          "en": "Get the equipment settled, then enjoy tonight’s screening."
+          "en": "Get the equipment settled, then enjoy tonight’s screening.",
+          "id": "quote_chideng_71d540b347"
         },
         {
           "zh": "灯可以换，片子的底色不能认错。",
-          "en": "You can change the lamp. You must still read the picture's colors correctly."
+          "en": "You can change the lamp. You must still read the picture's colors correctly.",
+          "id": "quote_chideng_c830b5a21b"
         },
         {
           "zh": "转轴修好了。你看你的，我把守夜灯留着。",
-          "en": "The pivot is fixed. Keep watching; I'll leave the night lamp on."
+          "en": "The pivot is fixed. Keep watching; I'll leave the night lamp on.",
+          "id": "quote_chideng_b0cd5ab19a"
         },
         {
           "zh": "银幕上的人动起来，我才敢把工具收回箱里。",
-          "en": "I'll put the tools away when the people on the screen start moving."
+          "en": "I'll put the tools away when the people on the screen start moving.",
+          "id": "quote_chideng_07c1f2381e"
         },
         {
           "zh": "幕布展开了，坐吧。",
-          "en": "The screen is open. Take a seat."
+          "en": "The screen is open. Take a seat.",
+          "id": "quote_chideng_877d05d8a6"
         },
         {
           "zh": "线接好了。歇会儿也成，回来接着放。",
-          "en": "The line is patched. Take a break; the next reel can wait for you."
+          "en": "The line is patched. Take a break; the next reel can wait for you.",
+          "id": "quote_chideng_7d705ef112"
         },
         {
           "zh": "旧零件别急着扔。先认清哪块该干什么活。",
-          "en": "Don't throw the old parts away yet. First work out which one belongs on which job."
+          "en": "Don't throw the old parts away yet. First work out which one belongs on which job.",
+          "id": "quote_chideng_24d96b0f3f"
         },
         {
           "zh": "垫圈按尺寸串在细铁丝上。合不上，拧得再紧也不会稳。",
-          "en": "Sort the washers on a thin wire by size. Tightening the wrong one will not make it fit."
+          "en": "Sort the washers on a thin wire by size. Tightening the wrong one will not make it fit.",
+          "id": "quote_chideng_8951350430"
         },
         {
           "zh": "昨晚有位觉醒者路过，帮我把回声海飘来的杂音滤干净了；原来那是文明纪元最后一班列车的报站声。",
-          "en": "An Awakened traveler passed by last night and helped me filter the static from the Echo Sea; it turned out to be the station call of the Civilization Era's last train."
+          "en": "An Awakened traveler passed by last night and helped me filter the static from the Echo Sea; it turned out to be the station call of the Civilization Era's last train.",
+          "id": "quote_chideng_4b9b92e2d4"
         },
         {
           "zh": "线盘别缠死。留一截松线，下次检修才不必把整架拆开。",
-          "en": "Leave some slack on the cable reel. The next repair should not mean taking the whole rack apart."
+          "en": "Leave some slack on the cable reel. The next repair should not mean taking the whole rack apart.",
+          "id": "quote_chideng_ea14f1fee4"
         },
         {
           "zh": "先记哪盏灯先灭，再拿钳子。一次换三根线，谁也说不清是哪根坏了。",
-          "en": "Note which lamp went dark first, then reach for the pliers. Change three wires at once and nobody knows which one was faulty."
+          "en": "Note which lamp went dark first, then reach for the pliers. Change three wires at once and nobody knows which one was faulty.",
+          "id": "quote_chideng_14f48cf125"
         },
         {
           "zh": "片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。",
-          "en": "Running the projector will not bring a film case in sooner. Check the delivery road before reaching for the wrench."
+          "en": "Running the projector will not bring a film case in sooner. Check the delivery road before reaching for the wrench.",
+          "id": "quote_chideng_58eb7f9c74"
         },
         {
           "zh": "纸响不算片子到了。先看片轮走了几格，再把那一格记上。",
-          "en": "Rustling paper does not mean the reel has arrived. Watch how far the reel turns, then mark only what moved."
+          "en": "Rustling paper does not mean the reel has arrived. Watch how far the reel turns, then mark only what moved.",
+          "id": "quote_chideng_cc2a38683c"
         },
         {
           "zh": "几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。",
-          "en": "Sort the trays together, but check the frame numbers in order. Leave a gap where a frame is missing; do not call it complete."
+          "en": "Sort the trays together, but check the frame numbers in order. Leave a gap where a frame is missing; do not call it complete.",
+          "id": "quote_chideng_264790db42"
         }
       ],
       "personality": {
@@ -360,27 +391,33 @@
       "quotes": [
         {
           "zh": "没走过的路，我会画成虚线。",
-          "en": "A road I haven’t walked gets a dotted line."
+          "en": "A road I haven’t walked gets a dotted line.",
+          "id": "quote_mitu_ad4588a02f"
         },
         {
           "zh": "地图可以旧，路标不能含糊。",
-          "en": "A map may age. A signpost must stay clear."
+          "en": "A map may age. A signpost must stay clear.",
+          "id": "quote_mitu_55599c7890"
         },
         {
           "zh": "下一封信，等我过了盐环再寄。",
-          "en": "The next letter goes out once I cross the Salt Ring."
+          "en": "The next letter goes out once I cross the Salt Ring.",
+          "id": "quote_mitu_7fd9162031"
         },
         {
           "zh": "地址写清，回来的路就不会断。",
-          "en": "Write the address clearly, and the way back will stay unbroken."
+          "en": "Write the address clearly, and the way back will stay unbroken.",
+          "id": "quote_mitu_b3dbe3f11d"
         },
         {
           "zh": "盐环聚落的变种人铁匠替我加固了背架，这一趟能多背四盒旧纪元纪录片。",
-          "en": "The mutant blacksmith at the Salt Ring settlement reinforced my pack frame; I can carry four more old-era documentary reels this trip."
+          "en": "The mutant blacksmith at the Salt Ring settlement reinforced my pack frame; I can carry four more old-era documentary reels this trip.",
+          "id": "quote_mitu_c26f8f9540"
         },
         {
           "zh": "看到发光的自进化孢子往高处爬，就说明辐射潮要涨了——跟着它们的边界走，准能绕回避难所。",
-          "en": "When glowing self-evolving spores climb to higher ground, the radiant tide is rising—follow their edge and you will make it back to the shelter."
+          "en": "When glowing self-evolving spores climb to higher ground, the radiant tide is rising—follow their edge and you will make it back to the shelter.",
+          "id": "quote_mitu_0e5e369a82"
         }
       ],
       "personality": {

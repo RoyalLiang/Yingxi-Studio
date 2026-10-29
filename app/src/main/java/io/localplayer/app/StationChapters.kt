@@ -17,7 +17,7 @@ internal data class WorldChapter(val id:String,val title:WorldText,val introduct
 
 /** Store stable content IDs so adding letters never silently shifts a reader's position. */
 internal class ChapterReading(context:android.content.Context,name:String="station-reading-v1") {
-    private val p=context.getSharedPreferences(name,android.content.Context.MODE_PRIVATE)
+    private val p=MigratingPreferences.open(context,name)
     fun chapter(chapters:List<WorldChapter>)=chapters.firstOrNull { it.id==p.getString("chapter",null) } ?: chapters.first()
     fun letter(chapter:WorldChapter)=chapter.letters.firstOrNull { it.id==p.getString("letter:${chapter.id}",null) } ?: chapter.letters.first()
     fun select(chapter:WorldChapter,letter:WorldLetter) {
