@@ -27,6 +27,60 @@ class LibraryParcelTest {
         val o=JSONObject(text);assertEquals(film.id,o.getJSONArray("films").getJSONObject(0).getString("id"));assertEquals(1,o.getJSONArray("moments").length())
         assertEquals(1,parcel.preview(text).films)
     }}
+    @Test fun everyCloudReadModeSurvivesBackupAndRestore(){test{context,store,parcel->
+        seed(store)
+        val settings=CloudReadPreferences(context)
+        for(value in 0..3){
+            settings.workers=value
+            val text=parcel.export()
+            val rows=JSONObject(text).getJSONArray("preferences")
+            val saved=(0 until rows.length()).map(rows::getJSONObject).single{it.getString("scope")=="cloud-playback"&&it.getString("name")=="workers"}
+            assertEquals(value,JSONObject(saved.getString("value")).getInt("value"))
+            settings.workers=(value+1)%4
+            parcel.restore(parcel.preview(text))
+            assertEquals(value,settings.workers)
+        }
+    }}
+    @Test fun unsupportedCloudReadModesAreRejectedBeforeChangingRecords(){test{context,store,parcel->
+        seed(store)
+        CloudReadPreferences(context).workers=2
+        val original=parcel.export()
+        for(value in listOf(-1,4,8)){
+            val changed=JSONObject(original)
+            val rows=changed.getJSONArray("preferences")
+            val saved=(0 until rows.length()).map(rows::getJSONObject).single{it.getString("scope")=="cloud-playback"&&it.getString("name")=="workers"}
+            saved.put("value",MigratingPreferences.encode(value))
+            assertTrue("workers=$value",runCatching{parcel.restore(parcel.preview(changed.toString()))}.isFailure)
+            assertEquals(original,parcel.export())
+            assertEquals(2,CloudReadPreferences(context).workers)
+            assertFalse(parcel.hasRecovery())
+        }
+    }}
+    @Test fun fullPlayerSpeedRangeSurvivesBackupAndRestore(){test{context,store,parcel->
+        seed(store)
+        for(value in listOf(.25f,.5f,1f,2f,4f)){
+            PlaybackPreferences(context).speed=value
+            val text=parcel.export()
+            PlaybackPreferences(context).speed=1.25f
+            parcel.restore(parcel.preview(text))
+            assertEquals(value,PlaybackPreferences(context).speed)
+        }
+    }}
+    @Test fun outOfRangeSpeedsAreRejectedWithoutChangingTheLibrary(){test{context,store,parcel->
+        seed(store)
+        PlaybackPreferences(context).speed=1.25f
+        val original=parcel.export()
+        for(value in listOf(-1f,0f,.24f,4.01f,8f)){
+            val changed=JSONObject(original)
+            val rows=changed.getJSONArray("preferences")
+            val saved=(0 until rows.length()).map(rows::getJSONObject).single{it.getString("scope")=="playback-settings-v1"&&it.getString("name")=="speed"}
+            saved.put("value",MigratingPreferences.encode(value))
+            assertTrue("speed=$value",runCatching{parcel.restore(parcel.preview(changed.toString()))}.isFailure)
+            assertEquals(original,parcel.export())
+            assertEquals(1.25f,PlaybackPreferences(context).speed)
+            assertFalse(parcel.hasRecovery())
+        }
+    }}
     @Test fun foreignRestoreKeepsIdentityAndRequiresManualLocation(){test{context,store,parcel->
         val film=seed(store);assertTrue(HistoryStore(context).update(film.media,HistoryStore(context).token(film.media),42000,60000,false));val text=parcel.export()
         val foreign=IsolatedMediaContext(context.baseContext)

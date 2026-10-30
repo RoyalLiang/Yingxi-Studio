@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "chapter": {
-    "zh": "第一章 · 灯还亮着",
-    "en": "Chapter I · The light is still on"
+    "zh": "第二章 · 有人回信",
+    "en": "Chapter II · someone wrote back"
   },
   "introducedIn": "0.2.0-alpha.20",
   "premise": {
-    "zh": "文明纪元在核火及其引发的长潮中终结。地下放映站、盐环聚落与理想城各有灯火；孢子、变异生灵、变种人与觉醒者共同生活。这里收拢旧影像，也给尚未走完的路留着空白。",
-    "en": "Nuclear fire and the Long Tide it triggers end the Civilization Era. Underground stations, Salt Ring settlements and Ideal City keep their own lights; spores, altered life, mutants and Awakened people share the world. Here, old images are gathered and unfinished routes retain their blank spaces."
+    "zh": "核爆与长潮终结繁荣的文明纪元，技术体系随之断层。掠夺、变异物种与环境危险不断影响生存，各方仍要主动探索、试造和建造。映汐是旧避难所外围的地下据点，收拢旧影像，也必须为防护、照料和每一次进展付出成本。",
+    "en": "Nuclear destruction and the Long Tide ended the prosperous Civilization Era and fractured its technology. Raiding, mutated life, and environmental dangers shape survival, while different groups continue to explore, experiment, and build. Yingxi is an underground outpost on an old shelter’s outskirts, preserving images while paying the costs of protection, care, and every advance."
   },
   "nodes": [
     {
@@ -17,15 +17,15 @@
         "en": "Yingxi Station"
       },
       "kind": {
-        "zh": "地下避难所 · 有人守候",
-        "en": "Underground shelter · A light kept on"
+        "zh": "地下据点 · 有人守候",
+        "en": "Underground outpost · A light kept on"
       },
       "x": 0.22,
       "y": 0.14,
       "known": true,
       "description": {
-        "zh": "旧铁路线终点、由旧避难所外围改建的地下幸存者据点，保留仍在运转的放映室。文明纪元幸存的影像在这里归档，无论是拾荒者、变种人行商还是觉醒者旅人，都能借一晚灯光。",
-        "en": "An underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter, with a working screening room. Surviving images from the Civilization Era are catalogued here; scavengers, mutant traders, and Awakened travelers alike may borrow its light."
+        "zh": "旧铁路线终点、由旧避难所外围改建的地下幸存者据点，保留仍在运转的放映室。阿汐与迟灯收存文明纪元的影像，迎接行商、废土客与其他来客；深层避难所的运行与进入条件仍未明确。 地下空间并未消除掠夺、生态与环境风险，防护仍需维护。",
+        "en": "An underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter, with a working screening room. Axi and Chideng preserve images from the Civilization Era and welcome traders, scavenger bands, and other visitors; the deep shelter’s operation and access remain unspecified. Being underground does not remove raiding, ecological, or environmental threats; protection still requires maintenance."
       }
     },
     {
@@ -42,8 +42,8 @@
       "y": 0.14,
       "known": true,
       "description": {
-        "zh": "盐壳包住文明纪元停运的列车车厢，地表幸存者与温顺的变种人匠人在此筑起聚落。弥途把能走的路画在车门内侧，行商与驮兽总会顺着路标回来补上一笔。",
-        "en": "Salt crusts the train carriages left from the Civilization Era, where surface survivors and gentle mutant artisans built a settlement. Mitu marks passable routes inside the doors; traders and pack beasts always return to redraw the lines."
+        "zh": "盐壳包住文明纪元停运的列车车厢，地表幸存者与温顺的变种人匠人在此筑起聚落。弥途把走通的路线刻在车门内侧并用盐蜡封痕，尚未亲脚核实的方向则挂上留白铅封路签；行商与驮兽总会顺着路标回来补上一笔。",
+        "en": "Salt crusts the train carriages left from the Civilization Era, where surface survivors and gentle mutant artisans built a settlement. Mitu seals walked routes with salt-wax inside the carriage doors and hangs blank lead-tagged tallies for unverified directions; traders and pack beasts always return to redraw the lines."
       }
     },
     {
@@ -184,8 +184,8 @@
       "home": "station",
       "portrait": "scavenger",
       "description": {
-        "zh": "旧风镜与拼装头灯压在帽檐上，灰绿工装补着回收布料，口袋里总有一颗不配套的螺丝。撬拆工具、防辐射呼吸面罩与胶片罐挂在胸前；嘴上嫌修理麻烦，却常和盐环聚落的变种人搬运工一起从废墟里抢出旧磁盘，从不肯把还能放映的影像留在辐射雨里。 她仍把“收到”和“证实”分栏，片名写在罐身侧签上。",
-        "en": "Old goggles and a jury-rigged headlamp on her cap; salvaged cloth patches across grey-green workwear, one mismatched screw in every pocket. Pry tools, radiation respirator, and film canisters hang from her harness. She grumbles about repairs, yet teams up with Salt Ring mutant haulers to rescue old drives from the ruins, never leaving a playable image in the fallout rain. She still records receipt separately from verification, with titles on the sides of the tins."
+        "zh": "旧风镜与拼装头灯压在帽檐上，灰绿工装补着回收布料，口袋里总有一颗不配套的螺丝。撬拆工具、防辐射呼吸面罩与胶片罐挂在胸前；嘴上嫌修理麻烦，却常和盐环聚落的变种人搬运工一起从废墟里抢出旧磁盘，从不肯把还能放映的影像留在辐射雨里。她仍把“收到”和“证实”分栏，片名写在罐身侧签上，并用片架边的索引麻绳把来信、片罐与检修纸按同一编号串起。",
+        "en": "Old goggles and a jury-rigged headlamp on her cap; salvaged cloth patches across grey-green workwear, one mismatched screw in every pocket. Pry tools, radiation respirator, and film canisters hang from her harness. She grumbles about repairs, yet teams up with Salt Ring mutant haulers to rescue old drives from the ruins, never leaving a playable image in the fallout rain. She still records receipt separately from verification, writes titles on the sides of the tins, and links letters, tins, and repair slips under one shared number along the shelf cord."
       },
       "quotes": [
         {
@@ -257,6 +257,11 @@
           "zh": "路牌写清来处，细账夹进簿里。找片匣的人，不必先读完一页告示。",
           "en": "Put the way in plain sight and keep the fine print in the ledger. No one should need a page of notices to find a film case.",
           "id": "quote_axi_2f18c998dc"
+        },
+        {
+          "zh": "来信、片罐和迟灯的检修纸共用一个编号。顺着片架边的麻绳找，故事才不会断在半路。",
+          "en": "Incoming letters, film tins, and Chideng’s repair slips share one number. Follow the cord beside the shelf and the story will not break halfway.",
+          "id": "quote_axi_alpha_carryover_20261026"
         }
       ],
       "personality": {
@@ -277,8 +282,8 @@
       "home": "station",
       "portrait": "keeper",
       "description": {
-        "zh": "灰白的鬓角，补过三次的铜线耳机；旧工装外罩着磨损的维修围裙，表笔、电线和钳子各有落脚处。提灯用回收金属拼了护网，灯罩边常停着循光而来的温顺孢子蛾。他记得每台文明纪元放映机的脾气，也常和路过的觉醒者一起校准旧广播频段，却总忘记自己的茶已经凉了。 拆下的垫圈按尺寸串回细铁丝，桌边留着尚未送出的回条。",
-        "en": "Grey at the temples, copper-wired headphones patched three times. A worn repair apron over old coveralls holds meter probes, wire, and pliers. Scrap metal guards his work light, where gentle spore-moths often rest. He remembers every Civilization Era projector's temperament and tunes old broadcast bands with passing Awakened listeners, yet always forgets his tea has gone cold. Removed washers return to a wire sorted by size; an unsent reply waits beside his desk."
+        "zh": "灰白的鬓角，补过三次的铜线耳机；旧工装外罩着磨损的维修围裙，表笔、电线和钳子各有落脚处。提灯用回收金属拼了护网，灯罩边常停着循光而来的温顺孢子蛾。他记得每台文明纪元放映机的脾气，也常和路过的觉醒者一起校准旧广播频段，却总忘记自己的茶已经凉了。拆下的垫圈按尺寸串回细铁丝，检修台边的牛皮纸频段抄本与待寄回条按片架索引号归档。",
+        "en": "Grey at the temples, copper-wired headphones patched three times. A worn repair apron over old coveralls holds meter probes, wire, and pliers. Scrap metal guards his work light, where gentle spore-moths often rest. He remembers every Civilization Era projector's temperament and tunes old broadcast bands with passing Awakened listeners, yet always forgets his tea has gone cold. Removed washers return to a wire sorted by size, while his kraft-paper frequency logbook and unsent replies are filed by shelf index number."
       },
       "quotes": [
         {
@@ -365,6 +370,11 @@
           "zh": "几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。",
           "en": "Sort the trays together, but check the frame numbers in order. Leave a gap where a frame is missing; do not call it complete.",
           "id": "quote_chideng_264790db42"
+        },
+        {
+          "zh": "频段抄本上只记听见的刻度。至于发报的灯塔在哪儿，得等弥途走过才算数。",
+          "en": "The frequency logbook only records the dial markings we heard. Where the transmitting beacon actually stands counts only after Mitu walks the road.",
+          "id": "quote_chideng_alpha_carryover_20261026"
         }
       ],
       "personality": {
@@ -385,8 +395,8 @@
       "home": "salt",
       "portrait": "wayfinder",
       "description": {
-        "zh": "短发间别着一支褪色的红铅笔，防尘短雨披和回收背架上尽是修补痕迹，绳索、片罐与净水水壶沿着橙色肩带固定。她常与幸存者聚落的变种人向导结伴穿行盐原，懂得根据变异兽群的迁徙避开辐射风带；地图贴身收着，罗盘从不离手，没走过的路线一律画成虚线。 商队的口信可以转递，但未亲走的路线仍保留虚线。",
-        "en": "A faded red pencil tucked into short hair, repairs across her dust poncho and salvaged pack frame. Rope, film canisters, and a purified-water flask sit along an orange strap. She crosses the salt flats with mutant guides from the survivor settlements and reads mutated herd migrations to skirt fallout winds. Unwalked routes stay dotted on her map. She can carry a caravan’s message without claiming to have walked its route; unwalked ground stays dotted."
+        "zh": "短发间别着一支褪色的红铅笔，防尘短雨披和回收背架上尽是修补痕迹，绳索、片罐与净水水壶沿着橙色肩带固定。她常与幸存者聚落的变种人向导结伴穿行盐原，懂得根据变异兽群的迁徙避开辐射风带；地图贴身收着，罗盘从不离手，已走通的信路在车门内侧封上盐蜡，没走过的传闻方向只挂留白铅封路签并画成虚线。",
+        "en": "A faded red pencil tucked into short hair, repairs across her dust poncho and salvaged pack frame. Rope, film canisters, and a purified-water flask sit along an orange strap. She crosses the salt flats with mutant guides from the survivor settlements and reads mutated herd migrations to skirt fallout winds. Walked routes are sealed with salt-wax inside the carriage doors; unwalked directions receive blank lead-tagged tallies and stay dotted on her map."
       },
       "quotes": [
         {
@@ -418,6 +428,11 @@
           "zh": "看到发光的自进化孢子往高处爬，就说明辐射潮要涨了——跟着它们的边界走，准能绕回避难所。",
           "en": "When glowing self-evolving spores climb to higher ground, the radiant tide is rising—follow their edge and you will make it back to the shelter.",
           "id": "quote_mitu_0e5e369a82"
+        },
+        {
+          "zh": "走通的路用盐蜡封刻；听来的方向先挂白签。把传闻当路标，迟早会在盐原里迷路。",
+          "en": "Seal walked roads with salt-wax; hang a blank tally for directions only heard about. Treat hearsay as a signpost and the salt flats will swallow your tracks.",
+          "id": "quote_mitu_alpha_carryover_20261026"
         }
       ],
       "personality": {
@@ -427,14 +442,6 @@
     }
   ],
   "chronicles": [
-    {
-      "id": "chronicle_beta_library_001",
-      "version": "0.2.0-beta.1",
-      "text": {
-        "zh": "阿汐把片匣登记纸归进同一册，迟灯将修好的册脊压在铜尺下。装进行囊的抄页另留一份，未辨清来处的纸条仍夹在原处。",
-        "en": "Axi gathers the film-case slips into one register while Chideng presses its repaired spine beneath a copper ruler. They keep a second copy of the pages packed in the satchel; slips with uncertain sources stay where they were."
-      }
-    },
     {
       "version": "0.2.0-alpha.18",
       "text": {
@@ -734,11 +741,27 @@
         "zh": "迟灯给片架的短脚换上薄铜垫，阿汐把旧衬纸抚平。片匣搬空后，两人轻推架沿，再把铅笔放回铜尺旁。",
         "en": "Chideng fits a copper shim beneath the shelf while Axi smooths the old paper. With the reels removed, they gently push the edge before returning the pencil beside the ruler."
       }
+    },
+    {
+      "id": "chronicle_beta_library_001",
+      "version": "0.2.0-beta.1",
+      "text": {
+        "zh": "阿汐把片匣登记纸归进同一册，迟灯将修好的册脊压在铜尺下。装进行囊的抄页另留一份，未辨清来处的纸条仍夹在原处。",
+        "en": "Axi gathers the film-case slips into one register while Chideng presses its repaired spine beneath a copper ruler. They keep a second copy of the pages packed in the satchel; slips with uncertain sources stay where they were."
+      }
+    },
+    {
+      "id": "chronicle_alpha_carryover_002",
+      "version": "0.2.0-beta.2",
+      "text": {
+        "zh": "阿汐把漏夹的札记补进登记册，旧编号仍留在原页。迟灯把片架索引绳的木夹一枚枚对过，弥途收好铅封路签；听来的方向，仍不描成实路。",
+        "en": "Axi files the loose notes without changing the numbers on the old pages. Chideng checks each clip on the shelf index cord, and Mitu puts away the lead-sealed route tallies. Directions heard from others remain untraced."
+      }
     }
   ],
   "boundary": {
-    "zh": "核爆长潮、地下放映站、共生生态与理想城贸易已正式采用。地图实线表示站内已核路线，虚线仍是待核位置或路径；人物台词不能代替实地记录。第二章的未署名寄信人及其设备情况仍未证实，回条尚未寄出。应用权限、连接与播放能力保持真实，不随剧情自动解锁或获得修复能力。",
-    "en": "The Nuclear Long Tide, underground station, symbiotic ecology and Ideal City trade are adopted canon. Solid lines are routes verified by the station; dotted lines are unsurveyed locations or paths, and dialogue is not a field survey. Chapter II’s unsigned sender and equipment claims remain unverified, and its reply is unsent. Permissions, connections and playback capabilities stay factual, without story-based unlocks or repair powers."
+    "zh": "废土存在掠夺、变异物种和环境风险，勘探与试造可能失败。映汐为旧避难所外围据点，深层设施另算；具体新物种、原型成果、袭击和战争须分别建立，小说不自动描实地图。应用第二章寄信人和设备情况仍未证实，回条未寄，人物身世与觉醒状态留白。应用权限、连接与播放能力不由故事解锁。",
+    "en": "Raiding, mutated life, and environmental threats make surveys and experiments liable to failure. Yingxi is an outpost on an old shelter’s outskirts, distinct from its deep facilities. New species, successful prototypes, attacks, and wars require separate establishment; the novel does not automatically verify map routes. The app’s Chapter II sender and equipment remain unverified, its reply unsent, and character origins and awakening status unspecified. Stories do not unlock app permissions, connections, or playback."
   },
   "lexicon": [
     {
@@ -876,8 +899,8 @@
         "en": "Ideal City"
       },
       "summary": {
-        "zh": "理想城又以高塔称呼，是繁荣纪元技术的集大成者与技术落地的受益者。它围绕旧能源塔与环状净水工程重建，凭技术优势高高在上、俯视外界，经盐环商队交换修配零件与旧纪元纪录片。与太阳军团格格不入；站内城址及实测路线仍待核。",
-        "en": "Also called the high towers, Ideal City embodies the accumulated technology of the Prosperity Era and benefits from its application. Rebuilt around old energy towers and circular waterworks, it looks down on the outside world from technological privilege and exchanges repair parts and old documentaries through Salt Ring caravans. It is at odds with the Sun Legion; the station still lacks a surveyed location and route."
+        "zh": "理想城又以高塔称呼，是繁荣纪元技术的集大成者与技术落地的受益者。它围绕旧能源塔与环状净水工程重建，凭技术优势高高在上、俯视外界，经盐环商队交换修配零件与旧纪元纪录片。与太阳军团格格不入，但具体冲突与战事未定；站内城址及实测路线仍待核。",
+        "en": "Also called the high towers, Ideal City embodies the accumulated technology of the Prosperity Era and benefits from its application. Rebuilt around old energy towers and circular waterworks, it looks down on the outside world from technological privilege and exchanges repair parts and old documentaries through Salt Ring caravans. It is at odds with the Sun Legion, without a defined conflict or war; the station still lacks a surveyed location and route."
       },
       "canonStatus": "confirmed"
     },
@@ -1020,8 +1043,8 @@
         "en": "Yingxi Station"
       },
       "summary": {
-        "zh": "映汐放映站位于旧铁路线终点，由旧避难所外围改建为地下幸存者据点；阿汐登记影像，迟灯维护设备，深层避难所另行区分。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。 阿汐在片架旁留了一张写着“灯还亮着”的短笺，给路过与回来的人。迟灯抚平片窗两侧的旧绒条，毛边向外收起，阿汐试映时核看画框的齐整边缘。 阿汐用空片罐盖压住片单留白的一角，标题朝向来人；片单留在灯下，读不读都不挡放映。 迟灯把片罐盖沿旧布的接缝收在内侧，线头压进两层布之间，阿汐移开盖子时片单纸角不会被带起。 阿汐用磨平的短木签标注片架，长来处留在登记纸中；应用中的本机片架对应已授权文件夹，片架名称不改变原目录。 迟灯为片架短脚换上一片薄铜垫，阿汐把取出的旧纸抚平作登记衬页；这是既有值夜修缮中的日常。 阿汐把同名片匣各自的纸条留在原处，迟灯把未看清的字留白；同名只供查找，不替代核对。 阿汐把想重映的片名另记一纸，片匣仍留原架；迟灯替纸角压浅折，未辨清的字继续留白。 柜前木签只留片匣短名，长来处夹回登记簿；迟灯会摸过边沿，确认不再刮手。",
-        "en": "Yingxi Station is an underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter; Axi records images and Chideng maintains equipment, while the deep shelter is distinct. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures. Chideng flattens the evening’s tickets with a brass ruler; Axi notes paused frames on their backs. Filed by date, these slips are not evidence of travel beyond the station. Axi leaves a note beside the shelves for passing and returning visitors: the light is still on. Chideng smooths the felt beside the projection window and tucks its frayed edges outward; Axi checks the even frame during a test screening. Axi holds a film list by its blank corner with an empty tin lid, its title facing visitors; reading it never delays a screening. Chideng turns the cloth seam inside the film-tin lid and tucks loose threads between its layers, so Axi can lift it without catching the film list’s paper corner. Axi marks the shelves with worn wooden labels and keeps longer trails in the register. In the app, a local shelf means a granted folder; its display name does not change the original directory. Chideng steadies a short shelf leg with a thin copper shim while Axi smooths the old paper supports for use beneath the register, a small part of their established night work. Axi keeps a separate slip with each box sharing a title, while Chideng leaves unclear words blank; a shared title helps a search but does not settle an identification. Axi lists titles for another screening on a separate slip while their boxes stay on the shelf; Chideng folds its corner and leaves unclear details blank. Cabinet labels keep only short reel titles; longer notes of origin stay in the ledger. Chideng checks each smoothed edge with a fingertip."
+        "zh": "映汐放映站位于旧铁路线终点，由旧避难所外围改建为地下幸存者据点；阿汐登记影像，迟灯维护设备，深层避难所另行区分。应用与据点统一使用映汐放映站；片罐侧签、垫圈细铁丝和第二章回信延续其日常。迟灯在检修架后留出一截松线，用旧皮带收住余线，换接头时不必扯动整排设备。 迟灯在检修纸上先画灭掉的指示灯，再标待查的接头；纸上记现象，不把猜测当结论。 阿汐把同一片匣的登记纸与检修纸夹在一起，迟灯翻查时沿用同一份记录。 迟灯用空片罐压住检修纸的一角，片轮实走一格才落一笔，停住的空栏交给阿汐留待核对。 迟灯把待理的胶片分放在几只浅铁盘里，每盘边缘夹着同一片匣的片号；缺号的空处先留白，交给阿汐继续核对。 迟灯把桌边长短不一的旧纸签裁齐，留下两行写片名，零碎备注另记在背面。 弥途把来处写在片匣角上，与两行片名的旧纸签并排，不再往纸签下面反复添抄。 夜里，迟灯把灯罩压低一格，让光留在检修纸上，过道旁的人不必迎着灯光。 阿汐把散开的据点旧事夹回档案架，在纸脊补记小片号，片匣封面则留给画面。 迟灯用铜尺压平当晚票根，阿汐在背面补记停片位置；这些纸签按日期收拢，不记作向外勘路的证据。 阿汐在片架旁留了一张写着“灯还亮着”的短笺，给路过与回来的人。迟灯抚平片窗两侧的旧绒条，毛边向外收起，阿汐试映时核看画框的齐整边缘。 阿汐用空片罐盖压住片单留白的一角，标题朝向来人；片单留在灯下，读不读都不挡放映。 迟灯把片罐盖沿旧布的接缝收在内侧，线头压进两层布之间，阿汐移开盖子时片单纸角不会被带起。 阿汐用磨平的短木签标注片架，长来处留在登记纸中；应用中的本机片架对应已授权文件夹，片架名称不改变原目录。 迟灯为片架短脚换上一片薄铜垫，阿汐把取出的旧纸抚平作登记衬页；这是既有值夜修缮中的日常。 阿汐把同名片匣各自的纸条留在原处，迟灯把未看清的字留白；同名只供查找，不替代核对。 阿汐把想重映的片名另记一纸，片匣仍留原架；迟灯替纸角压浅折，未辨清的字继续留白。 柜前木签只留片匣短名，长来处夹回登记簿；迟灯会摸过边沿，确认不再刮手。 登记簿中夹有区分收到与待核纸条的窄灰布，椅背旧布不再拖地，来件纸签与待修清单分放两侧。外围据点的照料、生产与防护仍消耗人力和物资；具体侵袭和试造成果留在小说创作中。",
+        "en": "Yingxi Station is an underground survivor outpost at an old railway terminus, adapted from the outskirts of an old shelter; Axi records images and Chideng maintains equipment, while the deep shelter is distinct. Axi registers images and Chideng tends equipment. App and story share the Yingxi Station name; tin labels, threaded washers and Chapter II’s reply extend its everyday life. Chideng leaves slack behind the repair rack and gathers the spare cable with an old belt, so a connector can be replaced without pulling the whole row of equipment. Chideng sketches the dark indicator lamp on a repair slip before marking the connector to inspect; the slip records observations rather than treating guesses as conclusions. Axi clips the registration and repair slips for each film case together, so Chideng can consult the same record. Chideng weighs down a corner of the repair sheet with an empty film can, marking only each step the reel actually turns; Axi leaves the stopped intervals blank for checking. Chideng sorts film into shallow iron trays, each carrying the same case number. Gaps in the frame sequence stay blank for Axi to check. Chideng trims the desk labels to a common size, leaving two lines for titles and keeping spare notes on the back. Mitu writes the place of origin on a case corner beside the two-line title label, rather than copying it below the label again. At night Chideng lowers the lampshade one notch, keeping light on the repair sheet and out of passing eyes. Axi returns loose station records to the archive shelf and numbers the paper spines, leaving the case covers to their pictures. Chideng flattens the evening’s tickets with a brass ruler; Axi notes paused frames on their backs. Filed by date, these slips are not evidence of travel beyond the station. Axi leaves a note beside the shelves for passing and returning visitors: the light is still on. Chideng smooths the felt beside the projection window and tucks its frayed edges outward; Axi checks the even frame during a test screening. Axi holds a film list by its blank corner with an empty tin lid, its title facing visitors; reading it never delays a screening. Chideng turns the cloth seam inside the film-tin lid and tucks loose threads between its layers, so Axi can lift it without catching the film list’s paper corner. Axi marks the shelves with worn wooden labels and keeps longer trails in the register. In the app, a local shelf means a granted folder; its display name does not change the original directory. Chideng steadies a short shelf leg with a thin copper shim while Axi smooths the old paper supports for use beneath the register, a small part of their established night work. Axi keeps a separate slip with each box sharing a title, while Chideng leaves unclear words blank; a shared title helps a search but does not settle an identification. Axi lists titles for another screening on a separate slip while their boxes stay on the shelf; Chideng folds its corner and leaves unclear details blank. Cabinet labels keep only short reel titles; longer notes of origin stay in the ledger. Chideng checks each smoothed edge with a fingertip. A narrow grey strip separates received slips from notes awaiting verification; the chair cloth stays off the floor, and incoming labels sit apart from repair lists. Care, production and protection still cost labour and supplies; particular raids and prototypes remain fiction drafts."
       },
       "proposal": {
         "zh": "可逐步发展为聚落间的公共影像档案节点；具体建筑结构与自治制度尚未确定。",
@@ -1041,8 +1064,8 @@
         "en": "Salt Ring Stops"
       },
       "summary": {
-        "zh": "盐壳包住停运车厢的已知地点，弥途在这里维护通行路标。",
-        "en": "An established place of salt-crusted railway carriages where Mitu maintains route markers."
+        "zh": "盐壳包住停运车厢的已知聚落，弥途在这里维护通行路标，用盐蜡封住已核路线刻痕，未走通的传闻方向则挂留白铅封路签。",
+        "en": "An established settlement of salt-crusted railway carriages where Mitu maintains route markers, sealing walked marks with salt-wax while hanging blank lead-tagged tallies for unverified directions."
       },
       "proposal": {
         "zh": "可发展为铁路聚落与递信中转地；多座避难所、商队和理想城通路尚未确认为已通行路线。",
@@ -1062,8 +1085,8 @@
         "en": "Wasteland Atlas"
       },
       "summary": {
-        "zh": "第一章地点与联系的记录。实线标确认信路，虚线保留传闻。",
-        "en": "A record of Chapter I places and connections. Solid lines mark an established letter route; dotted lines preserve rumors."
+        "zh": "探索页承载的地点与联系记录。实线标站内已核信路，虚线保留尚未亲脚核实的位置或路径线索。",
+        "en": "The record of places and connections shown on the Explore page. Solid lines mark station-surveyed mail routes; dotted lines preserve unsurveyed locations or route leads."
       },
       "canonStatus": "confirmed"
     },
@@ -1733,6 +1756,57 @@
         "zh": "创作提案：能形成季节性叠声的小型鸣虫，有时随近处可听机械节律同步。声音会掩盖脚步或像中继信号，却不解码无线电，也没有统一操控意识。",
         "en": "Species concept: A small insect forming seasonal acoustic choruses, sometimes entrained by nearby audible machinery. The layered sound can obscure footsteps or resemble a relay, without decoding radio or sharing a controlling mind."
       }
+    },
+    {
+      "id": "wayfinder_tally",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "物件与信笺",
+        "en": "Objects and letters"
+      },
+      "name": {
+        "zh": "铅封路签",
+        "en": "Lead-sealed Route Tally"
+      },
+      "summary": {
+        "zh": "弥途挂在盐环列站车门内侧的木质路签。已走通的信路用盐蜡封住刻痕；商队捎来的口信、广播听见的频段或未署名来信提到却尚未亲脚丈量的方向，只挂留白木签并记下消息来源，绝不提前描成实线。",
+        "en": "Wooden route tallies hung by Mitu inside the Salt Ring carriage doors. Walked mail routes have their carved marks sealed with salt-wax; directions heard from caravans, radio bands, or unsigned letters remain on blank lead-tagged tallies with their source noted, never inked as solid lines ahead of a survey."
+      }
+    },
+    {
+      "id": "canister_ledger_cord",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "物件与信笺",
+        "en": "Objects and letters"
+      },
+      "name": {
+        "zh": "片架索引绳",
+        "en": "Shelf Index Cord"
+      },
+      "summary": {
+        "zh": "拴在映汐放映站片架侧面的细麻绳与木夹。阿汐把来信残页、片罐侧签和迟灯的检修纸编上同一组号码挂在一起；弥途出站前只需核对木夹编号，就能把散落各处的线索串成不断线的往返记录。",
+        "en": "A twine cord and wooden clips fastened beside the shelves at Yingxi Station. Axi assigns one shared number to incoming notes, film-tin side labels, and Chideng’s repair slips; before setting out, Mitu checks the clip numbers so scattered leads stay connected as one continuous record."
+      }
+    },
+    {
+      "id": "frequency_logbook",
+      "status": "confirmed",
+      "canonStatus": "confirmed",
+      "category": {
+        "zh": "物件与信笺",
+        "en": "Objects and letters"
+      },
+      "name": {
+        "zh": "频段抄本",
+        "en": "Frequency Logbook"
+      },
+      "summary": {
+        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。",
+        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source."
+      }
     }
   ],
   "chapters": [
@@ -1957,7 +2031,7 @@
         "en": "Source register"
       },
       "meaning": {
-        "zh": "菜单中的远程媒体来源入口，登记并浏览幸存者据点（SMB／SFTP）和信号塔（WebDAV／网盘）。",
+        "zh": "分册与连接、目录路标的管理入口；分册字段仍标明分册名称和未归册，不因此新增信号技术或世界制度。",
         "en": "Manage sections and connection or directory markers. Section fields remain explicit; the name adds no signal technology or fictional institution."
       }
     },
@@ -2073,11 +2147,11 @@
     }
   ],
   "canonAdoption": {
-    "date": "2026-10-22",
+    "date": "2026-10-26",
     "basis": "user-confirmed",
     "note": {
-      "zh": "地下放映站、核爆引发长潮、共生生态与理想城贸易已正式采用。作者设定与据点调查分开：虚线表示位置或路线尚未实测，不表示城邦和物种未被写入正史。",
-      "en": "The underground station, nuclear origins of the Long Tide, symbiotic ecology and Ideal City trade are adopted canon. Authorial facts and station surveys are separate: dotted lines mark unsurveyed locations or routes, not the absence of cities or species from canon."
+      "zh": "2026-10-22采用核爆长潮、共生生态与理想城贸易；2026-10-26补充技术断层、深层避难所、聚居户数分界、行商、废土客、掠夺者与太阳军团。繁荣纪元与文明纪元为同一旧时代；映汐是旧避难所外围据点。作者设定与站内调查分开，存在不等于路线已核。 同日进一步明确废土并不安全，主动探索与自主构造需要面对侵袭、失败和真实成本；具体装置与物种设想仍按采用层级区分。",
+      "en": "The Nuclear Long Tide, symbiotic ecology, and Ideal City trade were adopted on 2026-10-22. Technological fracture, deep shelters, household thresholds, traders, scavenger bands, raiders, and the Sun Legion were added on 2026-10-26. Prosperity Era and Civilization Era name the same old era; Yingxi is an outpost on an old shelter’s outskirts. Authorial facts remain distinct from station surveys: existence does not establish a verified route. The same day also establishes that the wasteland is unsafe: active exploration and independent construction face attacks, failure, and real costs. Particular device and species ideas remain subject to their own adoption status."
     }
   },
   "dailyLines": [
@@ -2431,6 +2505,54 @@
       "text": {
         "zh": "我在行囊内袋缝了一道浅线。阿汐把纸签按旧折痕摊开，能认准来处的放在外侧；暂时辨不清的压在里层，等下次回来再核。纸薄，也没有哪一张该随手丢掉。",
         "en": "I sew a shallow seam inside the travel bag. Axi unfolds the paper slips along their old creases, putting those with a known origin near the opening. The uncertain ones stay deeper inside until the next check. The paper is thin; none of it needs to be thrown away."
+      }
+    },
+    {
+      "id": "diary_station_logbook_cloth_20261026",
+      "author": "axi",
+      "text": {
+        "zh": "我把一条窄灰布夹在登记簿的两页之间。一边压着已经收到的纸条，另一边留给核实后的补记。迟灯把回条夹回原处，那页空白仍留着。",
+        "en": "I slipped a narrow strip of grey cloth between two logbook pages. One holds the note we received; the other waits for what we can verify. Chideng put the reply back, leaving that page blank."
+      }
+    },
+    {
+      "id": "diary_station_chair_cloth_20261026",
+      "author": "axi",
+      "text": {
+        "zh": "我把椅背上的旧布折短一截，弥途的披风搭上去，布角便不再拖地。迟灯递来一杯热水，没催她先讲路上的事。",
+        "en": "I folded the old cloth shorter over the chair back, keeping its corners off the floor beneath Mitu’s cloak. Chideng brought hot water without asking her to tell the road’s story first."
+      }
+    },
+    {
+      "id": "diary_station_trade_clips_20261026",
+      "author": "axi",
+      "text": {
+        "zh": "我把来件的纸签和迟灯写的待修清单分夹在登记簿两边。商队带来的话慢慢听，纸上先写清缺哪件零件。",
+        "en": "I clipped the incoming labels to one side of the logbook and Chideng’s repair list to the other. We can hear the caravan out; first, the page needs to say which parts we need."
+      }
+    },
+    {
+      "id": "diary_salt_blank_tally_20261026",
+      "author": "mitu",
+      "text": {
+        "zh": "盐环列站的车门内侧新挂了一枚留白木签，等哪天亲脚走过再封上盐蜡。",
+        "en": "A blank wooden tally hangs inside the Salt Ring carriage door, waiting for salt-wax once the road is actually walked."
+      }
+    },
+    {
+      "id": "diary_station_index_cord_20261026",
+      "author": "chideng",
+      "text": {
+        "zh": "检修纸和待寄回条夹在同一根麻绳上，片罐一归位，前因后果就对上了。",
+        "en": "The repair slip and the unsent reply hang from the same cord; once the tin returns to the shelf, the whole thread lines up."
+      }
+    },
+    {
+      "id": "diary_station_frequency_log_20261026",
+      "author": "chideng",
+      "text": {
+        "zh": "迟灯把新滤出的波段刻度抄进牛皮本，和片罐侧签对上了同一个号。",
+        "en": "Chideng copied the newly filtered band markings into his kraft notebook, matching the number on the film tin's side label."
       }
     }
   ],

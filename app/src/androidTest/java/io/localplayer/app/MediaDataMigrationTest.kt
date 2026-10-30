@@ -138,9 +138,13 @@ class MediaDataMigrationTest {
         }
     }}
     @Test fun quoteAliasesKeepTheExactTextAndStableIdentity(){test{context,session->
-        val world=StationWorld.load(context);world.people.forEach{person->person.quotes.forEachIndexed{index,text->
+        val world=StationWorld.load(context)
+        // Freeze Alpha-written indices; new Beta quotes are selected by their stable IDs.
+        val legacyCounts=mapOf("axi" to 14,"chideng" to 17,"mitu" to 6)
+        world.people.forEach{person->person.quotes.take(legacyCounts.getValue(person.id)).forEachIndexed{index,text->
             assertEquals(text.id,LegacyQuoteAliases.resolve("quote:${person.id}:$index"))
         }}
+        legacyCounts.forEach{(person,count)->assertNull(LegacyQuoteAliases.resolve("quote:$person:$count"))}
         val quote=world.people.first().quotes.first();val old="quote:${world.people.first().id}:0";val now=System.currentTimeMillis()
         context.getSharedPreferences("station-experience-v1",0).edit().putString("diary-line",old).putLong("diary-at",now).commit()
         assertEquals(quote.zh,StationPreferences(context).diary(now).text.zh)

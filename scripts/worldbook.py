@@ -126,7 +126,7 @@ def validate(root):
     return world
 
 def render_glossary(world):
-    lines=["# 映汐世界观名词表", "", "本表由随包图谱生成，应用探索页的「废土词典」读取相同数据。修改定义时先维护图谱，再运行 `python3 -B scripts/worldbook.py --write-glossary`。", "", "2026-10-22 用户明确采用核爆长潮、地下放映站、聚落生态、孢子机制、觉醒感知及理想城贸易。正式设定与站内证据分别列示：地点存在不等于角色已走通路线。演进提案仍未成为事实。", "", "人物、地点衔接、矛盾处理及第二章内容见[世界书](worldbook.md)。第一、二章均可手动阅读，分别保留阅读位置；第二章纸条的寄信人和所述设备情况仍未证实。", "", "| 稳定标识 | 名词 | English | 分类 | 正式采用 | 站内证据 | 定义 | 演进提案 |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    lines=["# 映汐世界观名词表", "", "本表由随包图谱生成，与探索概览及练习共用词条定义。独立词典入口已于 alpha.44 收起。修改定义时先维护图谱，再运行 `python3 -B scripts/worldbook.py --write-glossary`。", "", "核爆长潮、地下放映站、聚落生态、孢子机制、觉醒感知与理想城贸易已正式采用；聚居、势力和技术断层按随包图谱的采用记录维护。正式设定与站内证据分别列示，地点存在不等于角色已走通路线；创作提案仍未成为事实。", "", "人物、地点衔接、矛盾处理及第二章内容见[世界书](worldbook.md)。第一、二章均可手动阅读，分别保留阅读位置；第二章纸条的寄信人和所述设备情况仍未证实。", "", "| 稳定标识 | 名词 | English | 分类 | 正式采用 | 站内证据 | 定义 | 演进提案 |", "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     def cell(value):return value.replace('|',r'\|').replace('\n',' ')
     for item in world['lexicon']:
         values=[item['id'],item['name']['zh'],item['name']['en'],item['category']['zh'],'正式设定' if item['canonStatus']=='confirmed' else '演进提案','未核作者提案' if item['canonStatus']=='proposal' else ('站内传闻' if item['status']=='rumor' else '已知记录'),item['summary']['zh'],item.get('proposal',{}).get('zh','—')]

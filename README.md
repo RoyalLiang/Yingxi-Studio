@@ -9,8 +9,8 @@
 <p align="center"><strong>一款简洁的 Android 本地与局域网视频播放器。</strong><br>打开文件、连上自己的媒体库，然后安心看完一部片子。</p>
 
 <p align="center">
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.1/yingxi-0.2.0-beta.1-70.apk">下载 arm64 安装包</a> ·
-  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-beta.1">阅读版本信笺</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71.apk">下载 arm64 安装包</a> ·
+  <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-beta.2">阅读版本信笺</a> ·
   <a href="docs/player-controls.md">播放与操作</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
@@ -54,10 +54,10 @@
 
 | 架构 | 安装包 |
 | --- | --- |
-| arm64-v8a | [arm64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.1/yingxi-0.2.0-beta.1-70.apk) |
-| armeabi-v7a | [armv7](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.1/yingxi-0.2.0-beta.1-70-armeabi-v7a.apk) |
-| x86_64 | [x86_64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.1/yingxi-0.2.0-beta.1-70-x86_64.apk) |
-| x86 | [x86](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.1/yingxi-0.2.0-beta.1-70-x86.apk) |
+| arm64-v8a | [arm64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71.apk) |
+| armeabi-v7a | [armv7](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71-armeabi-v7a.apk) |
+| x86_64 | [x86_64](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71-x86_64.apk) |
+| x86 | [x86](https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71-x86.apk) |
 
 原有文件名用于 arm64 接续更新。alpha.33 及更早的 32 位 ARM 或 x86 客户端需要从上表手动选择一次，此后可自动选择适配包。没有通用架构包。
 

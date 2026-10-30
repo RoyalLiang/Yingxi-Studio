@@ -26,9 +26,10 @@ class WorldReleaseRegressionTest {
     }
     @Test fun chidengArrivalAndTrayNotesAreReadableInTheArchive() {
         val person=StationWorld.load(ui.activity).people.first{it.id=="chideng"}
-        assertEquals("几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。",person.quotes.last().zh)
+        val tray=person.quotes.single{it.zh=="几盘可以一起理，片号得一格格对。缺的地方先留白，不能算齐了。"}
+        val carryover=person.quotes.single{it.id=="quote_chideng_alpha_carryover_20261026"}
         val arrival=person.quotes.single{it.zh=="片匣还在路上，空转的机器催不来它。先看送片的路，再动扳手。"}
-        for(daily in listOf(arrival,person.quotes.last())) for(language in listOf("zh","en")) {
+        for(daily in listOf(arrival,tray,carryover)) for(language in listOf("zh","en")) {
             ui.runOnUiThread { ui.activity.setContent { PlayerTheme {
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides
                     android.content.res.Configuration(ui.activity.resources.configuration).apply{setLocale(java.util.Locale.forLanguageTag(language))}) {

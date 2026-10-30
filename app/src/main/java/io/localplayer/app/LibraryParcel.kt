@@ -60,9 +60,9 @@ internal class LibraryParcel(private val context:Context,private val databaseNam
             val value=MigratingPreferences.decode(raw)
             when {
                 scope=="library-appearance"->require(value is String&&value in LibraryAppearance.entries.map{it.name})
-                scope=="cloud-playback"&&name=="workers"->require(value is Int&&value in 1..8)
+                scope=="cloud-playback"&&name=="workers"->require(value is Int&&value in 0..3)
                 name in setOf("segment-cache","next-episode","remember-manual","subtitles-disabled")->require(value is Boolean)
-                name=="speed"->require(value is Float&&value.isFinite()&&value in .5f..2f)
+                name=="speed"->require(value is Float&&value.isFinite()&&value in .25f..4f)
                 else->require(value is String&&value.length<=40)
             }
         }

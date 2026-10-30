@@ -7,8 +7,8 @@ class PlaybackPreferences(context:Context,name:String="playback-settings-v1"){
         get()=prefs.getBoolean("remember-manual",true)
         set(value){prefs.edit().putBoolean("remember-manual",value).apply()}
     var speed:Float
-        get()=prefs.getFloat("speed",1f).takeIf{it.isFinite()&&it in .5f..2f} ?: 1f
-        set(value){prefs.edit().putFloat("speed",value.coerceIn(.5f,2f)).apply()}
+        get()=prefs.getFloat("speed",1f).takeIf{it.isFinite()&&it in .25f..4f} ?: 1f
+        set(value){prefs.edit().putFloat("speed",value.coerceIn(.25f,4f)).apply()}
     var audioLanguage:String?
         get()=prefs.getString("preferred-audio-language",null)
         set(value){prefs.edit().putString("preferred-audio-language",value).remove("audio-language").apply()}

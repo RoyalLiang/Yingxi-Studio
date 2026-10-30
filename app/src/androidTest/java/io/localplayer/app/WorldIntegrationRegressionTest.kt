@@ -45,7 +45,7 @@ class WorldIntegrationRegressionTest {
         ui.onNodeWithTag("world-person-personality").assertExists()
         capture("personality")
         ui.onNodeWithTag("world-scroll").performScrollToNode(hasTestTag("world-quote"))
-        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("1 / 6", substring = true)
+        ui.onNodeWithTag("world-quote-progress", useUnmergedTree = true).assertTextContains("1 / ${StationWorld.load(ui.activity).people.first{it.id=="mitu"}.quotes.size}", substring = true)
     }
 
     @Test fun overviewRemainsReadableWithoutGlossaryButtonsInBothLanguagesAtLargeText() {

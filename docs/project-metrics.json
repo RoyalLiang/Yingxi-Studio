@@ -1,12 +1,8 @@
 {
-  "sourceCommit": "e57566604910d0a408926b72826a1cec4b79be51",
+  "sourceCommit": "bb21cb7e59c3b721d0521ed1014a4192d7bb59bd",
   "timezone": "Asia/Shanghai",
-  "throughDate": "2026-10-29",
+  "throughDate": "2026-10-30",
   "dailyCommits": [
-    {
-      "date": "2026-10-23",
-      "count": 16
-    },
     {
       "date": "2026-10-24",
       "count": 13
@@ -30,7 +26,11 @@
     {
       "date": "2026-10-29",
       "count": 14
+    },
+    {
+      "date": "2026-10-30",
+      "count": 5
     }
   ],
-  "totalCommits": 185
+  "totalCommits": 190
 }
