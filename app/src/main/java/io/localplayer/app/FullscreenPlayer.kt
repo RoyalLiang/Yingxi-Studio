@@ -77,7 +77,7 @@ internal val PlayerPanel = Color(0xFF25282B)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun FullscreenPlayer(controller: MediaController?, title: String, connectionError: String?, back: () -> Unit,
     rotate: () -> Unit, lock: (Boolean) -> Unit, externalCaption: () -> Unit, compact: Boolean,
-    smallWindow: (() -> Unit)?, background: () -> Unit, videoView: (PlayerView) -> Unit, externalAudio: () -> Unit = {}) {
+    smallWindow: (() -> Unit)?, background: () -> Unit, videoView: (PlayerView) -> Unit, externalAudio: () -> Unit = {}, entryReady: Boolean = true) {
     val context = LocalContext.current
     val momentScope = rememberCoroutineScope()
     val activity = context as Activity
@@ -259,7 +259,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
             it.resizeMode = if(compatibilityOutput)AspectRatioFrameLayout.RESIZE_MODE_FILL else if(fill)AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
             it.subtitleView?.setPadding(safeLeft+subtitleGutter,0,safeRight+subtitleGutter,subtitleBottom+subtitleGutter) },
             onRelease = { if(compatibilityOutput)CompatibilityVideoOutput.detach(it.videoSurfaceView as android.view.TextureView);it.player = null }, modifier = Modifier.fillMaxSize().testTag(if(fill) "video-scale-fill" else "video-scale-fit")) }
-        if(pendingEpisode!=null)Box(Modifier.fillMaxSize().background(Color(0xFF101113)).testTag("episode-loading-cover"))
+        // Wait for the display shape without covering or disabling playback controls.
+        if(!entryReady||pendingEpisode!=null)Box(Modifier.fillMaxSize().background(Color(0xFF101113)).testTag("episode-loading-cover"))
         if (!compact) {
             Box(Modifier.fillMaxSize().testTag("playback-gesture-surface")
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { visible = !visible }
@@ -309,7 +310,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact&&(buffering||pendingEpisode!=null||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
+        if(!compact&&(!entryReady||buffering||pendingEpisode!=null||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
             PlayerLoadingMotion(Modifier.align(Alignment.Center).size(88.dp).testTag("playback-buffering"))
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {

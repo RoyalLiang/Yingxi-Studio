@@ -39,7 +39,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -200,20 +199,8 @@ class PlaybackActivity:ComponentActivity(){
                 }
             }
             BackHandler{leave()}
-            Box(Modifier.fillMaxSize()){
-                Box(Modifier.fillMaxSize().then(if(entryReady)Modifier else Modifier.clearAndSetSemantics{})){
-                    FullscreenPlayer(controller,title,connectionError,::leave,::rotate,::lock,::chooseCaption,
-                        compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView,::chooseAudio)
-                }
-                if(!entryReady)Surface(Modifier.fillMaxSize(),color=Color.Black){
-                    Box(Modifier.fillMaxSize()){
-                        PlayerLoadingMotion(Modifier.align(Alignment.Center).size(88.dp))
-                        IconButton(::leave,Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp)){
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack,"返回",tint=Color.White)
-                        }
-                    }
-                }
-            }
+            FullscreenPlayer(controller,title,connectionError,::leave,::rotate,::lock,::chooseCaption,
+                compact,if(supportsPictureInPicture())::enterSmallWindow else null,::playInBackground,::attachVideoView,::chooseAudio,entryReady)
         }}
     }
     private fun chooseCaption(){

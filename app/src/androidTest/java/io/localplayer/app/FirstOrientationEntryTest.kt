@@ -2,6 +2,7 @@ package io.localplayer.app
 
 import android.content.res.Configuration
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.*
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.runner.lifecycle.ActivityLifecycleCallback
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -15,6 +16,39 @@ import java.util.concurrent.atomic.AtomicReference
 class FirstOrientationEntryTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
     private fun <T> main(block:()->T):T{var result:Result<T>?=null;ui.runOnUiThread{result=runCatching(block)};return result!!.getOrThrow()}
+    @Test fun slowNetworkPreparationKeepsPauseAndRotationReachable(){
+        val context=ui.activity.application
+        val file=File(context.cacheDir,"direction-portrait.mp4");check(file.isFile)
+        val opened=AtomicReference<PlaybackActivity>()
+        fun capture(){androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.let{bitmap->
+            File(context.cacheDir,"entry-controls.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()
+        }}
+        val callback=ActivityLifecycleCallback{activity,stage->if(activity is PlaybackActivity&&stage==Stage.CREATED)opened.set(activity)}
+        val monitor=ActivityLifecycleMonitorRegistry.getInstance();main{monitor.addLifecycleCallback(callback)}
+        DavFixture(file,2,6000L).use{server->
+            val source=io.localplayer.core.Source(label="慢首包",protocol=io.localplayer.core.Protocol.WEBDAV,host="127.0.0.1",port=server.port,root="/dav",username=server.username,secure=false)
+            val store=SourceStore(context);store.save(source,server.password,true)
+            val model=main{ViewModelProvider(ui.activity)[LibraryViewModel::class.java]}
+            try{
+                main{model.open(source)}
+                ui.waitUntil(10000){model.source?.id==source.id&&!model.busy&&model.entries.isNotEmpty()}
+                main{model.play(model.entries.first{it.isVideo})}
+                ui.waitUntil(5000){opened.get()!=null&&main{opened.get().hasWindowFocus()}}
+                ui.waitUntil(2000){ui.onAllNodesWithContentDescription("旋转屏幕").fetchSemanticsNodes().isNotEmpty()}
+                assertFalse("The fixture must still be waiting for video metadata",main{opened.get().entryReady})
+                ui.onNodeWithContentDescription("旋转屏幕").assertIsDisplayed().performTouchInput{click()}
+                ui.waitUntil(3000){main{opened.get().resources.configuration.orientation==Configuration.ORIENTATION_LANDSCAPE}}
+                ui.onNodeWithContentDescription("暂停").assertIsDisplayed().performTouchInput{click()}
+                ui.onNodeWithContentDescription("播放").assertIsDisplayed()
+                capture()
+                ui.onNodeWithContentDescription("返回").performTouchInput{click()}
+                ui.waitUntil(3000){main{opened.get().isDestroyed}}
+            }finally{
+                if(opened.get()?.isDestroyed!=true)capture()
+                main{opened.get()?.finish();monitor.removeLifecycleCallback(callback)};store.delete(source.id)
+            }
+        }
+    }
     @Test fun firstVisibleNetworkPortraitUsesItsActualShape()=firstDraw("direction-portrait.mp4",Configuration.ORIENTATION_PORTRAIT)
     @Test fun firstVisibleNetworkLandscapeUsesItsActualShape()=firstDraw("direction-landscape.mp4",Configuration.ORIENTATION_LANDSCAPE)
     @Test fun compatibilityVideoStillProducesAFrameAfterDirectionAdmission()=firstDraw("compat-wmv.wmv",Configuration.ORIENTATION_LANDSCAPE)
