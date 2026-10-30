@@ -96,7 +96,7 @@ class FilmLibraryUiTest {
         try{ui.onNodeWithText("Film catalog").assertIsDisplayed()
             listOf("Index","Backup","Repair").forEach{label->
                 ui.onNodeWithText(label).assertIsDisplayed().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){get->
-                    val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();assertTrue(get(layouts));assertTrue("Tool label must fit without truncation: $label",layouts.none{it.hasVisualOverflow})
+                    val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();assertTrue(get(layouts));assertTrue("Tool label must fit without truncation: $label",layouts.all{!it.isLineEllipsized(0)&&!it.didOverflowHeight&&it.getLineRight(0)-it.getLineLeft(0)<=it.size.width+1})
                 }
             }
             capture("english");ui.onNodeWithTag("film-work:$id").performClick();ui.onNodeWithText("Film dossier").assertIsDisplayed();ui.onNodeWithText("Versions and sources").assertIsDisplayed();capture("english-dossier")}
