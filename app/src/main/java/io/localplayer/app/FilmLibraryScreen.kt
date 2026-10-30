@@ -3,6 +3,11 @@ package io.localplayer.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -48,7 +54,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     val zh=LocalConfiguration.current.locales[0].language=="zh"
     fun words(cn:String,en:String)=if(zh)cn else en
     var tool by rememberSaveable{mutableStateOf<String?>(null)}
-    if(tool!=null){LibraryToolsScreen(vm,databaseName,tool!!,onSources){tool=null};return}
+    if(tool!=null){key(tool){LibraryToolsScreen(vm,databaseName,tool!!,onSources,{tool=it}){tool=null}};return}
     val scope=rememberCoroutineScope()
     var revision by remember{mutableIntStateOf(0)}
     var view by remember{mutableStateOf(FilmLibraryView())}
@@ -94,7 +100,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     val shown=safe(view.shown)
     val work=if(shelf==null)all.firstOrNull{it.id==selected} else shown.filter{it.id==selected}.takeIf{it.isNotEmpty()}?.let{LibraryWork(it.first().id,it.first().title,it.flatMap{item->item.films})}
     BackHandler{if(selected!=null)selected=null else back()}
-    Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("film-library")){
+    LibraryChrome(Modifier.testTag("film-library"),selected==null,null,{tool=it},header={
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick={if(selected!=null)selected=null else back()}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,words("返回","Back"))}
             Column(Modifier.weight(1f)){
@@ -102,11 +108,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
             }
             IconButton(onClick={revision++},modifier=Modifier.testTag("film-library-refresh")){Icon(Icons.Rounded.Refresh,words("刷新已浏览影片","Refresh browsed films"))}
         }
-        if(selected==null)Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)){
-            TextButton(onClick={tool="index"},modifier=Modifier.testTag("catalog-index")){Text(words("收录目录","Index folders"))}
-            TextButton(onClick={tool="backup"},modifier=Modifier.testTag("catalog-backup")){Text(words("行囊备份","Travel backup"))}
-            TextButton(onClick={tool="repair"},modifier=Modifier.testTag("catalog-repair")){Text(words("检修台","Repair bench"))}
-        }
+    }){
         if(migration.state!="Committed"||migration.quarantined>0)Column(Modifier.padding(horizontal=24.dp,vertical=8.dp).testTag("data-migration-state")){
             Text(if(migration.state=="Committed")words("旧记录已归位，${migration.quarantined} 项仍需核对，原件已保留。","Old records are in place; ${migration.quarantined} need review. Originals were retained.")else words("旧记录正在归位；此时仍沿用原记录。若未完成，可稍后重试。","Old records are being moved into place. Original storage remains in use until completion; retry if needed."),fontSize=13.sp,color=Muted,lineHeight=20.sp)
             if(migration.state!="Committed")TextButton(onClick={MediaDataMigration.start(context)}){Text(words("重试归位","Retry migration"))}
@@ -136,9 +138,15 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
                 }
             }
             items(shown,key={if(shelf==null)it.id else it.films.first().id}){item->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable{selected=item.id}.testTag("film-work:${item.id}")){
+                val interaction=remember{MutableInteractionSource()}
+                val pressed by interaction.collectIsPressedAsState()
+                val focused by interaction.collectIsFocusedAsState()
+                val scale by animateFloatAsState(if(pressed).97f else 1f,label="film-poster-press")
+                Column(Modifier.fillMaxWidth().clickable(interactionSource=interaction,indication=null){selected=item.id}.testTag("film-work:${item.id}")){
                     if(shelf==null){
-                        MediaThumbnail(item.films.first().media,Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(10.dp)))
+                        MediaThumbnail(item.films.first().media,Modifier.fillMaxWidth().aspectRatio(.68f).graphicsLayer{scaleX=scale;scaleY=scale}
+                            .clip(RoundedCornerShape(16.dp)).border(if(focused)2.dp else 1.dp,if(pressed||focused)Berry else androidx.compose.ui.graphics.Color.Transparent,RoundedCornerShape(16.dp))
+                            .testTag("film-poster:${item.id}"))
                         Spacer(Modifier.height(8.dp));Text(io.localplayer.core.mediaDisplayTitle(item.title),fontSize=14.sp,fontWeight=FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis)
                         Text(item.films.map{it.media.sourceLabel}.distinct().joinToString(" · "),fontSize=11.sp,color=Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
                     }else Row(Modifier.fillMaxWidth().background(GroupedSurface).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)){

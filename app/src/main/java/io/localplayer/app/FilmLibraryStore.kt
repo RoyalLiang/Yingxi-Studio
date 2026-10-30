@@ -47,7 +47,9 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
             val (before,policy)=synchronized(lock){check(!closed);snapshot(helper.readableDatabase) to SealedMedia.version()}
             val parsed=before.filterIndexed{index,_->index%2==1}.distinct().associateWith(MediaRef::parse)
             val refs=parsed.values+extra
-            val visible=refs.distinctBy(::visibilityKey).filter{ref->SealedMedia.visible(ref)&&(ref.localUri?.let{!SealedMedia.protectsLocalUri(android.net.Uri.parse(it))}?:true)}.map(::visibilityKey).toSet()
+            val publicRefs=refs.distinctBy(::visibilityKey).filter{SealedMedia.visible(it)}
+            val protectedUris=SealedMedia.protectedLocalUris(publicRefs.mapNotNull{it.localUri?.let(android.net.Uri::parse)})
+            val visible=publicRefs.filter{ref->ref.localUri?.let{android.net.Uri.parse(it) in protectedUris}!=true}.map(::visibilityKey).toSet()
             try{return synchronized(lock){
                 check(!closed)
                 if(snapshot(helper.readableDatabase)!=before)throw CatalogChanged()

@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import androidx.compose.runtime.*
 import io.localplayer.core.Source
 import io.localplayer.core.SourceRoot
@@ -94,7 +95,7 @@ internal object SealedMedia {
     fun visible(entry:LocalEntry,inside:Boolean=false)=visible(MediaRef(entry.uri.toString(),entry.name,"本机文件",localUri=entry.uri.toString(),localParentUri=entry.parentUri?.toString(),localAncestors=entry.ancestorUris),inside)
     fun seal(item:SealedItem){
         check(unlocked&&!damaged){"请先验证身份并开柜"}
-        val next=rows.filterNot{it.id==item.id}+item
+        val next=rows.filterNot{it.id==item.id}+item.copy(aliases=item.aliases+rows.firstOrNull{it.id==item.id}?.aliases.orEmpty())
         require(next.size<=512){"封存记录已满，请先整理封存柜"}
         save(next)
     }
@@ -109,16 +110,51 @@ internal object SealedMedia {
         MediaPosters.cancelProtected();OnlineSubtitles.cancelProtected();changes.toList().forEach{it()}
     }
     /** Call on IO: handles document providers whose document IDs are opaque. */
-    fun protectsLocalUri(uri:Uri):Boolean {
-        if(damaged)return true
-        return rows.filter{it.media.localUri!=null}.any{item->
-            val parent=Uri.parse(item.media.localUri)
-            sameLocalDocument(uri.toString(),parent.toString()) || uri.toString() in item.aliases || item.directory && parent.authority==uri.authority &&
-                runCatching{DocumentsContract.isChildDocument(context.contentResolver,parent,uri)}.getOrElse{
-                    // Fail closed for an unresolvable item inside the same granted tree.
-                    runCatching{DocumentsContract.getTreeDocumentId(parent)==DocumentsContract.getTreeDocumentId(uri)}.getOrDefault(true)
+    fun protectsLocalUri(uri:Uri):Boolean=uri in protectedLocalUris(listOf(uri))
+
+    /** Call on IO, outside the migration gate: URI conversion and child checks use provider IPC. */
+    internal fun protectedLocalUris(uris:List<Uri>):Set<Uri>{
+        if(damaged)return uris.toSet()
+        return matchingLocalUris(uris,rows.filter{it.media.localUri!=null},true)
+    }
+    private fun matchingLocalUris(uris:List<Uri>,protected:List<SealedItem>,failClosed:Boolean):Set<Uri>{
+        if(protected.isEmpty())return emptySet()
+        val mediaAuthorities=setOf("media","com.android.providers.media.documents","com.android.externalstorage.documents")
+        // Cache only this lookup: a SAF path can refer to a different file after replacement.
+        val converted=mutableMapOf<Uri,Result<Set<Uri>>>()
+        fun aliases(uri:Uri):Result<Set<Uri>> = converted.getOrPut(uri){runCatching{
+            buildSet{
+                add(uri)
+                val media=if(uri.authority==MediaStore.AUTHORITY)uri else MediaStore.getMediaUri(context,uri)
+                if(media!=null){add(media);if(isMediaStoreFile(media))runCatching{MediaStore.getDocumentUri(context,media)}.getOrNull()?.let{add(it)}}
+            }
+        }.onFailure{if(it is kotlinx.coroutines.CancellationException||it is android.os.OperationCanceledException)throw it}}
+        fun related(item:SealedItem,parent:Uri,child:Uri):Boolean =
+            sameLocalDocument(child.toString(),parent.toString()) || sameMediaStoreItem(parent,child) || child.toString() in item.aliases ||
+                item.directory && parent.authority==child.authority && runCatching{DocumentsContract.isChildDocument(context.contentResolver,parent,child)}.getOrElse{
+                    failClosed&&runCatching{DocumentsContract.getTreeDocumentId(parent)==DocumentsContract.getTreeDocumentId(child)}.getOrDefault(true)
                 }
-        }
+        return uris.distinct().filterTo(mutableSetOf()){uri->protected.any{item->
+            val parent=Uri.parse(item.media.localUri)
+            if(related(item,parent,uri))true
+            else if(uri.authority in mediaAuthorities&&parent.authority in mediaAuthorities){
+                val children=aliases(uri);val parents=aliases(parent)
+                if(children.isFailure||parents.isFailure)failClosed else parents.getOrThrow().any{p->children.getOrThrow().any{c->related(item,p,c)}}
+            }else false
+        }}
+    }
+    private fun isMediaStoreFile(uri:Uri):Boolean {
+        if(uri.scheme!="content"||uri.authority!=MediaStore.AUTHORITY)return false
+        return uri.pathSegments.let{p->p.size==3&&p[1] in setOf("file","downloads")||p.size==4&&p[1] in setOf("video","audio","images")&&p[2]=="media"}
+    }
+    private fun sameMediaStoreItem(a:Uri,b:Uri):Boolean {
+        if(!isMediaStoreFile(a)||!isMediaStoreFile(b))return false
+        return runCatching{
+            val first=MediaStore.getVolumeName(a);val second=MediaStore.getVolumeName(b)
+            val id=android.content.ContentUris.parseId(a)
+            id>0&&id==android.content.ContentUris.parseId(b)&&
+                (first==second||first==MediaStore.VOLUME_EXTERNAL&&second!=MediaStore.VOLUME_INTERNAL||second==MediaStore.VOLUME_EXTERNAL&&first!=MediaStore.VOLUME_INTERNAL)
+        }.getOrDefault(false)
     }
     fun checkDirectorySupport(parent:Uri,signal:android.os.CancellationSignal){
         try{
@@ -130,11 +166,11 @@ internal object SealedMedia {
             require(child==null||relation){"此文件提供方无法核验目录范围，请逐集封存"}
         }catch(e:android.os.OperationCanceledException){throw e}catch(e:Exception){throw java.io.IOException("此文件提供方无法核验目录范围，请逐集封存",e)}
     }
-    fun localAliases(parent:Uri,known:List<MediaRef>):Set<String> = known.filter{ref->
-        val uri=ref.localUri?.let(Uri::parse)?:return@filter false
-        sameLocalDocument(parent.toString(),uri.toString()) || sameLocalDocument(ref.localParentUri,parent.toString()) || ref.localAncestors.any{sameLocalDocument(it,parent.toString())} ||
-            parent.authority==uri.authority && runCatching{DocumentsContract.isChildDocument(context.contentResolver,parent,uri)}.getOrElse{
-                runCatching{DocumentsContract.getTreeDocumentId(parent)==DocumentsContract.getTreeDocumentId(uri)}.getOrDefault(true)
-            }
-    }.map{it.key}.toSet()
+    fun localAliases(parent:Uri,known:List<MediaRef>,directory:Boolean):Set<String>{
+        val item=SealedItem(MediaRef(parent.toString(),"","",localUri=parent.toString()),directory)
+        val related=matchingLocalUris(known.mapNotNull{it.localUri?.let(Uri::parse)},listOf(item),false)
+        return known.filter{ref->ref.localUri!=null&&!item.covers(ref)&&Uri.parse(ref.localUri) in related}
+            .flatMap{listOfNotNull(it.key,it.localUri)}.toSet()
+    }
+
 }

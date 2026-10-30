@@ -21,10 +21,18 @@ class SealedMediaRegressionTest {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext
         val tree=DocumentsContract.buildTreeDocumentUri(FixtureDocumentsProvider.AUTHORITY,"root")
-        context.startActivity(Intent().setClassName(instrumentation.context.packageName,GrantFixtureActivity::class.java.name)
-            .putExtra("tree",tree.toString()).putExtra("target",context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        ui.waitUntil(10000){context.checkUriPermission(tree,android.os.Process.myPid(),android.os.Process.myUid(),Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}
+        if(context.checkUriPermission(tree,android.os.Process.myPid(),android.os.Process.myUid(),Intent.FLAG_GRANT_READ_URI_PERMISSION)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+            context.startActivity(Intent().setClassName(instrumentation.context.packageName,GrantFixtureActivity::class.java.name)
+                .putExtra("tree",tree.toString()).putExtra("target",context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            ui.waitUntil(10000){context.checkUriPermission(tree,android.os.Process.myPid(),android.os.Process.myUid(),Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}
+        }
         context.contentResolver.takePersistableUriPermission(tree,Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ui.waitUntil(10000){ui.activity.hasWindowFocus()}
+        ui.runOnIdle{
+            SealedMedia.unlock()
+            SealedMedia.items().filter{android.net.Uri.parse(it.media.localUri?:"").authority==FixtureDocumentsProvider.AUTHORITY}.forEach{SealedMedia.unseal(it.id)}
+            SealedMedia.lock()
+        }
         val models=ViewModelStore()
         lateinit var files:LocalFilesViewModel
         lateinit var vm:LibraryViewModel
@@ -42,12 +50,13 @@ class SealedMediaRegressionTest {
             val directory=files.entries.first{it.directory}
             assertTrue(video.size>0)
             for(entry in listOf(video,directory)) {
+                sealed+=entry.uri.toString()
                 ui.runOnIdle {vm.sealLocal(entry,files);vm.completePrivateAccess(vm.privateRequest!!.id)}
                 ui.waitUntil(10000){!vm.busy}
                 ui.runOnIdle {
                     assertNull(vm.error)
                     val item=SealedMedia.items().first{it.id==entry.uri.toString()}
-                    sealed+=item.id
+
                     assertEquals(if(entry.directory)null else entry.size,item.media.sizeBytes)
                     SealedMedia.lock();SealedMedia.reload();SealedMedia.unlock()
                     assertEquals(item.media.sizeBytes,SealedMedia.items().first{it.id==item.id}.media.sizeBytes)

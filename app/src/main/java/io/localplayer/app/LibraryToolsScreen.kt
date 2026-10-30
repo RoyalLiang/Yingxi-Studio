@@ -27,7 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.*
 
-@Composable internal fun LibraryToolsScreen(vm:LibraryViewModel,databaseName:String,tool:String,onSources:()->Unit,back:()->Unit){
+@Composable internal fun LibraryToolsScreen(vm:LibraryViewModel,databaseName:String,tool:String,onSources:()->Unit,onTool:(String)->Unit,back:()->Unit){
     val context=LocalContext.current.applicationContext
     val zh=LocalConfiguration.current.locales[0].language=="zh"
     fun words(cn:String,en:String)=if(zh)cn else en
@@ -71,12 +71,13 @@ import kotlinx.coroutines.*
             parcel.preview(bytes.toString(Charsets.UTF_8))
         }}
     }
-    Column(Modifier.fillMaxSize().background(Paper).windowInsetsPadding(WindowInsets.safeDrawing).testTag("library-$tool")){
+    LibraryChrome(Modifier.testTag("library-$tool"),true,tool,onTool,header={
         Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
             IconButton(onClick={worker?.cancel();back()}){Icon(Icons.AutoMirrored.Rounded.ArrowBack,words("返回","Back"))}
             Text(when(tool){"index"->words("收录目录","Index folders");"backup"->words("行囊备份","Travel backup");else->words("检修台","Repair bench")},Modifier.weight(1f),fontSize=25.sp,fontWeight=FontWeight.SemiBold)
             if(busy)IconButton(onClick={worker?.cancel()}){Icon(Icons.Rounded.Close,words("停止","Stop"))}
         }
+    }){
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         if(message!=null)Text(message!!,Modifier.padding(horizontal=24.dp,vertical=12.dp).testTag("library-tool-message"),color=Muted)
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){

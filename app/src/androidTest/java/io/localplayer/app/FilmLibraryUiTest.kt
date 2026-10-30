@@ -16,6 +16,30 @@ import java.util.Locale
 class FilmLibraryUiTest {
     private val databaseName="library-ui-${System.nanoTime()}.db"
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
+    @Test fun toolNavigationShowsSelectionAndKeepsAllToolsReachable(){
+        val (models,id)=screen()
+        val appearance=AppearancePreferences(ui.activity);val oldMode=appearance.mode
+        try{
+            for(mode in listOf(LibraryAppearance.NIGHT,LibraryAppearance.DAY)){
+                ui.runOnUiThread{appearance.mode=mode};capture("catalog-${mode.name.lowercase()}")
+            }
+            capture("catalog")
+            ui.onNodeWithTag("film-work:$id").performTouchInput{down(center)}
+            ui.mainClock.advanceTimeBy(180);capture("catalog-poster-pressed")
+            ui.onNodeWithTag("film-work:$id").performTouchInput{up()}
+            ui.onNodeWithContentDescription("返回").performClick()
+            ui.onNodeWithTag("catalog-repair").performTouchInput{click()}
+            ui.onNodeWithTag("catalog-repair").assertIsSelected()
+            ui.onNodeWithTag("repair-inspect").assertIsDisplayed();capture("catalog-repair-selected")
+            ui.onNodeWithTag("catalog-backup").performTouchInput{click()}
+            ui.onNodeWithTag("catalog-backup").assertIsSelected()
+            ui.onNodeWithTag("catalog-repair").assertIsNotSelected()
+            ui.onNodeWithTag("parcel-export").assertIsDisplayed();capture("catalog-backup-selected")
+            ui.onNodeWithTag("catalog-index").performTouchInput{click()}
+            ui.onNodeWithTag("catalog-index").assertIsSelected()
+            ui.onNodeWithTag("catalog-backup").assertIsNotSelected()
+        }finally{ui.runOnUiThread{appearance.mode=oldMode;models.clear()};ui.activity.deleteDatabase(databaseName)}
+    }
     private fun screen(english:Boolean=false):Pair<ViewModelStore,String>{
         val context=ui.activity.applicationContext
         context.deleteDatabase(databaseName)
