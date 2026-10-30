@@ -78,7 +78,7 @@ private fun LibraryToolNavigation(active:String?,onTool:(String)->Unit,modifier:
                 Row(Modifier.weight(1f).graphicsLayer{scaleX=scale;scaleY=scale}.clip(RoundedCornerShape(22.dp))
                     .background(tint).border(.8.dp,if(focused)Berry else if(selected)Berry.copy(alpha=.25f)else Color.Transparent,RoundedCornerShape(22.dp))
                     .selectable(selected,interactionSource=interaction,indication=null,role=Role.Tab,onClick={onTool(key)})
-                    .heightIn(min=48.dp).padding(horizontal=8.dp).testTag("catalog-$key").semantics{contentDescription=descriptions[index]},
+                    .heightIn(min=48.dp).padding(horizontal=if(config.fontScale>=1.5f)4.dp else 8.dp).testTag("catalog-$key").semantics{contentDescription=descriptions[index]},
                     horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
                     if(config.fontScale<1.5f){Icon(icons[index],null,Modifier.size(17.dp),tint=if(selected)Berry else Ink);Spacer(Modifier.width(5.dp))}
                     Text(labels[index],color=if(selected)Berry else Ink,fontSize=13.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)

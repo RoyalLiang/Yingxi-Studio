@@ -93,7 +93,13 @@ class FilmLibraryUiTest {
     }
     @Test fun englishScreenShowsRealFunctionNames(){
         val(models,id)=screen(true)
-        try{ui.onNodeWithText("Film catalog").assertIsDisplayed();capture("english");ui.onNodeWithTag("film-work:$id").performClick();ui.onNodeWithText("Film dossier").assertIsDisplayed();ui.onNodeWithText("Versions and sources").assertIsDisplayed();capture("english-dossier")}
+        try{ui.onNodeWithText("Film catalog").assertIsDisplayed()
+            listOf("Index","Backup","Repair").forEach{label->
+                ui.onNodeWithText(label).assertIsDisplayed().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){get->
+                    val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();assertTrue(get(layouts));assertTrue("Tool label must fit without truncation: $label",layouts.none{it.hasVisualOverflow})
+                }
+            }
+            capture("english");ui.onNodeWithTag("film-work:$id").performClick();ui.onNodeWithText("Film dossier").assertIsDisplayed();ui.onNodeWithText("Versions and sources").assertIsDisplayed();capture("english-dossier")}
         finally{ui.runOnUiThread{models.clear()};ui.activity.deleteDatabase(databaseName)}
     }
     @Test fun oldSlipConfirmationAppearsFromHomeAndCanBeDismissed(){

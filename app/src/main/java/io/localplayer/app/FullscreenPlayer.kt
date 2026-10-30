@@ -251,6 +251,8 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     }) {
         val compatibilityOutput=softwareSdr
         key(compatibilityOutput) { AndroidView(factory = { ctx -> (if(compatibilityOutput)android.view.LayoutInflater.from(ctx).inflate(R.layout.player_compatibility,null) as PlayerView else PlayerView(ctx)).apply { useController = false; setKeepContentOnPlayerReset(true);setEnableComposeSurfaceSyncWorkaround(true)
+                    // Compatibility owns the texture directly, so PlayerView never receives its first-frame event.
+                    if(compatibilityOutput)setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
             subtitleView?.let { subtitles ->
                 (subtitles.parent as? android.view.ViewGroup)?.removeView(subtitles)
                 overlayFrameLayout?.addView(subtitles,android.widget.FrameLayout.LayoutParams(-1,-1))

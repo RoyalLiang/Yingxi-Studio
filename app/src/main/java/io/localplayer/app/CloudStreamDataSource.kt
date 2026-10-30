@@ -126,7 +126,7 @@ internal class PlaybackSourcesFactory(private val context:android.content.Contex
     private fun factory(owner:Uri?,ref:MediaRef?=null):androidx.media3.exoplayer.source.MediaSource.Factory {
         val original=androidx.media3.datasource.DefaultDataSource.Factory(context,PlaybackNetworkFactory(owner=owner))
         val guarded=DataSource.Factory{val source=original.createDataSource();if(ref==null)source else CatalogDataSource(MediaDataMigration.session(context),ref,source)}
-        val delegate=androidx.media3.exoplayer.source.DefaultMediaSourceFactory(guarded,PlaybackExtractors(context)).setLoadErrorHandlingPolicy(policy).also{drm?.let(it::setDrmSessionManagerProvider)}
+        val delegate=androidx.media3.exoplayer.source.DefaultMediaSourceFactory(guarded,PlaybackExtractors(context,sourceName=ref?.title)).setLoadErrorHandlingPolicy(policy).also{drm?.let(it::setDrmSessionManagerProvider)}
         return SidecarMediaSourceFactory(delegate,guarded,context)
     }
     override fun setDrmSessionManagerProvider(provider:androidx.media3.exoplayer.drm.DrmSessionManagerProvider):androidx.media3.exoplayer.source.MediaSource.Factory {drm=provider;return this}

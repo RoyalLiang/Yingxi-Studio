@@ -10,6 +10,7 @@ import io.localplayer.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.collectLatest
 
 data class Draft(val source:Source=Source(label="",protocol=Protocol.SMB,host=""),val port:String=source.port.toString(),val password:String="",val remember:Boolean=true,
     val browsePath:String?=null,val webDavUrl:String=if(source.protocol==Protocol.WEBDAV&&source.host.isNotBlank())source.webDavAddress else "https://",val allowHttp:Boolean=!source.secure)
@@ -45,7 +46,9 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     private var discoveryAllowed=false
     private var discoveryEpoch=0L
     private var historyRows by mutableStateOf(emptyList<HistoryEntry>())
-    val history:List<HistoryEntry> get()=historyRows.filter{SealedMedia.visible(it.media)}
+    private var historyPolicy by mutableLongStateOf(-1L)
+    private var historyRefresh by mutableIntStateOf(0)
+    val history:List<HistoryEntry> get()=if(historyPolicy==SealedMedia.version())historyRows else emptyList()
     var candidates by mutableStateOf(emptyList<Candidate>());private set
     var discoveryMessage by mutableStateOf("发现当前局域网中的 SMB、SFTP / SSH 和 WebDAV 服务");private set
     var scanning by mutableStateOf(false);private set
@@ -106,15 +109,24 @@ class LibraryViewModel internal constructor(app:Application,private val sourceCo
     @Volatile private var generation=0L
     private val playChannel=Channel<PlayTarget>(Channel.BUFFERED,onUndeliveredElement={it.release()})
     val plays=playChannel.receiveAsFlow()
-    init { refreshHistory()
+    init {
+        viewModelScope.launch {
+            snapshotFlow{SealedMedia.version() to historyRefresh}.collectLatest{(policy,_)->
+                try {
+                    val next=withContext(Dispatchers.IO){SealedMedia.publicItems(historyStore.entries()){it.media}}
+                    SealedMedia.withVersion(policy){historyPolicy=policy;historyRows=next}
+                }catch(cancel:CancellationException){throw cancel}
+                catch(failure:Exception){if(policy==SealedMedia.version())error=failure.message}
+            }
+        }
         val inventory=StationInventory(app)
-        inventory.restore(history.filter { h->h.media.sourceId?.let{id->sources.any{it.id==id&& (h.media.location==null||mediaLocation(it)==h.media.location)}}
+        inventory.restore(runCatching{historyStore.entries()}.getOrDefault(emptyList()).filter { h->h.media.sourceId?.let{id->sources.any{it.id==id&& (h.media.location==null||mediaLocation(it)==h.media.location)}}
             ?: h.media.localUri?.let{runCatching{app.checkUriPermission(Uri.parse(it),android.os.Process.myPid(),android.os.Process.myUid(),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)==android.content.pm.PackageManager.PERMISSION_GRANTED}.getOrDefault(false)} ?: false
         })
 
     }
 
-    fun refreshHistory(){runCatching{historyStore.entries()}.onSuccess{historyRows=it}.onFailure{error=it.message}}
+    fun refreshHistory(){historyRows=emptyList();historyRefresh++}
     fun removeHistory(entry:HistoryEntry){if(selectedHistoryKey==entry.media.key)selectedHistoryKey=null;if(pendingReplay?.entry?.media?.key==entry.media.key)dismissDraft();runCatching{historyStore.remove(entry.media);MediaThumbnails.remove(getApplication(),entry.media);MediaPosters.remove(getApplication(),entry.media);store.forgetPosition(entry.media.key)}.onFailure{error=it.message};refreshHistory()}
     fun clearHistory(){if(pendingReplay!=null)dismissDraft();historyStore.clear();selectedHistoryKey=null;MediaThumbnails.clear(getApplication());MediaPosters.clear(getApplication());OnlineSubtitles.clear(getApplication());store.clearPositions();refreshHistory()}
     fun setDiscoveryEnabled(enabled:Boolean){discoveryEligible=enabled;refreshDiscoveryPermission()}

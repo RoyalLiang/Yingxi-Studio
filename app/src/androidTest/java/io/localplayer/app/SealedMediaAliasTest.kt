@@ -1,5 +1,10 @@
 package io.localplayer.app
 
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.test.*
+import androidx.lifecycle.ViewModelStore
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
@@ -17,6 +22,31 @@ import java.util.concurrent.atomic.AtomicReference
 
 class SealedMediaAliasTest {
     @get:Rule val ui=createAndroidComposeRule<MainActivity>()
+
+    private fun assertLegacyPublicModels(privateRef:MediaRef,publicRef:MediaRef,sealed:SealedItem){
+        val isolated=IsolatedMediaContext(ui.activity.applicationContext)
+        val app=object:android.app.Application(){init{attachBaseContext(isolated)}}
+        val models=ViewModelStore()
+        try {
+            val history=HistoryStore(isolated)
+            listOf(privateRef,publicRef).forEach{assertTrue(history.update(it,history.token(it),1000,20000,false))}
+            StationInventory(isolated).observe(listOf(privateRef,publicRef))
+            lateinit var vm:LibraryViewModel
+            ui.runOnUiThread{vm=LibraryViewModel(app);models.put("alias-public",vm)}
+            ui.waitUntil(5000){vm.history.isNotEmpty()}
+            assertEquals("Legacy aliases must not leak through public history",listOf(publicRef.key),vm.history.map{it.media.key})
+            ui.runOnUiThread{ui.activity.setContent{CompositionLocalProvider(LocalContext provides isolated){PlayerTheme{HomeScreen(vm,{},{},{})}}}}
+            ui.waitUntil(5000){ui.onAllNodesWithText("今天新发现 1 部 · 来自已浏览的目录").fetchSemanticsNodes().isNotEmpty()}
+            ui.onAllNodesWithText(io.localplayer.core.mediaDisplayTitle(privateRef.title)).assertCountEquals(0)
+            ui.onAllNodesWithText(io.localplayer.core.mediaDisplayTitle(publicRef.title)).onFirst().assertExists()
+            ui.runOnUiThread{SealedMedia.unlock();SealedMedia.unseal(sealed.id);SealedMedia.lock()}
+            ui.waitUntil(5000){vm.history.size==2&&ui.onAllNodesWithText("今天新发现 2 部 · 来自已浏览的目录").fetchSemanticsNodes().isNotEmpty()}
+            ui.onAllNodesWithText(io.localplayer.core.mediaDisplayTitle(privateRef.title)).onFirst().assertExists()
+            ui.runOnUiThread{SealedMedia.unlock();SealedMedia.seal(sealed);SealedMedia.lock();assertTrue(vm.history.isEmpty())}
+            ui.waitUntil(5000){vm.history.size==1&&ui.onAllNodesWithText("今天新发现 1 部 · 来自已浏览的目录").fetchSemanticsNodes().isNotEmpty()}
+            ui.onAllNodesWithText(io.localplayer.core.mediaDisplayTitle(privateRef.title)).assertCountEquals(0)
+        }finally{ui.runOnUiThread{models.clear()};isolated.dispose()}
+    }
 
     @Test fun mediaStoreAndDocumentAliasesStayOutOfThePublicCatalog(){
         val context=ui.activity.applicationContext
@@ -80,6 +110,7 @@ class SealedMediaAliasTest {
                 for(uri in listOf(document,media)){
                     val sealed=MediaRef(uri.toString(),name,"本机文件",localUri=uri.toString());sealKeys+=sealed.key
                     SealedMedia.unlock();SealedMedia.seal(SealedItem(sealed,false));SealedMedia.lock()
+                    if(uri==document)assertLegacyPublicModels(privateFilms.first{it.media.localUri==media.toString()}.media,publicRef,SealedItem(sealed,false))
                     val started=android.os.SystemClock.elapsedRealtime()
                     assertEquals("Only the unrelated physical file should remain public",listOf(publicId),store.works().flatMap{it.films}.map{it.id})
                     println("SEALED_ALIAS_LOOKUP elapsedMs=${android.os.SystemClock.elapsedRealtime()-started}")

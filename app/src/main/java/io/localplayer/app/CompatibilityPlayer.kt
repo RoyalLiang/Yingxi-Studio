@@ -40,6 +40,10 @@ internal class CompatibilityPlayer(private val context:Context,private val nativ
     override fun getState():State {
         val state=super.getState()
         if(player!==native)return state
+        // A recoverable native error is an internal handover, not a completed admission.
+        if(!closed&&native.playerError!=null&&native.currentMediaItem?.localConfiguration?.drmConfiguration==null&&
+            needsCompatibility(videoFormat(),native.currentTracks,native.playerError))
+            return state.buildUpon().setPlayerError(null).setPlaybackState(Player.STATE_BUFFERING).setIsLoading(true).build()
         val captions=MutableSubtitleSource.captions(native.currentMediaItem)
         val groups=native.currentTracks.groups.flatMap { group ->
             if(!group.mediaTrackGroup.id.substringAfterLast(':').startsWith(MutableSubtitleSource.PREFIX))listOf(group) else captions.mapIndexed { i,caption ->

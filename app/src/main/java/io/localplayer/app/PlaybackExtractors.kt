@@ -32,12 +32,26 @@ internal fun dolbyVisionBaseFormat(format:Format,nativeSupported:Boolean):Format
 internal class PlaybackExtractors(
     context:Context?=null,
     private val delegate:ExtractorsFactory=DefaultExtractorsFactory(),
+    private val sourceName:String?=null,
     private val supportsNative:(Format)->Boolean={format->context!=null&&supportsNativeDolbyVision(context,format)}
 ):ExtractorsFactory by delegate {
-    override fun createExtractors():Array<Extractor> = delegate.createExtractors().map(::wrap).toTypedArray()
+    override fun createExtractors():Array<Extractor> = if(sourceName.isNullOrBlank())delegate.createExtractors().map(::wrap).toTypedArray() else createExtractors(Uri.EMPTY,emptyMap())
     override fun createExtractors(uri:Uri,responseHeaders:Map<String,List<String>>):Array<Extractor> =
-        delegate.createExtractors(uri,responseHeaders).map(::wrap).toTypedArray()
+        delegate.createExtractors(if(sourceName.isNullOrBlank())uri else uri.buildUpon().appendPath(sourceName).build(),responseHeaders).map(::wrap).toTypedArray()
+    private companion object {
+        val ASF_HEADER=byteArrayOf(0x30,0x26,0xb2.toByte(),0x75,0x8e.toByte(),0x66,0xcf.toByte(),0x11,0xa6.toByte(),0xd9.toByte(),0,0xaa.toByte(),0,0x62,0xce.toByte(),0x6c)
+    }
     private fun wrap(extractor:Extractor)=object:Extractor by extractor {
+        override fun sniff(input:ExtractorInput):Boolean {
+            if(input.position==0L){
+                val header=ByteArray(ASF_HEADER.size)
+                val asf=try { input.peekFully(header,0,header.size,true)&&header.contentEquals(ASF_HEADER) }
+                    catch(_:java.io.EOFException){false} finally {input.resetPeekPosition()}
+                // ASF is handled by the compatibility player; avoid byte-by-byte native sniffing.
+                if(asf)throw androidx.media3.common.ParserException.createForUnsupportedContainerFeature("此片壳需要兼容放映")
+            }
+            return extractor.sniff(input)
+        }
         override fun init(output:ExtractorOutput) {
             extractor.init(object:ExtractorOutput by output {
                 override fun track(id:Int,type:Int):TrackOutput {

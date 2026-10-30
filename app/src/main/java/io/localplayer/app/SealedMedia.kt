@@ -43,7 +43,7 @@ internal data class SealedItem(
 /** An app visibility/access policy. Original media files are neither moved nor encrypted. */
 internal object SealedMedia {
     private val policyLock=Any()
-    private var policyVersion=0L
+    private var policyVersion by mutableLongStateOf(0L)
     internal fun hasProtection():Boolean=synchronized(policyLock){damaged||rows.isNotEmpty()}
     internal fun version():Long=synchronized(policyLock){policyVersion}
     internal fun <T> withVersion(version:Long,action:()->T):T=synchronized(policyLock){
@@ -108,6 +108,12 @@ internal object SealedMedia {
         check(preferences.edit().putString("items",a.toString()).commit()){"封存记录未能保存，请重试"}
         synchronized(policyLock){rows=next;policyVersion++}
         MediaPosters.cancelProtected();OnlineSubtitles.cancelProtected();changes.toList().forEach{it()}
+    }
+    // Provider identity checks belong on IO before publishing any public media model.
+    internal fun <T> publicItems(items:List<T>,media:(T)->MediaRef):List<T>{
+        val candidates=items.filter{visible(media(it))}
+        val denied=protectedLocalUris(candidates.mapNotNull{media(it).localUri?.let(Uri::parse)})
+        return candidates.filter{media(it).localUri?.let{Uri.parse(it) in denied}!=true}
     }
     /** Call on IO: handles document providers whose document IDs are opaque. */
     fun protectsLocalUri(uri:Uri):Boolean=uri in protectedLocalUris(listOf(uri))

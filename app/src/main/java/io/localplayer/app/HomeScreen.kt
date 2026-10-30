@@ -1,5 +1,7 @@
 package io.localplayer.app
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.localplayer.core.mediaDisplayTitle
 
 import androidx.core.net.toUri
@@ -42,7 +44,14 @@ import androidx.compose.ui.unit.sp
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME){diary=station.diary()}
     remember { station.claimGreeting() }
     val inventoryRevision = StationInventory.revision.intValue
-    val found = remember(inventoryRevision) { StationInventory(context).today().filter{SealedMedia.visible(it.media)}.take(8) }
+    val policy=SealedMedia.version()
+    var findings by remember(context){mutableStateOf(-1L to emptyList<StationFinding>())}
+    LaunchedEffect(context,inventoryRevision,policy){
+        val next=withContext(Dispatchers.IO){SealedMedia.publicItems(StationInventory(context).today()){it.media}}
+        if(policy==SealedMedia.version())findings=policy to next
+    }
+    val publicFindings=if(findings.first==policy)findings.second else emptyList()
+    val found=publicFindings.take(8)
     val continuing = vm.history.firstOrNull { !it.completed && it.positionMs > 0 && it.durationMs > 0 }
     val recent = vm.history.filterNot { it.media.key == continuing?.media?.key }.take(8)
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -102,7 +111,7 @@ import androidx.compose.ui.unit.sp
             if(found.isNotEmpty()) {
                 item(span={GridItemSpan(maxLineSpan)}) { Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
                     Text("今日拾获",fontSize=21.sp,fontWeight=FontWeight.SemiBold)
-                    Text("今天新发现 ${StationInventory(context).today().size} 部 · 来自已浏览的目录",fontSize=12.sp,color=Muted)
+                    Text("今天新发现 ${publicFindings.size} 部 · 来自已浏览的目录",fontSize=12.sp,color=Muted)
                 } }
                 items(found,key={"found:${it.media.key}"}) { finding ->
                     FindingCard(finding, seal={vm.sealMedia(finding.media)}) { vm.resume(HistoryEntry(finding.media,0,0,finding.firstSeen,false)) }
