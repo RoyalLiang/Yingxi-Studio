@@ -17,7 +17,12 @@ class RepositoryGuardTest(unittest.TestCase):
     def test_plans_cannot_be_published_even_when_force_staged(self):
         for name in ("docs/beta-capability-plan.md", "docs/world-integration.md", "docs/apple-platform-plan.md", "docs/explore-play-proposal.md", "plans/next.md", "ios/docs/design.md", "docs/roadmap.md", "website/DESIGN.md"):
             self.assertTrue(inspect(name, b"local planning"), name)
-        self.assertFalse(inspect("docs/worldbook.md", b"World setting"))
+        self.assertTrue(inspect("docs/worldbook.md", b"World setting"))
+
+    def test_all_project_documents_stay_local_even_when_force_staged(self):
+        for name in ("docs/README.md", "docs/agent/current.md", "docs/catalog.json", "docs/world-glossary.md", "docs/world-statistics.json"):
+            self.assertTrue(inspect(name, b"local documentation"), name)
+        self.assertFalse(inspect("README.md", b"Public product introduction"))
 
     def test_detects_secret_shapes_without_printing_values(self):
         for data in (b"ghp_" + b"x"*36, b"-----BEGIN " + b"PRIVATE KEY-----", b"sftp://" + b"user:credential@server", b"192.168." + b"42.19", b"/Use" + b"rs/someone/file"):

@@ -9,36 +9,18 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.m
          "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
          "gradle/android-rpc.gradle.kts", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
          "app/build.gradle.kts", "app/proguard-rules.pro", "core/build.gradle.kts", "app/src/main/AndroidManifest.xml",
-         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/playback-format-support.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/world-statistics.md", "docs/world-statistics.json", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
+         "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
 
 
-EXACT.update({
-    'docs/README.md',
-    'docs/agent/architecture.md',
-    'docs/agent/capabilities.md',
-    'docs/agent/current.md',
-    'docs/agent/documents.md',
-    'docs/agent/start.md',
-    'docs/agent/validation.md',
-    'docs/catalog.json',
-    'docs/history/README.md',
-})
 EXACT.add("third_party/mpv-bridge/MPVLib.java")
 EXACT.add("app/src/main/res/raw/world_atlas.json")
 EXACT.add("assets/artwork.json")
 EXACT.add("app/src/androidTest/assets/upgrade-resume.mp4")
-EXACT.add("docs/wasteland-copy-audit-2026-10-22.md")
-EXACT.add("docs/decoder-smoothness-validation.md")
-EXACT.add("docs/track-subtitle-preview-validation.md")
-EXACT.add("docs/station-ui-validation.md")
-EXACT.add("docs/code-audit-20261027.md")
-EXACT.add("docs/code-audit-fixes-20261027.md")
-EXACT.add("docs/adr-playback-io-20261027.md")
-EXACT.add("docs/current-version-review-alpha64.md")
 
 EXACT.update("app/src/main/res/drawable-nodpi/portrait_"+name+".webp" for name in ("axi","chideng","mitu"))
 
 def allowed(name):
+    if name.startswith("docs/"):return False
     if re.search(r"(?:^|[/_.-])(?:plans?|proposals?|roadmaps?|specs?|designs?|research)(?:[/_.-]|$)", name, re.I):
         return False
     if name == "docs/world-integration.md": return False

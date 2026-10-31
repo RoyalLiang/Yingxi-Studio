@@ -40,6 +40,7 @@ def generate(root,ref):
     parts.append('</g></svg>')
     target=root/"assets/readme";target.mkdir(parents=True,exist_ok=True)
     (target/"activity.svg").write_text("\n".join(parts)+"\n")
+    (root/"docs").mkdir(exist_ok=True)
     (root/"docs/project-metrics.json").write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
     return data
 

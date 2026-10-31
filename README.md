@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71.apk">下载 arm64 安装包</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-beta.2">阅读版本信笺</a> ·
-  <a href="docs/player-controls.md">播放与操作</a> · <a href="docs/README.md">渐进式文档目录</a> ·
+  <a href="https://yingxi-station.pages.dev/support/">使用帮助</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
 
@@ -73,7 +73,7 @@
 
 自动发现只列候选；连接成功后才能浏览影片。未广播的服务可以手动输入地址，普通网页不会直接当作 WebDAV 媒体库。
 
-海报、字幕的匹配方式、来源和开关见[海报与字幕](docs/media-enrichment.md)。播放格式取决于设备可用的解码器。
+海报优先匹配同目录资料；字幕可选择内嵌、同目录、本机导入或支持的在线匹配。播放格式取决于设备可用的解码器。
 
 播放器显示视频记录的真实码率；点击码率可手动选择片源已有且可播放的视频轨道或清晰度档位。单一视频轨道只有一档，不会生成转码档位。
 
@@ -81,7 +81,7 @@
 
 ![最近七天源码提交活跃度](assets/readme/activity.svg)
 
-图表按项目 Git 历史生成，是注明截止提交的快照，随发版更新。[原始统计数据](docs/project-metrics.json)可核对每日提交数。功能支持以本页矩阵和对应文档为准，不把活跃度当作性能指标。
+图表按项目 Git 历史生成，是注明截止提交的快照，随发版更新。每日提交数按图表标注的截止提交计算。功能支持以本页矩阵和对应文档为准，不把活跃度当作性能指标。
 
 ## 一封来自放映站的信
 
@@ -89,15 +89,13 @@
 
 首页日记内的「档案室」可以阅读阿汐、迟灯、弥途的档案、语录与据点大事记；底部「探索」提供章节来信、地点图谱和三项离线练习。图谱实线记下往返信路，虚线保留尚未证实的传闻。人物、关系和信笺有共同档案，后续发版按真实改动续写。
 
-世界观让更新记录有一条连续的线；操作仍然直白，影片、来源、搜寻附近据点和下载始终使用真实名称。读[世界观与信笺写法](docs/worldbook.md)、[世界观名词表](docs/world-glossary.md)、[统计总览](docs/world-statistics.md)，或直接去看一部片子。
+世界观让更新记录有一条连续的线；操作仍然直白，影片、来源、搜寻附近据点和下载始终使用真实名称。各版实际改动保留在[版本信笺](releases/)中，也可以直接去看一部片子。
 
 ## 参与修缮
 
 使用 Kotlin、Jetpack Compose 与 Media3 实现，以 IINA 的产品理念为参考，遵循 Android 的权限、系统文件选择与安装流程。
 
 - [工程与数据规则](CONTRIBUTING.md)
-- [文件导航](docs/file-navigation.md) · [来源设置](docs/network-settings.md)
-- [云盘接入](docs/cloud-integrations.md) · [版本与发布](docs/releasing.md)
 - [第三方许可资料](third_party)
 
 本项目按 [GNU GPLv3](LICENSE) 发布，完整对应源码随每个版本提供；第三方依赖保留各自许可与 NOTICE。IINA 用作产品参考，未复用其图标。

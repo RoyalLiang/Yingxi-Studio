@@ -147,12 +147,14 @@ if __name__=='__main__':
     data=validate(root)
     target=root/'docs/world-glossary.md'
     expected=render_glossary(data)
+    had_local_docs=target.parent.is_dir()
+    if args.write_glossary or args.write_statistics:target.parent.mkdir(parents=True,exist_ok=True)
     if args.write_glossary:target.write_text(expected)
-    elif not target.is_file() or target.read_text()!=expected:raise SystemExit('World glossary is stale; run scripts/worldbook.py --write-glossary')
+    elif had_local_docs and (not target.is_file() or target.read_text()!=expected):raise SystemExit('World glossary is stale; run scripts/worldbook.py --write-glossary')
     from world_statistics import repository_snapshot, render_statistics
     snapshot=repository_snapshot(root,data)
     outputs={root/'docs/world-statistics.json':json.dumps(snapshot,ensure_ascii=False,indent=2)+'\n',root/'docs/world-statistics.md':render_statistics(snapshot)}
     for output,content in outputs.items():
         if args.write_statistics:output.write_text(content)
-        elif not output.is_file() or output.read_text()!=content:raise SystemExit('World statistics drift; run python3 -B scripts/worldbook.py --write-statistics')
+        elif had_local_docs and (not output.is_file() or output.read_text()!=content):raise SystemExit('World statistics drift; run python3 -B scripts/worldbook.py --write-statistics')
     print(f"World atlas valid: {len(data['characters'])} characters, {len(data['nodes'])} places, {len(data['lexicon'])} terms")

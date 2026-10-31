@@ -109,7 +109,31 @@ class WorldbookTests(unittest.TestCase):
 
     def test_published_glossary_matches_the_app_data(self):
         source=Path(__file__).resolve().parents[1]
-        self.assertEqual(render_glossary(self.atlas),(source/'docs/world-glossary.md').read_text())
+        rendered=render_glossary(self.atlas)
+        for term in self.atlas['lexicon']:
+            self.assertIn('| '+term['id']+' |',rendered)
+        target=source/'docs/world-glossary.md'
+        if target.is_file():self.assertEqual(rendered,target.read_text())
+
+    def test_cli_supports_source_only_checkout_and_checks_local_documents(self):
+        import shutil,subprocess,sys
+        source=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for name in ['scripts/worldbook.py','scripts/world_statistics.py','app/src/main/res/raw/world_atlas.json','version.json']:
+                target=root/name;target.parent.mkdir(parents=True,exist_ok=True)
+                shutil.copyfile(source/name,target)
+            command=[sys.executable,str(root/'scripts/worldbook.py')]
+            result=subprocess.run(command,capture_output=True,text=True)
+            self.assertEqual(0,result.returncode,result.stderr)
+            self.assertFalse((root/'docs').exists())
+            result=subprocess.run(command+['--write-glossary','--write-statistics'],capture_output=True,text=True)
+            self.assertEqual(0,result.returncode,result.stderr)
+            self.assertTrue((root/'docs/world-statistics.json').is_file())
+            (root/'docs/world-glossary.md').write_text('stale local copy')
+            result=subprocess.run(command,capture_output=True,text=True)
+            self.assertNotEqual(0,result.returncode)
+            self.assertIn('glossary is stale',result.stderr)
 
     def test_release_rejects_an_unknown_speaker(self):
         from release_notes import load_notes
