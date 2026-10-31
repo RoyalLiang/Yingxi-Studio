@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/download/v0.2.0-beta.2/yingxi-0.2.0-beta.2-71.apk">下载 arm64 安装包</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/releases/tag/v0.2.0-beta.2">阅读版本信笺</a> ·
-  <a href="docs/player-controls.md">播放与操作</a> ·
+  <a href="docs/player-controls.md">播放与操作</a> · <a href="docs/README.md">渐进式文档目录</a> ·
   <a href="https://github.com/RoyalLiang/Yingxi-Studio/issues">反馈问题</a>
 </p>
 

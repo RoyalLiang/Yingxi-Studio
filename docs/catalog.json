@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "entrypoint": "docs/README.md",
+  "snapshotDate": "2026-10-31",
+  "versionSource": "version.json",
+  "policy": "只加载匹配 loadWhen 的最小文档；kind 不构成验证或发布授权。",
+  "documents": [
+    {
+      "path": "README.md",
+      "level": "L0",
+      "kind": "entry",
+      "topic": "product",
+      "loadWhen": "安装、产品介绍或下载"
+    },
+    {
+      "path": "docs/README.md",
+      "level": "L0",
+      "kind": "entry",
+      "topic": "navigation",
+      "loadWhen": "查找任务对应文档"
+    },
+    {
+      "path": "docs/agent/start.md",
+      "level": "L0",
+      "kind": "current",
+      "topic": "workflow",
+      "loadWhen": "开始一次任务，核对基线"
+    },
+    {
+      "path": "docs/agent/current.md",
+      "level": "L1",
+      "kind": "current",
+      "topic": "status",
+      "loadWhen": "了解最新版本与证据边界"
+    },
+    {
+      "path": "docs/agent/capabilities.md",
+      "level": "L1",
+      "kind": "current",
+      "topic": "product",
+      "loadWhen": "查现有功能或需求承接"
+    },
+    {
+      "path": "docs/agent/architecture.md",
+      "level": "L1",
+      "kind": "current",
+      "topic": "architecture",
+      "loadWhen": "定位源码拥有者与调用链"
+    },
+    {
+      "path": "docs/agent/validation.md",
+      "level": "L1",
+      "kind": "current",
+      "topic": "verification",
+      "loadWhen": "改动、构建、合并或交付"
+    },
+    {
+      "path": "docs/agent/documents.md",
+      "level": "L1",
+      "kind": "current",
+      "topic": "documentation",
+      "loadWhen": "整理或维护文档"
+    },
+    {
+      "path": "docs/history/README.md",
+      "level": "L1",
+      "kind": "entry",
+      "topic": "history",
+      "loadWhen": "需要精确旧版证据"
+    },
+    {
+      "path": "docs/player-controls.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "playback",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/file-navigation.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "local-files",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/network-settings.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "sources",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/cloud-integrations.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "cloud",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/media-enrichment.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "sidecars",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/playback-format-support.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "decoding",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/releasing.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "release",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/worldbook.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "world",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/ios-alpha.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "ios",
+      "loadWhen": "摘要不足，或修改对应范围；版本沿革按原版本解读"
+    },
+    {
+      "path": "docs/adr-playback-io-20261027.md",
+      "level": "L2",
+      "kind": "decision",
+      "topic": "playback-io",
+      "loadWhen": "修改 native、输出、外挂轨道或缩略图 IO"
+    },
+    {
+      "path": "docs/world-glossary.md",
+      "level": "L2",
+      "kind": "generated",
+      "topic": "world",
+      "loadWhen": "查词义与统计；从 world_atlas.json 生成"
+    },
+    {
+      "path": "docs/world-statistics.md",
+      "level": "L2",
+      "kind": "generated",
+      "topic": "world",
+      "loadWhen": "查词义与统计；从 world_atlas.json 生成"
+    },
+    {
+      "path": "docs/decoder-smoothness-validation.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "decoding",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/track-subtitle-preview-validation.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "sidecars",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/station-ui-validation.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "ui",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/code-audit-20261027.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "audit",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/code-audit-fixes-20261027.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "audit",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/current-version-review-alpha64.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "playback",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "docs/wasteland-copy-audit-2026-10-22.md",
+      "level": "L3",
+      "kind": "historical",
+      "topic": "world",
+      "loadWhen": "核对报告标题/小节对应的版本、提交和环境"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "engineering",
+      "loadWhen": "提交、数据与源码边界"
+    },
+    {
+      "path": "website/README.md",
+      "level": "L2",
+      "kind": "reference",
+      "topic": "website",
+      "loadWhen": "修改官网、内容同步或上报接收端"
+    }
+  ],
+  "collections": [
+    {
+      "glob": "releases/*.md",
+      "level": "L3",
+      "kind": "release",
+      "topic": "android-release",
+      "loadWhen": "读取精确 Android 版本信笺；不批量加载或改写已发布内容"
+    },
+    {
+      "glob": "ios/releases/*.md",
+      "level": "L3",
+      "kind": "release",
+      "topic": "ios-release",
+      "loadWhen": "读取精确 iOS 版本信笺；发布暂停"
+    }
+  ],
+  "localOnly": {
+    "instructions": [
+      "AGENTS.md",
+      ".agents/boot.yaml",
+      ".agents/route-presets.jsonl"
+    ],
+    "runtime": ".agent-runtime/",
+    "publication": "本地规则、私稿、方案、工具链、账户及完整运行证据不进入公开源码。"
+  }
+}

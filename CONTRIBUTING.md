@@ -1,7 +1,7 @@
 # 工程与数据规则
 
 - 每次完成改动并验证后，commit 并 push 本次任务涉及的文件；保留其他任务或用户尚未完成的工作。用户已授权常规提交、推送和新版本自动发布，无需每轮重新请求相同授权。
-- 发布新版本时，同步更新 `version.json` 并提交 `releases/v<versionName>.md`，中英双语列出更新内容、验证范围和限制。推送到 `main` 后自动检查、签名并发布；具体步骤与签名配置见[版本与发布](docs/releasing.md)。
+- 发布新版本时，同步更新 `version.json` 并提交 `releases/v<versionName>.md`，中英双语只写本版实际改动，采用拾荒者信笺语气；验证、限制、CI 和提交证据另存交付记录。推送到 `main` 后自动检查、签名并发布；具体步骤与签名配置见[版本与发布](docs/releasing.md)。
 
 - 本项目为 Android 原生播放器，维持本机/SMB/SFTP 的只读访问、取消、随机定位与 SFTP 身份核验边界。
 - 禁止生成、提交或打包 mac 专有元数据：`.DS_Store`、AppleDouble、`__MACOSX`、资源分叉和扩展属性。忽略规则不能代替最终检查。
@@ -19,3 +19,5 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
 构建、协议与设备测试应注明实际执行范围；未运行的 GitHub workflow、目标手机或现场 NAS 不能记为通过。
+
+文档从[渐进式目录](docs/README.md)进入；维护规则见[文档约定](docs/agent/documents.md)。

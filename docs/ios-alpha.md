@@ -1,5 +1,7 @@
 # iOS 27 alpha
 
+> iOS 留存 Alpha 的历史功能与构建说明。当前发布暂停；不代表 Android Beta 的能力或验收状态。参见[当前版本](agent/current.md)。
+
 当前已按用户要求暂停后续发布；仅保留手动构建，恢复需用户明确要求。
 
 此工程为原生 SwiftUI / AVFoundation 应用，显示名 **映汐放映站**，默认 Bundle ID `io.localplayer.app`，iOS 最低版本为 **27.0**。它独立于 Android Kotlin/JVM 实现。

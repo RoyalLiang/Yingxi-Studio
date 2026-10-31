@@ -2,22 +2,22 @@
   "axi": {
     "name": "阿汐",
     "role": "影像拾荒者 · 据点管理员",
-    "letter": "我把松开的分册纸脊重新折好，迟灯用铜尺压住边沿。册名写在纸上，片罐还放在原来的格子里；要换一行索引，不必搬动整架影像。",
-    "english": "I refolded the loose paper spine while Chideng held its edge beneath a brass ruler. The volume name stays on paper; the film tins stay in their old slots. Changing an index line need not move a shelf of images.",
-    "record": "diary_028"
+    "letter": "阿汐把片架索引绳上的散页摊开，先看页角的旧编号，再将同一片罐的检修纸夹在后面。字迹不清的地方留着空白，旧页仍夹在原处。",
+    "english": "Axi spread the loose pages from the shelf index cord, checked the old corner numbers, then clipped each tin’s repair notes behind its sheet. She left unclear marks blank and kept the original pages in place.",
+    "record": "diary_station_index_return_20261031"
   },
   "chideng": {
     "name": "迟灯",
     "role": "放映站守夜人 · 旧设备修理师",
-    "letter": "我把盖沿旧布的接缝翻到内侧，线头夹进两层布里。阿汐用指腹顺着盖沿摸了一圈，才把片单的空白角压回去；纸上的片名，一笔也没擦。",
-    "english": "I turn the cloth seam to the inside of the tin lid and tuck the thread ends between its layers. Axi runs a fingertip around the rim before setting it back on the film list's blank corner; none of the titles loses a mark.",
-    "record": "diary_station_lid_seam_20261024"
+    "letter": "迟灯把新滤出的波段刻度抄进牛皮本，和片罐侧签对上了同一个号。",
+    "english": "Chideng copied the newly filtered band markings into his kraft notebook, matching the number on the film tin's side label.",
+    "record": "diary_station_frequency_log_20261026"
   },
   "mitu": {
     "name": "弥途",
     "role": "盐环路标师 · 往返列站的递信人",
-    "letter": "我把商队带来的理想城口信写在图纸边上，没往实线上添一笔。阿汐问我走过没有，我摇头；纸边留得宽些，容得下听来的话，也容得下还没走过的路。",
-    "english": "I put the caravan's message from Ideal City in the map's margin, adding nothing to the solid route. When Axi asks whether I have walked there, I shake my head. The wide margin holds what we have heard and leaves room for ground we have not crossed.",
-    "record": "diary_world_route_margin_20261024"
+    "letter": "盐环列站的车门内侧新挂了一枚留白木签，等哪天亲脚走过再封上盐蜡。",
+    "english": "A blank wooden tally hangs inside the Salt Ring carriage door, waiting for salt-wax once the road is actually walked.",
+    "record": "diary_salt_blank_tally_20261026"
   }
 }

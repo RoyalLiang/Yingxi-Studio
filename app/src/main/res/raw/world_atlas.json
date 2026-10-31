@@ -1787,8 +1787,8 @@
         "en": "Shelf Index Cord"
       },
       "summary": {
-        "zh": "拴在映汐放映站片架侧面的细麻绳与木夹。阿汐把来信残页、片罐侧签和迟灯的检修纸编上同一组号码挂在一起；弥途出站前只需核对木夹编号，就能把散落各处的线索串成不断线的往返记录。",
-        "en": "A twine cord and wooden clips fastened beside the shelves at Yingxi Station. Axi assigns one shared number to incoming notes, film-tin side labels, and Chideng’s repair slips; before setting out, Mitu checks the clip numbers so scattered leads stay connected as one continuous record."
+        "zh": "拴在映汐放映站片架侧面的细麻绳与木夹。阿汐把来信残页、片罐侧签和迟灯的检修纸编上同一组号码挂在一起；弥途出站前只需核对木夹编号，就能把散落各处的线索串成不断线的往返记录。归拢散页时沿用原页角编号，检修续页夹在对应片罐的旧页之后；索引只串起记录，不替模糊字迹补出结论。",
+        "en": "A twine cord and wooden clips fastened beside the shelves at Yingxi Station. Axi assigns one shared number to incoming notes, film-tin side labels, and Chideng’s repair slips; before setting out, Mitu checks the clip numbers so scattered leads stay connected as one continuous record. Loose pages retain their old corner numbers, with repair continuations clipped behind the matching tin’s original sheet; the index connects records without guessing at unclear marks."
       }
     },
     {
@@ -2553,6 +2553,14 @@
       "text": {
         "zh": "迟灯把新滤出的波段刻度抄进牛皮本，和片罐侧签对上了同一个号。",
         "en": "Chideng copied the newly filtered band markings into his kraft notebook, matching the number on the film tin's side label."
+      }
+    },
+    {
+      "id": "diary_station_index_return_20261031",
+      "author": "axi",
+      "text": {
+        "zh": "阿汐把片架索引绳上的散页摊开，先看页角的旧编号，再将同一片罐的检修纸夹在后面。字迹不清的地方留着空白，旧页仍夹在原处。",
+        "en": "Axi spread the loose pages from the shelf index cord, checked the old corner numbers, then clipped each tin’s repair notes behind its sheet. She left unclear marks blank and kept the original pages in place."
       }
     }
   ],

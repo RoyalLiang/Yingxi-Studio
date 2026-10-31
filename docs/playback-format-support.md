@@ -1,5 +1,7 @@
 # Android 播放格式与落地方案
 
+> L2 专题说明，含旧版追加记录。先读[当前能力总表](agent/capabilities.md)，只按需读取本专题；旧版验证不自动适用于当前版本。
+
 当前问题与验证范围见 [alpha.64 检查报告](current-version-review-alpha64.md)。下文按版本保留接入历史，旧版“尚未接通”的结论以较新实现和实播证据为准。
 
 核对日期：2026-10-26。本轮版本：**0.2.0-alpha.57 / 59**。本轮以 [969c640 的 alpha.55 报告](https://github.com/RoyalLiang/Yingxi-Studio/blob/969c640bfa4055f777339cf6a3f698d736d842b1/docs/playback-format-support.md)为基线；实现与验证记录见[解码接入和流畅度验证](decoder-smoothness-validation.md)。发布状态仍以正式 Release 为准。

@@ -12,6 +12,17 @@ EXACT = {".gitignore", ".gitattributes", "README.md", "LICENSE", "CONTRIBUTING.m
          "app/src/androidTest/AndroidManifest.xml", "app/src/androidTest/java/io/localplayer/app/FixtureDocumentsProvider.java", "app/src/androidTest/java/io/localplayer/app/GrantFixtureActivity.java", "app/src/androidTest/java/io/localplayer/app/ReleaseLaunchSmoke.java", "docs/player-controls.md", "docs/releasing.md", "docs/file-navigation.md", "docs/network-settings.md", "docs/cloud-integrations.md", "docs/media-enrichment.md", "docs/playback-format-support.md", "docs/worldbook.md", "docs/world-glossary.md", "docs/world-statistics.md", "docs/world-statistics.json", "docs/project-metrics.json", "assets/readme/activity.svg", "assets/readme/sources.webp", "assets/readme/updates.webp", "assets/readme/letter.webp", "docs/ios-alpha.md", "deploy/cloud-integrations.example.json", "app/src/main/res/drawable-nodpi/cloud_aliyunpan.webp", "app/src/main/res/drawable-nodpi/cloud_baidu.webp"}
 
 
+EXACT.update({
+    'docs/README.md',
+    'docs/agent/architecture.md',
+    'docs/agent/capabilities.md',
+    'docs/agent/current.md',
+    'docs/agent/documents.md',
+    'docs/agent/start.md',
+    'docs/agent/validation.md',
+    'docs/catalog.json',
+    'docs/history/README.md',
+})
 EXACT.add("third_party/mpv-bridge/MPVLib.java")
 EXACT.add("app/src/main/res/raw/world_atlas.json")
 EXACT.add("assets/artwork.json")
