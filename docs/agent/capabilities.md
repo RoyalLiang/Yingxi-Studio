@@ -8,6 +8,7 @@
 | SMB/SFTP | 扫描候选、认证、浏览、根目录约束和随机读取；SSH 候选不等于 SFTP 可用，SFTP 保留主机身份核验 | [来源设置](../network-settings.md)、`AppConnectors`、`SmbConnector`、`SftpConnector` |
 | WebDAV/OpenList | 使用服务端给定地址与账户，校验偏移、长度及重定向边界；性能取决于实际服务 | [来源设置](../network-settings.md)、`WebDavConnector` |
 | 官方云盘 | 阿里云官方授权、账户与目录、原画/可用平台清晰度；百度入口不等于已实现官方账户和播放接入 | [云盘接入](../cloud-integrations.md) |
+| 云盘读取与缓存 | 阿里云原画按设置并发读取，可缓存完整校验的原始字节片段；满足设置与非计费 Wi-Fi 条件时预取下一集，缓存可清理且不等于完整离线下载 | `CloudReadPreferences`、`SegmentCache`、`NextEpisodePrefetch` |
 | 片匣总录 | 索引选定本地、SMB、SFTP 目录，跨来源按片名和信源查找；保留原片架入口 | `FilmLibraryScreen`、`FilmLibraryStore`、`CatalogIndex` |
 | 放映单 | 将总录影片编排为有序列表并依次播放；不可读条目跳过并提示检查 | `LibraryPlaylistTest`、`FilmLibraryRegressionTest` |
 | 影片档案 | 修改展示片名、保存札记与片刻标记；重新关联文件沿用影片记录；同尺寸不证明是同一版本 | `FilmLibraryStore`、`FilmMomentPlaybackTest`、`LibraryViewModel` |
