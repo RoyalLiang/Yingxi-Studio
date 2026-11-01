@@ -39,11 +39,11 @@ object PlaybackMetrics {
     private var videoEnabled=false
     private var videoCodecErrors=0
     private var videoDecoderReleases=0
- @Synchronized fun reset(){
+ @Synchronized fun reset(owner:android.net.Uri?=null){
   audioDecoder=null;audioCounters=null
   sdr=false;sdrDecoderDroppedFrames=null;sdrAvSyncMs=null;sdrPollMs=null;sdrPollMainMs=null
   PlaybackIoProbe.reset()
-        PlaybackExtractionProbe.reset()
+        PlaybackExtractionProbe.reset(owner)
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0
@@ -71,7 +71,7 @@ object PlaybackMetrics {
         override fun onVideoCodecError(eventTime:AnalyticsListener.EventTime,error:Exception){synchronized(this@PlaybackMetrics){videoCodecErrors++}}
         override fun onVideoDecoderReleased(eventTime:AnalyticsListener.EventTime,name:String){synchronized(this@PlaybackMetrics){videoDecoderReleases++}}
 
-  override fun onMediaItemTransition(eventTime:AnalyticsListener.EventTime,mediaItem:MediaItem?,reason:Int){reset()}
+  override fun onMediaItemTransition(eventTime:AnalyticsListener.EventTime,mediaItem:MediaItem?,reason:Int){reset(mediaItem?.localConfiguration?.uri)}
   override fun onVideoDecoderInitialized(eventTime:AnalyticsListener.EventTime,name:String,initializedTimestampMs:Long,initializationDurationMs:Long){
    synchronized(this@PlaybackMetrics){decoder=name;decoderInitMs=initializationDurationMs}
    android.util.Log.i("YingxiPlayback","decoder=$name initMs=$initializationDurationMs")

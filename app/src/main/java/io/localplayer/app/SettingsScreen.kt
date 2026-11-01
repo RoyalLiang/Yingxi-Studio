@@ -113,7 +113,7 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,vm) {
         fun consume(){UpdateInstallResult.take(context)?.let{(text,error)->
-            if(vm.installing){if(error)vm.fail(text)else vm.installMessage(text)}
+            if(error)vm.fail(text)else if(vm.installing)vm.installMessage(text)
         }}
         val resultPreferences=context.getSharedPreferences("update-install-result",android.content.Context.MODE_PRIVATE)
         val resultListener=android.content.SharedPreferences.OnSharedPreferenceChangeListener{_,key->if(key=="text")consume()}

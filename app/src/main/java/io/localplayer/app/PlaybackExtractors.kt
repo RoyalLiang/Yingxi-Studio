@@ -62,7 +62,7 @@ internal class PlaybackExtractors(
     }
     private fun wrap(extractor:Extractor,recordProgress:Boolean)=object:Extractor by extractor {
         override fun sniff(input:ExtractorInput):Boolean {
-            if(recordProgress)PlaybackExtractionProbe.sniff(extractorKind(extractor),sourceName,input.position)
+            if(recordProgress)PlaybackExtractionProbe.sniff(extractorKind(extractor),sourceName,input.position,diagnosticUri)
             if(input.position==0L){
                 val header=ByteArray(ASF_HEADER.size)
                 val asf=try { input.peekFully(header,0,header.size,true)&&header.contentEquals(ASF_HEADER) }
@@ -73,9 +73,9 @@ internal class PlaybackExtractors(
             return extractor.sniff(input)
         }
         override fun read(input:ExtractorInput,seekPosition:PositionHolder):Int {
-            if(recordProgress)PlaybackExtractionProbe.reading(input.position)
+            val token=if(recordProgress)PlaybackExtractionProbe.reading(extractorKind(extractor),sourceName,input.position,diagnosticUri)else null
             val result=extractor.read(input,seekPosition)
-            if(recordProgress)PlaybackExtractionProbe.read(if(result==Extractor.RESULT_SEEK)seekPosition.position else input.position,
+            if(recordProgress)PlaybackExtractionProbe.read(token,if(result==Extractor.RESULT_SEEK)seekPosition.position else input.position,
                 result==Extractor.RESULT_SEEK,result==Extractor.RESULT_END_OF_INPUT)
             return result
         }

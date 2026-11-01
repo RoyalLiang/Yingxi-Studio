@@ -49,6 +49,21 @@ class ReportedPlaybackIssuesTest {
         ui.onNodeWithTag("playback-buffering").assertExists()
     }
 
+    @Test fun openingSettingsStillExplainsAnInstallationFailureAfterProcessDeath(){
+        val app=ui.activity.application
+        val owners=ViewModelStore()
+        try{
+            UpdateInstallResult.save(app,"存储空间不足，请释放空间后重试",true)
+            lateinit var vm:SettingsViewModel
+            ui.runOnUiThread{
+                vm=SettingsViewModel(app,AppUpdates(app));owners.put("recovered",vm)
+                ui.activity.setContent{PlayerTheme{SettingsRoute(vm){}}}
+            }
+            ui.onNodeWithTag("update-toast").assertTextEquals("存储空间不足，请释放空间后重试").assertIsDisplayed()
+            assertTrue(vm.error)
+        }finally{ui.runOnUiThread{owners.clear()};UpdateInstallResult.take(app)}
+    }
+
     @Test fun openingSettingsDoesNotAutomaticallyInstallARestoredDownload(){
         val app=ui.activity.application
         val previous=UpdateDownloads.state.value

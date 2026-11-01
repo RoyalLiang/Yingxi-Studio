@@ -71,4 +71,31 @@ class PlaybackExtractorStartupTest {
         assertTrue(extractors.createExtractors(owner,emptyMap()).single().sniff(input(byteArrayOf(1,2,3))))
         assertEquals("MATROSKA",PlaybackExtractionProbe.snapshot().containerHint)
     }
+
+    @Test fun queuedSourcesAndLateReadsCannotReplaceTheActiveGeneration(){
+        val first=Uri.parse("content://fixture/first");val next=Uri.parse("content://fixture/next")
+        PlaybackMetrics.reset(first)
+        val entered=java.util.concurrent.CountDownLatch(1);val finish=java.util.concurrent.CountDownLatch(1)
+        val blocked=object:Extractor by Probe(){
+            override fun read(input:ExtractorInput,seekPosition:PositionHolder):Int{
+                entered.countDown();check(finish.await(5,java.util.concurrent.TimeUnit.SECONDS));seekPosition.position=9000
+                return Extractor.RESULT_SEEK
+            }
+        }
+        val blockedFactory=object:ExtractorsFactory{override fun createExtractors()=arrayOf<Extractor>(blocked)}
+        val active=PlaybackExtractors(delegate=blockedFactory,sourceName="first.mkv",diagnosticUri=first).createExtractors(first,emptyMap()).single()
+        val queued=PlaybackExtractors(delegate=factory(Probe()),sourceName="next.mp4",diagnosticUri=next).createExtractors(next,emptyMap()).single()
+        active.sniff(input(byteArrayOf(1,2,3)))
+        queued.sniff(input(byteArrayOf(1,2,3)))
+        assertEquals("MATROSKA",PlaybackExtractionProbe.snapshot().containerHint)
+        val worker=java.util.concurrent.Executors.newSingleThreadExecutor()
+        try{
+            val oldRead=worker.submit<Int>{active.read(input(byteArrayOf(1,2,3)),PositionHolder())}
+            assertTrue(entered.await(2,java.util.concurrent.TimeUnit.SECONDS))
+            PlaybackMetrics.reset(next);queued.sniff(input(byteArrayOf(1,2,3)))
+            val expected=PlaybackExtractionProbe.snapshot()
+            finish.countDown();oldRead.get(2,java.util.concurrent.TimeUnit.SECONDS)
+            assertEquals(expected,PlaybackExtractionProbe.snapshot())
+        }finally{finish.countDown();worker.shutdownNow();PlaybackMetrics.reset()}
+    }
 }
