@@ -312,7 +312,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
                         })
                 })
         }
-        if(!compact&&(!entryReady||buffering||pendingEpisode!=null||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging)
+        if(!compact&&(!entryReady||buffering||pendingEpisode!=null||controller==null)&&error==null&&connectionError==null&&!settings&&!queue&&!dragging&&!diagnosticsOpen)
             PlayerLoadingMotion(Modifier.align(Alignment.Center).size(88.dp).testTag("playback-buffering"))
 
         if (!compact && (visible || dragging) && !locked && !queue && !settings) {

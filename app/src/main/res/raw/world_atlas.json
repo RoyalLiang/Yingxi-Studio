@@ -757,6 +757,14 @@
         "zh": "阿汐把漏夹的札记补进登记册，旧编号仍留在原页。迟灯把片架索引绳的木夹一枚枚对过，弥途收好铅封路签；听来的方向，仍不描成实路。",
         "en": "Axi files the loose notes without changing the numbers on the old pages. Chideng checks each clip on the shelf index cord, and Mitu puts away the lead-sealed route tallies. Directions heard from others remain untraced."
       }
+    },
+    {
+      "id": "chronicle_service_loop_20261101",
+      "version": "0.2.0-beta.3",
+      "text": {
+        "zh": "迟灯擦净检修架接头上的灰，把旧皮带下的松线摸过一遍，再将磨旧的标签转向外侧。下一次换线的人，仍能沿原来的字迹找到它。",
+        "en": "Chideng wipes the connector on the repair rack, checks the slack beneath the old belt, and turns the worn label outward. Whoever changes the cable next can still follow the old lettering."
+      }
     }
   ],
   "boundary": {
@@ -2561,6 +2569,14 @@
       "text": {
         "zh": "阿汐把片架索引绳上的散页摊开，先看页角的旧编号，再将同一片罐的检修纸夹在后面。字迹不清的地方留着空白，旧页仍夹在原处。",
         "en": "Axi spread the loose pages from the shelf index cord, checked the old corner numbers, then clipped each tin’s repair notes behind its sheet. She left unclear marks blank and kept the original pages in place."
+      }
+    },
+    {
+      "id": "diary_station_service_loop_20261101",
+      "author": "chideng",
+      "text": {
+        "zh": "迟灯用软布擦净接头上的灰。重新接线前，他先摸一摸旧皮带下留出的那截松线，再把磨旧的标签转向外侧。",
+        "en": "Chideng wiped the dust from the connector with a soft cloth. Before reconnecting it, he felt for the slack beneath the old belt and turned the worn label outward."
       }
     }
   ],

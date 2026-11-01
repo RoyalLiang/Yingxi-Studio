@@ -33,16 +33,36 @@ internal class PlaybackExtractors(
     context:Context?=null,
     private val delegate:ExtractorsFactory=DefaultExtractorsFactory(),
     private val sourceName:String?=null,
+    private val diagnosticUri:Uri?=null,
     private val supportsNative:(Format)->Boolean={format->context!=null&&supportsNativeDolbyVision(context,format)}
 ):ExtractorsFactory by delegate {
-    override fun createExtractors():Array<Extractor> = if(sourceName.isNullOrBlank())delegate.createExtractors().map(::wrap).toTypedArray() else createExtractors(Uri.EMPTY,emptyMap())
+    override fun createExtractors():Array<Extractor> = if(sourceName.isNullOrBlank())delegate.createExtractors().map{wrap(it,diagnosticUri==null)}.toTypedArray() else createExtractors(Uri.EMPTY,emptyMap())
     override fun createExtractors(uri:Uri,responseHeaders:Map<String,List<String>>):Array<Extractor> =
-        delegate.createExtractors(if(sourceName.isNullOrBlank())uri else uri.buildUpon().appendPath(sourceName).build(),responseHeaders).map(::wrap).toTypedArray()
+        delegate.createExtractors(if(sourceName.isNullOrBlank())uri else uri.buildUpon().appendPath(sourceName).build(),responseHeaders).map{wrap(it,diagnosticUri==null||uri==diagnosticUri)}.toTypedArray()
     private companion object {
         val ASF_HEADER=byteArrayOf(0x30,0x26,0xb2.toByte(),0x75,0x8e.toByte(),0x66,0xcf.toByte(),0x11,0xa6.toByte(),0xd9.toByte(),0,0xaa.toByte(),0,0x62,0xce.toByte(),0x6c)
     }
-    private fun wrap(extractor:Extractor)=object:Extractor by extractor {
+    // Type checks survive release obfuscation; class names do not.
+    private fun extractorKind(extractor:Extractor):PlaybackExtractionProbe.Kind=when(extractor){
+        is androidx.media3.extractor.mkv.MatroskaExtractor->PlaybackExtractionProbe.Kind.MATROSKA
+        is androidx.media3.extractor.mp4.Mp4Extractor,is androidx.media3.extractor.mp4.FragmentedMp4Extractor->PlaybackExtractionProbe.Kind.MP4
+        is androidx.media3.extractor.ts.TsExtractor->PlaybackExtractionProbe.Kind.MPEG_TS
+        is androidx.media3.extractor.ts.PsExtractor->PlaybackExtractionProbe.Kind.MPEG_PS
+        is androidx.media3.extractor.avi.AviExtractor->PlaybackExtractionProbe.Kind.AVI
+        is androidx.media3.extractor.flv.FlvExtractor->PlaybackExtractionProbe.Kind.FLV
+        is androidx.media3.extractor.ogg.OggExtractor->PlaybackExtractionProbe.Kind.OGG
+        is androidx.media3.extractor.flac.FlacExtractor->PlaybackExtractionProbe.Kind.FLAC
+        is androidx.media3.extractor.wav.WavExtractor->PlaybackExtractionProbe.Kind.WAV
+        is androidx.media3.extractor.mp3.Mp3Extractor->PlaybackExtractionProbe.Kind.MP3
+        is androidx.media3.extractor.ts.AdtsExtractor->PlaybackExtractionProbe.Kind.AAC
+        is androidx.media3.extractor.ts.Ac3Extractor->PlaybackExtractionProbe.Kind.AC3
+        is androidx.media3.extractor.ts.Ac4Extractor->PlaybackExtractionProbe.Kind.AC4
+        is androidx.media3.extractor.amr.AmrExtractor->PlaybackExtractionProbe.Kind.AMR
+        else->PlaybackExtractionProbe.Kind.OTHER
+    }
+    private fun wrap(extractor:Extractor,recordProgress:Boolean)=object:Extractor by extractor {
         override fun sniff(input:ExtractorInput):Boolean {
+            if(recordProgress)PlaybackExtractionProbe.sniff(extractorKind(extractor),sourceName,input.position)
             if(input.position==0L){
                 val header=ByteArray(ASF_HEADER.size)
                 val asf=try { input.peekFully(header,0,header.size,true)&&header.contentEquals(ASF_HEADER) }
@@ -51,6 +71,13 @@ internal class PlaybackExtractors(
                 if(asf)throw androidx.media3.common.ParserException.createForUnsupportedContainerFeature("此片壳需要兼容放映")
             }
             return extractor.sniff(input)
+        }
+        override fun read(input:ExtractorInput,seekPosition:PositionHolder):Int {
+            if(recordProgress)PlaybackExtractionProbe.reading(input.position)
+            val result=extractor.read(input,seekPosition)
+            if(recordProgress)PlaybackExtractionProbe.read(if(result==Extractor.RESULT_SEEK)seekPosition.position else input.position,
+                result==Extractor.RESULT_SEEK,result==Extractor.RESULT_END_OF_INPUT)
+            return result
         }
         override fun init(output:ExtractorOutput) {
             extractor.init(object:ExtractorOutput by output {

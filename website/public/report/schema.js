@@ -1,6 +1,8 @@
 export const CONSENT_VERSION = '2026-10-26';
 export const REPOSITORY = 'https://github.com/RoyalLiang/Yingxi-Studio';
-const counts = new Set(`httpPhaseMs urlRequests rangeRequests sourceReadBytes readParallelism diskCacheReadBytes urlResolveMs responseWaitMs bodyReadMs lastHttpStatus sourceBodyAverageBytesPerSecond signedTrafficLimitBitsPerSecond versionCode sdk bufferingWaitMs suppression positionMs bufferedMs ioWaitingMs sinceReadMs ioFailures bytes readCalls maxReadMs readTimeMs droppedFrames audioRenderedBuffers sdrDecoderDroppedFrames sdrPollMs sdrPollMainMs encodedFrameRate videoSkippedOutputs encodedWidth encodedHeight openCalls openTimeMs firstFrameMs rebuffers decoderInitMs videoInputBuffers videoRenderedBuffers videoSkippedInputs videoCodecErrors videoDecoderReleases videoWidth videoHeight`.split(' '));
+const counts = new Set(`httpPhaseMs urlRequests rangeRequests sourceReadBytes readParallelism diskCacheReadBytes urlResolveMs responseWaitMs bodyReadMs lastHttpStatus sourceBodyAverageBytesPerSecond signedTrafficLimitBitsPerSecond versionCode sdk bufferingWaitMs suppression positionMs bufferedMs ioWaitingMs sinceReadMs ioFailures bytes readCalls maxReadMs readTimeMs droppedFrames audioRenderedBuffers sdrDecoderDroppedFrames sdrPollMs sdrPollMainMs encodedFrameRate videoSkippedOutputs encodedWidth encodedHeight openCalls openTimeMs firstFrameMs rebuffers decoderInitMs videoInputBuffers videoRenderedBuffers videoSkippedInputs videoCodecErrors videoDecoderReleases videoWidth videoHeight extractorPosition extractorSniffCalls extractorReadCalls extractorSeeks`.split(' '));
+const containers = new Set(['UNKNOWN','OTHER','MATROSKA','MP4','MPEG_TS','MPEG_PS','AVI','ASF','FLV','OGG','FLAC','WAV','MP3','AAC','AC3','AC4','AMR']);
+const extractionPhases = new Set(['IDLE','SNIFF','READ','SEEK','END']);
 const flags = new Set(['downloadRightsNotice','playRequested','isPlaying','videoRendererEnabled']);
 const codec = /^(?:mpv\.|c2\.|OMX\.|ffmpeg|libavcodec)[A-Za-z0-9._+-]{0,150}$/i;
 const simple = /^[\p{L}\p{N}][\p{L}\p{N} ._()+-]{0,79}$/u;
@@ -16,6 +18,8 @@ export function sanitizeReport(input) {
   for(const key of flags)if(Object.hasOwn(input,key))data[key]=typeof input[key]==='boolean'?input[key]:null;
   for(const key of ['manufacturer','model','android'])if(Object.hasOwn(input,key))data[key]=typeof input[key]==='string'&&simple.test(input[key])?input[key]:null;
   for(const key of ['state','ioOperation','httpPhase','lastIoFailure','playerError'])if(Object.hasOwn(input,key))data[key]=typeof input[key]==='string'&&token.test(input[key])?input[key]:null;
+  for(const key of ['containerHint','extractor'])if(Object.hasOwn(input,key))data[key]=containers.has(input[key])?input[key]:null;
+  if(Object.hasOwn(input,'extractorPhase'))data.extractorPhase=extractionPhases.has(input.extractorPhase)?input.extractorPhase:null;
   if(Object.hasOwn(input,'source'))data.source=['SFTP','SMB','WEBDAV','ALIYUN','LOCAL'].includes(input.source)?input.source:null;
   for(const key of ['decoder','audioDecoder'])if(Object.hasOwn(input,key))data[key]=typeof input[key]==='string'&&codec.test(input[key])?input[key]:null;
   if(Object.hasOwn(input,'videoCodecs'))data.videoCodecs=typeof input.videoCodecs==='string'&&input.videoCodecs.length<=80&&videoCodecs.test(input.videoCodecs)?input.videoCodecs:null;

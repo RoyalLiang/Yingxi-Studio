@@ -41,4 +41,34 @@ class PlaybackExtractorStartupTest {
         assertTrue(extractors.createExtractors(uri,headers).single().sniff(input(byteArrayOf(1,2,3))))
         assertTrue(probe.sniffed);assertEquals("opaque-id",uri.lastPathSegment)
     }
+
+    @Test fun extractionReportRecordsProgressWithoutRetainingTheSourceName(){
+        PlaybackMetrics.reset()
+        val extractor=PlaybackExtractors(delegate=factory(Probe()),sourceName="private-account-private-film.mkv").createExtractors().single()
+        val source=input(byteArrayOf(1,2,3))
+        assertTrue(extractor.sniff(source))
+        source.resetPeekPosition()
+        assertEquals(Extractor.RESULT_END_OF_INPUT,extractor.read(source,PositionHolder()))
+        val report=org.json.JSONObject(playbackDiagnostic(null))
+        assertEquals("MATROSKA",report.getString("containerHint"))
+        assertEquals("OTHER",report.getString("extractor"))
+        assertEquals("END",report.getString("extractorPhase"))
+        assertEquals(0L,report.getLong("extractorPosition"))
+        assertEquals(1L,report.getLong("extractorSniffCalls"))
+        assertEquals(1L,report.getLong("extractorReadCalls"))
+        assertFalse(report.toString().contains("private-"))
+        PlaybackMetrics.reset()
+        assertEquals("IDLE",PlaybackExtractionProbe.snapshot().phase)
+        assertNull(PlaybackExtractionProbe.snapshot().position)
+    }
+
+    @Test fun sidecarExtractorCannotReplaceThePrimaryVideoProbe(){
+        PlaybackMetrics.reset()
+        val owner=Uri.parse("content://fixture/video")
+        val extractors=PlaybackExtractors(delegate=factory(Probe()),sourceName="film.mkv",diagnosticUri=owner)
+        assertTrue(extractors.createExtractors(Uri.parse("content://fixture/audio"),emptyMap()).single().sniff(input(byteArrayOf(1,2,3))))
+        assertEquals("IDLE",PlaybackExtractionProbe.snapshot().phase)
+        assertTrue(extractors.createExtractors(owner,emptyMap()).single().sniff(input(byteArrayOf(1,2,3))))
+        assertEquals("MATROSKA",PlaybackExtractionProbe.snapshot().containerHint)
+    }
 }

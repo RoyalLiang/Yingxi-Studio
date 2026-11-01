@@ -93,3 +93,20 @@ test('compact native UI keeps legacy behavior and posts once through verificatio
     }
   }finally{globalThis.window=old.window;globalThis.document=old.document;globalThis.fetch=old.fetch}
 });
+
+
+test('extraction progress uses a fixed vocabulary and bounded offsets',async()=>{
+  const extraction={containerHint:'MATROSKA',extractor:'MATROSKA',extractorPhase:'SEEK',extractorPosition:4294967297,extractorSniffCalls:2,extractorReadCalls:41,extractorSeeks:1};
+  const {data}=sanitizeReport({...report,...extraction});
+  for(const [key,value] of Object.entries(extraction))assert.equal(data[key],value);
+  for(const key of ['containerHint','extractor','extractorPhase'])assert.equal(sanitizeReport({...report,[key]:'/private/movie.mkv'}).data[key],null);
+  for(const value of [-1,Infinity,Number.MAX_SAFE_INTEGER+1])assert.equal(sanitizeReport({...report,extractorPosition:value}).data.extractorPosition,null);
+  const response=await onRequestPost(context(body({report:{...report,...extraction}})),async(url,options)=>{
+    if(url.includes('/siteverify'))return verify();
+    const issue=JSON.parse(options.body);
+    assert(issue.body.includes('MATROSKA'));assert(issue.body.includes('SEEK'));assert(issue.body.includes('4294967297'));
+    assert(!issue.body.includes('/private/movie'));
+    return Response.json({number:123,html_url:'https://github.com/RoyalLiang/Yingxi-Studio/issues/123'},{status:201});
+  });
+  assert.equal(response.status,201);
+});

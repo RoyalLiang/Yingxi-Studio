@@ -43,6 +43,7 @@ object PlaybackMetrics {
   audioDecoder=null;audioCounters=null
   sdr=false;sdrDecoderDroppedFrames=null;sdrAvSyncMs=null;sdrPollMs=null;sdrPollMainMs=null
   PlaybackIoProbe.reset()
+        PlaybackExtractionProbe.reset()
   started=SystemClock.elapsedRealtime();firstFrame=null;played=false;wasBuffering=false
   rebuffers=0;dropped=0;bytes=0;reads=0;readNanos=0;opens=0;openNanos=0
   maxReadNanos=0;decoder=null;decoderInitMs=0;bufferingSince=0

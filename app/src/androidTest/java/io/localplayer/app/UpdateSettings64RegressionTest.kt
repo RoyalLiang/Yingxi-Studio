@@ -93,7 +93,7 @@ class UpdateSettings64RegressionTest {
         }finally{finish.set(true);ui.runOnUiThread{vm.cancel()};vm.release?.let{AppUpdates.partialFile(context,it).delete()}}
     }
     @Test fun customSubtitleSearchCanBeSavedAtNarrowWidthAndLargeText(){
-        val raw=context.getSharedPreferences("media-enrichment-v1",0)
+        val raw=MigratingPreferences.open(context,"media-enrichment-v1")
         val oldSource=raw.getString("subtitle-source",null);val oldSearch=raw.getString("custom-subtitle-search",null)
         try{
             raw.edit().putString("subtitle-source","subhd").remove("custom-subtitle-search").commit()
@@ -113,7 +113,7 @@ class UpdateSettings64RegressionTest {
     }
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     @Test fun customSourceOnlyPreparesAnEncodedBrowserLink(){
-        val raw=context.getSharedPreferences("media-enrichment-v1",0)
+        val raw=MigratingPreferences.open(context,"media-enrichment-v1")
         val oldSource=raw.getString("subtitle-source",null);val oldSearch=raw.getString("custom-subtitle-search",null)
         lateinit var player:androidx.media3.exoplayer.ExoPlayer
         try{

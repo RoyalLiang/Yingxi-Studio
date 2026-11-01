@@ -20,6 +20,7 @@ import java.util.Locale
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):String {
     val metrics=PlaybackMetrics.snapshot();val io=PlaybackIoProbe.snapshot()
+    val extraction=PlaybackExtractionProbe.snapshot()
     val transports=PlaybackIoProbe.transportSnapshots()
     val active=transports.filter{it.stage!=null}.maxByOrNull{it.currentMs}
     val advisory=transports.lastOrNull{it.rangeRequests>0||it.urlRequests>0}
@@ -33,6 +34,9 @@ internal fun playbackDiagnostic(player:Player?,bufferingWaitMs:Long?=null):Strin
     }?:videoGroups.firstOrNull{it.length>0}?.getTrackFormat(0)
     val mime=selected?.sampleMimeType?.takeIf{it in setOf("video/avc","video/hevc","video/dolby-vision","video/av01","video/x-vnd.on2.vp9","video/x-vnd.on2.vp8","video/mp4v-es","video/mpeg2","video/3gpp") }
     return JSONObject().put("report","yingxi-playback-v1")
+        .put("containerHint",extraction.containerHint).put("extractor",extraction.extractor)
+        .put("extractorPhase",extraction.phase).put("extractorPosition",extraction.position?:JSONObject.NULL)
+        .put("extractorSniffCalls",extraction.sniffCalls).put("extractorReadCalls",extraction.readCalls).put("extractorSeeks",extraction.seeks)
         .put("httpPhase",active?.stage?.name?:if(transports.isEmpty())JSONObject.NULL else "IDLE")
         .put("httpPhaseMs",active?.currentMs?:0).put("urlRequests",transports.sumOf{it.urlRequests})
         .put("rangeRequests",transports.sumOf{it.rangeRequests}).put("sourceReadBytes",transports.sumOf{it.sourceBytes})

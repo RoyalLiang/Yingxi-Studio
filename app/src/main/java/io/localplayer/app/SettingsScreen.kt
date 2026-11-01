@@ -50,6 +50,8 @@ internal class SettingsViewModel @JvmOverloads constructor(app:Application,priva
     init {
         if(injectedUpdates==null){
             UpdateDownloads.restore(app)
+            // Restoring a download is not a new request to open the system installer.
+            installationOffered=UpdateDownloads.state.value?.ready!=null
             viewModelScope.launch{UpdateDownloads.state.collect{state->if(state!=null){
                 val notify=state.error&&(!error||message!=state.message)
                 release=state.release;busy=state.busy;progress=state.progress;ready=state.ready;message=state.message;error=state.error
@@ -110,7 +112,9 @@ generation++;job?.cancel();job=null;busy=false;progress=null;message="已取消"
     val context=LocalContext.current
     val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,vm) {
-        fun consume(){UpdateInstallResult.take(context)?.let{(text,error)->if(error)vm.fail(text)else vm.installMessage(text)}}
+        fun consume(){UpdateInstallResult.take(context)?.let{(text,error)->
+            if(vm.installing){if(error)vm.fail(text)else vm.installMessage(text)}
+        }}
         val resultPreferences=context.getSharedPreferences("update-install-result",android.content.Context.MODE_PRIVATE)
         val resultListener=android.content.SharedPreferences.OnSharedPreferenceChangeListener{_,key->if(key=="text")consume()}
         resultPreferences.registerOnSharedPreferenceChangeListener(resultListener)
