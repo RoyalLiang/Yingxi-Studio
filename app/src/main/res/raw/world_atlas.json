@@ -765,6 +765,14 @@
         "zh": "迟灯擦净检修架接头上的灰，把旧皮带下的松线摸过一遍，再将磨旧的标签转向外侧。下一次换线的人，仍能沿原来的字迹找到它。",
         "en": "Chideng wipes the connector on the repair rack, checks the slack beneath the old belt, and turns the worn label outward. Whoever changes the cable next can still follow the old lettering."
       }
+    },
+    {
+      "id": "chronicle_frequency_margins_20261104",
+      "version": "0.2.0-beta.4",
+      "text": {
+        "zh": "迟灯在频段抄本里留下细划线和未填的空格，阿汐沿旧编号核对片架木夹。空格只说明这次尚无读数，不能据此说远处的发报点已经消失。",
+        "en": "Chideng leaves thin strikes and blank spaces in the Frequency Logbook. Axi checks the shelf clips against the old numbers. A blank means no reading was recorded this time; it does not show that a distant source has vanished."
+      }
     }
   ],
   "boundary": {
@@ -1812,8 +1820,8 @@
         "en": "Frequency Logbook"
       },
       "summary": {
-        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。",
-        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source."
+        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。改记的刻度保留细划线，空白只表示当次尚无读数，不据此断言发报点已消失。",
+        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source. A thin strike preserves a corrected marking. A blank records the absence of a reading on that occasion, not the disappearance of its source."
       }
     }
   ],
@@ -2577,6 +2585,14 @@
       "text": {
         "zh": "迟灯用软布擦净接头上的灰。重新接线前，他先摸一摸旧皮带下留出的那截松线，再把磨旧的标签转向外侧。",
         "en": "Chideng wiped the dust from the connector with a soft cloth. Before reconnecting it, he felt for the slack beneath the old belt and turned the worn label outward."
+      }
+    },
+    {
+      "id": "diary_frequency_margins_20261104",
+      "author": "chideng",
+      "text": {
+        "zh": "迟灯等旋钮下最后一阵沙沙声落定，才在频段抄本的旧数值旁添一笔。写错的刻度只划细线，不涂成黑块；阿汐翻页时，还能看清它对应哪一枚片架木夹。",
+        "en": "Chideng waits for the last hiss beneath the dial to settle before penciling a reading beside the old one in the Frequency Logbook. A thin strike crosses a mistaken mark. When Axi turns the page, she can still match it to the wooden clip on the shelves."
       }
     }
   ],

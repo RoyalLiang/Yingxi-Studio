@@ -125,7 +125,18 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             return releaseByView
         }
     }
-    private val poll=object:Runnable {override fun run(){if(released||runtime==null)return;refresh();handler.postDelayed(this,150)}}
+    private val poll=object:Runnable {override fun run(){
+        if(released||runtime==null)return
+        val now=android.os.SystemClock.elapsedRealtime()
+        // Check before JNI polling: a blocked snapshot must not disable the deadline.
+        // Only this descriptor's reads extend inactivity, up to five minutes total.
+        if(!firstFrame&&openingSince>0&&(now-openingSince>300000||now-maxOf(openingSince,input?.lastReadAt?:0)>30000)){
+            stopRuntime()
+            failure=PlaybackException("SDR 兼容播放中断",java.io.IOException("SDR 兼容解码未能生成画面"),PlaybackException.ERROR_CODE_DECODING_FAILED)
+            state=Player.STATE_IDLE;wanted=false;syncPlay();invalidateState();return
+        }
+        refresh();handler.postDelayed(this,150)
+    }}
 
     override fun getState():State {
         val playlist=items.mapIndexed { i,item->MediaItemData.Builder(item.mediaId.ifEmpty{"mpv-$i"})
@@ -187,8 +198,9 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
                 handler.post {
                     if(released||generation!=current)return@post
                     if(runCatching{checkItemAuthority(item)}.isFailure){resources.close();opening=null;state=Player.STATE_IDLE;wanted=false;invalidateState();return@post}
-                    runtime=engine;this.engine=Engine(engine);input=opened;opening=null;openingSince=android.os.SystemClock.elapsedRealtime()
+                    runtime=engine;this.engine=Engine(engine);input=opened;opening=null
                     pendingLoad={
+                        openingSince=android.os.SystemClock.elapsedRealtime()
                         val start=position;val rate=speed.speed;val volume=gain
                         enqueue{it.command("loadfile",opened.path,"replace","-1","start=${start/1000.0}");it.set("speed",rate.toString());it.set("volume",(volume*100).toString())}
                         handleSetTrackSelectionParameters(selection);handler.post(poll)
@@ -291,8 +303,6 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         try {
             val values=snapshot.getOrThrow()
             val now=android.os.SystemClock.elapsedRealtime()
-            if(!firstFrame&&openingSince>0&&now-openingSince>30000)
-                throw java.io.IOException("SDR 兼容解码未能生成画面")
             values["time-pos"]?.toDoubleOrNull()?.let{position=(it*1000).toLong().coerceAtLeast(0)}
             buffered=values["demuxer-cache-time"]?.toDoubleOrNull()?.let{(it*1000).toLong()}?:position
             // Container/track metadata does not need a synchronous JNI roundtrip every UI tick.
@@ -443,7 +453,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     override fun handleRelease():ListenableFuture<*>{released=true;clearOutput();stopRuntime();wanted=false;syncPlay();runCatching{context.unregisterReceiver(noisy)};return done()}
     private fun stopRuntime(){
         pendingLoad=null
-        generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null
+        generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null;openingSince=0
         val owner=engine;engine=null
         firstFrame=false;firstFrameEvent=false;subtitleRequested=false
         val m=runtime;val source=input;val pending=opening;val captions=externalInputs.values.toList();externalInputs.clear();runtime=null;input=null;opening=null

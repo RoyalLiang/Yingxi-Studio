@@ -294,7 +294,8 @@ internal class AliyunRangeFile(override val size: Long, private val parent: Canc
                 readTelemetry.rangeRequest()
                 val result = readTelemetry.measure(RemoteReadTelemetry.Stage.HEADERS){call.execute()}
                 readTelemetry.response(result.code)
-                if (result.code == 403 && attempt == 0) { result.close(); val rejected=url!!;url=readTelemetry.measure(RemoteReadTelemetry.Stage.URL){refresh?.invoke(cancellation,rejected)?:resolve(cancellation)}; continue }
+                val rejectedDownloadRequest=result.code==400&&result.peekBody(64).string().trim()=="not a valid request"
+                if ((result.code == 403 || rejectedDownloadRequest) && attempt == 0) { result.close(); val rejected=url!!;url=readTelemetry.measure(RemoteReadTelemetry.Stage.URL){refresh?.invoke(cancellation,rejected)?:resolve(cancellation)}; continue }
                 val range=Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)").matchEntire(result.header("Content-Range").orEmpty())
                 val from=range?.groupValues?.get(1)?.toLongOrNull()?:-1L
                 val end=range?.groupValues?.get(2)?.toLongOrNull()?:-1L

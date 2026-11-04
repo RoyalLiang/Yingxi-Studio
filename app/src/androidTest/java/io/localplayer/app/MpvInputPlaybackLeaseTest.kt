@@ -42,6 +42,7 @@ class MpvInputPlaybackLeaseTest {
                     val bytes=ByteArray(4096)
                     assertEquals(bytes.size,Os.pread(input.descriptor.fileDescriptor,bytes,0,bytes.size,position))
                     assertArrayEquals(ByteArray(bytes.size){((position+it)%251).toByte()},bytes)
+                    assertTrue(input.lastReadAt>0)
                 }
             }
             val until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5)

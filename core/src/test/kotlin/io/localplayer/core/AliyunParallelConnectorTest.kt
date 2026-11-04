@@ -23,6 +23,35 @@ class AliyunParallelConnectorTest {
         }}
         client.dispatcher.executorService.shutdown();client.connectionPool.evictAll()
     }
+    @Test fun refreshesOnceWhenProviderRejectsSignedRequest()=fixture {_,client,cdn,_->
+        cdn.enqueue(MockResponse().setResponseCode(400).setBody(" not a valid request"))
+        cdn.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Range","bytes 7-10/11").setBody("DATA"))
+        val refreshes=AtomicInteger()
+        AliyunRangeFile(11,Cancellation(),client,refresh={_,rejected->
+            assertEquals(cdn.url("/rejected").toString(),rejected)
+            refreshes.incrementAndGet();cdn.url("/fresh").toString()
+        },resolve={cdn.url("/rejected").toString()}).use{file->
+            val bytes=ByteArray(4);assertEquals(4,file.readAt(7,bytes,0,4));assertEquals("DATA",String(bytes))
+        }
+        assertEquals(1,refreshes.get());assertEquals(2,cdn.requestCount)
+        repeat(2){assertEquals("bytes=7-",cdn.takeRequest().getHeader("Range"))}
+    }
+    @Test fun otherBadRequestsDoNotRefreshSignedAddresses()=fixture {_,client,cdn,_->
+        cdn.enqueue(MockResponse().setResponseCode(400).setBody("invalid range"))
+        val refreshes=AtomicInteger()
+        AliyunRangeFile(11,Cancellation(),client,refresh={_,_->refreshes.incrementAndGet();cdn.url("/fresh").toString()},resolve={cdn.url("/bad-range").toString()}).use{file->
+            assertFailsWith<AliyunRangeResponseFailure>{file.readAt(7,ByteArray(4),0,4)}
+        }
+        assertEquals(0,refreshes.get());assertEquals(1,cdn.requestCount)
+    }
+    @Test fun repeatedSignedRequestRejectionStopsAfterOneRefresh()=fixture {_,client,cdn,_->
+        repeat(2){cdn.enqueue(MockResponse().setResponseCode(400).setBody(" not a valid request"))}
+        val refreshes=AtomicInteger()
+        AliyunRangeFile(11,Cancellation(),client,refresh={_,_->refreshes.incrementAndGet();cdn.url("/fresh").toString()},resolve={cdn.url("/rejected").toString()}).use{file->
+            assertFailsWith<AliyunRangeResponseFailure>{file.readAt(7,ByteArray(4),0,4)}
+        }
+        assertEquals(1,refreshes.get());assertEquals(2,cdn.requestCount)
+    }
     @Test fun refreshesExpiringLinkBeforeRejectionAndReusesOnlyVersionedAccountCache()=fixture {api,client,cdn,server->
         var data=ByteArray(2*1024*1024+55){(it%251).toByte()}
         val urls=AtomicInteger();val requests=AtomicInteger()

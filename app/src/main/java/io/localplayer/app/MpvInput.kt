@@ -13,9 +13,10 @@ import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Seekable descriptor: reuse authenticated transports without exposing credentials or a server. */
-internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,private val cleanup:()->Unit,private val readFailure:java.util.concurrent.atomic.AtomicReference<Throwable?> = java.util.concurrent.atomic.AtomicReference()):Closeable {
+internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,private val cleanup:()->Unit,private val readFailure:java.util.concurrent.atomic.AtomicReference<Throwable?> = java.util.concurrent.atomic.AtomicReference(),private val readProgress:java.util.concurrent.atomic.AtomicLong = java.util.concurrent.atomic.AtomicLong()):Closeable {
     private val closed=AtomicBoolean()
     val failure get()=readFailure.get()
+    val lastReadAt get()=readProgress.get()
     val path get()="fd://${descriptor.fd}"
     override fun close(){if(closed.compareAndSet(false,true)){runCatching{descriptor.close()};cleanup()}}
     companion object {
@@ -32,6 +33,7 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                 val file=io.localplayer.core.ReadAheadFile(lease.open(),512*1024)
                 PlaybackMetrics.opened(System.nanoTime()-started)
                 val failed=java.util.concurrent.atomic.AtomicReference<Throwable?>()
+                val progress=java.util.concurrent.atomic.AtomicLong()
                 val released=AtomicBoolean()
                 fun cleanup(){if(released.compareAndSet(false,true))closer.execute{
                     // Cancel a blocked transport even when the descriptor callback is busy.
@@ -59,6 +61,7 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                                 lease.checkCurrent()
                                 if(read<=0)throw java.io.EOFException("远程文件读取中断")
                                 count+=read
+                                progress.set(android.os.SystemClock.elapsedRealtime())
                                 PlaybackIoProbe.progress(probe,read)
                             }
                             PlaybackMetrics.read(count,System.nanoTime()-start)
@@ -71,7 +74,7 @@ internal class MpvInput private constructor(val descriptor:ParcelFileDescriptor,
                 }
                 val fd=context.getSystemService(StorageManager::class.java).openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY,callback,Handler(thread.looper))
                 var removeObserver:()->Unit={}
-                val input=MpvInput(fd,{removeObserver();cleanup()},failed)
+                val input=MpvInput(fd,{removeObserver();cleanup()},failed,progress)
                 removeObserver=PlaybackRegistry.observeInvalidation{sourceId,mediaId->
                     if(sourceId==lease.source.id||(mediaId!=null&&mediaId==lease.mediaId))input.close()
                 }
