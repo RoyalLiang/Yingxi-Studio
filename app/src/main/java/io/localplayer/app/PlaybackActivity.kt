@@ -398,7 +398,7 @@ class PlaybackActivity:ComponentActivity(){
         val hint=media?.let{PlaybackOrientationProbe.cached(this,it)}?:if(target?.uri?.toString()==id)
             intent.getIntExtra("initial-orientation",ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED).takeIf{it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE||it==ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT} else null
         val direction=automaticDirection.update(c,events,hint)
-        direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(this,it,orientation)}}
+        if(automaticDirection.hasMetadata)direction?.let{orientation->media?.let{PlaybackOrientationProbe.remember(this,it,orientation)}}
         if(!foreground||compact||captionPickerOpen)return
         val desired=if(directionLocked)ActivityInfo.SCREEN_ORIENTATION_LOCKED else
             manualDirection?:direction?:return

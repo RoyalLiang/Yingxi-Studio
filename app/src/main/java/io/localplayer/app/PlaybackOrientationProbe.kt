@@ -23,7 +23,7 @@ internal object PlaybackOrientationProbe {
     private const val MAX_CACHE_RECORDS=64
     private val cacheLock=Any()
     private const val CACHE_AGE_MS=24L*60*60*1000
-    private fun preferences(context:Context)=context.applicationContext.getSharedPreferences("video-orientation-v1",Context.MODE_PRIVATE)
+    private fun preferences(context:Context)=context.applicationContext.getSharedPreferences("video-orientation-v2",Context.MODE_PRIVATE)
     private fun recordedAt(value:Any?)=runCatching{org.json.JSONObject(value as String).getLong("recordedAt")}.getOrDefault(0L)
     fun remember(context:Context,media:MediaRef,orientation:Int){
         if(runCatching{MediaDataMigration.session(context).checkLocator(media)}.isFailure||SealedMedia.protects(media)||(media.sizeBytes?:0)<=0||orientation !in setOf(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT))return

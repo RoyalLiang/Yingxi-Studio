@@ -66,7 +66,12 @@ object PlaybackRegistry {
     internal fun observeInvalidation(change:(String?,String?)->Unit):()->Unit {invalidations.add(change);return{invalidations.remove(change)}}
     internal fun add(source: Source, credentials: Credentials, path: String, name: String, connector:Connector=AppConnectors(),context:android.content.Context?=null,bindingEpoch:Long?=null,media:MediaRef?=null): Uri {
         fun register():Uri {
-            val authority:((()->Unit)?)=context?.let{app->val epoch=bindingEpoch?:SourceBindingEpochs.current(app,source);{SourceBindingEpochs.verifyLease(app,source,epoch);media?.let{MediaDataMigration.session(app).checkLocator(it)};Unit}}
+        val authority:((()->Unit)?)=context?.let{app->
+            val epoch=bindingEpoch?:SourceBindingEpochs.current(app,source)
+            val verifySource=SourceBindingEpochs.leaseVerifier(app,source,epoch)
+            val session=MediaDataMigration.session(app);
+            {verifySource();media?.let(session::checkLocator);Unit}
+        }
             authority?.invoke()
             require(io.localplayer.core.SourceRoot(source.initialPath).contains(path)){"影片在来源根目录之外"}
             val token=UUID.randomUUID().toString();leases[token]=PlaybackLease(source,credentials,path,connector,authority=authority,mediaId=media?.mediaId)

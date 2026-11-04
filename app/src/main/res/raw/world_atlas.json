@@ -773,6 +773,14 @@
         "zh": "迟灯在频段抄本里留下细划线和未填的空格，阿汐沿旧编号核对片架木夹。空格只说明这次尚无读数，不能据此说远处的发报点已经消失。",
         "en": "Chideng leaves thin strikes and blank spaces in the Frequency Logbook. Axi checks the shelf clips against the old numbers. A blank means no reading was recorded this time; it does not show that a distant source has vanished."
       }
+    },
+    {
+      "id": "chronicle_logbook_pageclip_20261105",
+      "version": "0.2.0-beta.5",
+      "text": {
+        "zh": "阿汐与迟灯交班时，用片架木夹暂记频段抄本的页码，再将木夹归回原位。夹记只标示阅读位置，不代表新增读数或远方路线已经核实。",
+        "en": "At the shift change Axi and Chideng briefly use a shelf clip to mark the Frequency Logbook’s page, then return it. The clip marks a reading place; it establishes neither a new measurement nor a verified route."
+      }
     }
   ],
   "boundary": {
@@ -1820,8 +1828,8 @@
         "en": "Frequency Logbook"
       },
       "summary": {
-        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。改记的刻度保留细划线，空白只表示当次尚无读数，不据此断言发报点已消失。",
-        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source. A thin strike preserves a corrected marking. A blank records the absence of a reading on that occasion, not the disappearance of its source."
+        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。改记的刻度保留细划线，空白只表示当次尚无读数，不据此断言发报点已消失。交班时可用片架木夹暂记页码，交接后归位；夹记不构成新增读数或路线证据。",
+        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source. A thin strike preserves a corrected marking. A blank records the absence of a reading on that occasion, not the disappearance of its source. A shelf clip may briefly mark the page during a shift handover and is returned afterward. That marker adds no measurement or route evidence."
       }
     }
   ],
@@ -2593,6 +2601,14 @@
       "text": {
         "zh": "迟灯等旋钮下最后一阵沙沙声落定，才在频段抄本的旧数值旁添一笔。写错的刻度只划细线，不涂成黑块；阿汐翻页时，还能看清它对应哪一枚片架木夹。",
         "en": "Chideng waits for the last hiss beneath the dial to settle before penciling a reading beside the old one in the Frequency Logbook. A thin strike crosses a mistaken mark. When Axi turns the page, she can still match it to the wooden clip on the shelves."
+      }
+    },
+    {
+      "id": "diary_logbook_pageclip_20261105",
+      "author": "axi",
+      "text": {
+        "zh": "阿汐把一枚磨圆的木夹移到频段抄本当天那页，夹口避开迟灯留下的细划线。换班时，她先把页码念给他听，再将木夹递回片架；旧读数留在纸上，今晚要核的地方也没有混在一起。",
+        "en": "Axi moves a rounded wooden clip to today’s page of the Frequency Logbook, clear of Chideng’s thin correction marks. At the shift change she reads him the page number before returning the clip to the shelves. The old readings stay on paper, with tonight’s checks kept distinct."
       }
     }
   ],

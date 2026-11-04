@@ -30,10 +30,14 @@ internal object SourceBindingEpochs {
         synchronized(lock){val p=prefs(context);check(p.edit().putLong("epoch:$id",p.getLong("epoch:$id",0)+1).putBoolean("deleted:$id",true).commit())}
         revoked(id)
     }
-    fun verifyLease(context:Context,source:Source,epoch:Long)=synchronized(lock){
-        val p=prefs(context)
-        if(p.getBoolean("deleted:${source.id}",false)||p.getString("digest:${source.id}",null)!=identity(source)||p.getLong("epoch:${source.id}",0)!=epoch)throw java.io.IOException("信源身份或根目录已变化，请重新选择影片")
+    fun leaseVerifier(context:Context,source:Source,epoch:Long):()->Unit {
+        val p=prefs(context);val expected=identity(source)
+        val deletedKey="deleted:${source.id}";val digestKey="digest:${source.id}";val epochKey="epoch:${source.id}"
+        return {synchronized(lock){
+            if(p.getBoolean(deletedKey,false)||p.getString(digestKey,null)!=expected||p.getLong(epochKey,0)!=epoch)throw java.io.IOException("信源身份或根目录已变化，请重新选择影片")
+        }}
     }
+    fun verifyLease(context:Context,source:Source,epoch:Long)=leaseVerifier(context,source,epoch).invoke()
     fun acceptsWrite(context:Context,ref:MediaRef,allowUnregistered:Boolean):Boolean {
         if(!LocalBindingEpochs.accepts(context,ref))return false
         val sourceId=ref.sourceId?:return true

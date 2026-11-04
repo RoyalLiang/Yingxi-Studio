@@ -62,8 +62,10 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
     }
     private fun visibleFilm(id:String,ref:MediaRef):Boolean=visible(ref)&&id !in checkNotNull(allowed.get()).denied
     private fun <T> transaction(extra:List<MediaRef> = emptyList(),action:(SQLiteDatabase)->T):T=access(extra){
-        val db=helper.writableDatabase;db.beginTransaction()
-        try{action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
+        MediaDataMigration.session(app).withLocatorChanges{
+            val db=helper.writableDatabase;db.beginTransaction()
+            try{action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
+        }
     }
     private fun put(db:SQLiteDatabase,table:String,vararg fields:Pair<String,Any>){
         val values=ContentValues();fields.forEach{(key,value)->when(value){is Long->values.put(key,value);is Int->values.put(key,value);else->values.put(key,value.toString())}}
@@ -197,7 +199,9 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
         db.delete("moments","id=?",arrayOf(momentId));Unit
     }
     internal fun <T> withDatabase(action:(SQLiteDatabase,Set<String>)->T):T=access {
-        action(helper.writableDatabase,works().flatMap{it.films}.map{it.id}.toSet())
+        MediaDataMigration.session(app).withLocatorChanges{
+            action(helper.writableDatabase,works().flatMap{it.films}.map{it.id}.toSet())
+        }
     }
     fun catalogEpoch():Long=access{helper.readableDatabase.rawQuery("SELECT value FROM metadata WHERE name='catalog-epoch'",null).use{if(it.moveToFirst())it.getString(0).toLong()else 0L}}
     fun observeBatch(refs:List<MediaRef>,epoch:Long):Int=transaction(refs){db->

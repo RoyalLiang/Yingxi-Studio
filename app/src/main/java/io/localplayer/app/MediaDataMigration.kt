@@ -60,6 +60,8 @@ internal class MediaDataSession(private val context:Context,private val historyN
     private var changes=0L
     private var players=0
     private val targets=mutableSetOf<String>()
+    private val verifiedLocators=LinkedHashSet<MediaRef>()
+    private var locatorWrites=0
     private fun committed():Boolean {
         committedCache?.let{return it}
         val ready=context.getDatabasePath(databaseName).exists()&&helper.readableDatabase.rawQuery("SELECT value FROM metadata WHERE name='data-migration-v1'",null).use{it.moveToFirst()&&it.getString(0)=="Committed"}
@@ -70,7 +72,7 @@ internal class MediaDataSession(private val context:Context,private val historyN
     fun playbackStopped()=synchronized(gate){players=(players-1).coerceAtLeast(0);changes++;Unit}
     fun targetCreated(id:String)=synchronized(gate){targets.add(id);changes++;Unit}
     fun targetReleased(id:String)=synchronized(gate){targets.remove(id);changes++;Unit}
-    fun close()=synchronized(gate){helper.close()}
+    fun close()=synchronized(gate){verifiedLocators.clear();helper.close()}
     fun isCommitted()=synchronized(gate){committed()}
     fun catalogEpoch():Long=synchronized(gate){if(committed())long(helper.readableDatabase,"catalog-epoch")else 0L}
     fun requireIdle()=synchronized(gate){check(players==0&&targets.isEmpty()){ "请先结束放映并关闭待播影片，再恢复行囊" }}
@@ -91,13 +93,25 @@ internal class MediaDataSession(private val context:Context,private val historyN
         db.rawQuery("SELECT f.id,f.media,c.position,c.duration,c.updated,c.completed FROM checkpoints c JOIN films f ON f.id=c.film_id ORDER BY c.updated DESC,f.id LIMIT 100",null).use{c->while(c.moveToNext())rows+=HistoryEntry(CatalogIdentity.current(db,c.getString(0),c.getString(1)),c.getLong(2),c.getLong(3),c.getLong(4),c.getInt(5)==1)}
         return rows
     }
-    private fun <T> transaction(action:(SQLiteDatabase)->T):T {
-        val db=helper.writableDatabase;db.beginTransaction();try{return action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
+    // Default playback catalog writers share this gate, including relinking and restores.
+    internal fun <T> withLocatorChanges(action:()->T):T=synchronized(gate){
+        locatorWrites++;verifiedLocators.clear()
+        try{action()}finally{verifiedLocators.clear();locatorWrites--}
+    }
+    private fun <T> transaction(action:(SQLiteDatabase)->T):T=withLocatorChanges {
+        val db=helper.writableDatabase;db.beginTransaction();try{action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
     }
     fun reference(ref:MediaRef):MediaRef=synchronized(gate){if(!committed())ref else transaction{CatalogIdentity.register(it,ref,System.currentTimeMillis())}}
     fun checkLocator(ref:MediaRef)=synchronized(gate){
         if(!LocalBindingEpochs.accepts(context,ref))throw java.io.IOException("文件夹授权已撤回，请重新选择影片")
-        if(committed()&&!CatalogIdentity.isCurrent(helper.readableDatabase,ref))throw java.io.IOException("片签位置已变化，请从片架重新打开")
+        val cacheable=databaseName==MEDIA_DATABASE&&locatorWrites==0
+        if(committed()&&(!cacheable||ref !in verifiedLocators)){
+            if(!CatalogIdentity.isCurrent(helper.readableDatabase,ref))throw java.io.IOException("片签位置已变化，请从片架重新打开")
+            if(cacheable){
+                if(verifiedLocators.size>=64)verifiedLocators.remove(verifiedLocators.first())
+                verifiedLocators.add(ref.copy(localAncestors=ref.localAncestors.toList()))
+            }
+        }
     }
     fun update(ref:MediaRef,expected:HistoryToken,position:Long,duration:Long,completed:Boolean):Boolean=synchronized(gate){
         val ready=committed()
