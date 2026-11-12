@@ -1811,8 +1811,8 @@
         "en": "Shelf Index Cord"
       },
       "summary": {
-        "zh": "拴在映汐放映站片架侧面的细麻绳与木夹。阿汐把来信残页、片罐侧签和迟灯的检修纸编上同一组号码挂在一起；弥途出站前只需核对木夹编号，就能把散落各处的线索串成不断线的往返记录。归拢散页时沿用原页角编号，检修续页夹在对应片罐的旧页之后；索引只串起记录，不替模糊字迹补出结论。",
-        "en": "A twine cord and wooden clips fastened beside the shelves at Yingxi Station. Axi assigns one shared number to incoming notes, film-tin side labels, and Chideng’s repair slips; before setting out, Mitu checks the clip numbers so scattered leads stay connected as one continuous record. Loose pages retain their old corner numbers, with repair continuations clipped behind the matching tin’s original sheet; the index connects records without guessing at unclear marks."
+        "zh": "拴在映汐放映站片架侧面的细麻绳与木夹。阿汐把来信残页、片罐侧签和迟灯的检修纸编上同一组号码挂在一起；弥途出站前只需核对木夹编号，就能把散落各处的线索串成不断线的往返记录。归拢散页时沿用原页角编号，检修续页夹在对应片罐的旧页之后；索引只串起记录，不替模糊字迹补出结论。迟灯复查旧页时只在检修纸背面留一道浅铅笔印记顺序，阿汐核完一格再将木夹归回原位；核对留痕不等于坐实远处故障或走通未核路线。",
+        "en": "A twine cord and wooden clips fastened beside the shelves at Yingxi Station. Axi assigns one shared number to incoming notes, film-tin side labels, and Chideng’s repair slips; before setting out, Mitu checks the clip numbers so scattered leads stay connected as one continuous record. Loose pages retain their old corner numbers, with repair continuations clipped behind the matching tin’s original sheet; the index connects records without guessing at unclear marks. During a recheck Chideng leaves only a light pencil tick on the back of a repair slip to mark order, and Axi returns the clip once a slot is checked; an inspection mark neither confirms a distant fault nor establishes an unwalked route."
       }
     },
     {
@@ -2609,6 +2609,14 @@
       "text": {
         "zh": "阿汐把一枚磨圆的木夹移到频段抄本当天那页，夹口避开迟灯留下的细划线。换班时，她先把页码念给他听，再将木夹递回片架；旧读数留在纸上，今晚要核的地方也没有混在一起。",
         "en": "Axi moves a rounded wooden clip to today’s page of the Frequency Logbook, clear of Chideng’s thin correction marks. At the shift change she reads him the page number before returning the clip to the shelves. The old readings stay on paper, with tonight’s checks kept distinct."
+      }
+    },
+    {
+      "id": "diary_inspection_pencil_check_20261112",
+      "author": "chideng",
+      "text": {
+        "zh": "迟灯顺着片架索引绳翻看旧检修纸，每核完一页，只在纸背边缘点一道浅铅笔印。阿汐对照完片罐编号再把木夹移回原处；查过哪一页记在背面，正面没证实的猜测仍一字不添。",
+        "en": "Chideng checks the old repair slips along the shelf index cord, leaving only a light pencil tick on the back edge as each page is reviewed. Axi verifies the tin number before returning the wooden clip to its place; the back tracks which sheet was checked, while unverified guesses stay off the front."
       }
     }
   ],
