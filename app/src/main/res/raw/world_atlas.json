@@ -781,6 +781,14 @@
         "zh": "阿汐与迟灯交班时，用片架木夹暂记频段抄本的页码，再将木夹归回原位。夹记只标示阅读位置，不代表新增读数或远方路线已经核实。",
         "en": "At the shift change Axi and Chideng briefly use a shelf clip to mark the Frequency Logbook’s page, then return it. The clip marks a reading place; it establishes neither a new measurement nor a verified route."
       }
+    },
+    {
+      "id": "chronicle_station_watch_20261117",
+      "version": "0.2.0-beta.6",
+      "text": {
+        "zh": "迟灯在检修纸背点出核对顺序，弥途把同向传闻的留白木签并排挂回外格，夜间潮气里再压平频段抄本的折角待干。账页与路签各守其界，待核的方向仍不落墨。",
+        "en": "Chideng marks review order on the back of repair slips, Mitu hangs matching blank rumor tallies side by side on the outer peg, and on damp watches the Frequency Logbook corner crease is flattened to dry. Records stay bounded; unverified directions remain uninked."
+      }
     }
   ],
   "boundary": {
