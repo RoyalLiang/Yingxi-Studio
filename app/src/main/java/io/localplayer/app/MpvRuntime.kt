@@ -34,20 +34,20 @@ internal class MpvRuntime private constructor(private val bridge:Class<*>) {
             // A 32-bit APK can run on a 64-bit device. Identify the installed split,
             // rather than selecting the device's first preferred ABI.
             val installed=File(context.applicationInfo.nativeLibraryDir,"libyingxi_mpv_mpv.so")
-            val fingerprint=sha(installed.readBytes())
+            val fingerprint=sha(installed)
             val abi=Build.SUPPORTED_ABIS.firstOrNull{spec.has(it)&&spec.getJSONObject(it).optString("libmpv.so")==fingerprint}
                 ?:error("此架构缺少兼容播放组件")
             val entries=spec.getJSONObject(abi)
             val dex=context.assets.open("mpv-bridge.jar").use{it.readBytes()}
             val digest=context.assets.open("mpv-bridge.sha256").bufferedReader().use{it.readText().trim()}
-            check(sha(dex)==digest){"兼容播放组件校验失败"}
+            check(shaBytes(dex)==digest){"兼容播放组件校验失败"}
             val dir=File(context.codeCacheDir,"mpv-$digest-$abi").apply{check(mkdirs()||isDirectory)}
             entries.keys().forEach { name ->
                 require(Regex("lib[\\w+]+\\.so").matches(name))
                 val source=File(context.applicationInfo.nativeLibraryDir,"libyingxi_mpv_"+name.removePrefix("lib"))
-                val data=source.readBytes()
-                check(sha(data)==entries.getString(name)){"兼容播放组件校验失败"}
-                verifiedFile(dir,name,data,entries.getString(name))
+                val expected=entries.getString(name)
+                check(sha(source)==expected){"兼容播放组件校验失败"}
+                verifiedFileFromFile(dir,name,source,expected)
             }
             val jar=verifiedFile(dir,"bridge.jar",dex,digest)
             val loader=DexClassLoader(jar.path,dir.path,dir.path,context.classLoader)
@@ -55,14 +55,38 @@ internal class MpvRuntime private constructor(private val bridge:Class<*>) {
             check(type.classLoader===loader){"兼容播放组件隔离失败"}
             return MpvRuntime(type).also{loaded=it}
         }
-        private fun sha(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
+        private fun shaBytes(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
+        private fun sha(file:File):String {
+            val md=MessageDigest.getInstance("SHA-256")
+            val buf=ByteArray(64*1024)
+            file.inputStream().use { input ->
+                while(true){val n=input.read(buf);if(n<0)break;md.update(buf,0,n)}
+            }
+            return md.digest().joinToString(""){"%02x".format(it)}
+        }
+        private fun verifiedFileFromFile(dir:File,name:String,source:File,digest:String):File {
+            val file=File(dir,name)
+            if(file.exists()&&!file.canWrite()&&file.length()==source.length()&&sha(file)==digest)return file
+            check(!file.exists()||file.delete())
+            // Android 14+: mark read-only immediately after opening, before writing code.
+            FileOutputStream(file).use { output ->
+                check(file.setReadOnly())
+                val buf=ByteArray(64*1024)
+                source.inputStream().use { input ->
+                    while(true){val n=input.read(buf);if(n<0)break;output.write(buf,0,n)}
+                }
+                output.fd.sync()
+            }
+            check(sha(file)==digest)
+            return file
+        }
         private fun verifiedFile(dir:File,name:String,data:ByteArray,digest:String):File {
             val file=File(dir,name)
-            if(file.exists()&&sha(file.readBytes())==digest&&!file.canWrite())return file
+            if(file.exists()&&!file.canWrite()&&file.length()==data.size.toLong()&&sha(file)==digest)return file
             check(!file.exists()||file.delete())
             // Android 14+: mark read-only immediately after opening, before writing code.
             FileOutputStream(file).use { output -> check(file.setReadOnly());output.write(data);output.fd.sync() }
-            check(sha(file.readBytes())==digest)
+            check(sha(file)==digest)
             return file
         }
     }

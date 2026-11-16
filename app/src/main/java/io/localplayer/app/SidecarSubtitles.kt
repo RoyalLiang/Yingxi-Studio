@@ -20,17 +20,20 @@ internal object SidecarSubtitles {
         fun collect(names:List<String>,read:(String)->ByteArray,audioUri:(String)->Uri):Discovery {
             val subtitles=mutableListOf<File>();val labels=mutableListOf<String>()
             val dir=File(context.cacheDir,"online-subtitles-v1").apply{mkdirs()}
+            val baseKey=enrichmentKey(media)
+            val digest=java.security.MessageDigest.getInstance("SHA-256")
             for(name in SubtitleSidecars.candidates(media.title,names,bilingual).take(12))try {
                 c.check();val extension=name.substringAfterLast('.').lowercase()
                 val data=provider.normalizeSidecar(read(name),extension)
-                val key=java.security.MessageDigest.getInstance("SHA-256").digest((enrichmentKey(media)+name).toByteArray()).joinToString(""){"%02x".format(it)}
+                digest.reset()
+                val key=digest.digest((baseKey+name).toByteArray()).joinToString(""){"%02x".format(it)}
                 val target=File(dir,"sidecar-$key.$extension")
                 val temp=File.createTempFile("sidecar-",".tmp",dir)
                 try{temp.writeBytes(data);c.check();check(temp.renameTo(target))}finally{temp.delete()}
                 subtitles+=target;labels+=name
             } catch(e:Exception){c.check()}
             val audio=if(withAudio)SubtitleSidecars.audioCandidates(media.title,names).take(8).map { name->c.check();SidecarAudio(audioUri(name),name) }else emptyList()
-            dir.listFiles()?.filter{it !in subtitles}?.sortedByDescending{it.lastModified()}?.drop(63)?.forEach{it.delete()}
+            if(subtitles.isNotEmpty())dir.listFiles()?.filter{it !in subtitles}?.sortedByDescending{it.lastModified()}?.drop(63)?.forEach{it.delete()}
             c.check();return Discovery(subtitles,labels,audio,registered.toList())
         }
         fun readLocal(uri:Uri):ByteArray = context.contentResolver.openInputStream(uri)?.use { input ->
@@ -46,7 +49,7 @@ internal object SidecarSubtitles {
                         session.open(entries.getValue(name).path).use { file ->
                             require(file.size in 1L..LIMIT.toLong()){"字幕文件超过大小限制"}
                             val data=ByteArray(file.size.toInt());var read=0
-                            while(read<data.size){c.check();val n=file.readAt(read.toLong(),data,read,minOf(65536,data.size-read));if(n<=0)throw IOException("字幕读取不完整");read+=n}
+                            while(read<data.size){c.check();val n=file.readAt(read.toLong(),data,read,minOf(262144,data.size-read));if(n<=0)throw IOException("字幕读取不完整");read+=n}
                             data
                         }
                     },{ name ->

@@ -6,6 +6,7 @@ import io.localplayer.core.Source
 /** Authority comes only from SourceStore configuration writes, never from old media observations. */
 internal object SourceBindingEpochs {
     private val lock=Any()
+    @Volatile private var changeRevision=0L
     private val observers=java.util.concurrent.CopyOnWriteArraySet<(String)->Unit>()
     fun observe(change:(String)->Unit):()->Unit {observers.add(change);return{observers.remove(change)}}
     private fun revoked(id:String){PlaybackRegistry.invalidateSource(id);observers.forEach{runCatching{it(id)}}}
@@ -22,20 +23,29 @@ internal object SourceBindingEpochs {
             val changed=(stored!=null&&stored!=identity(source))||p.getBoolean("deleted:$key",false)
             val digest=identity(source);val epoch=p.getLong("epoch:$key",0)+(if(changed)1 else 0)
             check(p.edit().putString("digest:$key",digest).putLong("epoch:$key",epoch).putBoolean("deleted:$key",false).commit())
+            if(changed)changeRevision++
             changed
         }
         if(changed)revoked(source.id)
     }
     fun deleted(context:Context,id:String){
-        synchronized(lock){val p=prefs(context);check(p.edit().putLong("epoch:$id",p.getLong("epoch:$id",0)+1).putBoolean("deleted:$id",true).commit())}
+        synchronized(lock){val p=prefs(context);check(p.edit().putLong("epoch:$id",p.getLong("epoch:$id",0)+1).putBoolean("deleted:$id",true).commit());changeRevision++}
         revoked(id)
     }
     fun leaseVerifier(context:Context,source:Source,epoch:Long):()->Unit {
         val p=prefs(context);val expected=identity(source)
         val deletedKey="deleted:${source.id}";val digestKey="digest:${source.id}";val epochKey="epoch:${source.id}"
-        return {synchronized(lock){
-            if(p.getBoolean(deletedKey,false)||p.getString(digestKey,null)!=expected||p.getLong(epochKey,0)!=epoch)throw java.io.IOException("信源身份或根目录已变化，请重新选择影片")
-        }}
+        val verifiedRevision=java.util.concurrent.atomic.AtomicLong(-1L)
+        return {
+            val revision=changeRevision
+            if(revision!=verifiedRevision.get()){
+                synchronized(lock){
+                    val lockedRevision=changeRevision
+                    if(p.getBoolean(deletedKey,false)||p.getString(digestKey,null)!=expected||p.getLong(epochKey,0)!=epoch)throw java.io.IOException("信源身份或根目录已变化，请重新选择影片")
+                    verifiedRevision.set(lockedRevision)
+                }
+            }
+        }
     }
     fun verifyLease(context:Context,source:Source,epoch:Long)=leaseVerifier(context,source,epoch).invoke()
     fun acceptsWrite(context:Context,ref:MediaRef,allowUnregistered:Boolean):Boolean {

@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 BUNDLE='io.localplayer.app'
-NAME='映汐播放器'
+NAME='映汐放映站'
 
 
 def run(args,log=None):

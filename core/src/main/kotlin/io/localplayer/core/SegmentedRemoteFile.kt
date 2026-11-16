@@ -115,17 +115,19 @@ internal class SegmentedRemoteFile(
     private fun fill(slot: Slot) {
         try {
             slot.cancellation.check()
-            var cached = options.cache?.get(identity,slot.start,slot.length)
-            var cacheBytes=cached?.size?:0
-            var cacheOffset=0
-            if(cached==null&&slot.start!=slot.alignedStart){
-                val full=options.cache?.get(identity,slot.alignedStart,slot.alignedLength)
-                if(full!=null){cacheBytes=full.size;cached=full;cacheOffset=(slot.start-slot.alignedStart).toInt()}
-            }
-            if (cached != null) {
-                synchronized(slot.monitor) { cached.copyInto(slot.bytes,startIndex=cacheOffset); slot.available=cached.size-cacheOffset; slot.monitor.notifyAll() }
-                readTelemetry.cacheHit(cacheBytes)
+            if (options.cache?.getInto(identity, slot.start, slot.length, slot.bytes, 0) == true) {
+                synchronized(slot.monitor) { slot.available = slot.length; slot.monitor.notifyAll() }
+                readTelemetry.cacheHit(slot.length)
                 return
+            }
+            if (slot.start != slot.alignedStart) {
+                val full = options.cache?.get(identity, slot.alignedStart, slot.alignedLength)
+                if (full != null) {
+                    val cacheOffset = (slot.start - slot.alignedStart).toInt()
+                    synchronized(slot.monitor) { full.copyInto(slot.bytes, startIndex = cacheOffset); slot.available = full.size - cacheOffset; slot.monitor.notifyAll() }
+                    readTelemetry.cacheHit(full.size)
+                    return
+                }
             }
             var attempts = 0
             while (slot.available < slot.length) {

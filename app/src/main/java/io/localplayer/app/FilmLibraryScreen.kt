@@ -56,6 +56,8 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     var tool by rememberSaveable{mutableStateOf<String?>(null)}
     if(tool!=null){key(tool){LibraryToolsScreen(vm,databaseName,tool!!,onSources,{tool=it}){tool=null}};return}
     val scope=rememberCoroutineScope()
+    val libraryStore=remember(context,databaseName){FilmLibraryStore(context,databaseName)}
+    DisposableEffect(libraryStore){onDispose{libraryStore.close()}}
     var revision by remember{mutableIntStateOf(0)}
     var view by remember{mutableStateOf(FilmLibraryView())}
     var loading by remember{mutableStateOf(true)}
@@ -75,22 +77,52 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     var editMoment by remember{mutableStateOf<LibraryMoment?>(null)}
     var label by remember{mutableStateOf("")}
     fun change(action:(FilmLibraryStore)->Unit){scope.launch{
-        runCatching{withContext(Dispatchers.IO){FilmLibraryStore(context,databaseName).use(action)}}.onSuccess{revision++}.onFailure{if(it is CancellationException)throw it;error=it.message}
+        runCatching{withContext(Dispatchers.IO){action(libraryStore)}}.onSuccess{revision++}.onFailure{if(it is CancellationException)throw it;error=it.message}
     }}
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME){revision++}
     DisposableEffect(Unit){val remove=SealedMedia.observe{view=FilmLibraryView();selected=null;relinkFilm=null;relinkTarget=null;pendingMoment=null;shelfFilm=null;groupFilm=null;editMoment=null;renameWork=false;editShelf=false;newShelf=false;revision++};onDispose{remove()}}
     val migration=MediaDataMigration.status
     LaunchedEffect(migration.state){revision++}
-    LaunchedEffect(revision,shelf,query,selected){
+    LaunchedEffect(libraryStore,revision){
         val requestedRevision=revision;val requestedShelf=shelf;val requestedQuery=query;val requestedSelected=selected
-        fun current()=revision==requestedRevision&&shelf==requestedShelf&&query==requestedQuery&&selected==requestedSelected
         loading=true
-        runCatching{withContext(Dispatchers.IO){FilmLibraryStore(context,databaseName).use{store->
-            if(view.loadedAt!=requestedRevision)store.registerLegacy(HistoryStore(context).entries(),StationInventory(context).entries())
-            val all=if(view.loadedAt==requestedRevision)view.all else store.works();val moments=all.firstOrNull{it.id==selected}?.films?.associate{it.id to store.moments(it.id)}?:emptyMap()
-            FilmLibraryView(all,if(query.isBlank()&&shelf==null)all else store.works(query,shelf),if(view.loadedAt==requestedRevision)view.shelves else store.shelves(),moments,requestedRevision)
-        }}}.onSuccess{if(current()){view=it;error=null}}.onFailure{if(it is CancellationException)throw it;if(current())error=it.message}
-        if(current())loading=false
+        runCatching{withContext(Dispatchers.IO){
+            libraryStore.registerLegacy(HistoryStore(context).entries(),StationInventory(context).entries())
+            val all=libraryStore.works()
+            val shownWorks=when{
+                requestedShelf!=null->libraryStore.works(requestedQuery,requestedShelf)
+                requestedQuery.isBlank()->all
+                else->filterLibraryWorks(all,requestedQuery)
+            }
+            val moments=all.firstOrNull{it.id==requestedSelected}?.films?.associate{it.id to libraryStore.moments(it.id)}?:emptyMap()
+            FilmLibraryView(all,shownWorks,libraryStore.shelves(),moments,requestedRevision)
+        }}.onSuccess{if(revision==requestedRevision){view=it;error=null}}.onFailure{if(it is CancellationException)throw it;if(revision==requestedRevision)error=it.message}
+        if(revision==requestedRevision)loading=false
+    }
+    LaunchedEffect(libraryStore,view.loadedAt,view.all,shelf,query){
+        val loadedAt=view.loadedAt
+        if(loadedAt!=revision||loadedAt<0)return@LaunchedEffect
+        val requestedShelf=shelf;val requestedQuery=query
+        if(requestedShelf==null){
+            view=view.copy(shown=filterLibraryWorks(view.all,requestedQuery))
+        }else{
+            runCatching{withContext(Dispatchers.IO){libraryStore.works(requestedQuery,requestedShelf)}}
+                .onSuccess{if(view.loadedAt==loadedAt&&revision==loadedAt&&shelf==requestedShelf&&query==requestedQuery)view=view.copy(shown=it)}
+                .onFailure{if(it is CancellationException)throw it;if(view.loadedAt==loadedAt&&revision==loadedAt)error=it.message}
+        }
+    }
+    LaunchedEffect(libraryStore,view.loadedAt,view.all,selected){
+        val loadedAt=view.loadedAt
+        if(loadedAt!=revision||loadedAt<0)return@LaunchedEffect
+        val requestedSelected=selected
+        if(requestedSelected==null){
+            if(view.moments.isNotEmpty())view=view.copy(moments=emptyMap())
+            return@LaunchedEffect
+        }
+        runCatching{withContext(Dispatchers.IO){
+            view.all.firstOrNull{it.id==requestedSelected}?.films?.associate{it.id to libraryStore.moments(it.id)}.orEmpty()
+        }}.onSuccess{if(view.loadedAt==loadedAt&&revision==loadedAt&&selected==requestedSelected)view=view.copy(moments=it)}
+            .onFailure{if(it is CancellationException)throw it;if(view.loadedAt==loadedAt&&revision==loadedAt)error=it.message}
     }
     fun safe(works:List<LibraryWork>)=works.mapNotNull{item->
         val films=item.films.filter{SealedMedia.visible(it.media)}
@@ -247,3 +279,6 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
 }
 
 internal fun momentClock(ms:Long):String {val seconds=ms.coerceAtLeast(0)/1000;return if(seconds>=3600)"%d:%02d:%02d".format(seconds/3600,seconds/60%60,seconds%60)else "%d:%02d".format(seconds/60,seconds%60)}
+
+private fun filterLibraryWorks(works:List<LibraryWork>,query:String):List<LibraryWork> =
+    if(query.isBlank())works else works.filter{work->work.title.contains(query,true)||work.films.any{it.media.title.contains(query,true)||it.media.sourceLabel.contains(query,true)}}

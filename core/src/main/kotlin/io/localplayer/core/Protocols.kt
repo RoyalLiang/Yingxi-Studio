@@ -127,10 +127,28 @@ class SftpConnector : Connector {
                         }
                         // Keep packets small even when the outer cache asks for 1 MiB.
                         // This avoids oversized reads being truncated by common servers.
-                        val n=stream!!.read(buffer,offset,minOf(length,32768,(size-position).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()))
+                        val activeStream=stream!!
+                        val maxTotal=minOf(length.toLong(),size-position).toInt()
+                        val first=activeStream.read(buffer,offset,minOf(maxTotal,32768))
                         if(done.get()) throw java.io.InterruptedIOException("读取已关闭")
-                        if(n>0)cursor+=n
-                        return n
+                        if(first<=0)return first
+                        cursor+=first
+                        var total=first
+                        if(warmed && first==32768 && total<maxTotal){
+                            val burstLimit=minOf(maxTotal,512*1024)
+                            val deadline=System.nanoTime()+20_000_000L
+                            while(total<burstLimit && System.nanoTime()<deadline){
+                                cancellation.check()
+                                if(done.get()) throw java.io.InterruptedIOException("读取已关闭")
+                                val chunk=minOf(32768,burstLimit-total)
+                                val more=activeStream.read(buffer,offset+total,chunk)
+                                if(done.get()) throw java.io.InterruptedIOException("读取已关闭")
+                                if(more<=0)break
+                                cursor+=more;total+=more
+                                if(more<chunk)break
+                            }
+                        }
+                        return total
                     }
                     override fun close() { if (done.compareAndSet(false, true)) file.close() }
                         }

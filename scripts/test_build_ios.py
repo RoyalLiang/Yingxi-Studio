@@ -1,7 +1,12 @@
-import tempfile,unittest,zipfile,stat
+import plistlib, tempfile, unittest, zipfile, stat
 from pathlib import Path
-from build_ios import pack_application
+from build_ios import BUNDLE, NAME, pack_application
 class IOSPackagingTests(unittest.TestCase):
+    def test_identity_matches_ios_info_plist(self):
+        plist_path = Path(__file__).resolve().parent.parent / 'ios' / 'Info.plist'
+        info = plistlib.loads(plist_path.read_bytes())
+        self.assertEqual(BUNDLE, 'io.localplayer.app')
+        self.assertEqual(NAME, info['CFBundleDisplayName'])
     def test_payload_keeps_executable_content_and_permissions(self):
         with tempfile.TemporaryDirectory() as root:
             root=Path(root);app=root/'Player.app';app.mkdir();exe=app/'Player';exe.write_bytes(b'compiled-fixture');exe.chmod(0o755)

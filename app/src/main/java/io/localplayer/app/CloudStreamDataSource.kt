@@ -112,10 +112,11 @@ internal class PlaybackNetworkFactory(
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-private class CatalogDataSource(private val session:MediaDataSession,private val ref:MediaRef,private val delegate:DataSource):DataSource by delegate {
+private class CatalogDataSource(session:MediaDataSession,ref:MediaRef,private val delegate:DataSource):DataSource by delegate {
+    private val verify=session.locatorVerifier(ref)
     override fun open(spec:DataSpec):Long=checked{delegate.open(spec)}
     override fun read(buffer:ByteArray,offset:Int,length:Int):Int=checked{delegate.read(buffer,offset,length)}
-    private fun <T> checked(action:()->T):T=try{session.checkLocator(ref);val result=action();session.checkLocator(ref);result}catch(e:Exception){runCatching{delegate.close()};throw e}
+    private fun <T> checked(action:()->T):T=try{verify();val result=action();verify();result}catch(e:Exception){runCatching{delegate.close()};throw e}
 }
 
 /** Each MediaSource owns its HLS child requests, including absolute HTTPS segment URLs. */

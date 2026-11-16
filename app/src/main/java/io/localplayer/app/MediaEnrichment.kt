@@ -45,9 +45,27 @@ internal object MediaPosters {
     private val lookup=PosterLookup(http)
     private val failed=java.util.concurrent.ConcurrentHashMap<String,Long>()
     val changes=MutableStateFlow(0L)
+    val globalChanges=MutableStateFlow(0L)
+    private val keyListeners=java.util.concurrent.ConcurrentHashMap<String,java.util.concurrent.CopyOnWriteArraySet<()->Unit>>()
+    fun observeKey(cacheKey:String,onChange:()->Unit):()->Unit {
+        val set=keyListeners.computeIfAbsent(cacheKey){java.util.concurrent.CopyOnWriteArraySet()}
+        set.add(onChange)
+        return {
+            set.remove(onChange)
+            if(set.isEmpty())keyListeners.remove(cacheKey,set)
+        }
+    }
+    private fun notifyKey(cacheKey:String){
+        changes.update{it+1}
+        keyListeners[cacheKey]?.forEach{it()}
+    }
+    private fun notifyAllKeys(){
+        changes.update{it+1}
+        globalChanges.update{it+1}
+    }
     private val revision=java.util.concurrent.atomic.AtomicLong()
     private val writes=Any()
-    fun retryMissing(){revision.incrementAndGet();failed.clear();changes.update{it+1}}
+    fun retryMissing(){revision.incrementAndGet();failed.clear();notifyAllKeys()}
     internal var connector:Connector=AppConnectors()
     private val locks=Array(16){kotlinx.coroutines.sync.Mutex()}
     internal var onlineLookup:(MediaIdentity,Cancellation)->PosterMatch?={id,c->lookup.find(id,c)}
@@ -146,7 +164,7 @@ internal object MediaPosters {
                     if(bitmap===previous&&old!=null)store.update(id,data.put("image",old.getString("image"))) else store.save(id,bitmap,data)
                 }
                 failed.remove(id)
-                if(refresh)changes.update{it+1}
+                if(refresh)notifyKey(id)
                 bitmap
             }catch(e:CancellationException){throw e}catch(_:Exception){if(coroutineContext.isActive&&valid())failed[id]=System.currentTimeMillis();previous?.takeIf{valid()}}
             finally{watcher.cancel(false);owner.dispose();protectedRequests.remove(c);c.close()}
@@ -178,7 +196,7 @@ internal object MediaPosters {
     }
 
     fun remove(c:Context,m:MediaRef)=synchronized(writes){revision.incrementAndGet();val id=enrichmentKey(m);jobs.remove(id)?.cancel();PosterStore(c).remove(id);File(c.cacheDir,"media-posters-v1/$id.jpg").delete();File(c.cacheDir,"media-posters-v1/$id.json").delete();failed.remove(id);Unit}
-    fun clear(c:Context)=synchronized(writes){revision.incrementAndGet();jobs.values.forEach{it.cancel()};jobs.clear();PosterStore(c).clear();File(c.cacheDir,"media-posters-v1").listFiles()?.forEach{it.delete()};failed.clear();changes.update{it+1}}
+    fun clear(c:Context)=synchronized(writes){revision.incrementAndGet();jobs.values.forEach{it.cancel()};jobs.clear();PosterStore(c).clear();File(c.cacheDir,"media-posters-v1").listFiles()?.forEach{it.delete()};failed.clear();notifyAllKeys()}
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

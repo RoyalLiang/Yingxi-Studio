@@ -168,9 +168,18 @@ private class DavSession(val source: Source, credentials: Credentials, val cance
                     val requested=minOf(length.toLong(),size-position).toInt()
                     val input=active.body?.byteStream() ?: throw IOException("文件响应为空")
                     // RemoteFile permits short reads. Never wait for the whole read-ahead
-                    // window: that blocks extractors and the first video frame on slow links.
-                    val count=input.read(buffer,offset,requested)
-                    if(count<0)throw IOException("远程文件读取中断")
+                    // window: that blocks extractors and the first video frame on slow links,
+                    // while still draining already-buffered socket bytes without blocking.
+                    val first=input.read(buffer,offset,requested)
+                    if(first<0)throw IOException("远程文件读取中断")
+                    var count=first
+                    while(count<requested){
+                        val ready=runCatching{input.available()}.getOrDefault(0)
+                        if(ready<=0)break
+                        val more=input.read(buffer,offset+count,minOf(ready,requested-count))
+                        if(more<=0)break
+                        count+=more
+                    }
                     cursor+=count;ensureOpen();return count
                 } finally {
                     // close may run before request publishes its Response; release it here too.

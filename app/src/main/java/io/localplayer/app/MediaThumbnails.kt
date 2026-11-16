@@ -56,6 +56,24 @@ internal object MediaThumbnails {
     private val failed = java.util.concurrent.ConcurrentHashMap<String,Long>()
     private val generation=java.util.concurrent.atomic.AtomicLong()
     val changes = MutableStateFlow(0L)
+    val globalChanges = MutableStateFlow(0L)
+    private val keyListeners = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.CopyOnWriteArraySet<() -> Unit>>()
+    fun observeKey(cacheKey: String, onChange: () -> Unit): () -> Unit {
+        val set = keyListeners.computeIfAbsent(cacheKey) { java.util.concurrent.CopyOnWriteArraySet() }
+        set.add(onChange)
+        return {
+            set.remove(onChange)
+            if (set.isEmpty()) keyListeners.remove(cacheKey, set)
+        }
+    }
+    private fun notifyKey(cacheKey: String) {
+        changes.update { it + 1 }
+        keyListeners[cacheKey]?.forEach { it() }
+    }
+    private fun notifyAllKeys() {
+        changes.update { it + 1 }
+        globalChanges.update { it + 1 }
+    }
     private const val MAX_DISK_BYTES = 24L * 1024 * 1024
     private const val MAX_REMOTE_BYTES = 16L * 1024 * 1024
     private fun directory(context: Context) = File(context.cacheDir, "media-thumbnails-v1").apply { mkdirs() }
@@ -187,7 +205,7 @@ internal object MediaThumbnails {
                         memory.put(cacheKey, bitmap)
                         failed.remove(cacheKey)
                         trim(context)
-                        changes.update { it + 1 }
+                        notifyKey(cacheKey)
                         bitmap
                     } finally {
                         cancellation.close()
@@ -206,11 +224,11 @@ internal object MediaThumbnails {
 
     fun remove(context: Context, media: MediaRef) {
         generation.incrementAndGet()
-        worker.execute { PlaybackOrientationProbe.remove(context,media); val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); changes.update { it + 1 } }
+        worker.execute { PlaybackOrientationProbe.remove(context,media); val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); notifyKey(id) }
     }
     fun clear(context: Context) {
         generation.incrementAndGet()
-        worker.execute { PlaybackOrientationProbe.clear(context); memory.evictAll(); failed.clear(); directory(context).listFiles()?.forEach { it.delete() }; changes.update { it + 1 } }
+        worker.execute { PlaybackOrientationProbe.clear(context); memory.evictAll(); failed.clear(); directory(context).listFiles()?.forEach { it.delete() }; notifyAllKeys() }
     }
     private fun trim(context: Context) {
         val files = directory(context).listFiles()?.filter { it.extension == "jpg" }?.sortedByDescending { it.lastModified() } ?: return
@@ -222,10 +240,19 @@ internal object MediaThumbnails {
 @Composable
 internal fun MediaThumbnail(media: MediaRef, modifier: Modifier = Modifier) {
     val context = LocalContext.current.applicationContext
-    val revision by MediaThumbnails.changes.collectAsState()
-    val posterRevision by MediaPosters.changes.collectAsState()
-    val bitmap by key(media.key,media.location,media.sizeBytes,media.localUri) {
-        produceState<Bitmap?>(null, revision, posterRevision) {
+    val cacheKey = remember(media.key,media.location,media.sizeBytes,media.localUri,media.bindingEpoch) { enrichmentKey(media) }
+    val itemFlow = remember(cacheKey) { MutableStateFlow(0L) }
+    val revision by itemFlow.collectAsState()
+    val globalThumbRevision by MediaThumbnails.globalChanges.collectAsState()
+    val posterGlobalRevision by MediaPosters.globalChanges.collectAsState()
+    DisposableEffect(cacheKey) {
+        val bump = { itemFlow.update { it + 1 } }
+        val unregThumb = MediaThumbnails.observeKey(cacheKey, bump)
+        val unregPoster = MediaPosters.observeKey(cacheKey, bump)
+        onDispose { unregThumb(); unregPoster() }
+    }
+    val bitmap by key(cacheKey) {
+        produceState<Bitmap?>(null, revision, globalThumbRevision, posterGlobalRevision) {
             // Keep the displayed frame while other cache entries notify observers.
             val saved=MediaPosters.load(context,media,localOnly=true)
             if(saved!=null)value=saved else coroutineScope {

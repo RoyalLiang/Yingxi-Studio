@@ -28,12 +28,29 @@ class PlaybackLease internal constructor(val source: Source, val credentials: Cr
     private var closed=false
     @Volatile private var revoked=false
     private val revocationHandlers=java.util.concurrent.CopyOnWriteArraySet<()->Unit>()
+    private val pooledFile=java.util.concurrent.atomic.AtomicReference<ReadAheadFile?>(null)
     internal fun onRevoked(handler:()->Unit):java.io.Closeable {revocationHandlers.add(handler);if(revoked)PlaybackRegistry.closeAction(handler);return java.io.Closeable{revocationHandlers.remove(handler)}}
     internal fun revoke(){revoked=true}
     internal fun checkCurrent(){if(revoked)throw IOException("信源身份或根目录已变化，请重新选择影片");authority?.invoke()}
     val resumeKey get()="${source.id}:$path"
     internal fun freshTransport(prefetch:Boolean=this.prefetch,connector:Connector=this.connector):PlaybackLease {checkCurrent();return PlaybackLease(source,credentials,path,connector,prefetch,adaptive,authority,mediaId)}
     internal fun replacementTransport()=PlaybackLease(source,credentials,path,connector,prefetch,adaptive,authority,mediaId)
+    internal fun acquireFile(position:Long=0):ReadAheadFile {
+        checkCurrent()
+        val pooled=if(prefetch&&!closed&&!revoked)pooledFile.getAndSet(null) else null
+        if(pooled!=null){
+            if(closed||revoked)runCatching{pooled.close()}
+            else return pooled
+        }
+        return ReadAheadFile(open(position))
+    }
+    internal fun releaseFile(file:ReadAheadFile,reusable:Boolean){
+        if(!reusable||!prefetch||closed||revoked||!pooledFile.compareAndSet(null,file)){
+            runCatching{file.close()}
+            return
+        }
+        if(closed||revoked)pooledFile.getAndSet(null)?.let{runCatching{it.close()}}
+    }
     @Synchronized fun open(position:Long=0): RemoteFile {
         checkCurrent()
         if(closed) throw IOException("播放已结束")
@@ -55,6 +72,7 @@ class PlaybackLease internal constructor(val source: Source, val credentials: Cr
         revocationHandlers.toList().forEach{runCatching{it()}};revocationHandlers.clear()
         // Signal/close the transport before taking the lock used by an in-flight connect.
         cancellation.close()
+        pooledFile.getAndSet(null)?.let{runCatching{it.close()}}
         synchronized(this) { closed=true;runCatching { session?.close() };session=null }
     }
 }
@@ -70,7 +88,8 @@ object PlaybackRegistry {
             val epoch=bindingEpoch?:SourceBindingEpochs.current(app,source)
             val verifySource=SourceBindingEpochs.leaseVerifier(app,source,epoch)
             val session=MediaDataMigration.session(app);
-            {verifySource();media?.let(session::checkLocator);Unit}
+            val verifyLocator=media?.let(session::locatorVerifier);
+            {verifySource();verifyLocator?.invoke();Unit}
         }
             authority?.invoke()
             require(io.localplayer.core.SourceRoot(source.initialPath).contains(path)){"影片在来源根目录之外"}
@@ -119,6 +138,7 @@ class RemoteDataSource : BaseDataSource(true) {
     private var started=false
     private var transferred=0L
     private var openedAt=0L
+    private var failed=false
     private fun trace(message:String){
         if(Log.isLoggable(TAG,Log.DEBUG)){
             Log.d(TAG,message)
@@ -127,20 +147,20 @@ class RemoteDataSource : BaseDataSource(true) {
     private companion object { const val TAG="YingxiSource" }
     override fun getUri()=uri
     override fun open(dataSpec: DataSpec): Long {
-        transferInitializing(dataSpec);closed=false;uri=dataSpec.uri;position=dataSpec.position;transferred=0;openedAt=android.os.SystemClock.elapsedRealtime()
+        transferInitializing(dataSpec);closed=false;failed=false;uri=dataSpec.uri;position=dataSpec.position;transferred=0;openedAt=android.os.SystemClock.elapsedRealtime()
         trace("open offset=$position")
         val openNanos=System.nanoTime()
         val probe=PlaybackIoProbe.begin(PlaybackIoProbe.Operation.OPEN,runCatching{PlaybackRegistry.get(dataSpec.uri).source.protocol.name}.getOrNull())
         var probeError:Throwable?=null
         try {
             val active=PlaybackRegistry.get(dataSpec.uri);lease=active
-            val opened=ReadAheadFile(active.open(dataSpec.position));file=opened;active.checkCurrent();PlaybackIoProbe.attach(probe,opened.readTelemetry)
-            if(closed) { opened.close();throw InterruptedIOException("读取已取消") }
-            if(position>opened.size) throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
+            val opened=active.acquireFile(dataSpec.position);file=opened;active.checkCurrent();PlaybackIoProbe.attach(probe,opened.readTelemetry)
+            if(closed) { failed=true;opened.close();throw InterruptedIOException("读取已取消") }
+            if(position>opened.size) { failed=true;throw DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE) }
             val available=opened.size-position
             remaining=if(dataSpec.length==C.LENGTH_UNSET.toLong()) available else minOf(available,dataSpec.length)
             started=true;transferStarted(dataSpec);trace("opened offset=$position remaining=$remaining took=${android.os.SystemClock.elapsedRealtime()-openedAt}ms");return remaining
-        } catch(e: Exception) { probeError=e;runCatching { file?.close() };file=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) } finally { PlaybackIoProbe.end(probe,probeError);PlaybackMetrics.opened(System.nanoTime()-openNanos) }
+        } catch(e: Exception) { probeError=e;failed=true;runCatching { file?.close() };file=null;lease=null;closed=true;throw if(e is IOException)e else IOException("无法打开远程文件",e) } finally { PlaybackIoProbe.end(probe,probeError);PlaybackMetrics.opened(System.nanoTime()-openNanos) }
 
     }
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -164,12 +184,20 @@ class RemoteDataSource : BaseDataSource(true) {
             if(n==0)throw IOException("远程服务返回空读取")
             PlaybackIoProbe.progress(probe,n)
             position+=n;remaining-=n;transferred+=n;bytesTransferred(n);return n
-        } catch(e:Exception){probeError=e;throw e} finally {PlaybackIoProbe.end(probe,probeError)}
+        } catch(e:Exception){probeError=e;failed=true;throw e} finally {PlaybackIoProbe.end(probe,probeError)}
     }
     override fun close() {
         closed=true
         trace("close offset=$position transferred=$transferred age=${android.os.SystemClock.elapsedRealtime()-openedAt}ms")
-        try { file?.close() } finally { file=null;lease=null;uri=null;if(started){started=false;transferEnded()} }
+        val activeFile=file;val activeLease=lease
+        file=null;lease=null;uri=null
+        try {
+            if(activeFile is ReadAheadFile && activeLease!=null && !failed && !Thread.currentThread().isInterrupted){
+                activeLease.releaseFile(activeFile,true)
+            }else{
+                activeFile?.close()
+            }
+        } finally { if(started){started=false;transferEnded()} }
     }
     class Factory : DataSource.Factory { override fun createDataSource(): DataSource=RemoteDataSource() }
 }

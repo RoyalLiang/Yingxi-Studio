@@ -8,13 +8,15 @@ import java.io.InterruptedIOException
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.LockSupport
 
 /** Bounded random-access read window. Issuing requests may wait for SMB credits,
  * so it runs off the reader thread and cannot hold up the first available block. */
 internal class SmbReadFile(
  private val file:File,override val size:Long,private val cancellation:Cancellation,readSize:Int
 ):RemoteFile{
- private val blockSize=minOf(65536,readSize.coerceAtLeast(1))
+ private val coldBlockSize=minOf(65536,readSize.coerceAtLeast(1))
+ private val warmBlockSize=minOf(262144,readSize.coerceAtLeast(1))
  private val closed=AtomicBoolean(false)
  private val issuer=Executors.newSingleThreadExecutor()
  private val window=AtomicReference<Window?>()
@@ -42,7 +44,8 @@ internal class SmbReadFile(
     while(!stopped.get()&&at<size){
      slots.acquire();if(stopped.get())break
      cancellation.check()
-     val length=minOf(blockSize.toLong(),size-at).toInt()
+     val block=if(warmed.get())warmBlockSize else coldBlockSize
+     val length=minOf(block.toLong(),size-at).toInt()
      val future=file.yingxiReadAsync(at,length);issuing.set(future)
      if(stopped.get()){future.cancel(true);break}
      queue.put(Pending(future,length));issuing.compareAndSet(future,null);at+=length
@@ -71,12 +74,17 @@ internal class SmbReadFile(
   require(position>=0&&offset>=0&&length>=0&&offset<=buffer.size&&length<=buffer.size-offset)
   checkOpen();if(length==0)return 0;if(position>=size)return -1
   if(position!=cursor){
-   window.getAndSet(null)?.stop();bytes=ByteArray(0);consumed=0;cursor=position
-   val next=newWindow(position);window.set(next)
-   if(closed.get()){next.stop();checkOpen()}
+   val forward=position-cursor
+   if(forward>0L&&forward<=(bytes.size-consumed).toLong()){
+    consumed+=forward.toInt();cursor=position
+   }else{
+    window.getAndSet(null)?.stop();bytes=ByteArray(0);consumed=0;cursor=position
+    val next=newWindow(position);window.set(next)
+    if(closed.get()){next.stop();checkOpen()}
+   }
   }
-  val current=window.get()?:throw InterruptedIOException("读取已关闭")
-  if(consumed>=bytes.size){
+  fun fetchBlock():Boolean{
+   val current=window.get()?:throw InterruptedIOException("读取已关闭")
    if(bytes.isNotEmpty())current.warm()
    try{
     val request=current.queue.poll(8,TimeUnit.SECONDS)?:throw IOException("SMB 读取等待超时")
@@ -87,10 +95,13 @@ internal class SmbReadFile(
      val deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(8)
      // SMBJ wraps timed get() timeouts as runtime failures. Poll readiness
      // without consuming the result, checking local cancellation between waits.
+     var waitNs=250_000L
      while(!future.isDone){
       checkOpen();if(current.stopped.get())throw InterruptedIOException("读取已关闭")
       if(System.nanoTime()>=deadline)throw TimeoutException()
-      Thread.sleep(10)
+      LockSupport.parkNanos(waitNs)
+      if(Thread.interrupted()){Thread.currentThread().interrupt();throw InterruptedException()}
+      waitNs=minOf(waitNs shl 1,2_000_000L)
      }
      checkOpen();future.get(8,TimeUnit.SECONDS)
     }finally{current.active.compareAndSet(future,null)}
@@ -98,23 +109,39 @@ internal class SmbReadFile(
        response.header.statusCode!=com.hierynomus.mserref.NtStatus.STATUS_END_OF_FILE.value)throw IOException("SMB 读取失败")
     bytes=response.data;consumed=0
     if(current.warmed.get())current.releaseSlot()
-    if(bytes.isEmpty())return -1
+    if(bytes.isEmpty())return false
     if(bytes.size>request.length)throw IOException("SMB 读取超出请求范围")
     if(bytes.size<request.length){
      // Some servers return a short block before EOF. Discard speculative
      // offsets and continue at the actual byte boundary, never skip data.
-     current.stop();window.set(newWindow(cursor+bytes.size))
+     current.stop();window.set(newWindow(cursor+bytes.size));return true
     }
+    return false
    }catch(e:InterruptedException){Thread.currentThread().interrupt();throw InterruptedIOException("读取已取消").apply{initCause(e)}}
    catch(e:ExecutionException){throw IOException("SMB 读取失败",e.cause)}
    catch(e:CancellationException){throw InterruptedIOException("读取已取消").apply{initCause(e)}}
    catch(e:TimeoutException){throw IOException("SMB 读取等待超时",e)}
    catch(e:Exception){checkOpen();throw if(e is IOException)e else IOException("SMB 读取失败",e)}
   }
+  var shortBlock=false
+  if(consumed>=bytes.size){
+   shortBlock=fetchBlock()
+   if(bytes.isEmpty())return -1
+  }
   checkOpen()
-  val count=minOf(length,bytes.size-consumed)
-  bytes.copyInto(buffer,offset,consumed,consumed+count);consumed+=count;cursor+=count
-  return count
+  var copied=minOf(length,bytes.size-consumed)
+  bytes.copyInto(buffer,offset,consumed,consumed+copied);consumed+=copied;cursor+=copied
+  while(!shortBlock&&copied<length&&cursor<size&&consumed>=bytes.size){
+   val current=window.get()?:break
+   val peek=current.queue.peek()
+   if(peek==null||peek.error!=null||peek.future?.isDone!=true)break
+   shortBlock=fetchBlock()
+   if(bytes.isEmpty())break
+   checkOpen()
+   val extra=minOf(length-copied,bytes.size-consumed)
+   bytes.copyInto(buffer,offset+copied,consumed,consumed+extra);consumed+=extra;cursor+=extra;copied+=extra
+  }
+  return copied
  }
  override fun close(){
   if(!closed.compareAndSet(false,true))return

@@ -89,6 +89,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     private var decodedHeight=0
     private var nextMetadataPoll=0L
     private var trackSignature:String?=null
+    private var videoParamsSignature:String?=null
     private var pauseApplied:Boolean?=null
     private var subtitleRequested=false
     private var firstFrame=false
@@ -276,7 +277,8 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         val current=generation
         val revision=sampleRevision
         val now=android.os.SystemClock.elapsedRealtime()
-        val metadata=decodedWidth==0||now>=nextMetadataPoll
+        val pausedSteady=!wanted&&state==Player.STATE_READY&&decodedWidth>0&&firstFrame&&nextMetadataPoll>0L
+        val metadata=!pausedSteady&&(decodedWidth==0||now>=nextMetadataPoll)
         if(metadata)nextMetadataPoll=now+1000
         val sourceFailure=input?.failure
         val keys=mutableListOf("time-pos","demuxer-cache-time","paused-for-cache","eof-reached","idle-active")
@@ -302,25 +304,29 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
         val applyStart=android.os.SystemClock.elapsedRealtimeNanos()
         try {
             val values=snapshot.getOrThrow()
-            val now=android.os.SystemClock.elapsedRealtime()
+            val prevPos=position;val prevBuf=buffered;val prevDur=duration;val prevVideo=video
+            val prevTracks=tracks;val prevState=state;val prevWanted=wanted;val prevFailure=failure
             values["time-pos"]?.toDoubleOrNull()?.let{position=(it*1000).toLong().coerceAtLeast(0)}
             buffered=values["demuxer-cache-time"]?.toDoubleOrNull()?.let{(it*1000).toLong()}?:position
             // Container/track metadata does not need a synchronous JNI roundtrip every UI tick.
             if(metadata){
                 duration=values["duration"]?.toDoubleOrNull()?.let{(it*1000).toLong()}?:duration
-                val params=runCatching{org.json.JSONObject(values["video-out-params"]?:"{}")}.getOrNull()
-                val width=params?.optInt("w")?:0
-                val height=params?.optInt("h")?:0
-                if(width>0&&height>0){
-                    val dw=params?.optInt("dw")?.takeIf{it>0}?:width
-                    val dh=params?.optInt("dh")?.takeIf{it>0}?:height
-                    val rotation=params?.optInt("rotate")?:0
-                    video=if(Math.floorMod(rotation,180)==90)VideoSize(dh,dw)else VideoSize(dw,dh)
-                    val json=values["track-list"]?:"[]"
-                    if(json!=trackSignature||width!=decodedWidth||height!=decodedHeight){
-                        tracks=readTracks(json,width,height,rotation,params?.optDouble("par",1.0)?.toFloat()?:1f,values["container-fps"]?.toFloatOrNull()?:sourceFormat.frameRate);trackSignature=json
+                val rawParams=values["video-out-params"]?:"{}"
+                val json=values["track-list"]?:"[]"
+                if(rawParams!=videoParamsSignature||json!=trackSignature||decodedWidth==0){
+                    val params=runCatching{org.json.JSONObject(rawParams)}.getOrNull()
+                    val width=params?.optInt("w")?:0
+                    val height=params?.optInt("h")?:0
+                    if(width>0&&height>0){
+                        val dw=params?.optInt("dw")?.takeIf{it>0}?:width
+                        val dh=params?.optInt("dh")?.takeIf{it>0}?:height
+                        val rotation=params?.optInt("rotate")?:0
+                        video=if(Math.floorMod(rotation,180)==90)VideoSize(dh,dw)else VideoSize(dw,dh)
+                        if(json!=trackSignature||width!=decodedWidth||height!=decodedHeight){
+                            tracks=readTracks(json,width,height,rotation,params?.optDouble("par",1.0)?.toFloat()?:1f,values["container-fps"]?.toFloatOrNull()?:sourceFormat.frameRate);trackSignature=json
+                        }
+                        decodedWidth=width;decodedHeight=height;videoParamsSignature=rawParams
                     }
-                    decodedWidth=width;decodedHeight=height
                 }
                 PlaybackMetrics.sdrOutput(values["frame-drop-count"]?.toIntOrNull()?:0,
                     values["decoder-frame-drop-count"]?.toIntOrNull(),
@@ -338,7 +344,9 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
             if(decodedWidth==0&&values["idle-active"]=="yes"){
                 failure=PlaybackException("SDR 兼容解码未能打开视频画面",null,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false
             }
-            syncPlay();invalidateState()
+            syncPlay()
+            val changed=firstFrameEvent||position!=prevPos||buffered!=prevBuf||duration!=prevDur||video!=prevVideo||tracks!==prevTracks||state!=prevState||wanted!=prevWanted||failure!=prevFailure
+            if(changed)invalidateState()
         }catch(e:Exception){failure=PlaybackException("SDR 兼容播放中断",e,PlaybackException.ERROR_CODE_DECODING_FAILED);state=Player.STATE_IDLE;wanted=false;syncPlay();invalidateState()}
         finally{PlaybackMetrics.sdrPoll(readNanos,android.os.SystemClock.elapsedRealtimeNanos()-applyStart)}
     }
@@ -453,7 +461,7 @@ internal class MpvPlayer(private val context:Context,private val sourceFormat:Fo
     override fun handleRelease():ListenableFuture<*>{released=true;clearOutput();stopRuntime();wanted=false;syncPlay();runCatching{context.unregisterReceiver(noisy)};return done()}
     private fun stopRuntime(){
         pendingLoad=null
-        generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;pauseApplied=null;openingSince=0
+        generation++;handler.removeCallbacks(poll);pollGeneration=null;decodedWidth=0;decodedHeight=0;nextMetadataPoll=0;trackSignature=null;videoParamsSignature=null;pauseApplied=null;openingSince=0
         val owner=engine;engine=null
         firstFrame=false;firstFrameEvent=false;subtitleRequested=false
         val m=runtime;val source=input;val pending=opening;val captions=externalInputs.values.toList();externalInputs.clear();runtime=null;input=null;opening=null

@@ -234,7 +234,7 @@ internal fun FullscreenPlayer(controller: MediaController?, title: String, conne
     LaunchedEffect(currentUri,previews) { frame = null;previews.releaseReader() }
     LaunchedEffect(currentUri,compact,buffering,previews) {
         val uri=currentUri
-        if(uri!=null&&!compact&&!buffering){delay(300);previews.warm(uri)}
+        if(uri!=null&&!uri.isPlayerNetworkUri()&&!compact&&!buffering){delay(300);previews.warm(uri)}
     }
     // Open the independent preview decoder only for an explicit seek gesture.
     LaunchedEffect(dragging, currentUri, buffering,previews) {
@@ -363,75 +363,39 @@ PlayerIcon(Icons.Rounded.BookmarkAdd, if(androidx.compose.ui.platform.LocalConfi
                 PlayerIcon(Icons.Rounded.Audiotrack,"音轨",{trackType=C.TRACK_TYPE_AUDIO;settings=true},controller!=null,Modifier.testTag("player-audio").background(Color(0x66101113),CircleShape))
                 PlayerIcon(Icons.Rounded.Subtitles,"字幕",{trackType=C.TRACK_TYPE_TEXT;settings=true},controller!=null,Modifier.testTag("player-subtitles").background(Color(0x66101113),CircleShape))
             }
-            if (!portrait && !speedOpen && !buffering && controller!=null) Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", { selectEpisode((controller?.currentMediaItemIndex?:index)-1) }, index > 0)
-                    PlayerIcon(Icons.Rounded.Replay10, "后退10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) }, seekable)
-                    IconButton(onClick = { if (playRequested) controller?.pause() else controller?.play() }, modifier = Modifier.size(if(portrait)64.dp else 72.dp).background(Color(0x8C101113), CircleShape)) {
-                        Icon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", tint = PlayerInk, modifier = Modifier.size(38.dp))
-                    }
-                    PlayerIcon(Icons.Rounded.Forward10, "前进10秒", { StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) }, seekable)
-                    if (!portrait && items.size > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", { selectEpisode((controller?.currentMediaItemIndex?:index)+1) }, index < items.lastIndex)
-                }
+            if (!portrait && !speedOpen && !buffering && controller!=null) PlayerCenterPlaybackControls(
+                modifier=Modifier.align(Alignment.Center),itemsSize=items.size,index=index,seekable=seekable,duration=duration,playRequested=playRequested,
+                onPrevious={ selectEpisode((controller?.currentMediaItemIndex?:index)-1) },
+                onBack10={ StationPreferences(context).seekClick(context);controller?.seekTo((position - 10_000).coerceAtLeast(0)) },
+                onTogglePlay={ if (playRequested) controller?.pause() else controller?.play() },
+                onForward10={ StationPreferences(context).seekClick(context);controller?.seekTo((position + 10_000).coerceAtMost(duration)) },
+                onNext={ selectEpisode((controller?.currentMediaItemIndex?:index)+1) }
+            )
             }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onGloballyPositioned{controlsHeight=it.size.height}
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6101113))))
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)).padding(horizontal = if(portrait)16.dp else 24.dp, vertical = 8.dp)) {
-                val shown = if (dragging) target else position
-                PlayerTimeline(shown,duration,buffered,dragging,seekable,
-                    change={dragging=true;target=it},finish={controller?.seekTo(target);position=target;dragging=false},thumbPosition={thumbBounds=it})
-                if(portrait)PortraitPlaybackToolbar(
-                    position=shown,duration=duration,speed=speed,index=index,count=items.size,playRequested=playRequested,enabled=controller!=null,onPlay={if(playRequested)controller?.pause()else controller?.play()},
-                    onSpeed={speedOpen=true},onQueue={queue=true},onPrevious={selectEpisode((controller?.currentMediaItemIndex?:index)-1)},onNext={selectEpisode((controller?.currentMediaItemIndex?:index)+1)},
-                    onRotate=rotate
-                ) else Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
-                    if(buffering&&controller!=null)PlayerIcon(if(playRequested)Icons.Rounded.Pause else Icons.Rounded.PlayArrow,if(playRequested)"暂停"else"播放",{if(playRequested)controller?.pause()else controller?.play()})
-                    Text("${playbackTime(shown)} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min=48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                    if(!portrait)FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        Box {
-                            TextButton(onClick = { speedOpen = true }, modifier = Modifier.heightIn(min = 48.dp).testTag("playback-speed")) { Text(speedLabel(speed), color = PlayerInk, fontSize = 14.sp) }
-                            MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
-                                DropdownMenu(expanded = speedOpen, onDismissRequest = { speedOpen = false }) {
-                                    Column(Modifier.width(260.dp).padding(12.dp)) {
-                                        Text("播放倍速", color = PlayerInk, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
-                                        listOf(.75f, 1f, 1.25f, 1.5f, 2f, 4f).chunked(3).forEach { row -> Row {
-                                            row.forEach { value -> TextButton(onClick = { controller?.setPlaybackSpeed(value); PlaybackPreferences(context).speed = value; speedOpen = false },
-                                                modifier = Modifier.weight(1f).heightIn(min = 48.dp).background(if (speed == value) PlayerAccent else Color.Transparent, RoundedCornerShape(10.dp))) {
-                                                Text(speedLabel(value), modifier = Modifier.testTag("speed-option-$value"), color = if (speed == value) Color(0xFF302029) else PlayerInk)
-                                            } }
-                                        } }
-                                    }
-                                }
-                            }
-                        }
-                        PlayerIcon(Icons.Rounded.Audiotrack,"音轨",{trackType=C.TRACK_TYPE_AUDIO;settings=true},modifier=Modifier.testTag("player-audio"))
-                        PlayerIcon(Icons.Rounded.Subtitles,"字幕",{trackType=C.TRACK_TYPE_TEXT;settings=true},modifier=Modifier.testTag("player-subtitles"))
-                        PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", { fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() })
-                        TextButton(onClick = { queue = true }, enabled = items.isNotEmpty()) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/${items.size}", color = PlayerInk, fontSize = 13.sp) }
-                        PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", rotate)
-                    }
-                }
-            }
+            PlayerBottomBar(
+                modifier=Modifier.align(Alignment.BottomCenter),
+                portrait=portrait,duration=duration,dragging=dragging,seekable=seekable,speed=speed,index=index,itemsSize=items.size,
+                playRequested=playRequested,buffering=buffering,controllerPresent=controller!=null,fill=fill,speedOpen=speedOpen,
+                shownPosition={ if (dragging) target else position },bufferedPosition={ buffered },
+                onControlsHeight={ controlsHeight = it },
+                onSeekChange={ dragging=true;target=it },
+                onSeekFinish={ controller?.seekTo(target);position=target;dragging=false },
+                onThumbPosition={ thumbBounds = it },
+                onTogglePlay={ if(playRequested)controller?.pause()else controller?.play() },
+                onOpenSpeed={ speedOpen = true },
+                onCloseSpeed={ speedOpen = false },
+                onSelectSpeed={ value -> controller?.setPlaybackSpeed(value); PlaybackPreferences(context).speed = value; speedOpen = false },
+                onQueue={ queue = true },
+                onPrevious={ selectEpisode((controller?.currentMediaItemIndex?:index)-1) },
+                onNext={ selectEpisode((controller?.currentMediaItemIndex?:index)+1) },
+                onRotate=rotate,
+                onAudio={ trackType=C.TRACK_TYPE_AUDIO;settings=true },
+                onSubtitles={ trackType=C.TRACK_TYPE_TEXT;settings=true },
+                onToggleFill={ fill = !fill; android.widget.Toast.makeText(context,if(fill)"铺满屏幕 · 等比裁切"else"完整画面 · 保留原比例",android.widget.Toast.LENGTH_SHORT).show() }
+            )
         }
-        if (!compact && dragging && thumbBounds!=Rect.Zero) frame?.let { bitmap ->
-            val width=176.dp
-            val height=99.dp
-            val safeLeft=WindowInsets.safeDrawing.getLeft(density,androidx.compose.ui.unit.LayoutDirection.Ltr)
-            val safeRight=WindowInsets.safeDrawing.getRight(density,androidx.compose.ui.unit.LayoutDirection.Ltr)
-            val safeTop=WindowInsets.safeDrawing.getTop(density)
-            Image(bitmap.asImageBitmap(),"进度预览",Modifier.offset {
-                val gap=12.dp.toPx();val w=width.toPx();val h=height.toPx()
-                val left=(thumbBounds.center.x-playerBounds.left-w/2).coerceIn(safeLeft+gap,(playerBounds.width-safeRight-gap-w).coerceAtLeast(safeLeft+gap))
-                val top=(thumbBounds.top-playerBounds.top-gap-h).coerceAtLeast(safeTop+gap)
-                IntOffset(left.roundToInt(),top.roundToInt())
-            }.size(width,height).clip(RoundedCornerShape(12.dp)).background(Color.Black).testTag("seek-preview"),
-                contentScale=androidx.compose.ui.layout.ContentScale.Fit)
-        }
-        if (!compact && !dragging) hud?.let { (name, value) ->
-            PlayerAdjustmentHud(name, value, Modifier
-                .align(if (name == "亮度") Alignment.CenterStart else Alignment.CenterEnd)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = 24.dp))
-        }
+        PlayerSeekPreviewOverlay(compact=compact,dragging=dragging,density=density,thumbBounds={ thumbBounds },playerBounds={ playerBounds },frameProvider={ frame })
+        PlayerHudOverlay(compact=compact,dragging=dragging,hudProvider={ hud })
         if (!compact && locked && (visible || touchExploration)) IconButton(onClick = { locked = false; lock(false); visible = true }, modifier = Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) { Icon(Icons.Rounded.Lock, "解锁方向与控件", tint = PlayerInk) }
         if(portrait&&speedOpen)PlaybackSpeedPanel(speed,{speedOpen=false}){value->controller?.setPlaybackSpeed(value);PlaybackPreferences(context).speed=value;speedOpen=false}
         if (queue && controller != null) PlaybackQueueSheet(items, index, truncated, { queue = false }) { chosen ->
@@ -444,6 +408,172 @@ PlayerIcon(Icons.Rounded.BookmarkAdd, if(androidx.compose.ui.platform.LocalConfi
                     TextButton(onClick={controller.replaceMediaItem(controller.currentMediaItemIndex,SidecarAudio.attach(item,emptyList()))}){Text("移除外挂音轨并重试",color=PlayerAccent)}
                 }
                 TextButton(onClick = back) { Text("返回重试", color = PlayerAccent) } } }
+    }
+}
+
+@Composable
+private fun PlayerCenterPlaybackControls(
+    modifier: Modifier,
+    itemsSize: Int,
+    index: Int,
+    seekable: Boolean,
+    duration: Long,
+    playRequested: Boolean,
+    onPrevious: () -> Unit,
+    onBack10: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onForward10: () -> Unit,
+    onNext: () -> Unit
+) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (itemsSize > 1) PlayerIcon(Icons.Rounded.SkipPrevious, "上一集", onPrevious, index > 0)
+        PlayerIcon(Icons.Rounded.Replay10, "后退10秒", onBack10, seekable)
+        IconButton(onClick = onTogglePlay, modifier = Modifier.size(72.dp).background(Color(0x8C101113), CircleShape)) {
+            Icon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", tint = PlayerInk, modifier = Modifier.size(38.dp))
+        }
+        PlayerIcon(Icons.Rounded.Forward10, "前进10秒", onForward10, seekable)
+        if (itemsSize > 1) PlayerIcon(Icons.Rounded.SkipNext, "下一集", onNext, index < itemsSize - 1)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PlayerBottomBar(
+    modifier: Modifier,
+    portrait: Boolean,
+    duration: Long,
+    dragging: Boolean,
+    seekable: Boolean,
+    speed: Float,
+    index: Int,
+    itemsSize: Int,
+    playRequested: Boolean,
+    buffering: Boolean,
+    controllerPresent: Boolean,
+    fill: Boolean,
+    speedOpen: Boolean,
+    shownPosition: () -> Long,
+    bufferedPosition: () -> Long,
+    onControlsHeight: (Int) -> Unit,
+    onSeekChange: (Long) -> Unit,
+    onSeekFinish: () -> Unit,
+    onThumbPosition: (Rect) -> Unit,
+    onTogglePlay: () -> Unit,
+    onOpenSpeed: () -> Unit,
+    onCloseSpeed: () -> Unit,
+    onSelectSpeed: (Float) -> Unit,
+    onQueue: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onRotate: () -> Unit,
+    onAudio: () -> Unit,
+    onSubtitles: () -> Unit,
+    onToggleFill: () -> Unit
+) {
+    Column(modifier.fillMaxWidth().onGloballyPositioned { onControlsHeight(it.size.height) }
+        .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6101113))))
+        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+        .padding(horizontal = if (portrait) 16.dp else 24.dp, vertical = 8.dp)) {
+        PlayerTimelineSection(shownPosition, bufferedPosition, duration, dragging, seekable, onSeekChange, onSeekFinish, onThumbPosition)
+        if (portrait) {
+            PortraitPlaybackToolbar(
+                position = shownPosition(), duration = duration, speed = speed, index = index, count = itemsSize,
+                playRequested = playRequested, enabled = controllerPresent, onPlay = onTogglePlay,
+                onSpeed = onOpenSpeed, onQueue = onQueue, onPrevious = onPrevious, onNext = onNext, onRotate = onRotate
+            )
+        } else {
+            Row(Modifier.fillMaxWidth().testTag("playback-toolbar"), verticalAlignment = Alignment.CenterVertically) {
+                if (buffering && controllerPresent) PlayerIcon(if (playRequested) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playRequested) "暂停" else "播放", onTogglePlay)
+                PlayerTimeReadout(shownPosition, duration)
+                FlowRow(Modifier.weight(1f).testTag("playback-actions"), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    Box {
+                        TextButton(onClick = onOpenSpeed, modifier = Modifier.heightIn(min = 48.dp).testTag("playback-speed")) { Text(speedLabel(speed), color = PlayerInk, fontSize = 14.sp) }
+                        MaterialTheme(colorScheme = darkColorScheme(surface = PlayerPanel, onSurface = PlayerInk)) {
+                            DropdownMenu(expanded = speedOpen, onDismissRequest = onCloseSpeed) {
+                                Column(Modifier.width(260.dp).padding(12.dp)) {
+                                    Text("播放倍速", color = PlayerInk, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
+                                    listOf(.75f, 1f, 1.25f, 1.5f, 2f, 4f).chunked(3).forEach { row ->
+                                        Row {
+                                            row.forEach { value ->
+                                                TextButton(
+                                                    onClick = { onSelectSpeed(value) },
+                                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).background(if (speed == value) PlayerAccent else Color.Transparent, RoundedCornerShape(10.dp))
+                                                ) {
+                                                    Text(speedLabel(value), modifier = Modifier.testTag("speed-option-$value"), color = if (speed == value) Color(0xFF302029) else PlayerInk)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    PlayerIcon(Icons.Rounded.Audiotrack, "音轨", onAudio, modifier = Modifier.testTag("player-audio"))
+                    PlayerIcon(Icons.Rounded.Subtitles, "字幕", onSubtitles, modifier = Modifier.testTag("player-subtitles"))
+                    PlayerIcon(if (fill) Icons.Rounded.FitScreen else Icons.Rounded.AspectRatio, "画面比例", onToggleFill)
+                    TextButton(onClick = onQueue, enabled = itemsSize > 0) { Icon(Icons.Rounded.PlaylistPlay, null, tint = PlayerInk); Text("选集 ${index + 1}/$itemsSize", color = PlayerInk, fontSize = 13.sp) }
+                    PlayerIcon(Icons.Rounded.ScreenRotation, "旋转屏幕", onRotate)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerTimelineSection(
+    shownPosition: () -> Long,
+    bufferedPosition: () -> Long,
+    duration: Long,
+    dragging: Boolean,
+    seekable: Boolean,
+    onSeekChange: (Long) -> Unit,
+    onSeekFinish: () -> Unit,
+    onThumbPosition: (Rect) -> Unit
+) {
+    PlayerTimeline(shownPosition(), duration, bufferedPosition(), dragging, seekable, change = onSeekChange, finish = onSeekFinish, thumbPosition = onThumbPosition)
+}
+
+@Composable
+private fun PlayerTimeReadout(shownPosition: () -> Long, duration: Long) {
+    Text("${playbackTime(shownPosition())} / ${playbackTime(duration)}", Modifier.width(116.dp).heightIn(min = 48.dp).wrapContentHeight().testTag("playback-time"), color = PlayerInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+}
+
+@Composable
+private fun PlayerSeekPreviewOverlay(
+    compact: Boolean,
+    dragging: Boolean,
+    density: androidx.compose.ui.unit.Density,
+    thumbBounds: () -> Rect,
+    playerBounds: () -> Rect,
+    frameProvider: () -> Bitmap?
+) {
+    val hasThumb by remember { derivedStateOf { thumbBounds() != Rect.Zero } }
+    if (!compact && dragging && hasThumb) {
+        val bitmap = frameProvider() ?: return
+        val width = 176.dp
+        val height = 99.dp
+        val safeLeft = WindowInsets.safeDrawing.getLeft(density, androidx.compose.ui.unit.LayoutDirection.Ltr)
+        val safeRight = WindowInsets.safeDrawing.getRight(density, androidx.compose.ui.unit.LayoutDirection.Ltr)
+        val safeTop = WindowInsets.safeDrawing.getTop(density)
+        Image(bitmap.asImageBitmap(), "进度预览", Modifier.offset {
+            val gap = 12.dp.toPx(); val w = width.toPx(); val h = height.toPx()
+            val bounds = playerBounds()
+            val thumb = thumbBounds()
+            val left = (thumb.center.x - bounds.left - w / 2).coerceIn(safeLeft + gap, (bounds.width - safeRight - gap - w).coerceAtLeast(safeLeft + gap))
+            val top = (thumb.top - bounds.top - gap - h).coerceAtLeast(safeTop + gap)
+            IntOffset(left.roundToInt(), top.roundToInt())
+        }.size(width, height).clip(RoundedCornerShape(12.dp)).background(Color.Black).testTag("seek-preview"),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+    }
+}
+
+@Composable
+private fun BoxScope.PlayerHudOverlay(compact: Boolean, dragging: Boolean, hudProvider: () -> Pair<String, Int>?) {
+    if (!compact && !dragging) hudProvider()?.let { (name, value) ->
+        PlayerAdjustmentHud(name, value, Modifier
+            .align(if (name == "亮度") Alignment.CenterStart else Alignment.CenterEnd)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+            .padding(horizontal = 24.dp))
     }
 }
 

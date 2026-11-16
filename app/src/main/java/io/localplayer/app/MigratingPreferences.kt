@@ -34,17 +34,18 @@ internal object MigratingPreferences {
         private val session=MediaDataMigration.session(context)
         private val listeners=CopyOnWriteArraySet<SharedPreferences.OnSharedPreferenceChangeListener>()
         fun notify(keys:Set<String>){
+            session.invalidatePreferenceCache(scope)
             val action={keys.forEach{key->listeners.forEach{it.onSharedPreferenceChanged(this,key)}}}
             if(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())action()else android.os.Handler(android.os.Looper.getMainLooper()).post{action()}
         }
         override fun getAll():MutableMap<String,*> = session.preferenceValues(scope,original).toMutableMap()
-        override fun contains(key:String?)=all.containsKey(key)
-        override fun getString(key:String?,defValue:String?):String?=all[key]?.let{it as String}?:defValue
-        override fun getStringSet(key:String?,defValues:MutableSet<String>?):MutableSet<String>?=(all[key] as? Set<*>)?.filterIsInstance<String>()?.toMutableSet()?:defValues?.toMutableSet()
-        override fun getInt(key:String?,defValue:Int)=(all[key] as? Int)?:defValue
-        override fun getLong(key:String?,defValue:Long)=(all[key] as? Long)?:defValue
-        override fun getFloat(key:String?,defValue:Float)=(all[key] as? Float)?:defValue
-        override fun getBoolean(key:String?,defValue:Boolean)=(all[key] as? Boolean)?:defValue
+        override fun contains(key:String?)=session.containsPreference(scope,original,key)
+        override fun getString(key:String?,defValue:String?):String?=session.preferenceValue(scope,original,key)?.let{it as String}?:defValue
+        override fun getStringSet(key:String?,defValues:MutableSet<String>?):MutableSet<String>?=(session.preferenceValue(scope,original,key) as? Set<*>)?.filterIsInstance<String>()?.toMutableSet()?:defValues?.toMutableSet()
+        override fun getInt(key:String?,defValue:Int)=(session.preferenceValue(scope,original,key) as? Int)?:defValue
+        override fun getLong(key:String?,defValue:Long)=(session.preferenceValue(scope,original,key) as? Long)?:defValue
+        override fun getFloat(key:String?,defValue:Float)=(session.preferenceValue(scope,original,key) as? Float)?:defValue
+        override fun getBoolean(key:String?,defValue:Boolean)=(session.preferenceValue(scope,original,key) as? Boolean)?:defValue
         override fun registerOnSharedPreferenceChangeListener(listener:SharedPreferences.OnSharedPreferenceChangeListener?){listener?.let{listeners.add(it)}}
         override fun unregisterOnSharedPreferenceChangeListener(listener:SharedPreferences.OnSharedPreferenceChangeListener?){listeners.remove(listener)}
         override fun edit():SharedPreferences.Editor=object:SharedPreferences.Editor {

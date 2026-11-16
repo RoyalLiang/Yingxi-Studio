@@ -61,7 +61,12 @@ internal class MediaDataSession(private val context:Context,private val historyN
     private var players=0
     private val targets=mutableSetOf<String>()
     private val verifiedLocators=LinkedHashSet<MediaRef>()
+    private var verifiedLocalRev=-1L
     private var locatorWrites=0
+    @Volatile internal var locatorVersion=0L;private set
+    private val cachedDbPreferences=HashMap<String,Map<String,Any?>>()
+    private var cachedPrefDataVersion=-1L
+    private var cachedPrefCommitted=false
     private fun committed():Boolean {
         committedCache?.let{return it}
         val ready=context.getDatabasePath(databaseName).exists()&&helper.readableDatabase.rawQuery("SELECT value FROM metadata WHERE name='data-migration-v1'",null).use{it.moveToFirst()&&it.getString(0)=="Committed"}
@@ -72,7 +77,7 @@ internal class MediaDataSession(private val context:Context,private val historyN
     fun playbackStopped()=synchronized(gate){players=(players-1).coerceAtLeast(0);changes++;Unit}
     fun targetCreated(id:String)=synchronized(gate){targets.add(id);changes++;Unit}
     fun targetReleased(id:String)=synchronized(gate){targets.remove(id);changes++;Unit}
-    fun close()=synchronized(gate){verifiedLocators.clear();helper.close()}
+    fun close()=synchronized(gate){locatorVersion++;committedCache=null;cachedDbPreferences.clear();cachedPrefDataVersion=-1L;verifiedLocators.clear();helper.close()}
     fun isCommitted()=synchronized(gate){committed()}
     fun catalogEpoch():Long=synchronized(gate){if(committed())long(helper.readableDatabase,"catalog-epoch")else 0L}
     fun requireIdle()=synchronized(gate){check(players==0&&targets.isEmpty()){ "请先结束放映并关闭待播影片，再恢复行囊" }}
@@ -95,18 +100,38 @@ internal class MediaDataSession(private val context:Context,private val historyN
     }
     // Default playback catalog writers share this gate, including relinking and restores.
     internal fun <T> withLocatorChanges(action:()->T):T=synchronized(gate){
-        locatorWrites++;verifiedLocators.clear()
-        try{action()}finally{verifiedLocators.clear();locatorWrites--}
+        locatorWrites++;locatorVersion++;verifiedLocators.clear();cachedDbPreferences.clear()
+        try{action()}finally{verifiedLocators.clear();cachedDbPreferences.clear();locatorVersion++;locatorWrites--}
     }
     private fun <T> transaction(action:(SQLiteDatabase)->T):T=withLocatorChanges {
         val db=helper.writableDatabase;db.beginTransaction();try{action(db).also{db.setTransactionSuccessful()}}finally{db.endTransaction()}
     }
     fun reference(ref:MediaRef):MediaRef=synchronized(gate){if(!committed())ref else transaction{CatalogIdentity.register(it,ref,System.currentTimeMillis())}}
+    internal fun locatorVerifier(ref:MediaRef):()->Unit {
+        val snapshot=ref.copy(localAncestors=ref.localAncestors.toList())
+        val checkedSession=java.util.concurrent.atomic.AtomicLong(-1L)
+        val checkedLocal=java.util.concurrent.atomic.AtomicLong(-1L)
+        return {
+            val sessionVer=locatorVersion
+            val localRev=LocalBindingEpochs.revision()
+            if(sessionVer!=checkedSession.get()||localRev!=checkedLocal.get()||locatorWrites>0){
+                checkLocator(snapshot)
+                synchronized(gate){
+                    if(locatorWrites==0&&sessionVer==locatorVersion&&localRev==LocalBindingEpochs.revision()){
+                        checkedSession.set(sessionVer)
+                        checkedLocal.set(localRev)
+                    }
+                }
+            }
+        }
+    }
     fun checkLocator(ref:MediaRef)=synchronized(gate){
-        if(!LocalBindingEpochs.accepts(context,ref))throw java.io.IOException("文件夹授权已撤回，请重新选择影片")
+        val currentLocalRev=LocalBindingEpochs.revision()
+        if(verifiedLocalRev!=currentLocalRev){verifiedLocators.clear();verifiedLocalRev=currentLocalRev}
         val cacheable=databaseName==MEDIA_DATABASE&&locatorWrites==0
-        if(committed()&&(!cacheable||ref !in verifiedLocators)){
-            if(!CatalogIdentity.isCurrent(helper.readableDatabase,ref))throw java.io.IOException("片签位置已变化，请从片架重新打开")
+        if(!cacheable||ref !in verifiedLocators){
+            if(!LocalBindingEpochs.accepts(context,ref))throw java.io.IOException("文件夹授权已撤回，请重新选择影片")
+            if(committed()&&!CatalogIdentity.isCurrent(helper.readableDatabase,ref))throw java.io.IOException("片签位置已变化，请从片架重新打开")
             if(cacheable){
                 if(verifiedLocators.size>=64)verifiedLocators.remove(verifiedLocators.first())
                 verifiedLocators.add(ref.copy(localAncestors=ref.localAncestors.toList()))
@@ -154,16 +179,47 @@ internal class MediaDataSession(private val context:Context,private val historyN
         if(!committed()){changes++;legacy.clear();return@synchronized}
         transaction{db->db.execSQL("UPDATE metadata SET value=? WHERE name='history-clear'",arrayOf((long(db,"history-clear")+1).toString()));db.delete("checkpoints",null,null);db.delete("history_revisions",null,null);db.delete("metadata","name LIKE 'legacy-position:%'",null)};Unit
     }
+    private fun dbDataVersion():Long=if(!context.getDatabasePath(databaseName).exists())-1L else helper.readableDatabase.rawQuery("PRAGMA data_version",null).use{if(it.moveToFirst())it.getLong(0)else -1L}
+    private fun loadDbScope(scope:String,original:SharedPreferences):Map<String,Any?>? {
+        val dataVer=dbDataVersion()
+        if(dataVer!=cachedPrefDataVersion){
+            committedCache=null;cachedDbPreferences.clear();cachedPrefDataVersion=dataVer
+        }
+        val ready=committed()
+        if(ready!=cachedPrefCommitted){
+            cachedDbPreferences.clear();cachedPrefCommitted=ready
+        }
+        if(!ready)return null
+        cachedDbPreferences[scope]?.let{return it}
+        importAddedScope(scope,original)
+        val loaded=HashMap<String,Any?>()
+        helper.readableDatabase.rawQuery("SELECT name,value FROM preferences WHERE scope=?",arrayOf(scope)).use{while(it.moveToNext())loaded[it.getString(0)]=MigratingPreferences.decode(it.getString(1))}
+        cachedDbPreferences[scope]=loaded
+        return loaded
+    }
+    internal fun invalidatePreferenceCache(scope:String)=synchronized(gate){cachedDbPreferences.remove(scope);Unit}
     fun preferenceValues(scope:String,original:SharedPreferences):Map<String,Any?> = synchronized(gate){
         val result=original.all.toMutableMap()
-        if(committed()){
-            importAddedScope(scope,original)
+        val dbValues=loadDbScope(scope,original)
+        if(dbValues!=null){
             result.keys.filter{MigratingPreferences.included(scope,it)}.forEach{result.remove(it)}
-            helper.readableDatabase.rawQuery("SELECT name,value FROM preferences WHERE scope=?",arrayOf(scope)).use{while(it.moveToNext())result[it.getString(0)]=MigratingPreferences.decode(it.getString(1))}
-        };result
+            result.putAll(dbValues)
+        }
+        result
+    }
+    fun containsPreference(scope:String,original:SharedPreferences,key:String?):Boolean = synchronized(gate){
+        if(key==null)return@synchronized false
+        val dbValues=loadDbScope(scope,original)
+        if(dbValues!=null&&MigratingPreferences.included(scope,key))dbValues.containsKey(key)else original.contains(key)
+    }
+    fun preferenceValue(scope:String,original:SharedPreferences,key:String?):Any? = synchronized(gate){
+        if(key==null)return@synchronized null
+        val dbValues=loadDbScope(scope,original)
+        if(dbValues!=null&&MigratingPreferences.included(scope,key))dbValues[key] else original.all[key]
     }
     fun writePreferences(scope:String,original:SharedPreferences,values:Map<String,Any?>,clear:Boolean)=synchronized(gate){
         changes++
+        cachedDbPreferences.remove(scope)
         if(!committed()){val editor=original.edit();if(clear)editor.clear();values.forEach{(k,v)->put(editor,k,v)};check(editor.commit());return@synchronized}
         importAddedScope(scope,original)
         transaction{db->
@@ -282,7 +338,7 @@ internal class MediaDataSession(private val context:Context,private val historyN
                     db.execSQL("INSERT OR REPLACE INTO migration_runs(id,digest,state,imported,quarantined) VALUES('legacy-v1',?,'Committed',?,?)",arrayOf<Any>(digest,entries.size,issues.size))
                     db.execSQL("INSERT OR REPLACE INTO metadata(name,value) VALUES('data-migration-v1','Committed')")
                 }
-                committedCache=true;changes++
+                committedCache=true;changes++;locatorVersion++
                 DataMigrationStatus("Committed",entries.size,issues.size)
             }.also{migrationProbe?.invoke("committed")}
         }catch(_:MigrationDeferred){DataMigrationStatus("Deferred",message="资料或放映状态有变化，旧数据仍可使用，请稍后重试")}

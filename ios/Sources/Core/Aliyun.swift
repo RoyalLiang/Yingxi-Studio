@@ -22,7 +22,7 @@ public enum CloudError: LocalizedError {
 public struct AliyunPKCE: CustomStringConvertible, CustomDebugStringConvertible, Sendable {
     public let verifier: String
     public let state: String
-    public var challenge: String { Self.encode(Data(SHA256.hash(data: Data(verifier.utf8)))) }
+    public var challenge: String { Self.encode(Data(SHA256.hash(data: Data(verifier.utf8))), pad: true) }
     public var description: String { "AliyunPKCE([redacted])" }
     public var debugDescription: String { description }
     public init() throws {
@@ -33,7 +33,10 @@ public struct AliyunPKCE: CustomStringConvertible, CustomDebugStringConvertible,
         }
         verifier = try random(); state = try random()
     }
-    private static func encode(_ data: Data) -> String { data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "") }
+    private static func encode(_ data: Data, pad: Bool = false) -> String {
+        let encoded = data.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+        return pad ? encoded : encoded.replacingOccurrences(of: "=", with: "")
+    }
 }
 public struct AliyunToken: Codable, Sendable, CustomStringConvertible, CustomDebugStringConvertible {
     public let access: String

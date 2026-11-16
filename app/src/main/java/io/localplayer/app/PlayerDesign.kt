@@ -91,6 +91,26 @@ internal val LocalGlassBackdrop = staticCompositionLocalOf<GraphicsLayer?> { nul
 @Composable
 fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = MaterialTheme.colorScheme.background.luminance()<.2f, radius: Int = 26, content: @Composable BoxScope.() -> Unit) {
     val scene = LocalGlassBackdrop.current
+    val wash = remember(dark) { Brush.linearGradient(if(dark)listOf(Color.White.copy(alpha=.07f),Color.Transparent)else listOf(Color.White.copy(alpha=.46f),Color.White.copy(alpha=.04f))) }
+    val hairline=Hairline
+    val rim = remember(dark,hairline) { Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark).3f else .96f),Color.White.copy(alpha=if(dark).08f else .24f),hairline)) }
+    val shape = remember(radius) { RoundedCornerShape(radius.dp) }
+    val baseFill = if (dark) Color(0xFF202128).copy(alpha = if(scene!=null).76f else .94f) else Color(0xFFFCFCFF).copy(alpha = if(scene!=null).66f else .94f)
+    if (scene == null) {
+        Box(modifier
+            .clip(shape)
+            .drawWithCache {
+                onDrawWithContent {
+                    // A legible material remains when blur is unavailable or the scene is uniform.
+                    drawRect(baseFill)
+                    drawRect(wash)
+                    drawContent()
+                }
+            }
+            .border(.7.dp, rim, shape),
+            content = content)
+        return
+    }
     val blurred = rememberGraphicsLayer()
     val lens = remember { RuntimeShader("""
         uniform shader content;
@@ -107,10 +127,6 @@ fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = MaterialTheme.co
         android.graphics.RenderEffect.createBlurEffect(blurPx, blurPx, android.graphics.Shader.TileMode.CLAMP)
     }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    val wash = remember(dark) { Brush.linearGradient(if(dark)listOf(Color.White.copy(alpha=.07f),Color.Transparent)else listOf(Color.White.copy(alpha=.46f),Color.White.copy(alpha=.04f))) }
-    val hairline=Hairline
-    val rim = remember(dark,hairline) { Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark).3f else .96f),Color.White.copy(alpha=if(dark).08f else .24f),hairline)) }
-    val shape = RoundedCornerShape(radius.dp)
     Box(modifier
         .onGloballyPositioned { offset = it.positionInRoot() }
         .clip(shape)
@@ -121,17 +137,15 @@ fun GlassSurface(modifier: Modifier = Modifier, dark: Boolean = MaterialTheme.co
                 android.graphics.RenderEffect.createRuntimeShaderEffect(lens, "content"), blurEffect
             ).asComposeRenderEffect()
             onDrawWithContent {
-            if (scene != null) {
                 blurred.renderEffect = effect
                 blurred.record {
                     translate(-offset.x, -offset.y) { drawLayer(scene) }
                 }
                 drawLayer(blurred)
-            }
-            // A legible material remains when blur is unavailable or the scene is uniform.
-            drawRect(if (dark) Color(0xFF202128).copy(alpha = if(scene!=null).76f else .94f) else Color(0xFFFCFCFF).copy(alpha = if(scene!=null).66f else .94f))
-            drawRect(wash)
-            drawContent()
+                // A legible material remains when blur is unavailable or the scene is uniform.
+                drawRect(baseFill)
+                drawRect(wash)
+                drawContent()
             }
         }
         .border(.7.dp, rim, shape),

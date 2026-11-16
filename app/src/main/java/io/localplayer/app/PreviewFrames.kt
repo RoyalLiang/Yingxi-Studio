@@ -40,9 +40,35 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
     internal companion object {
         private val closer=java.util.concurrent.Executors.newSingleThreadExecutor()
         private val cacheRevision=java.util.concurrent.atomic.AtomicLong()
-        internal fun memoryCache()=object:LruCache<String,Bitmap>(24*1024*1024){override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount}
+        private val cacheIndexes=java.util.WeakHashMap<LruCache<String,Bitmap>,MutableMap<String,java.util.TreeSet<Long>>>()
+        private fun parseIndexKey(key:String):Pair<String,Long>? {
+            val split=key.lastIndexOf(':');if(split<=0)return null
+            val time=key.substring(split+1).toLongOrNull()?:return null
+            return key.substring(0,split) to time
+        }
+        private fun recordIndexKey(target:LruCache<String,Bitmap>,key:String){
+            val (prefix,time)=parseIndexKey(key)?:return
+            synchronized(cacheIndexes){cacheIndexes.getOrPut(target){HashMap()}.getOrPut(prefix){java.util.TreeSet()}.add(time)}
+        }
+        private fun removeIndexKey(target:LruCache<String,Bitmap>,key:String){
+            val (prefix,time)=parseIndexKey(key)?:return
+            synchronized(cacheIndexes){
+                val map=cacheIndexes[target]?:return
+                val set=map[prefix]?:return
+                set.remove(time)
+                if(set.isEmpty())map.remove(prefix)
+            }
+        }
+        internal fun memoryCache():LruCache<String,Bitmap> {
+            lateinit var lru:LruCache<String,Bitmap>
+            lru=object:LruCache<String,Bitmap>(24*1024*1024){
+                override fun sizeOf(key:String,value:Bitmap)=value.allocationByteCount
+                override fun entryRemoved(evicted:Boolean,key:String,oldValue:Bitmap,newValue:Bitmap?){if(newValue==null)removeIndexKey(lru,key)}
+            }
+            return lru
+        }
         internal val playbackCache=memoryCache()
-        internal fun clearPlaybackCache(){synchronized(playbackCache){cacheRevision.incrementAndGet();playbackCache.evictAll()}}
+        internal fun clearPlaybackCache(){synchronized(playbackCache){cacheRevision.incrementAndGet();playbackCache.evictAll()};synchronized(cacheIndexes){cacheIndexes[playbackCache]?.clear()}}
     }
     private data class Session(val uri: Uri, val decoder: PreviewDecoder)
     private val mutex = Mutex()
@@ -55,8 +81,9 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
     private var session: Session? = null
     @Volatile private var active: PreviewDecoder? = null
     @Volatile private var lastFrame: Pair<Uri, PreviewFrame>? = null
-    private fun cacheKey(uri:Uri,timeMs:Long)="$scope\u0000$uri:${bucket(timeMs)}"
-    private fun evictOwnedCache(){if(cache!==playbackCache)cache.evictAll()}
+    private fun cachePrefix(uri:Uri)="$scope\u0000$uri"
+    private fun cacheKey(uri:Uri,timeMs:Long)="${cachePrefix(uri)}:${bucket(timeMs)}"
+    private fun evictOwnedCache(){if(cache!==playbackCache){cache.evictAll();synchronized(cacheIndexes){cacheIndexes[cache]?.clear()}}}
     private fun bucket(timeMs: Long) = timeMs.coerceAtLeast(0) / 1000 * 1000
     internal fun cached(uri: Uri, timeMs: Long): PreviewFrame? = if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)null else
         cache.get(cacheKey(uri,timeMs))?.let { PreviewFrame(it, bucket(timeMs)) }
@@ -64,10 +91,17 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
 
     internal fun nearest(uri:Uri,timeMs:Long):PreviewFrame? {
         if(closed.get()||runCatching{checkAuthority(uri)}.isFailure)return null
-        val prefix="$scope\u0000$uri:"
-        return cache.snapshot().entries.mapNotNull{(key,bitmap)->
-            key.takeIf{it.startsWith(prefix)}?.removePrefix(prefix)?.toLongOrNull()?.let{PreviewFrame(bitmap,it)}
-        }.filter{kotlin.math.abs(it.timeMs-timeMs)<=2000}.minByOrNull{kotlin.math.abs(it.timeMs-timeMs)}
+        val prefix=cachePrefix(uri)
+        val candidates=synchronized(cacheIndexes){
+            val tree=cacheIndexes[cache]?.get(prefix)?:return null
+            val before=tree.floor(timeMs)?.takeIf{kotlin.math.abs(it-timeMs)<=2000}
+            val after=tree.ceiling(timeMs)?.takeIf{it!=before&&kotlin.math.abs(it-timeMs)<=2000}
+            listOfNotNull(before,after).sortedBy{kotlin.math.abs(it-timeMs)}
+        }
+        for(t in candidates){
+            cache.get("$prefix:$t")?.let{return PreviewFrame(it,t)}
+        }
+        return null
     }
 
     /** Cached targets bypass a busy reader; queued misses collapse to the latest position. */
@@ -168,7 +202,7 @@ class PreviewFrames internal constructor(private val cache:LruCache<String,Bitma
                             if (continuation.isActive && !closed.get()) {
                                 val valid=synchronized(cache){
                                 if(cache!==playbackCache||revision==cacheRevision.get()){
-                                    if(bitmap!=null)cache.put(key,bitmap)
+                                    if(bitmap!=null){cache.put(key,bitmap);recordIndexKey(cache,key)}
                                     true
                                 }else false
                             }

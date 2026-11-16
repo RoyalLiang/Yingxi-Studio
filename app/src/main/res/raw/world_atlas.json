@@ -1794,8 +1794,8 @@
         "en": "Lead-sealed Route Tally"
       },
       "summary": {
-        "zh": "弥途挂在盐环列站车门内侧的木质路签。已走通的信路用盐蜡封住刻痕；商队捎来的口信、广播听见的频段或未署名来信提到却尚未亲脚丈量的方向，只挂留白木签并记下消息来源，绝不提前描成实线。",
-        "en": "Wooden route tallies hung by Mitu inside the Salt Ring carriage doors. Walked mail routes have their carved marks sealed with salt-wax; directions heard from caravans, radio bands, or unsigned letters remain on blank lead-tagged tallies with their source noted, never inked as solid lines ahead of a survey."
+        "zh": "弥途挂在盐环列站车门内侧的木质路签。已走通的信路用盐蜡封住刻痕；商队捎来的口信、广播听见的频段或未署名来信提到却尚未亲脚丈量的方向，只挂留白木签并记下消息来源，绝不提前描成实线。每趟返站后，弥途会用布角拭去签面的浮盐再把同向传闻的留白签并排收在最外一格；并挂只为下趟一同问路，不表示站方或商队已核实该去向。",
+        "en": "Wooden route tallies hung by Mitu inside the Salt Ring carriage doors. Walked mail routes have their carved marks sealed with salt-wax; directions heard from caravans, radio bands, or unsigned letters remain on blank lead-tagged tallies with their source noted, never inked as solid lines ahead of a survey. After returning to station, Mitu wipes surface salt from the wood with a cloth corner and groups blank rumor tallies from the same direction on the outermost peg; grouping them keeps future inquiries together without certifying that the direction is passable."
       }
     },
     {
@@ -2617,6 +2617,14 @@
       "text": {
         "zh": "迟灯顺着片架索引绳翻看旧检修纸，每核完一页，只在纸背边缘点一道浅铅笔印。阿汐对照完片罐编号再把木夹移回原处；查过哪一页记在背面，正面没证实的猜测仍一字不添。",
         "en": "Chideng checks the old repair slips along the shelf index cord, leaving only a light pencil tick on the back edge as each page is reviewed. Axi verifies the tin number before returning the wooden clip to its place; the back tracks which sheet was checked, while unverified guesses stay off the front."
+      }
+    },
+    {
+      "id": "diary_tally_cord_knot_20261117",
+      "author": "mitu",
+      "text": {
+        "zh": "弥途抹去铅封路签上的浮盐，把两块同方向的留白木签并排挂回盐环车门最外格。阿汐照例只核对签尾来源，迟灯没多问归期；外头传来的去向可以先挨在一起，路走实前绝不落墨。",
+        "en": "Mitu brushes surface salt off the lead-sealed route tallies and hangs two blank wood slips bound the same way side by side on the outermost carriage peg. Axi checks only the source tags on the tails and Chideng asks no return date; rumors bound for one quarter may hang together, yet stay uninked until the road is walked."
       }
     }
   ],

@@ -18,7 +18,7 @@ final class AliyunTests:XCTestCase {
     private func api()->AliyunAPI{let config=URLSessionConfiguration.ephemeral;config.protocolClasses=[CloudStub.self];return AliyunAPI(base:URL(string:"https://api.example.invalid/")!,configuration:config)}
     func testPKCEHasSecureLengthAndIndependentState()throws{
         var seen=Set<String>()
-        for _ in 0..<500{let grant=try AliyunPKCE();XCTAssertEqual(grant.verifier.count,43);XCTAssertEqual(grant.challenge.count,43);XCTAssertNotEqual(grant.verifier,grant.state);XCTAssertTrue(seen.insert(grant.verifier).inserted);XCTAssertFalse(grant.description.contains(grant.verifier))}
+        for _ in 0..<500{let grant=try AliyunPKCE();XCTAssertEqual(grant.verifier.count,43);XCTAssertEqual(grant.challenge.count,44);XCTAssertTrue(grant.challenge.hasSuffix("="));XCTAssertNotEqual(grant.verifier,grant.state);XCTAssertTrue(seen.insert(grant.verifier).inserted);XCTAssertFalse(grant.description.contains(grant.verifier))}
     }
     func testAuthorizationAcceptsOfficialUniversalLinkAndRejectsForeignHost()async throws{
         let grant=try AliyunPKCE()

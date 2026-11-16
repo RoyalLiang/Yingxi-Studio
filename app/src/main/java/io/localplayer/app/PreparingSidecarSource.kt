@@ -15,7 +15,7 @@ import java.util.concurrent.Executors
 internal class PreparingSidecarSource(private val context:Context,private var item:MediaItem,
     private val media:MediaRef,private val create:(MediaItem)->MediaSource):CompositeMediaSource<Unit>() {
     companion object {
-        private val workers=Executors.newFixedThreadPool(2)
+        private val workers=Executors.newFixedThreadPool(4)
         private val closer=Executors.newCachedThreadPool()
         private const val AUTO="automatic-sidecar-audio"
     }
