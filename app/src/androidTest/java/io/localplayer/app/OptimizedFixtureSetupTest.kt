@@ -2,7 +2,7 @@ package io.localplayer.app
 import androidx.test.platform.app.InstrumentationRegistry
 import io.localplayer.core.*
 import org.junit.Test
-/** Opt-in preparation only: both loopback servers expose r8-smoke/r8-{avc,hevc}.mp4.
+/** Opt-in preparation only: both loopback servers expose r8-smoke/r8-{avc,hevc}.mp4 and r8-wmv.wmv.
  * Keep these two clips apart from the large-file/random-access fixture directory.
  * Install debug, run persist, install the optimized candidate with -r, then run
  * ReleaseLaunchSmoke. Restore debug and run remove to clear only these sources.

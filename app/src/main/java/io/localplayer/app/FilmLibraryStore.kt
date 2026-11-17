@@ -77,7 +77,8 @@ internal class FilmLibraryStore(context:Context,name:String="film-library-v1.db"
                 SealedMedia.withVersion(snapPolicy){
                     val denied=before.chunked(2).filter{visibilityKey(parsed.getValue(it[1])) !in visible}.map{it[0].split(':')[1]}.toSet()
                     val scope=VisibilityScope(visible,denied)
-                    if(extra.isEmpty()){
+                // Provider identity can change without a catalog or policy write.
+                    if(extra.isEmpty()&&refs.none{it.localUri!=null}){
                         cachedScope=scope;cachedScopePolicy=snapPolicy;cachedScopeUnlocked=SealedMedia.unlocked
                         cachedScopeDataVersion=dbDataVersion();cachedScopeSessionLocatorVer=MediaDataMigration.session(app).locatorVersion
                     }

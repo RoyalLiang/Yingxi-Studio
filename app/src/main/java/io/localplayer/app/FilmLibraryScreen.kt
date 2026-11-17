@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,7 +58,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     if(tool!=null){key(tool){LibraryToolsScreen(vm,databaseName,tool!!,onSources,{tool=it}){tool=null}};return}
     val scope=rememberCoroutineScope()
     val libraryStore=remember(context,databaseName){FilmLibraryStore(context,databaseName)}
-    DisposableEffect(libraryStore){onDispose{libraryStore.close()}}
+    DisposableEffect(libraryStore){onDispose{CoroutineScope(Dispatchers.IO).launch{libraryStore.close()}}}
     var revision by remember{mutableIntStateOf(0)}
     var view by remember{mutableStateOf(FilmLibraryView())}
     var loading by remember{mutableStateOf(true)}
@@ -83,7 +84,8 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
     DisposableEffect(Unit){val remove=SealedMedia.observe{view=FilmLibraryView();selected=null;relinkFilm=null;relinkTarget=null;pendingMoment=null;shelfFilm=null;groupFilm=null;editMoment=null;renameWork=false;editShelf=false;newShelf=false;revision++};onDispose{remove()}}
     val migration=MediaDataMigration.status
     LaunchedEffect(migration.state){revision++}
-    LaunchedEffect(libraryStore,revision){
+    val sealedCatalog=SealedMedia.hasProtection()
+    LaunchedEffect(libraryStore,revision,if(sealedCatalog)query else null,if(sealedCatalog)shelf else null,if(sealedCatalog)selected else null){
         val requestedRevision=revision;val requestedShelf=shelf;val requestedQuery=query;val requestedSelected=selected
         loading=true
         runCatching{withContext(Dispatchers.IO){
@@ -100,6 +102,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
         if(revision==requestedRevision)loading=false
     }
     LaunchedEffect(libraryStore,view.loadedAt,view.all,shelf,query){
+        if(sealedCatalog)return@LaunchedEffect
         val loadedAt=view.loadedAt
         if(loadedAt!=revision||loadedAt<0)return@LaunchedEffect
         val requestedShelf=shelf;val requestedQuery=query
@@ -112,6 +115,7 @@ private data class FilmLibraryView(val all:List<LibraryWork> = emptyList(),val s
         }
     }
     LaunchedEffect(libraryStore,view.loadedAt,view.all,selected){
+        if(sealedCatalog)return@LaunchedEffect
         val loadedAt=view.loadedAt
         if(loadedAt!=revision||loadedAt<0)return@LaunchedEffect
         val requestedSelected=selected

@@ -789,6 +789,14 @@
         "zh": "迟灯在检修纸背点出核对顺序，弥途把同向传闻的留白木签并排挂回外格，夜间潮气里再压平频段抄本的折角待干。账页与路签各守其界，待核的方向仍不落墨。",
         "en": "Chideng marks review order on the back of repair slips, Mitu hangs matching blank rumor tallies side by side on the outer peg, and on damp watches the Frequency Logbook corner crease is flattened to dry. Records stay bounded; unverified directions remain uninked."
       }
+    },
+    {
+      "id": "chronicle_logbook_backing_sheet_20261118",
+      "version": "0.2.0-beta.7",
+      "text": {
+        "zh": "迟灯用旧检修纸承接频段抄本页背的潮气，阿汐清理页夹再归还原位。垫纸只作晾页用品，潮痕不是新读数，也不构成路线已核的依据。",
+        "en": "Chideng uses an old repair sheet to dry the back of a logbook page while Axi cleans and returns the clip. The backing is a drying aid; its damp marks establish neither new readings nor a verified route."
+      }
     }
   ],
   "boundary": {
@@ -1836,8 +1844,8 @@
         "en": "Frequency Logbook"
       },
       "summary": {
-        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。改记的刻度保留细划线，空白只表示当次尚无读数，不据此断言发报点已消失。交班时可用片架木夹暂记页码，交接后归位；夹记不构成新增读数或路线证据。潮湿夜班记完一页后，他会把左上角折痕压平待纸背干透再合本；纸边留折只记当班潮气，不意味相邻页的读数出自同一发报源。",
-        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source. A thin strike preserves a corrected marking. A blank records the absence of a reading on that occasion, not the disappearance of its source. A shelf clip may briefly mark the page during a shift handover and is returned afterward. That marker adds no measurement or route evidence. After a damp night watch, he flattens the top-left corner crease to let the backing dry before closing the book; matching edge creases log damp conditions on one watch rather than proving consecutive readings come from one transmitter."
+        "zh": "迟灯放在检修台边的牛皮纸抄本。每次与路过的觉醒者校准广播或辨认受损声轨后，他只按片架索引绳的编号记下波段刻度与杂音特征；听见频段只算留存线索，不等于弥途已经走通了发报地点的路线。改记的刻度保留细划线，空白只表示当次尚无读数，不据此断言发报点已消失。交班时可用片架木夹暂记页码，交接后归位；夹记不构成新增读数或路线证据。潮湿夜班记完一页后，他会把左上角折痕压平待纸背干透再合本；纸边留折只记当班潮气，不意味相邻页的读数出自同一发报源。晾页时可垫旧检修纸承接潮气，垫纸上的潮痕不另编读数，也不转作路线依据。",
+        "en": "A kraft-paper notebook kept beside Chideng’s repair bench. After tuning broadcasts or reading damaged soundtracks with passing Awakened listeners, he logs only band markings and static traits under the shelf cord’s index number; hearing a frequency records a lead, not a walked route to its source. A thin strike preserves a corrected marking. A blank records the absence of a reading on that occasion, not the disappearance of its source. A shelf clip may briefly mark the page during a shift handover and is returned afterward. That marker adds no measurement or route evidence. After a damp night watch, he flattens the top-left corner crease to let the backing dry before closing the book; matching edge creases log damp conditions on one watch rather than proving consecutive readings come from one transmitter. Old repair paper may absorb dampness beneath a drying page; its marks receive no reading number and establish no route evidence."
       }
     }
   ],
@@ -2641,6 +2649,14 @@
       "text": {
         "zh": "潮气还没退净，迟灯没有急着合上频段抄本，只把刚写完那页的左上角折痕按平晾在灯旁。阿汐递过干布擦净桌面水汽；两页同沾了夜露，仍各自按本子原号分开记着。",
         "en": "With damp air still lingering, Chideng leaves the Frequency Logbook open beside the lamp and presses down only the top-left corner crease of the finished page to dry. Axi hands him a dry cloth to wipe condensation from the bench; pages that shared one damp watch still stay under separate original numbers."
+      }
+    },
+    {
+      "id": "diary_logbook_backing_sheet_20261118",
+      "author": "chideng",
+      "text": {
+        "zh": "迟灯在晾开的频段抄本下垫半张旧检修纸，留一角在页边。阿汐清掉木夹齿间的纸屑，等页背干爽才抽走垫纸。纸上沾下的潮痕不另起编号，旧读数仍只认原页。",
+        "en": "Chideng slips half an old repair sheet beneath the open Frequency Logbook, leaving one corner exposed. Axi clears paper fibers from the wooden clip and removes the backing only when the page is dry. The transferred damp marks get no new number; the readings still belong to their original page."
       }
     }
   ],

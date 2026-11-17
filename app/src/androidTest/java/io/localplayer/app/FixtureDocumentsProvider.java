@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 public final class FixtureDocumentsProvider extends DocumentsProvider {
     private volatile java.util.concurrent.CountDownLatch childRelease;
     private volatile java.util.concurrent.CountDownLatch childEntered;
+    private volatile boolean clipInMovies = true;
 
     public static final String AUTHORITY = "io.localplayer.app.test.documents";
     private volatile java.util.concurrent.CountDownLatch thumbnailRelease;
@@ -26,6 +27,7 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
             android.os.Bundle result=new android.os.Bundle();result.putBoolean("entered",thumbnailEntered);result.putBoolean("cancelled",thumbnailCancelled);result.putBoolean("signal",thumbnailHasSignal);return result;
         }
         android.os.Bundle result = new android.os.Bundle();
+        if (method.equals("fixture:set-clip-in-movies")) { clipInMovies = Boolean.parseBoolean(arg); return result; }
         if (method.equals("fixture:block-child")) { childEntered = new java.util.concurrent.CountDownLatch(1); childRelease = new java.util.concurrent.CountDownLatch(1); }
         else if (method.equals("fixture:child-entered")) result.putBoolean("entered", childEntered != null && childEntered.getCount() == 0);
         else if (method.equals("fixture:release-child")) { if (childRelease != null) childRelease.countDown(); childRelease = null; }
@@ -137,6 +139,6 @@ public final class FixtureDocumentsProvider extends DocumentsProvider {
         if (parent.equals("sidecars")) return child.equals("video42") || child.equals("subtitle42");
         if (parent.equals("series")) return child.startsWith("episode");
         if (parent.equals("root")) return child.equals("movies") || child.equals("shorts") || child.equals("clip");
-        return parent.equals("movies") && (child.equals("shorts") || child.equals("clip"));
+        return parent.equals("movies") && (child.equals("shorts") || (child.equals("clip") && clipInMovies));
     }
 }

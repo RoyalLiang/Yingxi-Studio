@@ -2,22 +2,22 @@
   "axi": {
     "name": "阿汐",
     "role": "影像拾荒者 · 据点管理员",
-    "letter": "阿汐把片架索引绳上的散页摊开，先看页角的旧编号，再将同一片罐的检修纸夹在后面。字迹不清的地方留着空白，旧页仍夹在原处。",
-    "english": "Axi spread the loose pages from the shelf index cord, checked the old corner numbers, then clipped each tin’s repair notes behind its sheet. She left unclear marks blank and kept the original pages in place.",
-    "record": "diary_station_index_return_20261031"
+    "letter": "阿汐把一枚磨圆的木夹移到频段抄本当天那页，夹口避开迟灯留下的细划线。换班时，她先把页码念给他听，再将木夹递回片架；旧读数留在纸上，今晚要核的地方也没有混在一起。",
+    "english": "Axi moves a rounded wooden clip to today’s page of the Frequency Logbook, clear of Chideng’s thin correction marks. At the shift change she reads him the page number before returning the clip to the shelves. The old readings stay on paper, with tonight’s checks kept distinct.",
+    "record": "diary_logbook_pageclip_20261105"
   },
   "chideng": {
     "name": "迟灯",
     "role": "放映站守夜人 · 旧设备修理师",
-    "letter": "迟灯把新滤出的波段刻度抄进牛皮本，和片罐侧签对上了同一个号。",
-    "english": "Chideng copied the newly filtered band markings into his kraft notebook, matching the number on the film tin's side label.",
-    "record": "diary_station_frequency_log_20261026"
+    "letter": "迟灯在晾开的频段抄本下垫半张旧检修纸，留一角在页边。阿汐清掉木夹齿间的纸屑，等页背干爽才抽走垫纸。纸上沾下的潮痕不另起编号，旧读数仍只认原页。",
+    "english": "Chideng slips half an old repair sheet beneath the open Frequency Logbook, leaving one corner exposed. Axi clears paper fibers from the wooden clip and removes the backing only when the page is dry. The transferred damp marks get no new number; the readings still belong to their original page.",
+    "record": "diary_logbook_backing_sheet_20261118"
   },
   "mitu": {
     "name": "弥途",
     "role": "盐环路标师 · 往返列站的递信人",
-    "letter": "盐环列站的车门内侧新挂了一枚留白木签，等哪天亲脚走过再封上盐蜡。",
-    "english": "A blank wooden tally hangs inside the Salt Ring carriage door, waiting for salt-wax once the road is actually walked.",
-    "record": "diary_salt_blank_tally_20261026"
+    "letter": "弥途抹去铅封路签上的浮盐，把两块同方向的留白木签并排挂回盐环车门最外格。阿汐照例只核对签尾来源，迟灯没多问归期；外头传来的去向可以先挨在一起，路走实前绝不落墨。",
+    "english": "Mitu brushes surface salt off the lead-sealed route tallies and hangs two blank wood slips bound the same way side by side on the outermost carriage peg. Axi checks only the source tags on the tails and Chideng asks no return date; rumors bound for one quarter may hang together, yet stay uninked until the road is walked.",
+    "record": "diary_tally_cord_knot_20261117"
   }
 }

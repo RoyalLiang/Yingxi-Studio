@@ -84,25 +84,32 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivitySync(intent);waitForIdleSync();
     }
-    private SurfaceView surface(View view){
-        if(view instanceof SurfaceView)return (SurfaceView)view;
-        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){SurfaceView found=surface(group.getChildAt(i));if(found!=null)return found;}}
+    private View surface(View view){
+        if((view instanceof SurfaceView || view instanceof android.view.TextureView) && view.isShown())return view;
+        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){View found=surface(group.getChildAt(i));if(found!=null)return found;}}
         return null;
     }
     private long frame(Activity activity) throws Exception {
         for(int attempt=0;attempt<50;attempt++){
-            AtomicReference<SurfaceView> holder=new AtomicReference<>();
+            AtomicReference<View> holder=new AtomicReference<>();
             runOnMainSync(()->holder.set(surface(activity.getWindow().getDecorView())));
-            SurfaceView view=holder.get();
-            if(view!=null&&view.getWidth()>0&&view.getHeight()>0){
-                Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);
+            View view=holder.get();Bitmap bitmap=null;
+            if(view instanceof android.view.TextureView){
+                AtomicReference<Bitmap> pixels=new AtomicReference<>();
+                runOnMainSync(()->pixels.set(((android.view.TextureView)view).getBitmap(160,90)));
+                bitmap=pixels.get();
+            }else if(view instanceof SurfaceView && view.getWidth()>0 && view.getHeight()>0){
+                bitmap=Bitmap.createBitmap(160,90,Bitmap.Config.ARGB_8888);
                 CountDownLatch done=new CountDownLatch(1);int[] status={-1};
-                PixelCopy.request(view,bitmap,result->{status[0]=result;done.countDown();},new Handler(Looper.getMainLooper()));
-                if(done.await(3,TimeUnit.SECONDS)&&status[0]==PixelCopy.SUCCESS){
-                    long hash=17;java.util.HashSet<Integer> colors=new java.util.HashSet<>();
-                    for(int y=0;y<bitmap.getHeight();y+=31)for(int x=0;x<bitmap.getWidth();x+=29){int pixel=bitmap.getPixel(x,y);colors.add(pixel);hash=hash*31+pixel;}
-                    bitmap.recycle();if(colors.size()>5)return hash;
-                }else bitmap.recycle();
+                try{
+                    PixelCopy.request((SurfaceView)view,bitmap,result->{status[0]=result;done.countDown();},new Handler(Looper.getMainLooper()));
+                    if(!done.await(3,TimeUnit.SECONDS)||status[0]!=PixelCopy.SUCCESS){bitmap.recycle();bitmap=null;}
+                }catch(IllegalArgumentException ignored){bitmap.recycle();bitmap=null;}
+            }
+            if(bitmap!=null){
+                long hash=17;java.util.HashSet<Integer> colors=new java.util.HashSet<>();
+                for(int y=0;y<bitmap.getHeight();y+=3)for(int x=0;x<bitmap.getWidth();x+=3){int pixel=bitmap.getPixel(x,y);colors.add(pixel);hash=hash*31+pixel;}
+                bitmap.recycle();if(colors.size()>5)return hash;
             }
             SystemClock.sleep(200);
         }
@@ -173,7 +180,7 @@ public final class ReleaseLaunchSmoke extends Instrumentation {
             if(image.getPixel(4,button.centerY())!=0xFFF3F1ED)throw new AssertionError("Footer background mismatch");
             image.recycle();passed.put("Production R8 rules: launch, settings and fixed footer");
             if(args!=null&&"media".equals(args.getString("mode"))){
-                for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:args.getString("clip")==null?new String[]{"r8-avc","r8-hevc"}:new String[]{args.getString("clip")})playback(source,clip);
+                for(String source:args.getString("source")==null?new String[]{"R8 SMB","R8 SFTP"}:new String[]{args.getString("source")})for(String clip:args.getString("clip")==null?new String[]{"r8-avc","r8-hevc","r8-wmv"}:new String[]{args.getString("clip")})playback(source,clip);
             }
             result.putString("passed",passed.toString());finish(Activity.RESULT_OK,result);
         }catch(Throwable error){

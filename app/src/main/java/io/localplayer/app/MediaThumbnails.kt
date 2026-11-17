@@ -224,7 +224,7 @@ internal object MediaThumbnails {
 
     fun remove(context: Context, media: MediaRef) {
         generation.incrementAndGet()
-        worker.execute { PlaybackOrientationProbe.remove(context,media); val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); notifyKey(id) }
+        worker.execute { PlaybackOrientationProbe.remove(context,media); val id = key(media); memory.remove(id); failed.remove(id); File(directory(context), "$id.jpg").delete(); notifyAllKeys() }
     }
     fun clear(context: Context) {
         generation.incrementAndGet()
